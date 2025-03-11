@@ -1,6 +1,6 @@
 "use client";
 import React, { useId, useRef } from "react";
-import { FaXmark } from "react-icons/fa6";
+import { FaEye, FaEyeSlash, FaXmark } from "react-icons/fa6";
 
 interface InputProps
 	extends Omit<Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange">, "width"> {
@@ -28,6 +28,13 @@ export default function Input({ title, onChange, width, ...options }: InputProps
 		}
 	};
 
+	const handleToggleHidden = () => {
+		if (inputRef.current) {
+			inputRef.current.type = inputRef.current.type === "password" ? "text" : "password";
+
+		}
+	}
+
 	return (
 		<div
 			className="group relative flex select-none items-center gap-2 border-b border-slate-200 text-center focus-within:border-indigo-200"
@@ -49,11 +56,24 @@ export default function Input({ title, onChange, width, ...options }: InputProps
 				minLength={1}
 				{...options}
 			/>
+			{
+				options.type === "password" && (
+					<button
+						className="absolute right-10 rounded-full p-1 text-white transition-all hover:bg-blue-700 active:bg-blue-600 group-focus-within:text-indigo-200"
+						onClick={handleToggleHidden}
+						type="button"
+						title="Limpar"
+					>
+						<FaEye />
+					</button>
+				)
+			}
 			<button
-				className="absolute right-3 rounded-full p-1 text-white transition-all hover:bg-neutral-700 active:bg-neutral-600 group-focus-within:text-indigo-200"
+				className="absolute right-3 rounded-full p-1 text-white transition-all hover:bg-blue-700 active:bg-blue-600 group-focus-within:text-indigo-200"
 				onClick={handleClear}
 				type="button"
 				ref={buttonRef}
+				title="Limpar"
 			>
 				<FaXmark />
 			</button>
