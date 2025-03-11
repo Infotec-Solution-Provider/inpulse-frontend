@@ -1,6 +1,7 @@
 "use client";
-import {FaAngleDown, FaAngleUp, FaXmark} from "react-icons/fa6";
-import {ChangeEventHandler, FocusEventHandler, ReactNode, useEffect, useRef, useState,} from "react";
+import { FaAngleDown, FaAngleUp, FaXmark } from "react-icons/fa6";
+import { ChangeEventHandler, FocusEventHandler, ReactNode, useEffect, useRef, useState, } from "react";
+import { motion } from "motion/react";
 
 interface SelectProps {
     options: Record<string, string>;
@@ -11,18 +12,20 @@ interface SelectProps {
     required?: boolean;
     placeholder?: string;
     rightIcon?: ReactNode;
+    maxOptions?: number;
 }
 
 export default function AutoComplete({
-                                         options,
-                                         title,
-                                         onChange,
-                                         name,
-                                         width,
-                                         required,
-                                         placeholder,
-                                         rightIcon,
-                                     }: SelectProps) {
+    options,
+    title,
+    onChange,
+    name,
+    width,
+    required,
+    placeholder,
+    rightIcon,
+    maxOptions
+}: SelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [filter, setFilter] = useState("");
     const [selected, setSelected] = useState<string | null>(null);
@@ -79,12 +82,10 @@ export default function AutoComplete({
         setIsOpen(!isOpen);
     };
 
-    //border-slate-200
-
     return (
         <div
             className="group relative flex select-none items-center border-b border-slate-200 text-center focus-within:border-indigo-200"
-            style={{width: width || "max-content"}}
+            style={{ width: width || "max-content" }}
             ref={componentRef}
         >
             {title && (
@@ -94,6 +95,10 @@ export default function AutoComplete({
             )}
             <input
                 name={name}
+                type="hidden"
+                value={selected ? options[selected] : ""}
+            />
+            <input
                 value={filter}
                 className="w-full bg-transparent px-3 py-2 outline-none"
                 onFocus={handleFocus}
@@ -108,35 +113,40 @@ export default function AutoComplete({
                 className="absolute -bottom-1 left-0 z-10 max-h-60 w-full translate-y-full snap-y overflow-y-auto rounded-md bg-neutral-700 shadow-sm shadow-black"
                 hidden={!isOpen}
             >
-                {Object.entries(options).map(([text, value]) => (
-                    <li
-                        key={value}
-                        className="cursor-pointer snap-center truncate px-2 py-1 text-sm first:pt-2 last:pb-2 hover:bg-slate-600"
-                        onClick={() => handleSelection(text)}
-                        hidden={!text.toLowerCase().includes(filter.toLowerCase())}
-                    >
-                        {text}
-                    </li>
-                ))}
+                {
+                    Object.entries(options)
+                        .filter(([text]) => text.toLowerCase().includes(filter.toLowerCase()))
+                        .slice(0, maxOptions || Object.keys(options).length)
+                        .map(([text, value]) => (
+                            <li
+                                key={value}
+                                className="cursor-pointer snap-center truncate px-4 py-1 text-sm first:pt-2 last:pb-2 hover:bg-slate-600 text-left"
+                                onClick={() => handleSelection(text)}
+                                hidden={!text.toLowerCase().includes(filter.toLowerCase())}
+                            >
+                                {text}
+                            </li>
+                        ))
+                }
             </ul>
             <div
                 className="relative flex w-max items-center gap-2 rounded-r-md px-2 group-focus-within:text-indigo-200">
                 <button
-                    className="absolute -left-4 rounded-full p-1 text-sm transition-all hover:bg-neutral-700 active:bg-neutral-600"
+                    className="absolute -left-4 rounded-full p-1 text-sm transition-all hover:bg-blue-700 active:bg-blue-600"
                     onClick={handleClear}
                     type="button"
                     hidden={!filter}
                 >
-                    <FaXmark/>
+                    <FaXmark />
                 </button>
 
                 {rightIcon || (
                     <button
-                        className="rounded-full p-1 transition-all hover:bg-neutral-700 active:bg-neutral-600"
+                        className="rounded-full p-1 transition-all hover:bg-blue-700 active:bg-blue-600"
                         onClick={handleToggle}
                         type="button"
                     >
-                        {isOpen ? <FaAngleUp/> : <FaAngleDown/>}
+                        {isOpen ? <FaAngleUp /> : <FaAngleDown />}
                     </button>
                 )}
             </div>

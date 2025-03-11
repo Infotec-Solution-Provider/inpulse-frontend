@@ -1,6 +1,6 @@
 "use client";
-import {FaAngleDown, FaAngleUp, FaXmark} from "react-icons/fa6";
-import {FocusEventHandler, useEffect, useRef, useState} from "react";
+import { FaAngleDown, FaAngleUp, FaXmark } from "react-icons/fa6";
+import { FocusEventHandler, useEffect, useRef, useState } from "react";
 
 interface SelectProps {
     options: Record<string, string>;
@@ -11,7 +11,7 @@ interface SelectProps {
     required?: boolean;
 }
 
-export default function Select({options, title, onChange, name, width, required}: SelectProps) {
+export default function Select({ options, title, onChange, name, width, required }: SelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [selected, setSelected] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ export default function Select({options, title, onChange, name, width, required}
     return (
         <div
             className="group relative flex select-none items-center border-b border-slate-200 text-center focus-within:border-indigo-200"
-            style={{width: width || "max-content"}}
+            style={{ width: width || "max-content" }}
             ref={componentRef}
         >
             {title && (
@@ -64,13 +64,18 @@ export default function Select({options, title, onChange, name, width, required}
             )}
             <input
                 name={name}
+                type="hidden"
+                value={selected ? options[selected] : ""}
+            />
+            <input
                 value={selected || ""}
-                className="w-full bg-transparent px-3 py-2 caret-transparent outline-none focus:outline-none"
+                className="w-full bg-transparent px-3 py-2 caret-transparent outline-none focus:outline-none cursor-default"
                 onFocus={handleFocus}
                 minLength={1}
                 autoComplete="off"
                 autoCorrect="off"
                 required={!!required}
+                title={title}
                 readOnly
             />
             <ul
@@ -89,19 +94,19 @@ export default function Select({options, title, onChange, name, width, required}
             </ul>
             <div className="relative flex w-max items-center rounded-r-md px-2 group-focus-within:text-indigo-200">
                 <button
-                    className="absolute -left-4 rounded-full p-1 text-sm transition-all hover:bg-neutral-700 active:bg-neutral-600"
+                    className="absolute -left-4 rounded-full p-1 text-sm transition-all hover:bg-blue-700 active:bg-blue-600"
                     onClick={handleClear}
                     type="button"
                     hidden={selected === null}
                 >
-                    <FaXmark/>
+                    <FaXmark />
                 </button>
                 <button
-                    className="rounded-full p-1 transition-all hover:bg-neutral-700 active:bg-neutral-600"
+                    className="rounded-full p-1 transition-all hover:bg-blue-700 active:bg-blue-600"
                     onClick={handleToggle}
                     type="button"
                 >
-                    {isOpen ? <FaAngleUp/> : <FaAngleDown/>}
+                    {isOpen ? <FaAngleUp /> : <FaAngleDown />}
                 </button>
             </div>
         </div>
