@@ -6,8 +6,7 @@ import { FormEventHandler, useRef } from "react";
 import { FaFileDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Select from "@/lib/components/select";
-import { User } from "@in.pulse-crm/types";
-import { ChatReport, ChatReportFileFormat } from "@in.pulse-crm/sdk";
+import { ChatReport, ChatReportFileFormat, User } from "@in.pulse-crm/sdk";
 import reportsService from "@/lib/services/reports.service";
 
 interface FormProps {
