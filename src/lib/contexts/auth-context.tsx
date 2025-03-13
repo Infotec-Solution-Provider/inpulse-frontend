@@ -7,6 +7,7 @@ import authService from "../services/auth.service";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 
 export const authContext = createContext({} as AuthContextProps);
 
@@ -18,12 +19,16 @@ export default function AuthProvider({ children }: ProviderProps) {
     const [user, setUser] = useState<User | null>(null);
 
     const signIn = useCallback(async (instance: string, { login, password }: AuthSignForm) => {
-        const { data } = await authService.login(instance, login, password);
+        try {
+            const { data } = await authService.login(instance, login, password)
 
-        localStorage.setItem("@inpulse/token", data.token);
-        setUser(data.user);
-        axios.defaults.headers["authorization"] = `Bearer ${data.token}`;
-        router.replace(`/${instance}/app`);
+            localStorage.setItem("@inpulse/token", data.token);
+            setUser(data.user);
+            axios.defaults.headers["authorization"] = `Bearer ${data.token}`;
+            router.replace(`/${instance}/app`);
+        } catch (err) {
+            toast.error("Falha ao logar!\n" + sanitizeErrorMessage(err));
+        }
     }, [router]);
 
     const signOut = useCallback(() => {
