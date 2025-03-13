@@ -1,7 +1,9 @@
 import { UserSDK } from "@in.pulse-crm/sdk";
+import axios from "axios";
 
-export default new UserSDK({
-    axiosConfig: {
-        baseURL: process.env["NEXT_PUBLIC_USERS_URL"]!
-    }
+const axiosInstance = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_USERS_URL,
+    timeout: 10000,
 });
+
+export default new UserSDK(axiosInstance);

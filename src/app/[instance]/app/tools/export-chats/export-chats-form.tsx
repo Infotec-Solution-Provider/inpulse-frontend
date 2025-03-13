@@ -3,16 +3,16 @@ import AutoComplete from "@/lib/components/auto-complete";
 import Input from "@/lib/components/input";
 import Button from "@/lib/components/button";
 import { FormEventHandler, useRef } from "react";
-import axios from "axios";
 import { FaFileDownload } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Select from "@/lib/components/select";
-import { ExportedChatInfo } from "@/lib/types/export-chats.types";
 import { User } from "@in.pulse-crm/types";
+import { ChatReport, ChatReportFileFormat } from "@in.pulse-crm/sdk";
+import reportsService from "@/lib/services/reports.service";
 
 interface FormProps {
     users: Array<User>;
-    onSuccessAction: () => void;
+    onSuccessAction: (report: ChatReport, message: string) => void;
 }
 
 export default function ExportChatsForm({ users, onSuccessAction }: FormProps) {
@@ -39,13 +39,15 @@ export default function ExportChatsForm({ users, onSuccessAction }: FormProps) {
         const formData = new FormData(formRef.current!);
         const data = Object.fromEntries(formData.entries());
 
-        const request = axios
-            .post<ExportedChatInfo>(`${process.env["NEXT_PUBLIC_WHATS_URL"]}/${instance}/tools/export-chats`, data)
-            .then((res) => {
-                onSuccessAction()
-            });
+        const response = reportsService.generateChatReport({
+            instance,
+            startDate: data.startDate as string,
+            endDate: data.endDate as string,
+            userId: data.userId as string,
+            format: data.format as ChatReportFileFormat,
+        }).then((res) => onSuccessAction(res.data, res.message))
 
-        await toast.promise(request, {
+        await toast.promise(response, {
             pending: "Exportando conversas...",
             success: "Conversas exportadas com sucesso!",
             error: "Falha ao exportar conversas!",
