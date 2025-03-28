@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    color-scheme: dark;
+  font-family: Arial, Helvetica, sans-serif;
+  color-scheme: dark;
+  scrollbar-width: thin; /* Define a largura da barra de rolagem (pode ser auto, thin ou none) */
+  scrollbar-color: rgb(113, 109, 207) rgb(56, 56, 82); /* Cor do polegar e do fundo */
 }

@@ -1,15 +1,17 @@
 "use client";
 import React, { useId, useRef } from "react";
-import { FaEye, FaEyeSlash, FaXmark } from "react-icons/fa6";
+import { FaEye, FaXmark } from "react-icons/fa6";
+import { SIZE_VARIANTS, SizeVariant } from "./variants";
 
-interface InputProps
-	extends Omit<Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange">, "width"> {
+interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "size"> {
 	title?: string;
 	onChange?: (value: string) => void;
-	width?: string;
+	size?: SizeVariant;
 }
 
-export default function Input({ title, onChange, width, ...options }: InputProps) {
+const baseStyles = "group relative flex select-none items-center gap-2 border-b border-slate-200 text-center focus-within:border-indigo-200";
+
+export default function Input({ title, onChange, width, size, ...options }: InputProps) {
 	const id = useId();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const buttonRef = useRef<HTMLButtonElement>(null);
@@ -31,13 +33,12 @@ export default function Input({ title, onChange, width, ...options }: InputProps
 	const handleToggleHidden = () => {
 		if (inputRef.current) {
 			inputRef.current.type = inputRef.current.type === "password" ? "text" : "password";
-
 		}
 	}
 
 	return (
 		<div
-			className="group relative flex select-none items-center gap-2 border-b border-slate-200 text-center focus-within:border-indigo-200"
+			className={`${baseStyles} ${SIZE_VARIANTS[size || "md"]}`}
 			style={{ width: width || "max-content" }}
 		>
 			{title && (

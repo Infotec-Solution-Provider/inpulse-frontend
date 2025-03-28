@@ -10,4 +10,5 @@ export interface AuthContextProps {
     user: User | null;
     signIn: (instance: string, data: AuthSignForm) => Promise<void>;
     signOut: () => void;
+    token: string | null;
 }

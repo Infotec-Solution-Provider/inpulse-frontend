@@ -1,17 +1,21 @@
 "use client";
 import { FaAngleDown, FaAngleUp, FaXmark } from "react-icons/fa6";
 import { FocusEventHandler, useEffect, useRef, useState } from "react";
+import { SizeVariant, SIZE_VARIANTS } from "./variants";
 
 interface SelectProps {
     options: Record<string, string>;
-    title?: string;
+    label?: string;
     onChange?: (value: string | null) => void;
+    placeholder?: string;
     name: string;
-    width?: string;
+    size?: SizeVariant;
     required?: boolean;
 }
 
-export default function Select({ options, title, onChange, name, width, required }: SelectProps) {
+const baseStyles = "group relative flex select-none items-center border-b border-slate-200 text-center focus-within:border-indigo-200";
+
+export default function Select({ options, label, onChange, name, size, required, placeholder }: SelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [selected, setSelected] = useState<string | null>(null);
 
@@ -19,7 +23,7 @@ export default function Select({ options, title, onChange, name, width, required
 
     useEffect(() => {
         if (!!onChange) onChange(selected ? options[selected] : null);
-    }, [selected, onChange]);
+    }, [selected]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -53,13 +57,12 @@ export default function Select({ options, title, onChange, name, width, required
 
     return (
         <div
-            className="group relative flex select-none items-center border-b border-slate-200 text-center focus-within:border-indigo-200"
-            style={{ width: width || "max-content" }}
+            className={`${baseStyles} ${SIZE_VARIANTS[size || "md"]}`}
             ref={componentRef}
         >
-            {title && (
+            {label && (
                 <label className="pointer-events-none mx-2 block w-max group-focus-within:text-indigo-200">
-                    {title}:
+                    {label}:
                 </label>
             )}
             <input
@@ -75,8 +78,9 @@ export default function Select({ options, title, onChange, name, width, required
                 autoComplete="off"
                 autoCorrect="off"
                 required={!!required}
-                title={title}
+                title={label}
                 readOnly
+                placeholder={placeholder}
             />
             <ul
                 className="absolute -bottom-1 left-0 z-10 max-h-60 w-full translate-y-full snap-y overflow-y-auto rounded-md bg-neutral-700 shadow-sm shadow-black"

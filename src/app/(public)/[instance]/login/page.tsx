@@ -4,7 +4,7 @@ import Input from "@/lib/components/input";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import Image from "next/image";
 import { FormEventHandler, useContext, useRef } from "react";
-import { authContext } from "@/lib/contexts/auth-context";
+import { AuthContext } from "@/lib/contexts/auth.context";
 
 interface LoginProps {
     params: Promise<{
@@ -13,7 +13,7 @@ interface LoginProps {
 }
 
 export default function Login({ params }: LoginProps) {
-    const { signIn } = useContext(authContext);
+    const { signIn } = useContext(AuthContext);
 
     const formRef = useRef<HTMLFormElement>(null);
 

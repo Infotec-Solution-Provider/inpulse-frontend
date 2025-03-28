@@ -2,15 +2,16 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import { AuthContextProps, AuthSignForm } from "@/lib/types/auth-context.types";
 import { ProviderProps } from "@/lib/types/generic.types";
-
 import authService from "../services/auth.service";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { User } from "@in.pulse-crm/sdk";
+import usersService from "../services/users.service";
+import reportsService from "../services/reports.service";
 
-export const authContext = createContext({} as AuthContextProps);
+export const AuthContext = createContext({} as AuthContextProps);
 
 export default function AuthProvider({ children }: ProviderProps) {
     const router = useRouter();
@@ -18,65 +19,80 @@ export default function AuthProvider({ children }: ProviderProps) {
     const instance = pathname.split("/")[1];
 
     const [user, setUser] = useState<User | null>(null);
+    const [token, setToken] = useState<string | null>(null);
 
     const signIn = useCallback(async (instance: string, { login, password }: AuthSignForm) => {
         try {
             const { data } = await authService.login(instance, login, password)
 
-            localStorage.setItem("@inpulse/token", data.token);
+            localStorage.setItem(`@inpulse/${instance}/token`, data.token);
+
             setUser(data.user);
+            setToken(data.token);
+
             axios.defaults.headers["authorization"] = `Bearer ${data.token}`;
-            router.replace(`/${instance}/app`);
+            router.replace(`/${instance}`);
+
         } catch (err) {
             toast.error("Falha ao logar!\n" + sanitizeErrorMessage(err));
         }
     }, [router]);
 
     const signOut = useCallback(() => {
-        localStorage.removeItem("@inpulse/token");
+        localStorage.removeItem(`@inpulse/${instance}/token`);
         setUser(null);
-    }, []);
+        setToken(null);
+        router.replace(`/${instance}/login`);
+    }, [router]);
 
     useEffect(() => {
-        const token = localStorage.getItem("@inpulse/token");
+        const previousToken = localStorage.getItem(`@inpulse/${instance}/token`);
+        setToken(previousToken);
+    }, [instance]);
 
-        if (token && pathname) {
-            authService.fetchSessionUser(instance, token)
-                .then(({ data }) => {
-                    console.log(data);
-                    setUser(data);
+    useEffect(() => {
+        usersService.setAuth(token ? `Bearer ${token}` : "");
+        reportsService.setAuth(token ? `Bearer ${token}` : "");
+
+        if (token) {
+            authService.fetchSessionData(token)
+                .then(async (res) => {
                     axios.defaults.headers["authorization"] = `Bearer ${token}`;
 
-                    if (user && pathname.includes("login")) {
-                        router.replace(`/${instance}/app`);
+                    return await usersService.getUserById(res.data.userId);
+                })
+                .then((res) => {
+                    setUser(res.data);
+
+                    if (pathname.includes("login")) {
+                        router.replace(`/${instance}`);
                     }
                 })
                 .catch((err) => {
                     toast.error(err.message || "Sessão expirada, faça o login novamente!");
-                    localStorage.removeItem("@inpulse/token");
+                    localStorage.removeItem(`@inpulse/${instance}/token`);
                     setUser(null);
 
-                    if (!user && !pathname.includes("login")) {
+                    if (!pathname.includes("login")) {
                         router.replace(`/${instance}/login`);
                     }
                 });
         }
 
-        if (!token && !user && !pathname.includes("login")) {
+        if (!token && !pathname.includes("login")) {
             router.replace(`/${instance}/login`);
         }
-
-
-    }, [router, instance, pathname]);
+    }, [token])
 
     return (
-        <authContext.Provider value={{
+        <AuthContext.Provider value={{
             user,
+            token,
             isAuthenticated: false,
             signIn,
             signOut
         }}>
             {children}
-        </authContext.Provider>
+        </AuthContext.Provider>
     );
 }

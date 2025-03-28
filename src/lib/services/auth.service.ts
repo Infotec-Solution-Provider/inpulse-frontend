@@ -1,3 +1,4 @@
+"use client"
 import { AuthSDK } from "@in.pulse-crm/sdk";
 import axios from "axios";
 

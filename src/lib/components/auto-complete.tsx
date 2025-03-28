@@ -1,30 +1,32 @@
 "use client";
 import { FaAngleDown, FaAngleUp, FaXmark } from "react-icons/fa6";
 import { ChangeEventHandler, FocusEventHandler, ReactNode, useEffect, useRef, useState, } from "react";
-import { motion } from "motion/react";
+import { SizeVariant, SIZE_VARIANTS } from "./variants";
 
 interface SelectProps {
     options: Record<string, string>;
     title?: string;
     onChange?: (value: string | null) => void;
     name: string;
-    width?: string;
+    size?: SizeVariant;
     required?: boolean;
     placeholder?: string;
     rightIcon?: ReactNode;
     maxOptions?: number;
 }
 
+const baseStyles = "group relative flex select-none items-center border-b border-slate-200 text-center focus-within:border-indigo-200";
+
 export default function AutoComplete({
     options,
     title,
     onChange,
     name,
-    width,
     required,
     placeholder,
     rightIcon,
-    maxOptions
+    maxOptions,
+    size
 }: SelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [filter, setFilter] = useState("");
@@ -34,7 +36,7 @@ export default function AutoComplete({
 
     useEffect(() => {
         if (!!onChange) onChange(selected ? options[selected] : null);
-    }, [selected, onChange]);
+    }, [selected]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -84,8 +86,7 @@ export default function AutoComplete({
 
     return (
         <div
-            className="group relative flex select-none items-center border-b border-slate-200 text-center focus-within:border-indigo-200"
-            style={{ width: width || "max-content" }}
+            className={`${baseStyles} ${SIZE_VARIANTS[size || "md"]}`}
             ref={componentRef}
         >
             {title && (

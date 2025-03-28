@@ -1,0 +1,127 @@
+"use client"
+import { AuthContext } from "@/lib/contexts/auth.context";
+import { SocketContext } from "@/lib/contexts/socket.context";
+import reportsService from "@/lib/services/reports.service";
+import usersService from "@/lib/services/users.service";
+import { ChatsReport, ChatsReportFileFormat, ChatsReportStatusData, User } from "@in.pulse-crm/sdk";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import axios from "axios";
+import { usePathname } from "next/navigation";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
+
+interface IChatsReportProviderProps {
+    children: ReactNode;
+}
+
+interface IChatsReportContext {
+    deleteReport: (id: number) => Promise<void>;
+    generateReport: (params: GenerateReportParams) => Promise<void>;
+    reports: Array<ChatsReport & { progress: number }>;
+    users: Array<User>;
+}
+
+export interface GenerateReportParams {
+    startDate: string;
+    endDate: string;
+    userId: string;
+    format: ChatsReportFileFormat;
+}
+
+export const ChatsReportContext = createContext<IChatsReportContext>({} as IChatsReportContext);
+
+export default function ChatsReportProvider({ children }: IChatsReportProviderProps) {
+    const { socket } = useContext(SocketContext);
+    const { token } = useContext(AuthContext);
+    const pathname = usePathname();
+    const instance = useMemo(() => pathname.split("/")[1], [pathname]);
+    const [reports, setReports] = useState<Array<ChatsReport & { progress: number }>>([]);
+    const [users, setUsers] = useState<Array<User>>([]);
+
+    const deleteReport = useCallback(async (id: number) => {
+        try {
+            await reportsService.deleteChatsReport(id);
+            setReports(prev => prev.filter(r => r.id !== id));
+            toast.success("Relatório excluído com sucesso!");
+        } catch (err) {
+            toast.error("Falha ao excluir relatório!\n" + sanitizeErrorMessage(err));
+        }
+    }, [instance]);
+
+    const generateReport = useCallback(async (params: GenerateReportParams) => {
+        try {
+            const response = await reportsService.generateChatsReport(params);
+            setReports(prev => [...prev, { ...response.data, progress: 0 }]);
+            toast.success(response.message);
+        }
+        catch (err) {
+            toast.error("Falha ao exportar relatório!\n" + sanitizeErrorMessage(err));
+        }
+    }, [instance]);
+
+    const handleReportStatus = useCallback((data: ChatsReportStatusData) => {
+        if (data.type === "chats" && data.isCompleted) {
+            setReports(prev => prev.map(r => {
+                if (r.id === data.id) {
+                    return { ...r, status: "completed", fileId: data.fileId, progress: 100, chats: data.chats, messages: data.messages };
+                }
+                return r;
+            }));
+        }
+        if (data.type === "chats" && data.isFailed) {
+            setReports(prev => prev.map(r => {
+                if (r.id === data.id) {
+                    return { ...r, status: "failed" };
+                }
+                return r;
+            }));
+        }
+        if (data.type === "chats" && !data.isFailed && !data.isCompleted) {
+            setReports(prev => prev.map(r => {
+                if (r.id === data.id) {
+                    return { ...r, progress: +data.progress.toFixed(0) };
+                }
+                return r;
+            }));
+        }
+    }, []);
+
+    useEffect(() => {
+        if (token) {
+            axios.defaults.headers.authorization = `Bearer ${token}`;
+            reportsService.getChatsReports()
+                .then(res => setReports(res.data.map(r => ({ ...r, progress: r.status === "pending" ? 0 : 100 }))))
+                .catch(err => toast.error("Falha ao buscar relatórios!\n" + sanitizeErrorMessage(err)));
+
+            usersService.getUsers()
+                .then(res => setUsers(res.data))
+                .catch(err => toast.error("Falha ao buscar usuários!\n" + sanitizeErrorMessage(err)));
+        }
+    }, [instance, token]);
+
+    useEffect(() => {
+        const CHATS_REPORT_ROOM = "reports:chats";
+        if (socket) {
+            socket.joinRoom(CHATS_REPORT_ROOM);
+            socket.on("report_status", handleReportStatus);
+        }
+
+        return () => {
+            if (socket) {
+                socket.leaveRoom(CHATS_REPORT_ROOM);
+                socket.off("report_status", handleReportStatus);
+            }
+        }
+    }, [socket]);
+
+    return (
+        <ChatsReportContext.Provider value={{
+            deleteReport,
+            generateReport,
+            reports,
+            users,
+        }}>
+            {children}
+        </ChatsReportContext.Provider>
+    );
+}

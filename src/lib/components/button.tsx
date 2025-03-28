@@ -1,4 +1,5 @@
 import React, { ReactNode } from "react";
+import { COLOR_VARIANTS, ColorVariant } from "./variants";
 
 interface ButtonProps
 	extends Omit<
@@ -7,12 +8,18 @@ interface ButtonProps
 	> {
 	children: ReactNode;
 	width?: string;
+	color?: ColorVariant;
 }
 
-export default function Button({ children, ...options }: ButtonProps) {
+
+export default function Button({ children, color, ...options }: ButtonProps) {
+	const { text, inherit, active, hover } = COLOR_VARIANTS[color || "indigo-dark"];
+
 	return (
 		<button
-			className="group rounded-md bg-indigo-900 p-2 text-center text-white hover:bg-indigo-800 active:bg-indigo-700"
+			className={
+				`group rounded-md ${inherit} p-2 text-center text-white ${hover} ${active} ${text}`
+			}
 			{...options}
 			style={{ width: options.width || "max-content", height: "max-content" }}
 		>
