@@ -88,7 +88,9 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
 
     useEffect(() => {
         if (token) {
-            axios.defaults.headers.authorization = `Bearer ${token}`;
+            reportsService.setAuth(`Bearer ${token}`);
+            usersService.setAuth(`Bearer ${token}`);
+
             reportsService.getChatsReports()
                 .then(res => setReports(res.data.map(r => ({ ...r, progress: r.status === "pending" ? 0 : 100 }))))
                 .catch(err => toast.error("Falha ao buscar relatórios!\n" + sanitizeErrorMessage(err)));
@@ -97,7 +99,7 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
                 .then(res => setUsers(res.data))
                 .catch(err => toast.error("Falha ao buscar usuários!\n" + sanitizeErrorMessage(err)));
         }
-    }, [instance, token]);
+    }, [instance, token, usersService, reportsService]);
 
     useEffect(() => {
         const CHATS_REPORT_ROOM = "reports:chats";

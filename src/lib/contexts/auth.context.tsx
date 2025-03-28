@@ -9,7 +9,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { User } from "@in.pulse-crm/sdk";
 import usersService from "../services/users.service";
-import reportsService from "../services/reports.service";
 
 export const AuthContext = createContext({} as AuthContextProps);
 
@@ -45,19 +44,15 @@ export default function AuthProvider({ children }: ProviderProps) {
         router.replace(`/${instance}/login`);
     }, [router]);
 
-    useEffect(() => {
-        const previousToken = localStorage.getItem(`@inpulse/${instance}/token`);
-        setToken(previousToken);
-    }, [instance]);
 
     useEffect(() => {
-        usersService.setAuth(token ? `Bearer ${token}` : "");
-        reportsService.setAuth(token ? `Bearer ${token}` : "");
+        const prevToken = localStorage.getItem(`@inpulse/${instance}/token`);
+        setToken(prevToken);
 
-        if (token) {
-            authService.fetchSessionData(token)
+        if (prevToken) {
+            authService.fetchSessionData(prevToken)
                 .then(async (res) => {
-                    axios.defaults.headers["authorization"] = `Bearer ${token}`;
+                    axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
 
                     return await usersService.getUserById(res.data.userId);
                 })
@@ -79,10 +74,10 @@ export default function AuthProvider({ children }: ProviderProps) {
                 });
         }
 
-        if (!token && !pathname.includes("login")) {
+        if (!prevToken && !pathname.includes("login")) {
             router.replace(`/${instance}/login`);
         }
-    }, [token])
+    }, [instance]);
 
     return (
         <AuthContext.Provider value={{
