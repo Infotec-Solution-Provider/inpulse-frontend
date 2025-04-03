@@ -16,7 +16,11 @@ export const SocketContext = createContext({} as ISocketContext);
 
 export default function SocketProvider({ children }: SocketProviderProps) {
     const { token } = useContext(AuthContext);
-    const ioClient = useMemo(() => io(process.env.NEXT_PUBLIC_SOCKET_URL || ""), []);
+    const ioClient = useMemo(() => io(process.env.NEXT_PUBLIC_SOCKET_URL || "", {
+        autoConnect: false,
+        path: '/socket.io',
+        transports: ['websocket']
+    }), []);
     const client = useMemo(() => new SocketClientSDK(ioClient), [ioClient]);
 
     useEffect(() => {
