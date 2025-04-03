@@ -5,7 +5,6 @@ import reportsService from "@/lib/services/reports.service";
 import usersService from "@/lib/services/users.service";
 import { ChatsReport, ChatsReportFileFormat, ChatsReportStatusData, User } from "@in.pulse-crm/sdk";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import axios from "axios";
 import { usePathname } from "next/navigation";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
