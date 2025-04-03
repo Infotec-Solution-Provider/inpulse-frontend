@@ -17,7 +17,8 @@ export const SocketContext = createContext({} as ISocketContext);
 export default function SocketProvider({ children }: SocketProviderProps) {
     const { token } = useContext(AuthContext);
     const ioClient = useMemo(() => io(process.env.NEXT_PUBLIC_SOCKET_URL || "", {
-        autoConnect: false, transports: ["websocket"],
+        autoConnect: false,
+        transports: ["polling", "websocket"],
     }), []);
     const client = useMemo(() => new SocketClientSDK(ioClient), [ioClient]);
 
