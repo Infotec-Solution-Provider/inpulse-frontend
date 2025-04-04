@@ -50,7 +50,7 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
     const generateReport = useCallback(async (params: GenerateReportParams) => {
         try {
             const response = await reportsService.generateChatsReport(params);
-            setReports(prev => [...prev, { ...response.data, progress: 0 }]);
+            setReports(prev => [{ ...response.data, progress: 0 }, ...prev]);
             toast.success(response.message);
         }
         catch (err) {
