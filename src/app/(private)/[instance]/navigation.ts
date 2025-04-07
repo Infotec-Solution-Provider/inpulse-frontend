@@ -13,8 +13,8 @@ export interface NavigationItemChildren {
 
 export const navigationItems: Navigationitem[] = [
     {
-        title: "Início",
-        href: "/",
+        title: "Conversas",
+        href: "",
     },
     {
         title: "Monitoria",
