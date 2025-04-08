@@ -11,7 +11,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@in.pulse-crm/sdk": "^1.5.2",
+    "@in.pulse-crm/sdk": "^1.6.2",
     "@in.pulse-crm/utils": "^1.2.2",
     "@mui/material": "^7.0.1",
     "@mui/x-data-grid": "^7.28.2",

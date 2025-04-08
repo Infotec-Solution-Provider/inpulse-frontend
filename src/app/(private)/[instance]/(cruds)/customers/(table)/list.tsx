@@ -1,11 +1,13 @@
 "use client";
 import ClientListItem from "./list-item";
 import { Client } from "../type";
-import { Modal, Table, TableBody, TableContainer, TableHead } from "@mui/material";
+import { Button, Modal, Table, TableBody, TableContainer, TableHead } from "@mui/material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
 import { FaArrowLeft, FaArrowRight, FaLeftRight, FaSpinner } from "react-icons/fa6";
 import { useEffect, useMemo, useState } from "react";
 import EditModal from "./(modal)/edit-modal";
+import customersService from "@/lib/services/customers.service";
+import CreateModal from "./(modal)/create-modal";
 
 const MockClients: Client[] = [
   {
@@ -104,12 +106,16 @@ export default function ClientsList() {
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>();
 
-  const [openModal, setOpenModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [openCreateModal, setOpenCreateModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client>();
 
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    customersService.getAllCustomers({}).then((response) => {
+      console.log(response);
+    });
     setClients([...MockClients, ...MockClients, ...MockClients, ...MockClients]);
     setTotalPages(Math.ceil((MockClients.length * 4) / 10));
     setLoading(false);
@@ -117,11 +123,11 @@ export default function ClientsList() {
 
   function openModalHandler(index: number) {
     setSelectedClient(clients[index]);
-    setOpenModal(true);
+    setOpenEditModal(true);
   }
 
   function closeModalHandler() {
-    setOpenModal(false);
+    setOpenEditModal(false);
     setSelectedClient(undefined);
   }
 
@@ -152,8 +158,12 @@ export default function ClientsList() {
   return (
     <>
       {selectedClient && (
-        <EditModal onClose={closeModalHandler} open={openModal} client={selectedClient} />
+        <EditModal onClose={closeModalHandler} open={openEditModal} client={selectedClient} />
       )}
+
+      <CreateModal onClose={() => setOpenCreateModal(false)} open={openCreateModal} />
+
+      <Button onClick={() => setOpenCreateModal(true)}>Cadastrar cliente</Button>
 
       <TableContainer className="mx-auto max-h-[40rem] w-full rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
         <Table>

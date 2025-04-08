@@ -8,24 +8,18 @@ import {
   TextField,
 } from "@mui/material";
 import { Client } from "../../type";
-import { useEffect } from "react";
 import { FaX } from "react-icons/fa6";
 
-export interface EditModalProps {
+export interface CreateModalProps {
   open: boolean;
-  client: Client;
-  onClose: (value: Client) => void;
+  onClose: () => void;
 }
 
 let formData: Partial<Client> = {};
 
-export default function EditModal({ onClose, client, open }: EditModalProps) {
-  useEffect(() => {
-    formData = client;
-  });
-
+export default function CreateModal({ onClose, open }: CreateModalProps) {
   function handleClose() {
-    onClose(client);
+    onClose();
   }
 
   function handleSubmit() {
@@ -37,7 +31,7 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
       <FormControl>
         <div className="flex h-full w-full flex-col items-center gap-4 bg-slate-800 p-4">
           <DialogTitle sx={{ paddingLeft: 0.5, paddingTop: 0 }} className="w-full text-left">
-            Editar Cliente
+            Cadastrar Cliente
           </DialogTitle>
           <IconButton
             aria-label="close"
@@ -59,7 +53,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               name="razao"
               type="text"
               id="razao"
-              defaultValue={client.name}
               required
               onChange={(e) => {
                 formData = { ...formData, name: e.target.value };
@@ -71,7 +64,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               name="fantasy"
               type="text"
               id="fantasy"
-              defaultValue={client.fantasy}
               onChange={(e) => {
                 formData = { ...formData, fantasy: e.target.value };
               }}
@@ -83,7 +75,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               name="cpf"
               type="text"
               id="cpf"
-              defaultValue={client.cpf}
               fullWidth
               required
               onChange={(e) => {
@@ -95,7 +86,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               name="city"
               type="text"
               fullWidth
-              defaultValue={client.city}
               id="city"
               required
               onChange={(e) => {
@@ -106,7 +96,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               label="ERP"
               name="erp"
               type="text"
-              defaultValue={client.erp}
               fullWidth
               onChange={(e) => {
                 formData = { ...formData, erp: e.target.value };
@@ -116,7 +105,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
           <div className="flex h-full w-full flex-row items-center gap-4">
             <TextField
               name="active"
-              defaultValue={client.active ? "true" : "false"}
               label="Ativo"
               fullWidth
               select
@@ -136,7 +124,6 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               select
               label="Tipo de Pessoa"
               name="Tipo de Pessoa"
-              defaultValue={client.personType}
               id="personType"
               fullWidth
               required
@@ -158,7 +145,7 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               Cancelar
             </Button>
 
-            <Button onClick={handleSubmit}>Salvar</Button>
+            <Button onClick={handleSubmit}>Cadastrar</Button>
           </div>
         </div>
       </FormControl>
