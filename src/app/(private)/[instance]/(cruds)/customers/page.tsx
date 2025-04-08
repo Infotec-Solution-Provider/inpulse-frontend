@@ -1,4 +1,3 @@
-import CreateClientForm from "./form";
 import ClientsList from "./(table)/list";
 
 export default async function ClientsPage() {

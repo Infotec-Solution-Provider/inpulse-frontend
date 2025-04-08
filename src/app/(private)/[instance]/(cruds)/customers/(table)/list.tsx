@@ -1,25 +1,25 @@
 "use client";
 import ClientListItem from "./list-item";
 import { Client } from "../type";
-import { TableBody, TableContainer, TableHead } from "@mui/material";
-import { StyledTableCell, StyledTableRow } from "./table-style";
+import { Modal, Table, TableBody, TableContainer, TableHead } from "@mui/material";
+import { StyledTableCell, StyledTableRow } from "./mui-style";
 import { FaArrowLeft, FaArrowRight, FaLeftRight, FaSpinner } from "react-icons/fa6";
 import { useEffect, useMemo, useState } from "react";
+import EditModal from "./(modal)/edit-modal";
 
 const MockClients: Client[] = [
   {
     id: "1",
     active: true,
-    personType: "Individual",
+    personType: "FISICA",
     name: "John Doe",
     cpf: "123.456.789-00",
-    erp: "ERP-001",
     city: "New York",
   },
   {
     id: "2",
     active: false,
-    personType: "Company",
+    personType: "JURIDICA",
     name: "Acme Corp",
     cpf: "234.567.890-11",
     erp: "ERP-002",
@@ -28,7 +28,7 @@ const MockClients: Client[] = [
   {
     id: "3",
     active: true,
-    personType: "Individual",
+    personType: "FISICA",
     name: "Jane Smith",
     cpf: "345.678.901-22",
     erp: "ERP-003",
@@ -37,7 +37,7 @@ const MockClients: Client[] = [
   {
     id: "4",
     active: true,
-    personType: "Individual",
+    personType: "FISICA",
     name: "Alice Johnson",
     cpf: "456.789.012-33",
     erp: "ERP-004",
@@ -46,7 +46,7 @@ const MockClients: Client[] = [
   {
     id: "5",
     active: false,
-    personType: "Company",
+    personType: "JURIDICA",
     name: "Tech Solutions",
     cpf: "567.890.123-44",
     erp: "ERP-005",
@@ -55,7 +55,7 @@ const MockClients: Client[] = [
   {
     id: "6",
     active: true,
-    personType: "Individual",
+    personType: "FISICA",
     name: "Bob Brown",
     cpf: "678.901.234-55",
     erp: "ERP-006",
@@ -64,7 +64,7 @@ const MockClients: Client[] = [
   {
     id: "7",
     active: false,
-    personType: "Company",
+    personType: "JURIDICA",
     name: "Global Enterprises",
     cpf: "789.012.345-66",
     erp: "ERP-007",
@@ -73,7 +73,7 @@ const MockClients: Client[] = [
   {
     id: "8",
     active: true,
-    personType: "Individual",
+    personType: "FISICA",
     name: "Charlie Davis",
     cpf: "890.123.456-77",
     erp: "ERP-008",
@@ -82,7 +82,7 @@ const MockClients: Client[] = [
   {
     id: "9",
     active: false,
-    personType: "Company",
+    personType: "JURIDICA",
     name: "Innovatech",
     cpf: "901.234.567-88",
     erp: "ERP-009",
@@ -91,7 +91,7 @@ const MockClients: Client[] = [
   {
     id: "10",
     active: true,
-    personType: "Individual",
+    personType: "FISICA",
     name: "Diana Prince",
     cpf: "012.345.678-99",
     erp: "ERP-010",
@@ -104,20 +104,37 @@ export default function ClientsList() {
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>();
 
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client>();
+
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    setClients(MockClients);
-    setTotalPages(Math.ceil(MockClients.length / 10));
+    setClients([...MockClients, ...MockClients, ...MockClients, ...MockClients]);
+    setTotalPages(Math.ceil((MockClients.length * 4) / 10));
     setLoading(false);
   }, []);
 
+  function openModalHandler(index: number) {
+    setSelectedClient(clients[index]);
+    setOpenModal(true);
+  }
+
+  function closeModalHandler() {
+    setOpenModal(false);
+    setSelectedClient(undefined);
+  }
+
   const rows = useMemo(() => {
-    if (clients) {
+    if (clients && clients.length > 0 && !loading) {
       return (
         <TableBody>
-          {clients.slice(page * 10, (page + 1) * 10).map((client) => (
-            <ClientListItem key={`${client.name}_${client.id}`} client={client} />
+          {clients.slice(page * 10, (page + 1) * 10).map((client, index) => (
+            <ClientListItem
+              key={`${client.name}_${client.id}`}
+              client={client}
+              openModalHandler={() => openModalHandler(index + page * 10)}
+            />
           ))}
         </TableBody>
       );
@@ -134,20 +151,26 @@ export default function ClientsList() {
 
   return (
     <>
+      {selectedClient && (
+        <EditModal onClose={closeModalHandler} open={openModal} client={selectedClient} />
+      )}
+
       <TableContainer className="mx-auto max-h-[40rem] w-full rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
-        <TableHead>
-          <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
-            <StyledTableCell className="w-32">Código</StyledTableCell>
-            <StyledTableCell className="w-32">Ativo</StyledTableCell>
-            <StyledTableCell className="w-32">Pessoa</StyledTableCell>
-            <StyledTableCell className="w-48">Razão social</StyledTableCell>
-            <StyledTableCell className="w-48">CPF/CNPJ</StyledTableCell>
-            <StyledTableCell className="w-48">Cidade</StyledTableCell>
-            <StyledTableCell className="w-32">ERP</StyledTableCell>
-            <StyledTableCell className="w-16" />
-          </StyledTableRow>
-        </TableHead>
-        {rows}
+        <Table>
+          <TableHead>
+            <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
+              <StyledTableCell>Código</StyledTableCell>
+              <StyledTableCell>Ativo</StyledTableCell>
+              <StyledTableCell>Pessoa</StyledTableCell>
+              <StyledTableCell>Razão social</StyledTableCell>
+              <StyledTableCell>CPF/CNPJ</StyledTableCell>
+              <StyledTableCell>Cidade</StyledTableCell>
+              <StyledTableCell>ERP</StyledTableCell>
+              <StyledTableCell> ... </StyledTableCell>
+            </StyledTableRow>
+          </TableHead>
+          {rows}
+        </Table>
       </TableContainer>
       <div className="flex h-fit w-full justify-center gap-4 px-4 pb-2 pt-0">
         <button
