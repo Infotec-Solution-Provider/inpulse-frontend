@@ -1,0 +1,1 @@
+export type ChatUrgency = "NORMAL" | "ALTA" | "URGENTE";
