@@ -14,13 +14,16 @@ export default function ChatsMenu() {
           </Button>
         </div>
         <form className="flex flex-col gap-1">
-          <TextField variant="outlined" placeholder="Filtrar" size="small" fullWidth />
+          <TextField variant="outlined" size="small" fullWidth label="Filtrar" />
           <div className="mb-1.5">
             <FormControlLabel
               control={<Checkbox size="small" defaultChecked />}
               label="Agendamentos"
             />
-            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Outros" />
+            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Recebidos" />
+            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Iniciados" />
+            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Inativos" />
+            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Não lidos" />
           </div>
         </form>
       </div>
@@ -37,7 +40,6 @@ export default function ChatsMenu() {
         />
         <ChatsMenuItem
           name="Maria Silva"
-          avatar="./pfp2.jpg"
           message="Olá! Estou interessada nos novos produtos."
           date="08/04/2015"
           tags={[
@@ -46,7 +48,6 @@ export default function ChatsMenu() {
         />
         <ChatsMenuItem
           name="João Pereira"
-          avatar="./pfp3.jpg"
           message="Oi! Quando será a próxima reunião?"
           date="09/04/2015"
           tags={[

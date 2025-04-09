@@ -3,19 +3,59 @@ import Image from "next/image";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import LogoutIcon from "@mui/icons-material/Logout";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useContext, useMemo } from "react";
-import { AuthContext } from "@/lib/contexts/auth.context";
-import { Button, IconButton, Tooltip } from "@mui/material";
+import { AuthContext } from "@/app/auth-context";
+import { IconButton } from "@mui/material";
+import { navigationItems } from "./navigation";
+import HeaderNavItem from "./header-nav-item";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import MonitorIcon from "@mui/icons-material/Monitor";
-import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import BuildIcon from "@mui/icons-material/Build";
+import { UserRole } from "@in.pulse-crm/sdk";
+
+const monitorRoutes = [
+  { title: "Atendimentos", href: "/monitor/attendances" },
+  { title: "Agendamentos", href: "/monitor/schedules" },
+  { title: "Usuários", href: "/monitor/users" },
+];
+
+const crudsRoutes = [
+  { title: "Atendimentos", href: "/attendances" },
+  { title: "Agendamentos", href: "/schedules" },
+  { title: "Usuários", href: "/users" },
+  { title: "Clientes", href: "/customers" },
+  { title: "Contatos", href: "/contacts" },
+  { title: "Templates", href: "/templates" },
+  { title: "Tags", href: "/tags" },
+];
+
+const reportsRoutes = [
+  { title: "Conversas", href: "/reports/chats" },
+  { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
+  { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
+  { title: "Mensagens por usuário", href: "/reports/messages-by-user" },
+];
+
+const toolsRoutes = [
+  { title: "Mensagens em massa", href: "/tools/mass-messages" },
+  { title: "Mensagens automáticas", href: "/tools/automatic-messages" },
+];
 
 export default function Header() {
   const { signOut, user } = useContext(AuthContext);
+
+  const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
+
+  const allowedRoutes = useMemo(() => {
+    return navigationItems.filter((item) => {
+      if ("allowedRoles" in item) {
+        return user?.NIVEL && item.allowedRoles!.includes(user.NIVEL);
+      }
+      return true;
+    });
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-20 shadow-2xl">
@@ -24,37 +64,25 @@ export default function Header() {
           <div className="flex items-center gap-8">
             <Image src={HorizontalLogo} alt={"Logo"} height={36} />
           </div>
-          <div>
-            <Tooltip title={<h2 className="text-base">Area de atendimento</h2>} arrow>
-              <Button>
+          <nav>
+            <menu className="flex items-center gap-4 text-sm font-semibold text-slate-200">
+              <HeaderNavItem title="Área de Atendimento" href="/">
                 <HeadsetMicIcon />
-              </Button>
-            </Tooltip>
-
-            <Tooltip title={<h2 className="text-base">Monitoria</h2>} arrow>
-              <Button>
+              </HeaderNavItem>
+              <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
                 <MonitorIcon />
-              </Button>
-            </Tooltip>
-
-            <Tooltip title={<h2 className="text-base">Cadastros</h2>} arrow>
-              <Button>
+              </HeaderNavItem>
+              <HeaderNavItem title="Cadastros" routes={crudsRoutes} disabled={!isUserAdmin}>
                 <AppRegistrationIcon />
-              </Button>
-            </Tooltip>
-
-            <Tooltip title={<h2 className="text-base">Relatórios</h2>} arrow>
-              <Button>
+              </HeaderNavItem>
+              <HeaderNavItem title="Relatórios" routes={reportsRoutes} disabled={!isUserAdmin}>
                 <BarChartIcon />
-              </Button>
-            </Tooltip>
-
-            <Tooltip title={<h2 className="text-base">Ferramentas</h2>} arrow>
-              <Button>
+              </HeaderNavItem>
+              <HeaderNavItem title="Ferramentas" routes={toolsRoutes} disabled={!isUserAdmin}>
                 <BuildIcon />
-              </Button>
-            </Tooltip>
-          </div>
+              </HeaderNavItem>
+            </menu>
+          </nav>
           <div className="flex items-center gap-4">
             <h1 className="truncate">{user?.NOME}</h1>
             <IconButton title="notifications" type="button">
@@ -67,63 +95,5 @@ export default function Header() {
         </div>
       </div>
     </header>
-  );
-}
-
-interface MenuSubItem {
-  title: string;
-  href: string;
-  roles?: string[];
-}
-
-interface MenuItemProps {
-  title: string;
-  href: string;
-  roles?: string[];
-  nestedItems?: MenuSubItem[];
-}
-
-function MenuItem({ title, href, nestedItems, roles }: MenuItemProps) {
-  const { user } = useContext(AuthContext);
-  // path completo /:instance/.../...
-  const pathname = usePathname();
-  const baseHref = pathname.split("/")[1];
-  const display = useMemo(() => {
-    if (!!user && roles) {
-      return roles.includes(user.NIVEL || "");
-    }
-    return true;
-  }, [user, roles]);
-
-  return (
-    <>
-      {display && (
-        <li className="group relative flex items-center gap-2">
-          {nestedItems ? (
-            <p className="cursor-default hover:text-indigo-400">{title}</p>
-          ) : (
-            <Link href={`/${baseHref}/${href}`} className="hover:text-indigo-400">
-              {title}
-            </Link>
-          )}
-          {nestedItems && (
-            <div className="absolute bottom-0 left-0 z-20 hidden w-max translate-y-full pt-2 group-hover:block">
-              <ul className="bg-neutral-700 px-4 py-1">
-                {nestedItems.map((item) => (
-                  <li key={item.title} className="w-max truncate p-1">
-                    <Link
-                      href={`/${baseHref}/${href}/${item.href}`}
-                      className="hover:text-indigo-400"
-                    >
-                      {item.title}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      )}
-    </>
   );
 }

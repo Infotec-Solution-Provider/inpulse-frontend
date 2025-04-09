@@ -15,7 +15,6 @@ export default function Home() {
                 startDate="2023-01-01"
                 urgency="NORMAL"
                 allowedUrgency={["NORMAL", "ALTA", "URGENTE"]}
-                avatarUrl="https://via.placeholder.com/64"
             />
         </div>
     );

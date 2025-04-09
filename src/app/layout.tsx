@@ -3,7 +3,7 @@ import type React from "react";
 import { Fira_Sans } from "next/font/google";
 import "./globals.css";
 import { Bounce, ToastContainer } from "react-toastify";
-import AuthProvider from "@/lib/contexts/auth.context";
+import AuthProvider from "@/app/auth-context";
 import { ThemeProvider } from "@emotion/react";
 
 const firaSans = Fira_Sans({
