@@ -2,13 +2,13 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import { AuthContextProps, AuthSignForm } from "@/lib/types/auth-context.types";
 import { ProviderProps } from "@/lib/types/generic.types";
-import authService from "../services/auth.service";
+import authService from "../lib/services/auth.service";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { User } from "@in.pulse-crm/sdk";
-import usersService from "../services/users.service";
+import usersService from "../lib/services/users.service";
 
 export const AuthContext = createContext({} as AuthContextProps);
 

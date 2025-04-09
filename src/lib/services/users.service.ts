@@ -1,10 +1,5 @@
-"use client"
-import { UserSDK } from "@in.pulse-crm/sdk";
-import axios from "axios";
+"use client";
+import { UsersClient } from "@in.pulse-crm/sdk";
 
-const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_USERS_URL,
-    timeout: 10000,
-});
-
-export default new UserSDK(axiosInstance);
+const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001";
+export default new UsersClient(USERS_URL);

@@ -1,9 +1,5 @@
-import { ReportSDK } from '@in.pulse-crm/sdk'
-import axios from 'axios'
+"use client";
+import { ReportsClient } from "@in.pulse-crm/sdk";
 
-const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_REPORTS_URL,
-    timeout: 120000,
-});
-
-export default new ReportSDK(axiosInstance);
+const REPORTS_URL = process.env["NEXT_PUBLIC_REPORTS_URL"] || "http://localhost:8006";
+export default new ReportsClient(REPORTS_URL);
