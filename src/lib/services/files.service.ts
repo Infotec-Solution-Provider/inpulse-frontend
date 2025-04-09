@@ -1,9 +1,5 @@
-import { FileSDK } from '@in.pulse-crm/sdk'
-import axios from 'axios'
+"use client";
+import { FilesClient } from "@in.pulse-crm/sdk";
 
-const axiosInstance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_FILES_URL,
-    timeout: 60000,
-});
-
-export default new FileSDK(axiosInstance);
+const FILES_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "http://localhost:8003";
+export default new FilesClient(FILES_URL);
