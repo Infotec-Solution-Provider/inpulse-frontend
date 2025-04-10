@@ -1,216 +1,161 @@
-"use client"
-import { useContext } from "react";
-import { FormWrapper } from "./form-wrapper";
-import { FormControl, MenuItem, Select } from "@mui/material";
-import { UsersContext } from "../context";
-import { UserRole } from "@in.pulse-crm/sdk";
-import { StyledInputLabel, StyledSelect, StyledTextField } from "./form-styles";
-import { FieldWrapper } from "./field-wrapper";
+import { TextField, MenuItem } from "@mui/material";
+import { User, UserRole } from "@in.pulse-crm/sdk";
 
-export default function FormGeral() {
-    const { changeFormField, form } = useContext(UsersContext);
-    const opcoesNivel = { "Ativo": "ATIVO", "Receptivo": "RECEP", "Ambos": "AMBOS", "Supervisor": "ADMIN" };
-    const opcoesSetor = { setor1: 1, setor2: 2, setor3: 3 };
+interface FormGeralProps {
+    formData: Partial<User>;
+    onFormChange: (data: Partial<User>) => void;
+}
+
+export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
 
     return (
-        <FormWrapper>
-            <FieldWrapper>
-                <StyledTextField
+        <div className="flex flex-col gap-4 w-full">
+            <div className="flex w-full flex-row justify-center gap-4">
+                <TextField
                     label="Nome"
-                    variant="outlined"
+                    name="NOME"
+                    id="NOME"
+                    type="text"
                     fullWidth
-                    size="small"
                     required
-                    onChange={(e) => changeFormField("NOME", e.target.value)}
+                    value={formData.NOME}
+                    onChange={(e) => onFormChange({ NOME: e.target.value })}
                 />
-                <StyledTextField
+                <TextField
                     label="Login"
-                    variant="outlined"
+                    name="LOGIN"
+                    id="LOGIN"
+                    type="text"
                     fullWidth
-                    size="small"
                     required
-                    onChange={(e) => changeFormField("LOGIN", e.target.value)}
+                    value={formData.LOGIN}
+                    onChange={(e) => onFormChange({ LOGIN: e.target.value })}
                 />
-            </FieldWrapper>
-            <FieldWrapper>
-                <StyledTextField
+            </div>
+            <div className="flex w-full flex-row justify-center gap-4">
+                <TextField
                     label="Email"
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    required
+                    name="EMAIL"
+                    id="EMAIL"
                     type="email"
-                    onChange={(e) => changeFormField("EMAIl", e.target.value)}
+                    fullWidth
+                    required
+                    value={formData.EMAIL}
+                    onChange={(e) => onFormChange({ EMAIL: e.target.value })}
                 />
-                <StyledTextField
+                <TextField
                     label="Senha"
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    required
+                    name="SENHA"
+                    id="SENHA"
                     type="password"
-                    onChange={(e) => changeFormField("SENHA", e.target.value)}
-                />
-            </FieldWrapper>
-            <FieldWrapper>
-                <StyledTextField
-                    label="Nome de exibição"
-                    variant="outlined"
                     fullWidth
-                    size="small"
-                    onChange={(e) => changeFormField("NOME_EXIBICAO", e.target.value)}
-                />
-                <StyledTextField
-                    label="Email de exibição"
-                    variant="outlined"
-                    fullWidth
-                    size="small"
-                    onChange={(e) => changeFormField("EMAIL_EXIBICAO", e.target.value)}
-                />
-            </FieldWrapper>
-            <FieldWrapper>
-                <StyledTextField
-                    label="Assinatura email"
-                    variant="outlined"
-                    fullWidth
-                    size="small"
                     required
-                    onChange={(e) => changeFormField("ASSINATURA_EMAIL", e.target.value)}
+                    value={formData.SENHA}
+                    onChange={(e) => onFormChange({ SENHA: e.target.value })}
                 />
-                <div className="w-[100%] justify-between">select horario</div>
-                {/* <FormControl fullWidth >
-                <StyledInputLabel>Horario</StyledInputLabel>
-                <Select
-                    value={horario}
-                    onChange={(value) => updateFields({ horario: value.target.value })}
-                    sx={{
-                        color: 'white',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'gray',
-                        },
-                        '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'white',
-                        },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'white',
-                        },
-                        '& .MuiSvgIcon-root': {
-                            color: 'white',
-                        }
-                    }}
-                    MenuProps={{
-                        PaperProps: {
-                            sx: {
-                                backgroundColor: '#333',
-                                '& .MuiMenuItem-root': {
-                                    color: 'white',
-                                    '&:hover': {
-                                        backgroundColor: '#555',
-                                    },
-                                    '&.Mui-selected': {
-                                        backgroundColor: '#666',
-                                    }
-                                }
-                            }
-                        }
-                    }}
+            </div>
+            <div className="flex w-full flex-row justify-center gap-4">
+                <TextField
+                    label="Nome de exibição"
+                    name="NOME_EXIBICAO"
+                    type="text"
+                    fullWidth
+                    value={formData.NOME_EXIBICAO}
+                    onChange={(e) => onFormChange({ NOME_EXIBICAO: e.target.value })}
+                />
+                <TextField
+                    label="Email de exibição"
+                    name="EMAIL_EXIBICAO"
+                    type="text"
+                    fullWidth
+                    value={formData.EMAIL_EXIBICAO}
+                    onChange={(e) => onFormChange({ EMAIL_EXIBICAO: e.target.value })}
+                />
+            </div>
+            <div className="flex w-full flex-row justify-center gap-4">
+                <TextField
+                    label="Assinatura email"
+                    name="ASSINATURA_EMAIL"
+                    type="text"
+                    fullWidth
+                    value={formData.ASSINATURA_EMAIL}
+                    onChange={(e) => onFormChange({ ASSINATURA_EMAIL: e.target.value })}
+                />
+                <TextField
+                    label="Código ERP"
+                    name="CODIGO_ERP"
+                    type="text"
+                    fullWidth
+                    required
+                    value={formData.CODIGO_ERP}
+                    onChange={(e) => onFormChange({ CODIGO_ERP: e.target.value })}
+                />
+            </div>
+            <div className="flex w-full flex-row justify-center gap-4">
+                <TextField
+                    label="Setor"
+                    name="SETOR"
+                    id="SETOR"
+                    select
+                    fullWidth
+                    required
+                    value={formData.SETOR}
+                    onChange={(e) => onFormChange({ SETOR: Number(e.target.value) })}
                 >
-                    {Object.entries(opcoesHorario).map(([key, value]) => (
-                        <MenuItem key={key} value={key} sx={{ color: 'white' }} >
-                            {value}
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl> */}
-            </FieldWrapper>
-            <FieldWrapper>
-                <FormControl fullWidth >
-                    <StyledInputLabel>Nível</StyledInputLabel>
-                    <StyledSelect
-                        label="Nível"
-                        value={form.NIVEL}
-                        size="small"
-                        required
-                        onChange={(e) => changeFormField("NIVEL", e.target.value as UserRole)}
-                        MenuProps={{
-                            PaperProps: {
-                                sx: {
-                                    backgroundColor: '#333',
-                                    '& .MuiMenuItem-root': {
-                                        color: 'white',
-                                        '&:hover': {
-                                            backgroundColor: '#555',
-                                        },
-                                        '&.Mui-selected': {
-                                            backgroundColor: '#666',
-                                        }
-                                    }
-                                }
-                            }
-                        }}
-                    >
-                        {Object.entries(opcoesNivel).map(([key, value]) => (
-                            <MenuItem key={key} value={key} sx={{ color: 'white' }}>
-                                {value}
-                            </MenuItem>
-                        ))}
-                    </StyledSelect>
-                </FormControl>
-                <FormControl fullWidth >
-                    <StyledInputLabel>Setor</StyledInputLabel>
-                    <Select
-                        label="Setor"
-                        value={form.SETOR}
-                        size="small"
-                        required
-                        onChange={(e) => changeFormField("SETOR", Number(e.target.value))}
-                        sx={{
-                            color: 'white',
-                            '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'gray',
-                            },
-                            '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'white',
-                            },
-                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'white',
-                            },
-                            '& .MuiSvgIcon-root': {
-                                color: 'white',
-                            }
-                        }}
-                        MenuProps={{
-                            PaperProps: {
-                                sx: {
-                                    backgroundColor: '#333',
-                                    '& .MuiMenuItem-root': {
-                                        color: 'white',
-                                        '&:hover': {
-                                            backgroundColor: '#555',
-                                        },
-                                        '&.Mui-selected': {
-                                            backgroundColor: '#666',
-                                        }
-                                    }
-                                }
-                            }
-                        }}
-                    >
-                        {Object.entries(opcoesSetor).map(([key, value]) => (
-                            <MenuItem key={key} value={key} sx={{ color: 'white' }}>
-                                {value}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-            </FieldWrapper>
-            <StyledTextField
-                label="Código ERP"
-                variant="outlined"
-                fullWidth
-                size="small"
-                onChange={(e) => changeFormField("CODIGO_ERP", e.target.value)}
-            />
-        </FormWrapper>
+                    <MenuItem value="1" key="Setor1">
+                        Setor 1
+                    </MenuItem>
+                    <MenuItem value="2" key="Setor2">
+                        Setor 2
+                    </MenuItem>
+                    <MenuItem value="3" key="Setor3">
+                        Setor 3
+                    </MenuItem>
+                    <MenuItem value="4" key="Setor4">
+                        Setor 4
+                    </MenuItem>
+                </TextField>
+                <TextField
+                    label="Nível"
+                    name="NIVEL"
+                    select
+                    fullWidth
+                    required
+                    value={formData.NIVEL}
+                    onChange={(e) => onFormChange({ NIVEL: e.target.value as UserRole })}
+                >
+                    <MenuItem value={"ADMIN"} key="ADMIN">
+                        Admin
+                    </MenuItem>
+                    <MenuItem value={"ATIVO"} key="ATIVO">
+                        Ativo
+                    </MenuItem>
+                    <MenuItem value={"RECEP"} key="RECEP">
+                        Recepcionista
+                    </MenuItem>
+                    <MenuItem value={"AMBOS"} key="AMBOS">
+                        Ambos
+                    </MenuItem>
+                </TextField>
+                <TextField
+                    label="Horário"
+                    name="HORARIO"
+                    select
+                    fullWidth
+                    value={formData.HORARIO}
+                    onChange={(e) => onFormChange({ HORARIO: Number(e.target.value) })}
+                >
+                    <MenuItem value={"1"} key="MANHA">
+                        Manhã
+                    </MenuItem>
+                    <MenuItem value={"2"} key="TARDE">
+                        Tarde
+                    </MenuItem>
+                    <MenuItem value={"3"} key="INTEGRAL">
+                        Integral
+                    </MenuItem>
+                </TextField>
+            </div>
+        </div>
     );
-}
+}  

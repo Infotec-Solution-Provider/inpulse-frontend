@@ -1,11 +1,4 @@
-import {
-  paginationItemClasses,
-  styled,
-  TableCell,
-  tableCellClasses,
-  TablePagination,
-  TableRow,
-} from "@mui/material";
+import { paginationItemClasses, styled, TableCell, tableCellClasses, TablePagination, TableRow } from "@mui/material";
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
@@ -17,7 +10,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
 }));
 
-export const StyledTableRow = styled(TableRow)(({ theme }) => ({
+export const StyledTableRow = styled(TableRow)(() => ({
   "&:nth-of-type(even)": {
     backgroundColor: "rgba(67, 56, 202, 0.05)",
   },
