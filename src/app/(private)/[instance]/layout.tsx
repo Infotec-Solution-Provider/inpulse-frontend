@@ -10,10 +10,6 @@ interface AppLayoutProps {
   children: ReactNode;
 }
 
-const darkTheme = createTheme({
-  palette: { mode: "dark" },
-});
-
 export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="box-border h-screen w-full overflow-hidden">

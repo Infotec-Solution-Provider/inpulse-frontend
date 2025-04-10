@@ -47,6 +47,7 @@ export default function Header() {
   const { signOut, user } = useContext(AuthContext);
 
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
+  console.log(user)
 
   const allowedRoutes = useMemo(() => {
     return navigationItems.filter((item) => {
