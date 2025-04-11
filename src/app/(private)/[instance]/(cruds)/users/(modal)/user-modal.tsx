@@ -29,8 +29,7 @@ export default function UserModal({ user }: UserModalProps) {
       VISUALIZA_COMPRAS: formData.VISUALIZA_COMPRAS === undefined ? "NAO" : formData.VISUALIZA_COMPRAS,
       LIGA_REPRESENTANTE: formData.LIGA_REPRESENTANTE === undefined ? "NAO" : formData.LIGA_REPRESENTANTE,
     };
-
-    isEdit ? updateUser(user.CODIGO, submittedData as UpdateUserDTO) : createUser(submittedData! as CreateUserDTO);
+    isEdit ? updateUser(user.CODIGO, submittedData as UpdateUserDTO) : createUser(submittedData as CreateUserDTO);
   }
 
   return (
@@ -75,7 +74,7 @@ export default function UserModal({ user }: UserModalProps) {
                 />
               )}
             </div>
-            <div className="flex w-full flex-row items-center justify-end gap-4 sticky bottom-0 pt-[1rem] border-t-[1px] border-white">
+            <div className="flex w-full flex-row items-center justify-end gap-4 sticky bottom-0 pt-[1rem] border-t-[2px] border-blue-500">
               <Button color="error" onClick={closeModal}>Cancelar</Button>
               <Button onClick={handleSubmit}>
                 {isEdit ? "Salvar" : "Cadastrar"}
