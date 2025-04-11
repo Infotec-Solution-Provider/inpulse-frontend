@@ -1,6 +1,7 @@
 "use client";
 import { Table, TableBody, TableContainer, TableHead } from "@mui/material";
-import { FaArrowLeft, FaArrowRight, FaSpinner } from "react-icons/fa6";
+import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
+import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
 import { useContext, useMemo, useState } from "react";
 import { UsersContext } from "../context";
 import UsersTableRow from "./users-row";
@@ -26,19 +27,23 @@ export default function UsersTable() {
       );
     } else if (loading) {
       return (
-        <StyledTableRow className="h-32 w-full items-center justify-center text-center text-gray-400">
-          <StyledTableCell colSpan={8} className="flex items-center justify-center gap-2">
-            <FaSpinner /> Carregando usuários...
-          </StyledTableCell>
-        </StyledTableRow>
+        <TableBody>
+          <StyledTableRow className="h-32 w-full items-center justify-center text-center text-gray-400">
+            <StyledTableCell colSpan={8} className="flex items-center justify-center gap-2">
+              <HourglassBottomIcon /> Carregando usuários...
+            </StyledTableCell>
+          </StyledTableRow>
+        </TableBody>
       );
     } else {
       return (
-        <StyledTableRow className="h-32 w-full items-center justify-center text-center text-gray-400">
-          <StyledTableCell colSpan={8}>
-            Nenhum usuário encontrado
-          </StyledTableCell>
-        </StyledTableRow>
+        <TableBody>
+          <StyledTableRow className="h-32 w-full items-center justify-center text-center text-gray-400">
+            <StyledTableCell colSpan={8}>
+              Nenhum usuário encontrado
+            </StyledTableCell>
+          </StyledTableRow>
+        </TableBody>
       );
     }
   }, [users, page, loading]);

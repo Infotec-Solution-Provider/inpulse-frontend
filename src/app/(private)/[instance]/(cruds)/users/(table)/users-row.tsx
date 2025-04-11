@@ -1,4 +1,4 @@
-import { FaPencil } from "react-icons/fa6";
+import EditIcon from '@mui/icons-material/Edit';
 import { TableRow } from "@mui/material";
 import { User } from "@in.pulse-crm/sdk";
 import { useContext } from "react";
@@ -33,7 +33,7 @@ export default function UsersTableRow({ user, index }: UserTableRowProps) {
             }
           }}
         >
-          <FaPencil />
+          <EditIcon />
         </button>
       </StyledTableCell>
     </TableRow>

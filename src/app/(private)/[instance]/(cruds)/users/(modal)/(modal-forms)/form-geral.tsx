@@ -43,7 +43,6 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                     type="email"
                     fullWidth
                     size="small"
-                    required
                     value={formData.EMAIL}
                     onChange={(e) => onFormChange({ EMAIL: e.target.value })}
                 />
@@ -59,7 +58,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                     onChange={(e) => onFormChange({ SENHA: e.target.value })}
                 />
             </div>
-            <div className="flex w-full flex-row justify-center gap-4">
+            {/*             <div className="flex w-full flex-row justify-center gap-4">
                 <StyledTextField
                     label="Nome de exibição"
                     name="NOME_EXIBICAO"
@@ -78,28 +77,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                     value={formData.EMAIL_EXIBICAO}
                     onChange={(e) => onFormChange({ EMAIL_EXIBICAO: e.target.value })}
                 />
-            </div>
-            <div className="flex w-full flex-row justify-center gap-4">
-                <StyledTextField
-                    label="Assinatura email"
-                    name="ASSINATURA_EMAIL"
-                    type="text"
-                    fullWidth
-                    size="small"
-                    value={formData.ASSINATURA_EMAIL}
-                    onChange={(e) => onFormChange({ ASSINATURA_EMAIL: e.target.value })}
-                />
-                <StyledTextField
-                    label="Código ERP"
-                    name="CODIGO_ERP"
-                    type="text"
-                    fullWidth
-                    size="small"
-                    required
-                    value={formData.CODIGO_ERP}
-                    onChange={(e) => onFormChange({ CODIGO_ERP: e.target.value })}
-                />
-            </div>
+            </div> */}
             <div className="flex w-full flex-row justify-center gap-4">
                 <StyledTextField
                     label="Setor"
@@ -109,6 +87,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                     fullWidth
                     size="small"
                     required
+                    defaultValue={""}
                     value={formData.SETOR}
                     onChange={(e) => onFormChange({ SETOR: Number(e.target.value) })}
                     slotProps={selectSlotProps}
@@ -133,6 +112,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                     fullWidth
                     size="small"
                     required
+                    defaultValue={""}
                     value={formData.NIVEL}
                     onChange={(e) => onFormChange({ NIVEL: e.target.value as UserRole })}
                     slotProps={selectSlotProps}
@@ -150,12 +130,13 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                         Ambos
                     </MenuItem>
                 </StyledTextField>
-                <StyledTextField
+                {/*                 <StyledTextField
                     label="Horário"
                     name="HORARIO"
                     select
                     fullWidth
                     size="small"
+                    defaultValue={""}
                     value={formData.HORARIO}
                     onChange={(e) => onFormChange({ HORARIO: Number(e.target.value) })}
                     slotProps={selectSlotProps}
@@ -169,7 +150,19 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
                     <MenuItem value={"3"} key="INTEGRAL">
                         Integral
                     </MenuItem>
-                </StyledTextField>
+                </StyledTextField> */}
+            </div>
+            <div className="flex w-1/2 pr-2 flex-row justify-center gap-4">
+                <StyledTextField
+                    label="Código ERP"
+                    name="CODIGO_ERP"
+                    type="text"
+                    fullWidth
+                    size="small"
+                    required
+                    value={formData.CODIGO_ERP}
+                    onChange={(e) => onFormChange({ CODIGO_ERP: e.target.value })}
+                />
             </div>
         </div>
     );

@@ -9,8 +9,6 @@ export const StyledDialog = styled(Dialog)(() => ({
 
 export const StyledDialogTitle = styled(DialogTitle)(() => ({
     display: "flex",
-    paddingX: "8px",
-    paddingY: 2,
     color: "white",
 }));
 
