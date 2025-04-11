@@ -1,5 +1,6 @@
-import { FormControlLabel, Switch, TextField } from "@mui/material";
+import { Switch } from "@mui/material";
 import { User } from "@in.pulse-crm/sdk";
+import { StyledFormControlLabel, StyledTextField } from "./styles-form";
 
 interface FormTelefoniaProps {
   formData: Partial<User>;
@@ -10,7 +11,7 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
   return (
     <div className="flex flex-col gap-4 w-full">
       <div className="flex w-full flex-row justify-center gap-4">
-        <FormControlLabel
+        <StyledFormControlLabel
           label="Visualiza compras"
           labelPlacement="start"
           control={
@@ -20,7 +21,7 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
             />
           }
         />
-        <FormControlLabel
+        <StyledFormControlLabel
           label="Edita/insere contatos"
           labelPlacement="start"
           control={
@@ -30,7 +31,7 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
             />
           }
         />
-        <FormControlLabel
+        <StyledFormControlLabel
           label="Liga pra representante"
           labelPlacement="start"
           control={
@@ -42,36 +43,40 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
         />
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <TextField
+        <StyledTextField
           label="Liga pra representante dias"
           name="LIGA_REPRESENTANTE_DIAS"
           type="number"
           fullWidth
+          size="small"
           value={formData.LIGA_REPRESENTANTE_DIAS}
           onChange={(e) => onFormChange({ LIGA_REPRESENTANTE_DIAS: Number(e.target.value) })}
         />
-        <TextField
+        <StyledTextField
           label="Limite diário de agendamento"
           name="limite_diario_agendamento"
           type="number"
           fullWidth
+          size="small"
           value={formData.limite_diario_agendamento}
           onChange={(e) => onFormChange({ limite_diario_agendamento: Number(e.target.value) })}
         />
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <TextField
+        <StyledTextField
           label="CodTelefonia"
           name="CODTELEFONIA"
           fullWidth
+          size="small"
           value={formData.CODTELEFONIA}
           onChange={(e) => onFormChange({ CODTELEFONIA: e.target.value })}
         />
-        <TextField
+        <StyledTextField
           label="OMNI"
           name="OMNI"
           type="number"
           fullWidth
+          size="small"
           value={formData.OMNI}
           onChange={(e) => onFormChange({ OMNI: Number(e.target.value) })}
         />

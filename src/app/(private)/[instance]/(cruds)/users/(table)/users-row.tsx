@@ -3,7 +3,7 @@ import { TableRow } from "@mui/material";
 import { User } from "@in.pulse-crm/sdk";
 import { useContext } from "react";
 import { UsersContext } from "../context";
-import { StyledTableCell } from "./table-styles";
+import { StyledTableCell } from "./styles-table";
 
 interface UserTableRowProps {
   user: Partial<User>;
@@ -11,7 +11,7 @@ interface UserTableRowProps {
 }
 
 export default function UsersTableRow({ user, index }: UserTableRowProps) {
-  const { openCreateUserModal } = useContext(UsersContext);
+  const { openUserModal } = useContext(UsersContext);
 
   return (
     <TableRow>
@@ -29,7 +29,7 @@ export default function UsersTableRow({ user, index }: UserTableRowProps) {
           type="button"
           onClick={() => {
             if (user.CODIGO) {
-              openCreateUserModal(user as User);
+              openUserModal(user as User);
             }
           }}
         >

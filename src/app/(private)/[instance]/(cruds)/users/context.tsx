@@ -5,7 +5,7 @@ import { CreateUserDTO, UpdateUserDTO, User } from "@in.pulse-crm/sdk"
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react"
 import { toast } from "react-toastify";
-import UsersModal from "./users-modal";
+import UsersModal from "./(modal)/user-modal";
 
 interface IUsersProviderProps {
     children: ReactNode;
@@ -16,8 +16,9 @@ interface IUsersContext {
     loading: boolean;
     createUser: (data: CreateUserDTO) => void;
     updateUser: (userId: number, data: UpdateUserDTO) => void;
-    openCreateUserModal: (user?: User) => void;
+    openUserModal: (user?: User) => void;
     closeModal: () => void;
+    modal: ReactNode;
 }
 
 export const UsersContext = createContext<IUsersContext>({} as IUsersContext);
@@ -41,7 +42,10 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
     const updateUser = useCallback(async (userId: number, data: UpdateUserDTO) => {
         try {
+            console.log("id: ", userId)
+            console.log("data: ", data)
             const response = await usersService.updateUser(String(userId), data)
+            console.log("response data: ", response.data)
             setUsers(prev => prev.map(u => u.CODIGO === userId ? response.data : u));
             toast.success("Usuário atualizado com sucesso!");
             closeModal();
@@ -50,23 +54,8 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         }
     }, []);
 
-    const openCreateUserModal = useCallback((user?: Partial<User>) => {
-        setModal(
-            <UsersModal
-                open={true}
-                onClose={(data) => {
-                    if (data) {
-                        if (user?.CODIGO) {
-                            updateUser(user.CODIGO, data);
-                        } else {
-                            createUser(data as CreateUserDTO);
-                        }
-                    }
-                    closeModal();
-                }}
-                user={user || {}}
-            />
-        );
+    const openUserModal = useCallback((user?: User) => {
+        setModal(<UsersModal user={user} />);
     }, [createUser, updateUser]);
 
     const closeModal = useCallback(() => {
@@ -92,8 +81,9 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
             loading,
             createUser,
             updateUser,
-            openCreateUserModal,
-            closeModal
+            openUserModal,
+            closeModal,
+            modal
         }}>
             {children}
             {modal}

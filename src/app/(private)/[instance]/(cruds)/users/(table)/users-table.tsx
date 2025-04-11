@@ -4,7 +4,7 @@ import { FaArrowLeft, FaArrowRight, FaSpinner } from "react-icons/fa6";
 import { useContext, useMemo, useState } from "react";
 import { UsersContext } from "../context";
 import UsersTableRow from "./users-row";
-import { StyledTableCell, StyledTableRow } from "./table-styles";
+import { StyledTableCell, StyledTableRow } from "./styles-table";
 
 export default function UsersTable() {
   const { users, loading } = useContext(UsersContext);
