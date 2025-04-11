@@ -1,9 +1,6 @@
-import { CustomerSDK } from "@in.pulse-crm/sdk";
+import { CustomersClient } from "@in.pulse-crm/sdk";
 import axios from "axios";
 
-const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_CUSTOMERS_URL,
-  timeout: 60000,
-});
+const NEXT_PUBLIC_CUSTOMERS_URL = process.env.NEXT_PUBLIC_CUSTOMERS_URL || "http://localhost:8002";
 
-export default new CustomerSDK(axiosInstance);
+export default new CustomersClient(NEXT_PUBLIC_CUSTOMERS_URL);

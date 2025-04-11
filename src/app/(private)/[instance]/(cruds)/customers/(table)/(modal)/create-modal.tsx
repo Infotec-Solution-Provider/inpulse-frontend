@@ -7,15 +7,17 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import { Client } from "../../type";
-import { FaX } from "react-icons/fa6";
+import { Close } from "@mui/icons-material";
+import { toast } from "react-toastify";
+import customersService from "@/lib/services/customers.service";
+import { CreateCustomerDTO, Customer } from "@in.pulse-crm/sdk";
 
 export interface CreateModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-let formData: Partial<Client> = {};
+let formData: Partial<Customer> = {};
 
 export default function CreateModal({ onClose, open }: CreateModalProps) {
   function handleClose() {
@@ -23,7 +25,33 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
   }
 
   function handleSubmit() {
-    console.log(formData);
+    const missingFields = [];
+    if (!formData.RAZAO) missingFields.push("Razão Social");
+    if (!formData.CPF_CNPJ) missingFields.push("CPF");
+    if (!formData.CIDADE) missingFields.push("Cidade");
+    if (formData.ATIVO === undefined) missingFields.push("Ativo");
+    if (!formData.PESSOA) missingFields.push("Tipo de Pessoa");
+
+    if (missingFields.length > 0) {
+      toast.error(
+        `Por favor, preencha os seguintes campos obrigatórios: ${missingFields.join(", ")}`,
+      );
+    } else {
+      const customerData: CreateCustomerDTO = {
+        RAZAO: formData.RAZAO!,
+        CPF_CNPJ: formData.CPF_CNPJ!,
+        CIDADE: formData.CIDADE!,
+        ATIVO: formData.ATIVO!,
+        PESSOA: formData.PESSOA!,
+        FANTASIA: formData.FANTASIA!,
+        COD_ERP: formData.COD_ERP || "",
+      };
+
+      customersService.createCustomer(customerData).then(() => {
+        toast.success("Cliente cadastrado com sucesso!");
+        onClose();
+      });
+    }
   }
 
   return (
@@ -44,7 +72,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               color: theme.palette.primary.light,
             })}
           >
-            <FaX />
+            <Close />
           </IconButton>
           <div className="flex w-full flex-row justify-center gap-4">
             <TextField
@@ -55,7 +83,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               id="razao"
               required
               onChange={(e) => {
-                formData = { ...formData, name: e.target.value };
+                formData = { ...formData, RAZAO: e.target.value };
               }}
             />
             <TextField
@@ -65,7 +93,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               type="text"
               id="fantasy"
               onChange={(e) => {
-                formData = { ...formData, fantasy: e.target.value };
+                formData = { ...formData, FANTASIA: e.target.value };
               }}
             />
           </div>
@@ -78,7 +106,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               fullWidth
               required
               onChange={(e) => {
-                formData = { ...formData, cpf: e.target.value };
+                formData = { ...formData, CPF_CNPJ: e.target.value };
               }}
             />
             <TextField
@@ -89,7 +117,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               id="city"
               required
               onChange={(e) => {
-                formData = { ...formData, city: e.target.value };
+                formData = { ...formData, CIDADE: e.target.value };
               }}
             />
             <TextField
@@ -98,7 +126,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               type="text"
               fullWidth
               onChange={(e) => {
-                formData = { ...formData, erp: e.target.value };
+                formData = { ...formData, COD_ERP: e.target.value };
               }}
             />
           </div>
@@ -110,13 +138,13 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               select
               required
               onChange={(e) => {
-                formData = { ...formData, active: e.target.value === "true" };
+                formData = { ...formData, ATIVO: e.target.value as "SIM" | "NAO" };
               }}
             >
-              <MenuItem value={"true"} key="true">
+              <MenuItem value={"SIM"} key="SIM">
                 Sim
               </MenuItem>
-              <MenuItem value={"false"} key="false">
+              <MenuItem value={"NAO"} key="NAO">
                 Não
               </MenuItem>
             </TextField>
@@ -128,13 +156,13 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               fullWidth
               required
               onChange={(e) => {
-                formData = { ...formData, personType: e.target.value as string };
+                formData = { ...formData, PESSOA: e.target.value as "FIS" | "JUR" };
               }}
             >
-              <MenuItem value="FISICA" key="FISICA">
+              <MenuItem value="FIS" key="FIS">
                 Física
               </MenuItem>
-              <MenuItem value="JURIDICA" key="JURIDICA">
+              <MenuItem value="JUR" key="JUR">
                 Jurídica
               </MenuItem>
             </TextField>
