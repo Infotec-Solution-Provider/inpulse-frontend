@@ -1,5 +1,5 @@
 "use client"
-import { AuthContext } from "@/lib/contexts/auth.context";
+import { AuthContext } from "@/app/auth-context";
 import usersService from "@/lib/services/users.service";
 import { CreateUserDTO, UpdateUserDTO, User } from "@in.pulse-crm/sdk"
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
