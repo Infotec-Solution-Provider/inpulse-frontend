@@ -15,11 +15,13 @@ interface UserModalProps {
 export default function UserModal({ user }: UserModalProps) {
   const { closeModal, createUser, updateUser, modal } = useContext(UsersContext)
   const [formData, setFormData] = useState<CreateUserDTO>({
-    LOGIN: user ? user.LOGIN : "",
-    NIVEL: user ? user.NIVEL : null,
     NOME: user ? user.NOME : "",
-    SENHA: user ? user.SENHA : "",
-    SETOR: user ? user.SETOR : null
+    LOGIN: user ? user.LOGIN : "",
+    EMAIL: user ? user.EMAIL : undefined,
+    SENHA: user ? user.SENHA! : "",
+    SETOR: user ? user.SETOR : null!,
+    NIVEL: user ? user.NIVEL as UserRole : "" as UserRole,
+    CODIGO_ERP: user ? user.CODIGO_ERP : null!
   });
   /* const [activeTab, setActiveTab] = useState(0); */
   const isEdit = !!user;
