@@ -4,8 +4,8 @@ import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk"
 import { useContext, useState } from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import { UsersContext } from "../context";
-import FormGeral from "./(modal-forms)/form-geral";
-import FormTelefonia from "./(modal-forms)/form-telefonia";
+import FormGeral from "../(forms)/form-geral";
+import FormTelefonia from "../(forms)/form-telefonia";
 import { StyledDialog, StyledDialogTitle, StyledIconButton, StyledTabs } from "./styles-modal";
 
 interface UserModalProps {

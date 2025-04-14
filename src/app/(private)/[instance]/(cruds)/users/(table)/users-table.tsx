@@ -49,8 +49,8 @@ export default function UsersTable() {
   }, [users, page, loading]);
 
   return (
-    <>
-      <TableContainer className="mx-auto max-h-[40rem] w-full rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
+    <div className="relative flex flex-col h-[calc(100vh-100px)]">
+      <TableContainer className="mx-auto w-full rounded-md bg-indigo-700 bg-opacity-5 shadow-md flex-1 mb-20">
         <Table>
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
@@ -66,7 +66,7 @@ export default function UsersTable() {
           {rows}
         </Table>
       </TableContainer>
-      <div className="flex h-fit w-full justify-center gap-4 px-4 pb-2 pt-0">
+      <div className="flex h-fit w-full justify-center gap-4 pb-6 sticky bottom-0 ">
         <button
           className={`${page === 0 ? "text-gray-400" : "text-indigo-700"}`}
           onClick={() => page > 0 && setPage(page - 1)}
@@ -83,6 +83,6 @@ export default function UsersTable() {
           <ArrowForward />
         </button>
       </div>
-    </>
+    </div>
   );
 }
