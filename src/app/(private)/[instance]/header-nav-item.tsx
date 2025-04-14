@@ -31,7 +31,7 @@ export default function HeaderNavItem({
   const baseHref = pathname.split("/")[1];
 
   return (
-    <li aria-disabled={disabled} className="relative list-none aria-disabled:hidden">
+    <li aria-disabled={Boolean(disabled)} className="relative list-none aria-disabled:hidden">
       <Tooltip title={<h2 className="text-base">{title}</h2>} arrow disableHoverListener={open}>
         {!routes ? (
           <Button component={Link} href={`/${baseHref}${href}`}>

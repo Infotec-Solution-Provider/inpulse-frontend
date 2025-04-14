@@ -4,6 +4,7 @@ import { ReactNode, createContext, useContext, useEffect, useMemo } from "react"
 import { AuthContext } from "../../auth-context";
 import { AppContext } from "./app-context";
 import QRModal from "./(main)/qr-modal";
+import { toast } from "react-toastify";
 
 interface ISocketContext {
   socket: SocketClient;
@@ -36,6 +37,15 @@ export default function SocketProvider({ children }: SocketProviderProps) {
   useEffect(() => {
     client.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
       openModal(<QRModal qr={qr} phone={phone} onClose={closeModal} />);
+    });
+
+    client.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {
+      if(success) {
+        toast.success(`Número ${phone} autenticado com sucesso!`);
+      }
+      else {
+        toast.error(`Erro ao autenticar número ${phone}: ${message}`);
+      }
     });
 
     return () => {
