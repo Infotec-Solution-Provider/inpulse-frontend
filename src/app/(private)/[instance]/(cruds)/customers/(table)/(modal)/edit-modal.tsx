@@ -7,29 +7,57 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import { Client } from "../../type";
 import { useEffect } from "react";
-import { FaX } from "react-icons/fa6";
+import { Close } from "@mui/icons-material";
+import { Customer, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
+import customersService from "@/lib/services/customers.service";
+import { toast } from "react-toastify";
 
 export interface EditModalProps {
   open: boolean;
-  client: Client;
-  onClose: (value: Client) => void;
+  client: Partial<Customer>;
+  onClose: (value: UpdateCustomerDTO) => void;
 }
 
-let formData: Partial<Client> = {};
+let formData: UpdateCustomerDTO = {};
 
 export default function EditModal({ onClose, client, open }: EditModalProps) {
-  useEffect(() => {
-    formData = client;
-  });
-
   function handleClose() {
     onClose(client);
   }
 
   function handleSubmit() {
-    console.log(formData);
+    const validkeyValues = {
+      RAZAO: (value: any) => typeof value === "string",
+      FANTASIA: (value: any) => typeof value === "string",
+      CPF_CNPJ: (value: any) => /^[0-9]{11}$/.test(value) || /^[0-9]{14}$/.test(value),
+      PESSOA: (value: any) => ["FIS", "JUR"].includes(value),
+      CIDADE: (value: any) => typeof value === "string",
+      ATIVO: (value: any) => value === "SIM" || value === "NAO",
+    };
+
+    const invalidKeys = Object.entries(formData)
+      .filter(
+        ([key, value]) =>
+          !(key in validkeyValues) || !validkeyValues[key as keyof typeof validkeyValues](value),
+      )
+      .map(([key]) => key);
+
+    if (invalidKeys.length > 0) {
+      toast.error(
+        `Por favor, preencha os seguintes campos corretamente: ${invalidKeys.join(", ")}`,
+      );
+    } else {
+      if (client.CODIGO !== undefined) {
+        customersService.updateCustomer(client.CODIGO, formData).then(() => {
+          toast.success("Cliente cadastrado com sucesso!");
+          onClose({
+            ...client,
+            ...formData,
+          });
+        });
+      }
+    }
   }
 
   return (
@@ -50,104 +78,104 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               color: theme.palette.primary.light,
             })}
           >
-            <FaX />
+            <Close />
           </IconButton>
           <div className="flex w-full flex-row justify-center gap-4">
             <TextField
               fullWidth
               label="Razão Social"
-              name="razao"
+              name="RAZAO"
               type="text"
-              id="razao"
-              defaultValue={client.name}
+              id="RAZAO"
+              defaultValue={client.RAZAO}
               required
               onChange={(e) => {
-                formData = { ...formData, name: e.target.value };
+                formData = { ...formData, RAZAO: e.target.value };
               }}
             />
             <TextField
               fullWidth
               label="Fantasia"
-              name="fantasy"
+              name="FANTASIA"
               type="text"
-              id="fantasy"
-              defaultValue={client.fantasy}
+              id="FANTASIA"
+              defaultValue={client.FANTASIA}
               onChange={(e) => {
-                formData = { ...formData, fantasy: e.target.value };
+                formData = { ...formData, FANTASIA: e.target.value };
               }}
             />
           </div>
           <div className="flex flex-row justify-center gap-4">
             <TextField
-              label="CPF"
-              name="cpf"
+              label="CPF/CNPJ"
+              name="CPF_CNPJ"
               type="text"
-              id="cpf"
-              defaultValue={client.cpf}
+              id="CPF_CNPJ"
+              defaultValue={client.CPF_CNPJ}
               fullWidth
               required
               onChange={(e) => {
-                formData = { ...formData, cpf: e.target.value };
+                formData = { ...formData, CPF_CNPJ: e.target.value };
               }}
             />
             <TextField
               label="Cidade"
-              name="city"
+              name="CIDADE"
               type="text"
               fullWidth
-              defaultValue={client.city}
-              id="city"
+              defaultValue={client.CIDADE}
+              id="CIDADE"
               required
               onChange={(e) => {
-                formData = { ...formData, city: e.target.value };
+                formData = { ...formData, CIDADE: e.target.value };
               }}
             />
             <TextField
               label="ERP"
-              name="erp"
+              name="COD_ERP"
               type="text"
-              defaultValue={client.erp}
+              defaultValue={client.COD_ERP}
               fullWidth
               onChange={(e) => {
-                formData = { ...formData, erp: e.target.value };
+                formData = { ...formData, COD_ERP: e.target.value };
               }}
             />
           </div>
           <div className="flex h-full w-full flex-row items-center gap-4">
             <TextField
-              name="active"
-              defaultValue={client.active ? "true" : "false"}
+              name="ATIVO"
+              defaultValue={client.ATIVO}
               label="Ativo"
               fullWidth
               select
               required
               onChange={(e) => {
-                formData = { ...formData, active: e.target.value === "true" };
+                formData = { ...formData, ATIVO: e.target.value as "SIM" | "NAO" | null };
               }}
             >
-              <MenuItem value={"true"} key="true">
+              <MenuItem value="SIM" key="SIM">
                 Sim
               </MenuItem>
-              <MenuItem value={"false"} key="false">
+              <MenuItem value="NAO" key="NAO">
                 Não
               </MenuItem>
             </TextField>
             <TextField
               select
               label="Tipo de Pessoa"
-              name="Tipo de Pessoa"
-              defaultValue={client.personType}
-              id="personType"
+              name="PESSOA"
+              defaultValue={client.PESSOA}
+              id="PESSOA"
               fullWidth
               required
               onChange={(e) => {
-                formData = { ...formData, personType: e.target.value as string };
+                formData = { ...formData, PESSOA: e.target.value as "FIS" | "JUR" | null };
               }}
             >
-              <MenuItem value="FISICA" key="FISICA">
+              <MenuItem value="FIS" key="FIS">
                 Física
               </MenuItem>
-              <MenuItem value="JURIDICA" key="JURIDICA">
+              <MenuItem value="JUR" key="JUR">
                 Jurídica
               </MenuItem>
             </TextField>
