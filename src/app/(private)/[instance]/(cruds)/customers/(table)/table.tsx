@@ -1,28 +1,36 @@
 "use client";
-import ClientListItem from "./list-item";
+import ClientTableItem from "./table-item";
 import {
   Button,
   CircularProgress,
+  MenuItem,
+  Pagination,
   Table,
   TableBody,
   TableContainer,
   TableHead,
+  TablePagination,
+  TextField,
 } from "@mui/material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useContext, useEffect, useMemo, useState } from "react";
 import EditModal from "./(modal)/edit-modal";
 import customersService from "@/lib/services/customers.service";
 import CreateModal from "./(modal)/create-modal";
-import { ArrowForward, ArrowBack } from "@mui/icons-material";
-import { Customer, PaginatedResponse } from "@in.pulse-crm/sdk";
+import { Search } from "@mui/icons-material";
+import { Customer, PaginatedResponse, RequestFilters } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { toast } from "react-toastify";
+import ClientTableHeader from "./table-header";
 
-export default function ClientsList() {
+export default function ClientsTable() {
   const [clients, setClients] = useState<Partial<Customer>[]>([]);
+  const { token } = useContext(AuthContext);
+
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>();
-  const { token } = useContext(AuthContext);
+  const [rowsPerPage, setRowsPerPage] = useState<string>("10");
+  const [filters, setFilters] = useState<RequestFilters<Customer>>();
 
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openCreateModal, setOpenCreateModal] = useState(false);
@@ -62,26 +70,41 @@ export default function ClientsList() {
   }
 
   function pageChangeHandler(next?: boolean) {
-    console.log(page);
     setLoading(true);
 
     if (next) {
       customersService
-        .getCustomers({ page: `${page + 1}` })
+        .getCustomers({ ...filters, page: `${page + 1}`, perPage: rowsPerPage })
         .then((response: PaginatedResponse<Customer>) => {
           setClients(response.data);
           setPage(response.page.current);
+          setTotalPages(response.page.total);
           setLoading(false);
         });
     } else {
       customersService
-        .getCustomers({ page: `${page - 1}` })
+        .getCustomers({ ...filters, page: `${page - 1}`, perPage: rowsPerPage })
         .then((response: PaginatedResponse<Customer>) => {
           setClients(response.data);
           setPage(response.page.current);
+          setTotalPages(response.page.total);
           setLoading(false);
         });
     }
+  }
+
+  function rowsPerPageChangeHandler(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    setRowsPerPage(e.target.value);
+    setPage(1);
+    setLoading(true);
+    customersService
+      .getCustomers({ ...filters, perPage: e.target.value })
+      .then((response: PaginatedResponse<Customer>) => {
+        setClients(response.data);
+        setPage(response.page.current);
+        setTotalPages(response.page.total);
+        setLoading(false);
+      });
   }
 
   const rows = useMemo(() => {
@@ -89,7 +112,7 @@ export default function ClientsList() {
       return (
         <TableBody>
           {clients.map((client, index) => (
-            <ClientListItem
+            <ClientTableItem
               key={`${client.RAZAO}_${client.CODIGO}`}
               client={client}
               openModalHandler={() => openModalHandler(index)}
@@ -118,43 +141,36 @@ export default function ClientsList() {
 
       <CreateModal onClose={() => setOpenCreateModal(false)} open={openCreateModal} />
 
-      <TableContainer className="mx-auto max-h-[40rem] w-full rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
-        <Table>
-          <TableHead>
-            <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
-              <StyledTableCell>Código</StyledTableCell>
-              <StyledTableCell>Ativo</StyledTableCell>
-              <StyledTableCell>Pessoa</StyledTableCell>
-              <StyledTableCell>Razão social</StyledTableCell>
-              <StyledTableCell>CPF/CNPJ</StyledTableCell>
-              <StyledTableCell>Cidade</StyledTableCell>
-              <StyledTableCell>ERP</StyledTableCell>
-              <StyledTableCell> ... </StyledTableCell>
-            </StyledTableRow>
-          </TableHead>
+      <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
+        <Table className="max-h-[100%] overflow-auto">
+          <ClientTableHeader
+            rowsPerPage={rowsPerPage}
+            setLoading={setLoading}
+            setPage={setPage}
+            setTotalPages={setTotalPages}
+            setClients={setClients}
+            filters={filters}
+            setFilters={setFilters}
+          />
           {rows}
         </Table>
       </TableContainer>
-      <div className="w-full">
-        <Button onClick={() => setOpenCreateModal(true)}>Cadastrar cliente</Button>
-
-        <div className="flex h-fit justify-center gap-4 px-4 pb-2 pt-0">
-          <button
-            className={`${page === 1 ? "text-gray-400" : "text-indigo-700"}`}
-            onClick={() => pageChangeHandler()}
-            disabled={page === 1}
-          >
-            <ArrowBack />
-          </button>
-          {page}/{totalPages}
-          <button
-            className={`${page === totalPages ? "text-gray-400" : "text-indigo-700"}`}
-            onClick={() => pageChangeHandler(true)}
-            disabled={page === totalPages}
-          >
-            <ArrowForward />
-          </button>
-        </div>
+      <div className="flex h-fit w-full justify-center gap-4 px-4 pt-0">
+        <Button onClick={() => setOpenCreateModal(true)} variant="outlined">
+          Cadastrar cliente
+        </Button>
+        <TablePagination
+          component="div"
+          count={totalPages ?? 1 * 10}
+          page={page - 1}
+          rowsPerPage={+rowsPerPage}
+          labelRowsPerPage="Entradas por página"
+          labelDisplayedRows={({ from, to, count }) => {
+            return `${from}-${to} de ${count}`;
+          }}
+          onRowsPerPageChange={(e) => rowsPerPageChangeHandler(e)}
+          onPageChange={(e, newPage) => pageChangeHandler(newPage + 1 > page)}
+        />
       </div>
     </>
   );

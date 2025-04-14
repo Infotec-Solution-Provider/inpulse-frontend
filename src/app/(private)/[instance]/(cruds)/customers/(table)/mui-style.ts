@@ -1,3 +1,4 @@
+import { BorderLeft, BorderRight } from "@mui/icons-material";
 import {
   Dialog,
   paginationItemClasses,
@@ -14,6 +15,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
   [`&.${tableCellClasses.body}`]: {
     fontSize: 14,
+
     color: theme.palette.common.white,
   },
 }));
