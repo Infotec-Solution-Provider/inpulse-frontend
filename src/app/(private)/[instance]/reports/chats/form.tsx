@@ -1,9 +1,9 @@
 "use client";
 import { ChatsReportFormat } from "@in.pulse-crm/sdk";
 import SimCardDownloadIcon from "@mui/icons-material/SimCardDownload";
-import { FormEventHandler, useCallback, useContext, useMemo, useState } from "react";
+import { FormEventHandler, useCallback, useContext, useState } from "react";
 import { ChatsReportContext, GenerateReportParams } from "./context";
-import { Autocomplete, Button, MenuItem, Select, TextField } from "@mui/material";
+import { Autocomplete, Button, MenuItem, TextField } from "@mui/material";
 
 export default function ChatReportForm() {
   const { users, generateReport } = useContext(ChatsReportContext);
@@ -29,6 +29,7 @@ export default function ChatReportForm() {
       onSubmit={handleSubmit}
     >
       <TextField
+        className="w-32"
         select
         onChange={(e) => setFormData({ ...formData, format: e.target.value as ChatsReportFormat })}
         label="Formato"
@@ -41,6 +42,7 @@ export default function ChatReportForm() {
       </TextField>
 
       <Autocomplete
+        className="w-96"
         defaultValue={{ label: "Todos", value: "*" }}
         options={[
           ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
@@ -55,18 +57,18 @@ export default function ChatReportForm() {
         )}
       />
       <TextField
+        className="w-52"
         type="date"
-        label="Data inicial"
         onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
       />
       <TextField
+        className="w-52"
         type="date"
-        label="Data final"
         onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
       />
       <div className="ml-auto">
         <Button title="Exportar" type="submit">
-          <SimCardDownloadIcon />
+          Exportar
         </Button>
       </div>
     </form>
