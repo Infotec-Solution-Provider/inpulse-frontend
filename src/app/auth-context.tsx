@@ -57,6 +57,7 @@ export default function AuthProvider({ children }: ProviderProps) {
         .fetchSessionData(prevToken)
         .then(async (res) => {
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
+          usersService.setAuth(`Bearer ${prevToken}`);
 
           return await usersService.getUserById(res.data.userId);
         })
