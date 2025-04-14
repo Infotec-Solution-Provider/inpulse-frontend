@@ -33,18 +33,18 @@ export default function ChatReportListItem({ user, report }: ChatReportListItemP
 
   return (
     <tr className="w-max rounded-md text-sm even:bg-indigo-500 even:bg-opacity-5">
-      <td className="px-2 py-3 pl-8">
+      <td className="w-44 px-2 py-3 pl-8">
         {statusText}
         {report.status == "pending" && ` (${report.progress}%)`}
       </td>
-      <td className="truncate px-2 py-3">{user}</td>
-      <td className="px-2 py-3">{Formatter.date(report.exportDate)}</td>
-      <td className="px-2 py-3">{report.startDate}</td>
-      <td className="px-2 py-3">{report.endDate}</td>
-      <td className="px-2 py-3">{report.chats}</td>
-      <td className="px-2 py-3">{report.messages}</td>
-      <td className="px-2 py-3">{report.format.toUpperCase()}</td>
-      <td className="flex items-center justify-end gap-4 px-2 py-3 pr-8">
+      <td className="w-48 truncate px-2 py-3">{user}</td>
+      <td className="w-48 truncate px-2 py-3">{Formatter.date(report.exportDate)}</td>
+      <td className="w-28 truncate px-2 py-3">{report.startDate}</td>
+      <td className="w-28 truncate px-2 py-3">{report.endDate}</td>
+      <td className="w-24 truncate px-2 py-3">{report.chats}</td>
+      <td className="w-28 truncate px-2 py-3">{report.messages}</td>
+      <td className="w-24 truncate px-2 py-3">{report.format.toUpperCase()}</td>
+      <td className="flex w-24 items-center justify-end gap-4 truncate px-2 py-3 pr-4">
         <a className="transition-all hover:text-indigo-400" href={fileUrl} title="Baixar">
           <SimCardDownloadIcon />
         </a>

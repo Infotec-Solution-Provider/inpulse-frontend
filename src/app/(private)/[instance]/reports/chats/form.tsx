@@ -1,6 +1,6 @@
 "use client";
 import { ChatsReportFormat } from "@in.pulse-crm/sdk";
-import SimCardDownloadIcon from "@mui/icons-material/SimCardDownload";
+import ArrowRightAltIcon from "@mui/icons-material/ArrowRightAlt";
 import { FormEventHandler, useCallback, useContext, useState } from "react";
 import { ChatsReportContext, GenerateReportParams } from "./context";
 import { Autocomplete, Button, MenuItem, TextField } from "@mui/material";
@@ -25,7 +25,7 @@ export default function ChatReportForm() {
 
   return (
     <form
-      className="flex items-center gap-3 bg-indigo-700 bg-opacity-5 px-4 py-4 text-xs shadow-md"
+      className="flex items-center gap-3 bg-indigo-700/5 px-4 py-4 text-xs shadow-md"
       onSubmit={handleSubmit}
     >
       <TextField
@@ -34,6 +34,7 @@ export default function ChatReportForm() {
         onChange={(e) => setFormData({ ...formData, format: e.target.value as ChatsReportFormat })}
         label="Formato"
         required
+        size="small"
         defaultValue={formData.format}
       >
         <MenuItem value="txt">TXT</MenuItem>
@@ -43,6 +44,7 @@ export default function ChatReportForm() {
 
       <Autocomplete
         className="w-96"
+        size="small"
         defaultValue={{ label: "Todos", value: "*" }}
         options={[
           ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
@@ -56,18 +58,23 @@ export default function ChatReportForm() {
           />
         )}
       />
-      <TextField
-        className="w-52"
-        type="date"
-        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-      />
-      <TextField
-        className="w-52"
-        type="date"
-        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-      />
+      <div className="ml-4 flex items-center gap-2">
+        <TextField
+          className="w-52"
+          type="date"
+          size="small"
+          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+        />
+        <ArrowRightAltIcon />
+        <TextField
+          className="w-52"
+          size="small"
+          type="date"
+          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+        />
+      </div>
       <div className="ml-auto">
-        <Button title="Exportar" type="submit">
+        <Button title="Exportar" type="submit" variant="outlined" size="small">
           Exportar
         </Button>
       </div>
