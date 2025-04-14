@@ -1,7 +1,7 @@
 "use client";
 import { Table, TableBody, TableContainer, TableHead } from "@mui/material";
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa6";
+import { ArrowForward, ArrowBack } from "@mui/icons-material";
 import { useContext, useMemo, useState } from "react";
 import { UsersContext } from "../context";
 import UsersTableRow from "./users-row";
@@ -72,7 +72,7 @@ export default function UsersTable() {
           onClick={() => page > 0 && setPage(page - 1)}
           disabled={page === 0}
         >
-          <FaArrowLeft />
+          <ArrowBack />
         </button>
         {page + 1}/{totalPages || 1}
         <button
@@ -80,7 +80,7 @@ export default function UsersTable() {
           onClick={() => page + 1 < (totalPages || 1) && setPage(page + 1)}
           disabled={page + 1 === totalPages}
         >
-          <FaArrowRight />
+          <ArrowForward />
         </button>
       </div>
     </>
