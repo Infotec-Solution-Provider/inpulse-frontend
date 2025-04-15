@@ -8,7 +8,7 @@ interface ClientListItemProps {
   openModalHandler: () => void;
 }
 
-export default function ClientListItem({ client, openModalHandler }: ClientListItemProps) {
+export default function ClientTableItem({ client, openModalHandler }: ClientListItemProps) {
   return (
     <TableRow>
       <StyledTableCell className="px-2 py-3">{client.CODIGO}</StyledTableCell>
