@@ -14,7 +14,7 @@ export default function UsersTableRow({ user, index }: UserTableRowProps) {
   const { openUserModal } = useContext(UsersContext);
 
   return (
-    <TableRow>
+    <TableRow sx={{ background: index % 2 === 0 ? 'transparent' : 'rgba(67, 56, 202, 0.05)' }}>
       <StyledTableCell className="px-2 py-3">{user.CODIGO}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.NOME}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.LOGIN}</StyledTableCell>

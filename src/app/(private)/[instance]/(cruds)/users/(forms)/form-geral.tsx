@@ -1,10 +1,10 @@
 import { MenuItem } from "@mui/material";
-import { User, UserRole } from "@in.pulse-crm/sdk";
+import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk";
 import { selectSlotProps, StyledTextField } from "./styles-form";
 
 interface FormGeralProps {
     formData: Partial<User>;
-    onFormChange: (data: Partial<User>) => void;
+    onFormChange: (data: CreateUserDTO | UpdateUserDTO) => void;
 }
 
 export default function FormGeral({ formData, onFormChange }: FormGeralProps) {

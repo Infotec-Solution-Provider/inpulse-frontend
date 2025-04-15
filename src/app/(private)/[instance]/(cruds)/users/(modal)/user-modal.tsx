@@ -26,12 +26,11 @@ export default function UserModal({ user }: UserModalProps) {
   /* const [activeTab, setActiveTab] = useState(0); */
   const isEdit = !!user;
 
-  const handleFormChange = (newData: Partial<User>) => {
+  const handleFormChange = (newData: CreateUserDTO | UpdateUserDTO) => {
     setFormData(prev => ({ ...prev, ...newData }));
   };
 
   function handleSubmit() {
-
     isEdit ? updateUser(user.CODIGO, formData) : createUser(formData);
   }
 
