@@ -43,7 +43,7 @@ export default function ClientTableHeader({
           <TextField
             label="Código"
             variant="standard"
-            style={{ width: "4rem" }}
+            slotProps={{ input: { disableUnderline: true } }}
             value={filters?.CODIGO || ""}
             onChange={(e) => {
               const value = e.target.value;
@@ -64,6 +64,7 @@ export default function ClientTableHeader({
             variant="standard"
             style={{ width: "6rem" }}
             select
+            slotProps={{ input: { disableUnderline: true } }}
             value={filters?.ATIVO || ""}
             onChange={(e) => {
               setFilters((prevFilters) => {
@@ -95,6 +96,7 @@ export default function ClientTableHeader({
             variant="standard"
             style={{ width: "7rem" }}
             select
+            slotProps={{ input: { disableUnderline: true } }}
             value={filters?.PESSOA || ""}
             onChange={(e) => {
               setFilters((prevFilters) => {
@@ -108,7 +110,7 @@ export default function ClientTableHeader({
               });
             }}
           >
-            <MenuItem value="null" key="none">
+            <MenuItem value="" key="none">
               Ambos
             </MenuItem>
             <MenuItem value="JUR" key="JUR">
@@ -124,6 +126,7 @@ export default function ClientTableHeader({
             label="Razão social"
             variant="standard"
             value={filters?.RAZAO || ""}
+            slotProps={{ input: { disableUnderline: true } }}
             onChange={(e) =>
               setFilters((prevFilters) => {
                 const updatedFilters = { ...prevFilters };
@@ -140,8 +143,8 @@ export default function ClientTableHeader({
         <StyledTableCell>
           <TextField
             label="CPF/CNPJ"
-            type="number"
             variant="standard"
+            slotProps={{ input: { disableUnderline: true } }}
             value={filters?.CPF_CNPJ || ""}
             onChange={(e) =>
               setFilters((prevFilters) => {
@@ -161,6 +164,7 @@ export default function ClientTableHeader({
             label="Cidade"
             variant="standard"
             value={filters?.CIDADE || ""}
+            slotProps={{ input: { disableUnderline: true } }}
             onChange={(e) =>
               setFilters((prevFilters) => {
                 const updatedFilters = { ...prevFilters };
@@ -176,10 +180,10 @@ export default function ClientTableHeader({
         </StyledTableCell>
         <StyledTableCell>
           <TextField
-            label="ERP"
-            type="number"
+            label="Código ERP"
             variant="standard"
             value={filters?.COD_ERP || ""}
+            slotProps={{ input: { disableUnderline: true } }}
             onChange={(e) =>
               setFilters((prevFilters) => {
                 const updatedFilters = { ...prevFilters };
