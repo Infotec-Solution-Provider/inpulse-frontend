@@ -2,7 +2,7 @@
 import { ChatsReportFormat } from "@in.pulse-crm/sdk";
 import ArrowRightAltIcon from "@mui/icons-material/ArrowRightAlt";
 import { FormEventHandler, useCallback, useContext, useState } from "react";
-import { ChatsReportContext, GenerateReportParams } from "./context";
+import { ChatsReportContext, GenerateReportParams } from "./chats-reports-context";
 import { Autocomplete, Button, MenuItem, TextField } from "@mui/material";
 
 export default function ChatReportForm() {

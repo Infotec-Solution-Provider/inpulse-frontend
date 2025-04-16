@@ -2,7 +2,7 @@
 import { useContext } from "react";
 import ChatReportListItem from "./list-item";
 
-import { ChatsReportContext } from "./context";
+import { ChatsReportContext } from "./chats-reports-context";
 
 export default function ChatsReportList() {
   const { reports, users } = useContext(ChatsReportContext);

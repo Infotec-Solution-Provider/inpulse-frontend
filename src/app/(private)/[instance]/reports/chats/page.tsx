@@ -1,6 +1,6 @@
 import ChatReportForm from "./form";
 import ChatsReportList from "./list";
-import ChatsReportProvider from "./context";
+import ChatsReportProvider from "./chats-reports-context";
 
 export default async function ChatsReportsPage() { 
     return (

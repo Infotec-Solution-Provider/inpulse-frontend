@@ -3,7 +3,7 @@ import { Formatter } from "@in.pulse-crm/utils";
 import { useContext, useMemo } from "react";
 import SimCardDownloadIcon from "@mui/icons-material/SimCardDownload";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { ChatsReportContext } from "./context";
+import { ChatsReportContext } from "./chats-reports-context";
 import { ChatsReport } from "@in.pulse-crm/sdk";
 
 interface ChatReportListItemProps {
@@ -32,7 +32,7 @@ export default function ChatReportListItem({ user, report }: ChatReportListItemP
   }, [report.status]);
 
   return (
-    <tr className="w-max rounded-md text-sm even:bg-indigo-500 even:bg-opacity-5">
+    <tr className="w-max rounded-md text-sm even:bg-indigo-500/5">
       <td className="w-44 px-2 py-3 pl-8">
         {statusText}
         {report.status == "pending" && ` (${report.progress}%)`}
