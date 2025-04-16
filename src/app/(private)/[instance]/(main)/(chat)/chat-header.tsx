@@ -10,18 +10,11 @@ export interface ChatContactInfoProps {
   cnpj: string;
   id: number;
   erpId: string;
-  startDate: string;
+  startDate: Date;
   urgency: ChatUrgency;
-  allowedUrgency: ChatUrgency[];
 }
 
-const URGENCY_TEXT: Record<ChatUrgency, string> = {
-  NORMAL: "Normal",
-  ALTA: "Alta",
-  URGENTE: "Urgente",
-};
-
-export default function ChatContactInfo({
+export default function ChatHeader({
   name,
   company,
   phone,
@@ -29,7 +22,6 @@ export default function ChatContactInfo({
   id,
   erpId,
   startDate,
-  allowedUrgency,
   urgency,
   avatarUrl,
 }: ChatContactInfoProps) {
@@ -49,29 +41,23 @@ export default function ChatContactInfo({
           {cnpj}
         </p>
         <p>
-          <b>Código: </b>{id}
+          <b>Código: </b>
+          {id}
         </p>
         <p>
-          <b>Código ERP: </b>{erpId}
+          <b>Código ERP: </b>
+          {erpId}
         </p>
       </div>
       <div className="flex flex-col gap-2">
         <p>
           <b>Data Início: </b>
-          {new Date(startDate).toLocaleDateString("pt-BR")}
+          {startDate.toLocaleDateString("pt-BR")}
         </p>
-        <Select
-          size="small"
-          sx={{ width: 176 }}
-          value={urgency}
-          label="Urgência"
-          variant="outlined"
-        >
-          {allowedUrgency.map((urgency) => (
-            <MenuItem key={urgency} value={urgency}>
-              {URGENCY_TEXT[urgency]}
-            </MenuItem>
-          ))}
+        <Select size="small" sx={{ width: 176 }} defaultValue={urgency} variant="outlined">
+          <MenuItem value="NORMAL">Normal</MenuItem>
+          <MenuItem value="ALTA">Alta</MenuItem>
+          <MenuItem value="URGENTE">Urgente</MenuItem>
         </Select>
       </div>
     </div>

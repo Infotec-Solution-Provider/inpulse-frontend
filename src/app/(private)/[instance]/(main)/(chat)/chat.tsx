@@ -1,16 +1,11 @@
 "use client";
-import { IconButton, TextField } from "@mui/material";
-import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions";
-import SendIcon from "@mui/icons-material/Send";
-import Message from "./message";
-import ChatContactInfo, { ChatContactInfoProps } from "./chat-contact-info";
+import ChatHeader, { ChatContactInfoProps } from "./chat-header";
+import ChatSendMessageArea from "./chat-send-message-area";
+import ChatMessagesList from "./chat-messages-list";
 
-export interface ChatProps extends ChatContactInfoProps { }
+export interface ChatProps extends ChatContactInfoProps {}
 
 export default function Chat({
-  allowedUrgency,
   avatarUrl,
   name,
   company,
@@ -23,8 +18,7 @@ export default function Chat({
 }: ChatProps) {
   return (
     <div className="grid grid-rows-[6rem_1fr_4rem] overflow-hidden rounded-md bg-slate-900 drop-shadow-md">
-      <ChatContactInfo
-        allowedUrgency={allowedUrgency}
+      <ChatHeader
         avatarUrl={avatarUrl}
         name={name}
         company={company}
@@ -35,33 +29,8 @@ export default function Chat({
         startDate={startDate}
         urgency={urgency}
       />
-      <ul className="flex flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2">
-        <Message style="received" text="Hello, how are you?" date={new Date("2025-04-04")} />
-        <Message style="sent" text="I'm good, thanks!" date={new Date("2025-04-04")} />
-        <Message
-          style="sent"
-          text="Ullamco cupidatat Lorem cupidatat exercitation elit Lorem deserunt deserunt laboris."
-          date={new Date("2025-04-04")}
-        />
-        <Message style="system" text="User has joined the chat." date={new Date("2025-04-04")} />
-      </ul>
-      <div className="flex items-center gap-2 bg-slate-950 bg-opacity-20 px-2 text-indigo-300">
-        <div className="flex items-center gap-2">
-          <IconButton size="small" color="inherit">
-            <ChatBubbleIcon />
-          </IconButton>
-          <IconButton size="small" color="inherit">
-            <AttachFileIcon />
-          </IconButton>
-          <IconButton size="small" color="inherit">
-            <EmojiEmotionsIcon />
-          </IconButton>
-        </div>
-        <TextField multiline fullWidth size="small" />
-        <IconButton size="small" color="inherit">
-          <SendIcon />
-        </IconButton>
-      </div>
+      <ChatMessagesList />
+      <ChatSendMessageArea />
     </div>
   );
 }

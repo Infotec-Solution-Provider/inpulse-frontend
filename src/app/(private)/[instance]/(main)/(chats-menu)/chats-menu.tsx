@@ -1,63 +1,100 @@
 "use client";
-import { Avatar, Button, Checkbox, FormControlLabel, Pagination, TextField } from "@mui/material";
+import { FilterList } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
+import GroupsIcon from "@mui/icons-material/Groups";
+import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import { IconButton, Menu, MenuItem, Pagination, TextField } from "@mui/material";
+import { useCallback, useState } from "react";
 import ChatsMenuItem from "./chats-menu-item";
 
 export default function ChatsMenu() {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const isFilterMenuOpen = anchorEl?.id == "filter-chats-button";
+  const isAddChatMenuOpen = anchorEl?.id == "add-chat-button";
+
+  const openFilterMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  }, []);
+
+  const openAddChatMenu = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setAnchorEl(null);
+  }, []);
+
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] flex-col rounded-md bg-slate-900 text-slate-300 drop-shadow-md">
+    <aside className="grid grid-rows-[auto_1fr_auto] flex-col rounded-md bg-slate-900 text-slate-300 drop-shadow-md">
+      {/*  Header */}
       <div className="flex flex-col gap-1 rounded-t-md p-3">
-        <div className="mb-1 flex items-center justify-between">
+        <header className="mb-1 flex items-center justify-between">
           <h1 className="mb-1">Conversas</h1>
-          <Button variant="text">
-            <AddIcon />
-          </Button>
-        </div>
-        <form className="flex flex-col gap-1">
-          <TextField variant="outlined" size="small" fullWidth label="Filtrar" />
-          <div className="mb-1.5">
-            <FormControlLabel
-              control={<Checkbox size="small" defaultChecked />}
-              label="Agendamentos"
-            />
-            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Recebidos" />
-            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Iniciados" />
-            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Inativos" />
-            <FormControlLabel control={<Checkbox size="small" defaultChecked />} label="Não lidos" />
+          <div className="flex items-center gap-2">
+            <IconButton id="filter-chats-button" onClick={openFilterMenu}>
+              <FilterList />
+            </IconButton>
+            <IconButton id="add-chat-button">
+              <AddIcon />
+            </IconButton>
           </div>
-        </form>
+          <Menu open={isFilterMenuOpen} anchorEl={anchorEl} onClose={closeMenu}>
+            <MenuItem className="flex items-center gap-2">
+              <MarkChatUnreadIcon />
+              <p>Não lidas</p>
+            </MenuItem>
+            <MenuItem className="flex items-center gap-2">
+              <ScheduleIcon />
+              <p>Agendados</p>
+            </MenuItem>
+            {/*             <MenuItem className="flex items-center gap-2">
+              <BedIcon />
+              <p>Inativos</p>
+            </MenuItem> */}
+            {/*             <MenuItem className="flex items-center gap-2">
+              <PendingIcon />
+              <p>Sem interação</p>
+            </MenuItem> */}
+            <MenuItem className="flex items-center gap-2">
+              <GroupsIcon />
+              <p>Internos</p>
+            </MenuItem>
+          </Menu>
+        </header>
+
+        <TextField label="Pesquisar conversa" className="grow" />
       </div>
-      <ul className="flex flex-col gap-2 overflow-y-auto bg-slate-300/5">
+      {/* Menu */}
+      <menu className="flex flex-col gap-2 overflow-y-auto bg-slate-300/5 p-3">
         <ChatsMenuItem
+          isUnread
           name="Renan Dutra"
           avatar="./pfp.jpg"
           message="Oi, tudo bem? Gostaria de renovar os produtos do meu estoque..."
-          date="07/04/2015"
+          messageDate={new Date()}
           tags={[
             { name: "Agendamento", color: "rgb(128, 0, 0)" },
             { name: "Já comprou", color: "rgb(0, 128, 0)" },
           ]}
         />
         <ChatsMenuItem
+          isOpen
           name="Maria Silva"
-          message="Olá! Estou interessada nos novos produtos."
-          date="08/04/2015"
-          tags={[
-            { name: "Novo", color: "rgb(0, 0, 128)" },
-          ]}
+          message="Poderia me enviar o catálogo, por favor?"
+          messageDate={new Date("2025-04-15")}
+          tags={[{ name: "Novo", color: "rgb(0, 0, 128)" }]}
         />
         <ChatsMenuItem
           name="João Pereira"
           message="Oi! Quando será a próxima reunião?"
-          date="09/04/2015"
-          tags={[
-            { name: "Reunião", color: "rgb(255, 165, 0)" },
-          ]}
+          messageDate={new Date("2025-04-14")}
+          tags={[{ name: "Reunião", color: "rgb(150, 105, 0)" }]}
         />
-      </ul>
-      <div className="flex h-16 items-center justify-center rounded-b-md bg-slate-300/5 p-2">
+      </menu>
+      <footer className="flex h-16 items-center justify-center rounded-b-md bg-slate-300/5 p-2">
         <Pagination />
-      </div>
-    </div>
+      </footer>
+    </aside>
   );
 }
