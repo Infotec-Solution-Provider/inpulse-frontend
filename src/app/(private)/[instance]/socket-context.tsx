@@ -1,6 +1,6 @@
 "use client";
 import { SocketClient, SocketEventType } from "@in.pulse-crm/sdk";
-import { ReactNode, createContext, useContext, useEffect, useMemo } from "react";
+import { ReactNode, createContext, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../../auth-context";
 import { AppContext } from "./app-context";
 import QRModal from "./(main)/qr-modal";
@@ -14,49 +14,47 @@ interface SocketProviderProps {
   children: ReactNode;
 }
 
+const SOCKET_URL = process.env["NEXT_PUBLIC_SOCKET_URL"] || "http://localhost:8004";
+
 export const SocketContext = createContext({} as ISocketContext);
 
 export default function SocketProvider({ children }: SocketProviderProps) {
   const { token } = useContext(AuthContext);
   const { openModal, closeModal } = useContext(AppContext);
 
-  const client = useMemo(() => {
-    const SOCKET_URL = process.env["NEXT_PUBLIC_SOCKET_URL"] || "http://localhost:8004";
-
-    return new SocketClient(SOCKET_URL);
-  }, []);
+  const socket = useRef(new SocketClient(SOCKET_URL));
 
   useEffect(() => {
     if (token) {
-      client.connect(token);
+      socket.current.connect(token);
     } else {
-      client.disconnect();
+      socket.current.disconnect();
     }
-  }, [token, client]);
+  }, [token, socket]);
 
   useEffect(() => {
-    client.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
+    socket.current.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
       openModal(<QRModal qr={qr} phone={phone} onClose={closeModal} />);
     });
 
-    client.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {
-      if(success) {
+    socket.current.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {
+      if (success) {
         toast.success(`Número ${phone} autenticado com sucesso!`);
-      }
-      else {
+      } else {
         toast.error(`Erro ao autenticar número ${phone}: ${message}`);
       }
     });
 
     return () => {
-      client.off(SocketEventType.WwebjsQr);
+      socket.current.off(SocketEventType.WwebjsQr);
+      socket.current.off(SocketEventType.WwebjsAuth);
     };
-  }, [client]);
+  }, [socket]);
 
   return (
     <SocketContext.Provider
       value={{
-        socket: client,
+        socket: socket.current,
       }}
     >
       {children}
