@@ -4,8 +4,8 @@ import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk"
 import { useContext, useState } from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import { UsersContext } from "../context";
-import FormGeral from "./(modal-forms)/form-geral";
-import FormTelefonia from "./(modal-forms)/form-telefonia";
+import FormGeral from "../(forms)/form-geral";
+import FormTelefonia from "../(forms)/form-telefonia";
 import { StyledDialog, StyledDialogTitle, StyledIconButton, StyledTabs } from "./styles-modal";
 
 interface UserModalProps {
@@ -15,21 +15,22 @@ interface UserModalProps {
 export default function UserModal({ user }: UserModalProps) {
   const { closeModal, createUser, updateUser, modal } = useContext(UsersContext)
   const [formData, setFormData] = useState<CreateUserDTO>({
-    LOGIN: user ? user.LOGIN : "",
-    NIVEL: user ? user.NIVEL : null,
     NOME: user ? user.NOME : "",
-    SENHA: user ? user.SENHA : "",
-    SETOR: user ? user.SETOR : null
+    LOGIN: user ? user.LOGIN : "",
+    EMAIL: user ? user.EMAIL : undefined,
+    SENHA: user ? user.SENHA! : "",
+    SETOR: user ? user.SETOR : null!,
+    NIVEL: user ? user.NIVEL as UserRole : "" as UserRole,
+    CODIGO_ERP: user ? user.CODIGO_ERP : null!
   });
   /* const [activeTab, setActiveTab] = useState(0); */
   const isEdit = !!user;
 
-  const handleFormChange = (newData: Partial<User>) => {
+  const handleFormChange = (newData: CreateUserDTO | UpdateUserDTO) => {
     setFormData(prev => ({ ...prev, ...newData }));
   };
 
   function handleSubmit() {
-
     isEdit ? updateUser(user.CODIGO, formData) : createUser(formData);
   }
 

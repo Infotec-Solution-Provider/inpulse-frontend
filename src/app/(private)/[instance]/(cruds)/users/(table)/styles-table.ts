@@ -1,6 +1,7 @@
 import { paginationItemClasses, styled, TableCell, tableCellClasses, TablePagination, TableRow } from "@mui/material";
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
+  border: "none",
   [`&.${tableCellClasses.head}`]: {
     color: theme.palette.common.white,
   },
