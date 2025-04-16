@@ -1,5 +1,5 @@
 "use client";
-import { Table, TableBody, TableContainer, TableHead, TablePagination, TableSortLabel } from "@mui/material";
+import { Button, Table, TableBody, TableContainer, TableHead, TablePagination, TableSortLabel } from "@mui/material";
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 import { useContext, useEffect, useMemo, useState } from "react";
 import { UsersContext } from "../context";
@@ -7,7 +7,7 @@ import UsersTableRow from "./users-row";
 import { StyledTableCell, StyledTableRow } from "./styles-table";
 
 export default function UsersTable() {
-  const { users, loading, sortedUsers, order, orderBy, handleSort } = useContext(UsersContext);
+  const { users, loading, sortedUsers, order, orderBy, handleSort, openUserModal } = useContext(UsersContext);
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -61,7 +61,7 @@ export default function UsersTable() {
 
   return (
     <div className="relative flex flex-col h-[calc(100vh-100px)]">
-      <TableContainer className="mx-auto w-full bg-indigo-700 bg-opacity-5 shadow-md flex-1 mb-20">
+      <TableContainer className="mx-auto w-full bg-indigo-700 bg-opacity-5 shadow-md flex-1">
         <Table>
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
@@ -125,24 +125,24 @@ export default function UsersTable() {
           {rows}
         </Table>
       </TableContainer>
-      <TablePagination
-        component="div"
-        count={users.length}
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        rowsPerPageOptions={[10, 25, 50]}
-        sx={{
-          position: "sticky",
-          bottom: 0,
-          alignSelf: "center"
-        }}
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
-        }
-        labelRowsPerPage="Linhas por página:"
-      />
+      <div className="flex sticky bottom-0 self-center pt-4 pb-2">
+        <Button onClick={() => openUserModal()} variant="outlined">
+          Cadastrar usuário
+        </Button>
+        <TablePagination
+          component="div"
+          count={users.length}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[10, 25, 50]}
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
+          }
+          labelRowsPerPage="Usuários por página:"
+        />
+      </div>
     </div>
   );
 }
