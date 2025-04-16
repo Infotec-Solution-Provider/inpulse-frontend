@@ -11,6 +11,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     color: theme.palette.common.white,
   },
+  "border-bottom": "none",
   [`&.${tableCellClasses.body}`]: {
     fontSize: 14,
     color: theme.palette.common.white,
@@ -19,8 +20,9 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
 
 export const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(even)": {
-    backgroundColor: "rgba(67, 56, 202, 0.05)",
+    backgroundColor: "rgba(99, 102, 241, 0.05)",
   },
+
   "&:last-child td, &:last-child th": {
     border: 0,
   },

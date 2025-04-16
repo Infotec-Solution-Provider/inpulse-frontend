@@ -10,7 +10,7 @@ interface ClientListItemProps {
 
 export default function ClientTableItem({ client, openModalHandler }: ClientListItemProps) {
   return (
-    <TableRow>
+    <StyledTableRow>
       <StyledTableCell className="px-2 py-3">
         <p className="w-14">{client.CODIGO}</p>
       </StyledTableCell>
@@ -45,6 +45,6 @@ export default function ClientTableItem({ client, openModalHandler }: ClientList
           <Edit onClick={openModalHandler} />
         </button>
       </StyledTableCell>
-    </TableRow>
+    </StyledTableRow>
   );
 }
