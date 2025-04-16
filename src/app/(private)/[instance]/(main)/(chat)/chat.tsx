@@ -17,7 +17,7 @@ export default function Chat({
   urgency,
 }: ChatProps) {
   return (
-    <div className="grid grid-rows-[6rem_1fr_4rem] overflow-hidden rounded-md bg-slate-900 drop-shadow-md">
+    <div className="grid grid-rows-[6rem_1fr_auto] overflow-hidden rounded-md bg-slate-900 drop-shadow-md">
       <ChatHeader
         avatarUrl={avatarUrl}
         name={name}

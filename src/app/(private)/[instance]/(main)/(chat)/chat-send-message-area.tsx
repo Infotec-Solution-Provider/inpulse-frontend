@@ -17,7 +17,7 @@ export default function ChatSendMessageArea() {
   }
 
   return (
-    <div className="flex items-center gap-2 bg-slate-950 bg-opacity-20 px-2 text-indigo-300">
+    <div className="flex items-center gap-2 bg-slate-950 bg-opacity-20 px-2 text-indigo-300 max-h-36">
       <input type="file" className="hidden" id="file-input" ref={fileInputRef} />
       <div className="flex items-center gap-2">
         <IconButton size="small" color="inherit">

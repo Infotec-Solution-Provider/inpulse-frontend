@@ -49,17 +49,6 @@ export default function ChatHeader({
           {erpId}
         </p>
       </div>
-      <div className="flex flex-col gap-2">
-        <p>
-          <b>Data Início: </b>
-          {startDate.toLocaleDateString("pt-BR")}
-        </p>
-        <Select size="small" sx={{ width: 176 }} defaultValue={urgency} variant="outlined">
-          <MenuItem value="NORMAL">Normal</MenuItem>
-          <MenuItem value="ALTA">Alta</MenuItem>
-          <MenuItem value="URGENTE">Urgente</MenuItem>
-        </Select>
-      </div>
     </div>
   );
 }
