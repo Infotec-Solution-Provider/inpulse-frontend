@@ -32,6 +32,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
     const [users, setUsers] = useState<User[]>([]);
     const [modal, setModal] = useState<ReactNode>(null);
     const [loading, setLoading] = useState(true);
+
     const [orderBy, setOrderBy] = useState<keyof User>('CODIGO');
     const [order, setOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -117,7 +118,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
             createUser,
             updateUser,
             openUserModal,
-            closeModal,
+            closeModal
         }}>
             {children}
             {modal}

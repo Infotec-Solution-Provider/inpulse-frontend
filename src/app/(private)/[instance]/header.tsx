@@ -28,6 +28,7 @@ const crudsRoutes = [
   { title: "Contatos", href: "/contacts" },
   { title: "Templates", href: "/templates" },
   { title: "Tags", href: "/tags" },
+  { title: "Carteiras", href: "/wallets" },
 ];
 
 const reportsRoutes = [

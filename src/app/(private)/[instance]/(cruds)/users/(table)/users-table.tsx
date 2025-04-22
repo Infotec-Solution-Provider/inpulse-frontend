@@ -1,13 +1,13 @@
 "use client";
-import { Button, Table, TableBody, TableContainer, TableHead, TablePagination, TableSortLabel } from "@mui/material";
+import { Button, Paper, Table, TableBody, TableContainer, TableHead, TablePagination, TableSortLabel } from "@mui/material";
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 import { useContext, useEffect, useMemo, useState } from "react";
 import { UsersContext } from "../context";
-import UsersTableRow from "./users-row";
+import UsersTableRow from "./user-row";
 import { StyledTableCell, StyledTableRow } from "./styles-table";
 
 export default function UsersTable() {
-  const { users, loading, sortedUsers, order, orderBy, handleSort, openUserModal } = useContext(UsersContext);
+  const { users, loading, openUserModal, sortedUsers, orderBy, order, handleSort } = useContext(UsersContext);
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -92,11 +92,11 @@ export default function UsersTable() {
                   Login
                 </TableSortLabel>
               </StyledTableCell>
-              <StyledTableCell sx={{ minWidth: '350px' }} sortDirection={orderBy === 'EMAIL' ? order : false}>
+              <StyledTableCell sx={{ minWidth: '350px' }} sortDirection={orderBy === 'EMAIl' ? order : false}>
                 <TableSortLabel
-                  active={orderBy === 'EMAIL'}
-                  direction={orderBy === 'EMAIL' ? order : 'asc'}
-                  onClick={() => handleSort('EMAIL')}
+                  active={orderBy === 'EMAIl'}
+                  direction={orderBy === 'EMAIl' ? order : 'asc'}
+                  onClick={() => handleSort('EMAIl')}
                 >
                   Email
                 </TableSortLabel>
@@ -125,7 +125,7 @@ export default function UsersTable() {
           {rows}
         </Table>
       </TableContainer>
-      <div className="flex sticky bottom-0 self-center pt-4 pb-2">
+      <div className="flex gap-4 sticky bottom-0 self-center pt-4 pb-2">
         <Button onClick={() => openUserModal()} variant="outlined">
           Cadastrar usuário
         </Button>
