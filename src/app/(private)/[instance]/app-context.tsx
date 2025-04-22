@@ -1,4 +1,4 @@
-import { Modal } from "@mui/material";
+"use client"
 import { createContext, ReactElement, ReactNode, useState } from "react";
 
 interface AppContextProps {
@@ -29,11 +29,6 @@ export default function AppProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {modal && (
-        <Modal open={!!modal} onClose={closeModal} className="flex items-center justify-center">
-          {modal}
-        </Modal>
-      )}
     </AppContext.Provider>
   );
 }

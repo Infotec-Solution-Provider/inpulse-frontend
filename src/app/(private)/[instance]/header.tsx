@@ -3,10 +3,9 @@ import Image from "next/image";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import LogoutIcon from "@mui/icons-material/Logout";
 import NotificationsIcon from "@mui/icons-material/Notifications";
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import { AuthContext } from "@/app/auth-context";
 import { IconButton } from "@mui/material";
-import { navigationItems } from "./navigation";
 import HeaderNavItem from "./header-nav-item";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import MonitorIcon from "@mui/icons-material/Monitor";
@@ -47,16 +46,6 @@ export default function Header() {
   const { signOut, user } = useContext(AuthContext);
 
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
-  console.log(user)
-
-  const allowedRoutes = useMemo(() => {
-    return navigationItems.filter((item) => {
-      if ("allowedRoles" in item) {
-        return user?.NIVEL && item.allowedRoles!.includes(user.NIVEL);
-      }
-      return true;
-    });
-  }, [user]);
 
   return (
     <header className="sticky top-0 z-20 shadow-2xl">

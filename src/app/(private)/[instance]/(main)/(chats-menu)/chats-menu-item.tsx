@@ -11,10 +11,11 @@ interface ChatsMenuItemProps {
   name: string;
   avatar?: string;
   message: string;
-  messageDate: Date;
+  messageDate: Date | null;
   tags: Tag[];
   isUnread?: boolean;
   isOpen?: boolean;
+  onClick?: () => void;
 }
 
 export default function ChatsMenuItem({
@@ -25,8 +26,13 @@ export default function ChatsMenuItem({
   tags,
   isUnread,
   isOpen,
+  onClick,
 }: ChatsMenuItemProps) {
   const lastMessageDateText = useMemo(() => {
+    if (!messageDate) {
+      return "Nunca";
+    }
+
     const today = new Date();
     const isMessageFromToday = messageDate.toDateString() === today.toDateString();
 
@@ -42,13 +48,14 @@ export default function ChatsMenuItem({
       month: "2-digit",
       day: "2-digit",
     });
-  }, []);
+  }, [messageDate]);
 
   return (
     <li
       aria-busy={Boolean(isUnread)}
       aria-selected={Boolean(isOpen)}
       className="group relative grid cursor-pointer grid-cols-[74px_1fr] rounded-md p-3 hover:bg-indigo-500 hover:bg-opacity-20 aria-busy:bg-red-500/10 aria-selected:bg-white/10"
+      onClick={onClick}
     >
       <div className="flex items-center">
         <Avatar alt={name} src={avatar || ""} sx={{ width: 64, height: 64 }} />

@@ -1,11 +1,26 @@
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { SocketEventType, WhatsappClient, WppChatWithDetails, WppMessage } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "./socket-context";
 
+interface DetailedChat extends WppChatWithDetails {
+  isUnread: boolean;
+  lastMessage: WppMessage | null;
+}
 interface IWhatsappContext {
-  chats: WppChatWithDetails[];
+  chats: DetailedChat[];
   messages: Record<number, WppMessage[]>;
+  openedChat: DetailedChat | null;
+  openedChatMessages: WppMessage[];
+  openChat: (chat: DetailedChat) => void;
 }
 
 interface WhatsappProviderProps {
@@ -20,9 +35,21 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
-  const [chats, setChats] = useState<WppChatWithDetails[]>([]);
+  const [chats, setChats] = useState<DetailedChat[]>([]);
+  const [openedChat, setOpenedChat] = useState<DetailedChat | null>(null);
+  const [openedChatMessages, setOpenedChatMessages] = useState<WppMessage[]>([]);
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
+
+  const openChat = useCallback(
+    (chat: DetailedChat) => {
+      console.log(messages);
+      setOpenedChat(chat);
+      setOpenedChatMessages(messages[chat.contactId || 0] || []);
+    },
+    [messages],
+  );
+  
 
   useEffect(() => {
     api.current.setAuth(token || "");
@@ -32,31 +59,81 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
 
     if (token) {
-      api.current.getChatsWithMessages().then((res) => {
-        setChats(res.data.chats);
+      api.current.getChatsBySession(token, true, true).then((res) => {
+        // Ultima mensagem de cada chat, para conseguir renderizar na lista de chats sem depender do estado de mensagens
+        const lastMessages: Record<number, WppMessage> = {};
+        const chatsMessages: Record<number, WppMessage[]> = {};
 
         for (const msg of res.data.messages) {
-          setMessages((prev) => {
-            const key = msg.chatId || 0;
+          const contactIdOrZero = msg.contactId || 0;
 
-            if (!prev[key]) {
-              prev[key] = [];
-            }
+          if (!chatsMessages[contactIdOrZero]) {
+            chatsMessages[contactIdOrZero] = [];
+          }
+          chatsMessages[contactIdOrZero].push(msg);
 
-            prev[key].push(msg);
-
-            return prev;
-          });
+          if (
+            !lastMessages[contactIdOrZero] ||
+            msg.timestamp > lastMessages[contactIdOrZero].timestamp
+          ) {
+            lastMessages[contactIdOrZero] = msg;
+          }
         }
+
+        const detailedChats = res.data.chats.map((chat) => ({
+          ...chat,
+          isUnread: res.data.messages.some(
+            (m) => m.contactId === chat.contactId && m.status !== "READ",
+          ),
+          lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
+        })) as DetailedChat[];
+
+        setChats(
+          detailedChats.sort((a, b) =>
+            (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
+          ),
+        );
+        setMessages(chatsMessages);
       });
     }
   }, [token]);
 
   useEffect(() => {
-    socket.on(SocketEventType.WppMessage, (data) => {
-      console.log(data);
-    });
+    if (socket) {
+      socket.on(SocketEventType.WppMessage, ({ message }) => {
+        setMessages((prev) => {
+          if (!prev[message.contactId || 0]) {
+            prev[message.contactId || 0] = [];
+          }
 
+          prev[message.contactId || 0].push(message);
+
+          return prev;
+        });
+
+        setChats((prev) =>
+          prev
+            .map((chat) => {
+              if (chat.contactId === message.contactId) {
+                return {
+                  ...chat,
+                  isUnread: true,
+                  lastMessage: message,
+                };
+              }
+
+              return chat;
+            })
+            .sort((a, b) =>
+              (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
+            ),
+        );
+      });
+
+      socket.on(SocketEventType.WppChatStarted, (data) => {
+        console.log(data);
+      });
+    }
   }, [socket]);
 
   return (
@@ -64,6 +141,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       value={{
         chats,
         messages,
+        openedChat,
+        openedChatMessages,
+        openChat,
       }}
     >
       {children}

@@ -4,7 +4,6 @@ import { Fira_Sans } from "next/font/google";
 import "./globals.css";
 import { Bounce, ToastContainer } from "react-toastify";
 import AuthProvider from "@/app/auth-context";
-import { ThemeProvider } from "@emotion/react";
 
 const firaSans = Fira_Sans({
   weight: ["400", "500", "600"],
@@ -13,7 +12,7 @@ const firaSans = Fira_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "InPulse: Exportar Conversas",
+  title: "InPulse",
 };
 
 export default function RootLayout({
