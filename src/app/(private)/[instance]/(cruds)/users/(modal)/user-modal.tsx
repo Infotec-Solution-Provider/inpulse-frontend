@@ -37,7 +37,16 @@ export default function UserModal({ user }: UserModalProps) {
   }
 
   return (
-    <StyledDialog onClose={closeModal} open={!!modal} fullWidth maxWidth="md">
+    <StyledDialog
+      onClose={(e, reason) => {
+        if (reason !== "backdropClick") {
+          closeModal();
+        }
+      }}
+      open={!!modal}
+      fullWidth
+      maxWidth="md"
+    >
       <div className="max-h-[85vh]">
         <FormControl className="h-full w-full">
           <div className="flex h-full w-full flex-col gap-3 bg-slate-800 p-4">

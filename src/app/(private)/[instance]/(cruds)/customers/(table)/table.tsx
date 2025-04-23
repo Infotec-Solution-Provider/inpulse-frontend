@@ -105,7 +105,6 @@ export default function ClientsTable() {
   }
 
   const rows = useMemo(() => {
-    console.log("calculou memo")
     if (clients && clients.length > 0 && !loading) {
       return (
         <TableBody>

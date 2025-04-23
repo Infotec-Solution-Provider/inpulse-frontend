@@ -1,4 +1,4 @@
-import EditIcon from '@mui/icons-material/Edit';
+import EditIcon from "@mui/icons-material/Edit";
 import { TableRow } from "@mui/material";
 import { User } from "@in.pulse-crm/sdk";
 import { useContext } from "react";
@@ -14,13 +14,13 @@ export default function UsersTableRow({ user, index }: UserTableRowProps) {
   const { openUserModal } = useContext(UsersContext);
 
   return (
-    <TableRow sx={{ background: index % 2 === 0 ? 'transparent' : 'rgba(67, 56, 202, 0.05)' }}>
-      <StyledTableCell className="px-2 py-3">{user.CODIGO}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.NOME}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.LOGIN}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.EMAIL}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.NIVEL}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.SETOR}</StyledTableCell>
+    <TableRow sx={{ background: index % 2 === 0 ? "transparent" : "rgba(67, 56, 202, 0.05)" }}>
+      <StyledTableCell className="px-2 py-3">{user.CODIGO || "N/D"}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{user.NOME || "N/D"}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{user.LOGIN || "N/D"}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{user.EMAIL || "N/D"}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{user.NIVEL || "N/D"}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{user.SETOR || "N/D"}</StyledTableCell>
 
       <StyledTableCell className="flex items-center justify-end gap-4 px-2 py-3 pr-8">
         <button
