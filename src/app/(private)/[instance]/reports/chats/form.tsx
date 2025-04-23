@@ -20,7 +20,7 @@ export default function ChatReportForm() {
       e.preventDefault();
       generateReport(formData);
     },
-    [formData],
+    [formData, generateReport],
   );
 
   return (

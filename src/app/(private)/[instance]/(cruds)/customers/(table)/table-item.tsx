@@ -1,6 +1,5 @@
 import { Edit } from "@mui/icons-material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
-import { TableRow } from "@mui/material";
 import { Customer } from "@in.pulse-crm/sdk";
 
 interface ClientListItemProps {

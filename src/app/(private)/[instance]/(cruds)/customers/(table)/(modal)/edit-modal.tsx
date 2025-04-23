@@ -7,8 +7,7 @@ import {
   MenuItem,
   TextField,
 } from "@mui/material";
-import { useEffect } from "react";
-import { Close } from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
 import { Customer, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
 import customersService from "@/lib/services/customers.service";
 import { toast } from "react-toastify";
@@ -28,12 +27,13 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
 
   function handleSubmit() {
     const validkeyValues = {
-      RAZAO: (value: any) => typeof value === "string",
-      FANTASIA: (value: any) => typeof value === "string",
-      CPF_CNPJ: (value: any) => /^[0-9]{11}$/.test(value) || /^[0-9]{14}$/.test(value),
-      PESSOA: (value: any) => ["FIS", "JUR"].includes(value),
-      CIDADE: (value: any) => typeof value === "string",
-      ATIVO: (value: any) => value === "SIM" || value === "NAO",
+      RAZAO: (value: unknown) => typeof value === "string",
+      FANTASIA: (value: unknown) => typeof value === "string",
+      CPF_CNPJ: (value: unknown) =>
+        typeof value === "string" && (/^[0-9]{11}$/.test(value) || /^[0-9]{14}$/.test(value)),
+      PESSOA: (value: unknown) => typeof value === "string" && ["FIS", "JUR"].includes(value),
+      CIDADE: (value: unknown) => typeof value === "string",
+      ATIVO: (value: unknown) => value === "SIM" || value === "NAO",
     };
 
     const invalidKeys = Object.entries(formData)
@@ -78,7 +78,7 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               color: theme.palette.primary.light,
             })}
           >
-            <Close />
+            <CloseIcon />
           </IconButton>
           <div className="flex w-full flex-row justify-center gap-4">
             <TextField

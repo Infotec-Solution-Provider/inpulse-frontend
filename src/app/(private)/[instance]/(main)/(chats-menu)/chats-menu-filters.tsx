@@ -1,12 +1,11 @@
 import { ShowingMessagesType } from "@/lib/reducers/chats-filter.reducer";
 import { FilterList } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
 import GroupsIcon from "@mui/icons-material/Groups";
 import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import { IconButton, Menu, MenuItem, TextField } from "@mui/material";
-import { useCallback, useContext, useState } from "react";
+import { useContext, useState } from "react";
 import { AppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
 import StartChatModal from "./start-chat-modal";
@@ -20,7 +19,7 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 };
 
 export default function ChatsMenuFilters() {
-  const { closeModal, openModal } = useContext(AppContext);
+  const { openModal } = useContext(AppContext);
   const { changeChatFilters, chatFilters } = useContext(WhatsappContext);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const isFilterMenuOpen = anchorEl?.id == "filter-chats-button";

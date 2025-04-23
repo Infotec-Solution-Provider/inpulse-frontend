@@ -1,4 +1,4 @@
-import { WhatsappClient, WppChat, WppMessage } from "@in.pulse-crm/sdk";
+import { WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";

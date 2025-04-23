@@ -1,4 +1,3 @@
-import filesService from "@/lib/services/files.service";
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import DoneIcon from "@mui/icons-material/Done";

@@ -3,21 +3,16 @@ import ClientTableItem from "./table-item";
 import {
   Button,
   CircularProgress,
-  MenuItem,
-  Pagination,
   Table,
   TableBody,
   TableContainer,
-  TableHead,
   TablePagination,
-  TextField,
 } from "@mui/material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
 import { ChangeEvent, useContext, useEffect, useMemo, useState } from "react";
 import EditModal from "./(modal)/edit-modal";
 import customersService from "@/lib/services/customers.service";
 import CreateModal from "./(modal)/create-modal";
-import { Search } from "@mui/icons-material";
 import { Customer, PaginatedResponse, RequestFilters } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { toast } from "react-toastify";
@@ -50,7 +45,7 @@ export default function ClientsTable() {
     } else {
       toast.error("Login expirado, faça login novamente");
     }
-  }, []);
+  }, [token]);
 
   function openModalHandler(index: number) {
     setSelectedClient(clients[index]);
@@ -131,7 +126,7 @@ export default function ClientsTable() {
         </TableBody>
       );
     }
-  }, [clients, page]);
+  }, [clients, page, loading, openModalHandler]);
 
   return (
     <>

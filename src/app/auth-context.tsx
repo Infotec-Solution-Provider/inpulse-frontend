@@ -44,7 +44,7 @@ export default function AuthProvider({ children }: ProviderProps) {
     setUser(null);
     setToken(null);
     router.replace(`/${instance}/login`);
-  }, [router]);
+  }, [router, instance]);
 
   useEffect(() => {
     const prevToken = localStorage.getItem(`@inpulse/${instance}/token`);
@@ -79,7 +79,7 @@ export default function AuthProvider({ children }: ProviderProps) {
     if (!prevToken && !pathname.includes("login")) {
       router.replace(`/${instance}/login`);
     }
-  }, [instance]);
+  }, [instance, pathname, router]);
 
   return (
     <AuthContext.Provider
