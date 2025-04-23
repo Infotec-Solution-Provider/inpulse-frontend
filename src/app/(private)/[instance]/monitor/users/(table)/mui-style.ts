@@ -18,7 +18,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   },
 }));
 
-export const StyledTableRow = styled(TableRow)(({ theme }) => ({
+export const StyledTableRow = styled(TableRow)(() => ({
   "&:nth-of-type(even)": {
     backgroundColor: "rgba(99, 102, 241, 0.05)",
   },

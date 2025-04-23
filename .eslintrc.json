@@ -1,9 +1,7 @@
 {
-  "extends": [
-    "next/core-web-vitals",
-    "next/typescript"
-  ],
+  "extends": ["next/core-web-vitals", "next/typescript"],
   "rules": {
-    "jsx-a11y/role-supports-aria-props": "off"
+    "jsx-a11y/role-supports-aria-props": "off",
+    "@typescript-eslint/no-unused-expressions": "error"
   }
 }

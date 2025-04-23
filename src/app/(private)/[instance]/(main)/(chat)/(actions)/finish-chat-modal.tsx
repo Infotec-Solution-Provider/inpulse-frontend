@@ -3,11 +3,11 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useContext } from "react";
 import { AppContext } from "../../../app-context";
 
-interface FinishChatModalProps {
+/* interface FinishChatModalProps {
   chatId: number;
 }
-
-export default function FinishChatModal({ chatId }: FinishChatModalProps) {
+ */
+export default function FinishChatModal() {
   const { closeModal } = useContext(AppContext);
 
   return (

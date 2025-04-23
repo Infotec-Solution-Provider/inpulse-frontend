@@ -1,5 +1,3 @@
-import { ChatUrgency } from "@/lib/types/chats.types";
-import { Formatter } from "@in.pulse-crm/utils";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import EditIcon from "@mui/icons-material/Edit";
 import ScheduleIcon from "@mui/icons-material/Schedule";
@@ -21,19 +19,19 @@ export default function ChatHeader({ name, avatarUrl }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
 
   const openFinishChatModal = () => {
-    openModal(<FinishChatModal chatId={1} />);
+    openModal(<FinishChatModal />);
   };
 
   const openTransferChatModal = () => {
-    openModal(<TransferChatModal chatId={1} />);
+    openModal(<TransferChatModal />);
   };
 
   const openScheduleChatModal = () => {
-    openModal(<ScheduleChatModal chatId={1} />);
+    openModal(<ScheduleChatModal />);
   };
 
   const openEditContactModal = () => {
-    openModal(<EditContactModal contactId={1} />);
+    openModal(<EditContactModal />);
   };
 
   return (

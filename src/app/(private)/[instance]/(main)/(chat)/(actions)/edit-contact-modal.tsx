@@ -1,13 +1,13 @@
-import { Button, IconButton, MenuItem, TextField } from "@mui/material";
+import { Button, IconButton, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useContext } from "react";
 import { AppContext } from "../../../app-context";
-
+/* 
 interface FinishChatModalProps {
   contactId: number;
-}
+} */
 
-export default function EditContactModal({ contactId }: FinishChatModalProps) {
+export default function EditContactModal() {
   const { closeModal } = useContext(AppContext);
 
   return (

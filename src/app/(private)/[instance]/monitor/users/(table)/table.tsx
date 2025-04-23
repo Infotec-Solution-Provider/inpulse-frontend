@@ -1,17 +1,6 @@
 "use client";
 import UserTableItem from "./table-item";
-import {
-  Button,
-  CircularProgress,
-  MenuItem,
-  Pagination,
-  Table,
-  TableBody,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TextField,
-} from "@mui/material";
+import { CircularProgress, Table, TableBody, TableContainer, TablePagination } from "@mui/material";
 import { ChangeEvent, useContext, useEffect, useMemo, useState } from "react";
 import { User, PaginatedResponse, RequestFilters } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
@@ -94,7 +83,7 @@ export default function OperatorsTable() {
     if (users && users.length > 0 && !loading) {
       return (
         <TableBody>
-          {users.map((operator, index) => (
+          {users.map((operator) => (
             <UserTableItem key={`${operator.NOME}_${operator.CODIGO}`} User={operator} />
           ))}
         </TableBody>
