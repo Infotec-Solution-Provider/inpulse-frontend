@@ -9,7 +9,7 @@ import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
 
 export default function ChatSendMessageArea() {
-  const { openedChat } = useContext(WhatsappContext);
+  const { currentChat: openedChat } = useContext(WhatsappContext);
   const { sendMessage } = useContext(ChatContext);
   const { state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);

@@ -9,7 +9,7 @@ import { WhatsappContext } from "../whatsapp-context";
 
 export default function Home() {
   const { modal, closeModal } = useContext(AppContext);
-  const { openedChat } = useContext(WhatsappContext);
+  const { currentChat: openedChat } = useContext(WhatsappContext);
 
   return (
     <ChatProvider>

@@ -4,7 +4,7 @@ import { WhatsappContext } from "../../whatsapp-context";
 import { WppMessage } from "@in.pulse-crm/sdk";
 
 export default function ChatMessagesList() {
-  const { openedChatMessages } = useContext(WhatsappContext);
+  const { currentChatMessages: openedChatMessages } = useContext(WhatsappContext);
   const ulRef = useRef<HTMLUListElement>(null);
 
   function getMessageFrom(msg: WppMessage) {

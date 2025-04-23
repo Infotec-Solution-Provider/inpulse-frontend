@@ -1,9 +1,12 @@
 import {
+  ActionDispatch,
   createContext,
+  Dispatch,
   ReactNode,
   useCallback,
   useContext,
   useEffect,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -13,13 +16,18 @@ import {
   WhatsappClient,
   WppChatWithDetails,
   WppMessage,
-  WppMessageStatus,
 } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "./socket-context";
 import processChatsAndMessages from "@/lib/process-chats-and-messages";
-import { Formatter } from "@in.pulse-crm/utils";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
+import MessageStatusHandler from "@/lib/event-handlers/message-status";
+import ReceiveMessageHandler from "@/lib/event-handlers/message";
+import ChatStartedHandler from "@/lib/event-handlers/chat-started";
+import ReadChatHandler from "@/lib/event-handlers/read-chat";
+import chatsFilterReducer, {
+  ChangeFiltersAction,
+  ChatsFiltersState,
+} from "@/lib/reducers/chats-filter.reducer";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -29,10 +37,12 @@ interface IWhatsappContext {
   wppApi: WhatsappClient;
   chats: DetailedChat[];
   messages: Record<number, WppMessage[]>;
-  openedChat: DetailedChat | null;
-  openedChatMessages: WppMessage[];
+  currentChat: DetailedChat | null;
+  currentChatMessages: WppMessage[];
   openChat: (chat: DetailedChat) => void;
   sendMessage: (to: string, data: SendMessageData) => void;
+  chatFilters: ChatsFiltersState;
+  changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
 }
 
 interface WhatsappProviderProps {
@@ -43,48 +53,29 @@ const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhos
 
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
-const types: Record<string, string> = {
-  image: "Enviou uma imagem.",
-  video: "Enviou um vídeo.",
-  audio: "Enviou um áudio.",
-  ptt: "Enviou uma mensagem de voz.",
-  document: "Enviou um documento.",
-  file: "Enviou um arquivo.",
-};
-
-function compareStatus(prevStatus: WppMessageStatus, newStatus: WppMessageStatus) {
-  if (prevStatus === "PENDING") {
-    return newStatus;
-  }
-  if (prevStatus === "SENT" && newStatus !== "PENDING") {
-    return prevStatus;
-  }
-  if (prevStatus === "RECEIVED" && ["SENT", "PENDING"].includes(newStatus)) {
-    return prevStatus;
-  }
-  if (prevStatus === "READ" && ["SENT", "PENDING", "RECEIVED"].includes(newStatus)) {
-    return prevStatus;
-  }
-
-  return newStatus;
-}
-
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
-  const [chats, setChats] = useState<DetailedChat[]>([]);
-  const [openedChat, setOpenedChat] = useState<DetailedChat | null>(null);
-  const [openedChatMessages, setOpenedChatMessages] = useState<WppMessage[]>([]);
-  const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
-  const api = useRef(new WhatsappClient(WPP_BASE_URL));
-  const openedChatRef = useRef<DetailedChat | null>(null);
+  const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
+  const [currentChat, setCurrentChat] = useState<DetailedChat | null>(null); // Conversa que está aberta
+  const currentChatRef = useRef<DetailedChat>(null); // Referência para a conversa atual
+  const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]); // Mensagens da conversa aberta
+  const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
+  const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
 
+  // Reducer que controla os filtros de conversas
+  const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
+    search: "",
+    showingType: "all",
+  });
+
+  // Abre conversa
   const openChat = useCallback(
     (chat: DetailedChat) => {
-      setOpenedChat(chat);
-      setOpenedChatMessages(messages[chat.contactId || 0] || []);
-      openedChatRef.current = chat;
+      setCurrentChat(chat);
+      setCurrentChatMessages(messages[chat.contactId || 0] || []);
+      currentChatRef.current = chat;
       if (chat.contactId) {
         api.current.markContactMessagesAsRead(chat.contactId);
 
@@ -104,10 +95,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [messages],
   );
 
+  // Envia mensagem
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
     api.current.sendMessage(to, data);
   }, []);
 
+  // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     api.current.setAuth(token || "");
 
@@ -124,191 +117,38 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [token]);
 
-  const handleContactMessagesRead = ({ contactId }: { contactId: number }) => {
-    setMessages((prev) => {
-      if (prev[contactId]) {
-        prev[contactId] = prev[contactId].map((m) => {
-          if (m.to.startsWith("me") && m.status !== "READ") {
-            return {
-              ...m,
-              status: "READ",
-            };
-          }
-          return m;
-        });
-      }
-      return prev;
-    });
-
-    setChats((prev) =>
-      prev.map((chat) => {
-        if (chat.contactId === contactId) {
-          return {
-            ...chat,
-            isUnread: false,
-          };
-        }
-
-        return chat;
-      }),
-    );
-
-    if (openedChatRef.current && openedChatRef.current.contactId === contactId) {
-      setOpenedChatMessages((prev) =>
-        prev.map((m) => {
-          if (m.to.startsWith("me") && m.status !== "READ") {
-            return {
-              ...m,
-              status: "READ",
-            };
-          }
-          return m;
-        }),
-      );
-    }
-  };
-
-  const handleReceiveMessage = ({ message }: { message: WppMessage }) => {
-    if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
-      new Notification(Formatter.phone(message.from), {
-        body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
-        icon: HorizontalLogo.src,
-      });
-    }
-
-    setMessages((prev) => {
-      const newMessages = { ...prev };
-      const contactId = message.contactId || 0;
-
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = [];
-      }
-
-      const findIndex = newMessages[contactId].findIndex((m) => m.id === message.id);
-      if (findIndex === -1) {
-        newMessages[contactId].push(message);
-      } else {
-        newMessages[contactId][findIndex] = message;
-      }
-
-      return newMessages;
-    });
-
-    setChats((prev) =>
-      prev
-        .map((chat) => {
-          if (chat.contactId === message.contactId) {
-            return {
-              ...chat,
-              isUnread: openedChatRef.current?.contactId !== message.contactId,
-              lastMessage: message,
-            };
-          }
-
-          return chat;
-        })
-        .sort((a, b) =>
-          (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
-        ),
-    );
-
-    if (openedChatRef.current && openedChatRef.current.contactId === message.contactId) {
-      setOpenedChatMessages((prev) => {
-        if (!prev.some((m) => m.id === message.id)) {
-          return [...prev, message];
-        }
-        return prev;
-      });
-
-      // TODO: Change the logic to only update the received message;
-      if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        api.current.markContactMessagesAsRead(message.contactId || 0);
-      }
-    }
-  };
-
-  // Handle chat started event (reviewd!)
-  const handleChatStarted = async ({ chatId }: { chatId: number }) => {
-    const { messages, ...chat } = await api.current.getChatById(chatId);
-    const isUnread = messages.some((m) => m.contactId === chat.contactId && m.status !== "READ");
-    const lastMessage = messages.find((m) => m.contactId === chat.contactId) || null;
-
-    socket.joinRoom(`chat:${chat.id}`);
-
-    new Notification("Novo atendimento!", {
-      body: `Contato: ${chat.contact?.name || "Contato excluído"}`,
-      icon: HorizontalLogo.src,
-    });
-
-    setMessages((prev) => {
-      const newMessages = { ...prev };
-      const contactId = chat.contactId || 0;
-
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = messages;
-      } else {
-        newMessages[contactId] = [...newMessages[contactId], ...messages];
-      }
-
-      return newMessages;
-    });
-
-    setChats((prev) => {
-      const chatIndex = prev.findIndex((c) => c.id === chat.id);
-      if (chatIndex !== -1) {
-        return prev;
-      }
-      return [{ ...chat, isUnread, lastMessage }, ...prev];
-    });
-  };
-
-  const handleMessageStatus = ({
-    messageId,
-    contactId,
-    status,
-  }: {
-    messageId: number;
-    contactId: number;
-    status: WppMessageStatus;
-  }) => {
-    setMessages((prev) => {
-      const newMsgs = { ...prev };
-
-      if (newMsgs[contactId]) {
-        newMsgs[contactId] = newMsgs[contactId].map((m) => {
-          if (m.id === messageId) {
-            return {
-              ...m,
-              status: compareStatus(m.status, status),
-            };
-          }
-          return m;
-        });
-      }
-
-      return newMsgs;
-    });
-    if (openedChatRef.current && openedChatRef.current.contactId === contactId) {
-      setOpenedChatMessages((prev) =>
-        prev.map((m) => {
-          if (m.id === messageId) {
-            return {
-              ...m,
-              status: compareStatus(m.status, status),
-            };
-          }
-          return m;
-        }),
-      );
-    }
-  };
-
+  // Atribui listeners para eventos de socket do whatsapp
   useEffect(() => {
     if (socket) {
-      socket.on(SocketEventType.WppMessage, handleReceiveMessage);
-      socket.on(SocketEventType.WppContactMessagesRead, handleContactMessagesRead);
-      socket.on(SocketEventType.WppChatStarted, handleChatStarted);
-      socket.on(SocketEventType.WppMessageStatus, handleMessageStatus);
+      // Evento de conversa lida
+      socket.on(
+        SocketEventType.WppContactMessagesRead,
+        ReadChatHandler(currentChatRef, setChats, setMessages, setCurrentChatMessages),
+      );
+
+      // Evento de nova conversa
+      socket.on(
+        SocketEventType.WppChatStarted,
+        ChatStartedHandler(api.current, socket, setMessages, setChats),
+      );
+
+      // Evento de nova mensagem
+      socket.on(
+        SocketEventType.WppMessage,
+        ReceiveMessageHandler(
+          api.current,
+          setMessages,
+          setCurrentChatMessages,
+          setChats,
+          currentChatRef,
+        ),
+      );
+
+      // Evento de status de mensagem
+      socket.on(
+        SocketEventType.WppMessageStatus,
+        MessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
+      );
     }
 
     return () => {
@@ -325,11 +165,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       value={{
         chats,
         messages,
-        openedChat,
-        openedChatMessages,
+        currentChat: currentChat,
+        currentChatMessages: currentChatMessages,
         openChat,
         sendMessage,
         wppApi: api.current,
+        chatFilters,
+        changeChatFilters,
       }}
     >
       {children}
