@@ -58,9 +58,9 @@ export default function AuthProvider({ children }: ProviderProps) {
         .then(async (session) => {
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
           usersService.setAuth(`Bearer ${prevToken}`);
-
           const user = await usersService.getUserById(session.userId);
           setUser(user);
+        
           if (pathname.includes("login")) {
             router.replace(`/${instance}`);
           }

@@ -13,7 +13,6 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import BuildIcon from "@mui/icons-material/Build";
 import { UserRole } from "@in.pulse-crm/sdk";
-
 const monitorRoutes = [
   { title: "Atendimentos", href: "/monitor/attendances" },
   { title: "Agendamentos", href: "/monitor/schedules" },
