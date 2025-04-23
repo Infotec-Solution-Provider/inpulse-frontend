@@ -1,13 +1,13 @@
-import { Button, IconButton, MenuItem, TextField } from "@mui/material";
+import { Button, IconButton, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useContext } from "react";
 import { AppContext } from "../../../app-context";
 
-interface ScheduleChatModalProps {
+/* interface ScheduleChatModalProps {
   chatId: number;
-}
+} */
 
-export default function ScheduleChatModal({ chatId }: ScheduleChatModalProps) {
+export default function ScheduleChatModal() {
   const { closeModal } = useContext(AppContext);
 
   return (

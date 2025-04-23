@@ -1,7 +1,6 @@
 import { MenuItem, TableHead, TextField } from "@mui/material";
 import { PaginatedResponse, RequestFilters, User } from "@in.pulse-crm/sdk";
-import customersService from "@/lib/services/customers.service";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { Search } from "@mui/icons-material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
 import usersService from "@/lib/services/users.service";
@@ -52,7 +51,11 @@ export default function UsersTableHeader({
               if (!isNaN(Number(value))) {
                 setFilters((prev) => {
                   const updated = { ...prev };
-                  value ? (updated.CODIGO = value) : delete updated.CODIGO;
+                  if (value) {
+                    updated.CODIGO = value;
+                  } else {
+                    delete updated.CODIGO;
+                  }
                   return updated;
                 });
               }

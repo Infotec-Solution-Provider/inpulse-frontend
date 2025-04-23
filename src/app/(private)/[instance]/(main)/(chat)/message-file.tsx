@@ -1,5 +1,5 @@
 import filesService from "@/lib/services/files.service";
-import { ReactNode, useContext, useMemo, useRef } from "react";
+import { ReactNode, useContext, useMemo } from "react";
 import DownloadIcon from "@mui/icons-material/Download";
 import { AppContext } from "../../app-context";
 import { IconButton } from "@mui/material";

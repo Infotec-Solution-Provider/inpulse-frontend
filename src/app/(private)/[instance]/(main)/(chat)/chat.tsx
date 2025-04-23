@@ -2,13 +2,11 @@
 import ChatHeader, { ChatContactInfoProps } from "./chat-header";
 import ChatSendMessageArea from "./chat-send-message-area";
 import ChatMessagesList from "./chat-messages-list";
-import ChatProvider, { ChatContext } from "./chat-context";
+import { ChatContext } from "./chat-context";
 import { useContext } from "react";
 import ChatAttachmentPreview from "./chat-attachment-preview";
 
-export interface ChatProps extends ChatContactInfoProps {}
-
-export default function Chat({ avatarUrl, name }: ChatProps) {
+export default function Chat({ avatarUrl, name }: ChatContactInfoProps) {
   const { state } = useContext(ChatContext);
 
   return (

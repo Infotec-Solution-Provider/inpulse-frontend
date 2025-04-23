@@ -1,9 +1,9 @@
-import { Button, IconButton, TextField } from "@mui/material";
+import { IconButton, TextField } from "@mui/material";
 import { useContext, useMemo } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import { ChatContext } from "./chat-context";
-import { FileIcon, defaultStyles } from "react-file-icon";
+import { DefaultExtensionType, FileIcon, defaultStyles } from "react-file-icon";
 import prettyBytes from "pretty-bytes";
 
 interface ChatAttachmentPreviewProps {
@@ -54,7 +54,7 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
     return (
       <div className="flex flex-col items-center gap-2 rounded-md bg-slate-950/10 px-8 py-4 text-slate-300">
         <div className="h-32 w-32 p-8">
-          <FileIcon extension={file.type} {...(defaultStyles as any)[ext]} radius={1.25} />
+          <FileIcon {...(defaultStyles[ext as DefaultExtensionType] || {})} radius={1.25} />
         </div>
         <h2 className="text-xl">Prévia Indisponível</h2>
         <p className="text-sm">
