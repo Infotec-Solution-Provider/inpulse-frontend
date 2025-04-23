@@ -37,6 +37,7 @@ export default function ClientsTable() {
   const [selectedClient, setSelectedClient] = useState<Partial<Customer>>();
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [firstLoading, setFirstLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (token) {
@@ -46,6 +47,7 @@ export default function ClientsTable() {
         setTotalPages(response.page.total);
         setPage(response.page.current);
         setLoading(false);
+        setFirstLoading(false);
       });
     } else {
       toast.error("Login expirado, faça login novamente");
@@ -155,23 +157,25 @@ export default function ClientsTable() {
           {rows}
         </Table>
       </TableContainer>
-      <div className="flex h-fit w-full justify-center gap-4 px-4 pt-0">
-        <Button onClick={() => setOpenCreateModal(true)} variant="outlined">
-          Cadastrar cliente
-        </Button>
-        <TablePagination
-          component="div"
-          count={totalPages ?? 1 * 10}
-          page={page - 1}
-          rowsPerPage={+rowsPerPage}
-          labelRowsPerPage="Entradas por página"
-          labelDisplayedRows={({ from, to, count }) => {
-            return `${from}-${to} de ${count}`;
-          }}
-          onRowsPerPageChange={(e) => rowsPerPageChangeHandler(e)}
-          onPageChange={(e, newPage) => pageChangeHandler(newPage + 1 > page)}
-        />
-      </div>
+      {!firstLoading && (
+        <div className="flex h-fit w-full justify-center gap-4 px-4 pt-0">
+          <Button onClick={() => setOpenCreateModal(true)} variant="outlined">
+            Cadastrar cliente
+          </Button>
+          <TablePagination
+            component="div"
+            count={totalPages ?? 10}
+            page={page - 1}
+            rowsPerPage={+rowsPerPage}
+            labelRowsPerPage="Entradas por página"
+            labelDisplayedRows={({ from, to, count }) => {
+              return `${from}-${to} de ${count}`;
+            }}
+            onRowsPerPageChange={(e) => rowsPerPageChangeHandler(e)}
+            onPageChange={(e, newPage) => pageChangeHandler(newPage + 1 > page)}
+          />
+        </div>
+      )}
     </>
   );
 }

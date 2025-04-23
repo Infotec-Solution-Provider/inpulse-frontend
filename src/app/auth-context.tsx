@@ -23,7 +23,7 @@ export default function AuthProvider({ children }: ProviderProps) {
   const signIn = useCallback(
     async (instance: string, { login, password }: AuthSignForm) => {
       try {
-        const { data } = await authService.login(instance, login, password);
+        const data = await authService.login(instance, login, password);
 
         localStorage.setItem(`@inpulse/${instance}/token`, data.token);
 
@@ -59,10 +59,10 @@ export default function AuthProvider({ children }: ProviderProps) {
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
           usersService.setAuth(`Bearer ${prevToken}`);
 
-          return await usersService.getUserById(res.data.userId);
+          return await usersService.getUserById(res.userId);
         })
         .then((res) => {
-          setUser(res.data);
+          setUser(res);
 
           if (pathname.includes("login")) {
             router.replace(`/${instance}`);
