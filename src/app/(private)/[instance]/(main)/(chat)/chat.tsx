@@ -2,35 +2,23 @@
 import ChatHeader, { ChatContactInfoProps } from "./chat-header";
 import ChatSendMessageArea from "./chat-send-message-area";
 import ChatMessagesList from "./chat-messages-list";
+import ChatProvider, { ChatContext } from "./chat-context";
+import { useContext } from "react";
+import ChatAttachmentPreview from "./chat-attachment-preview";
 
 export interface ChatProps extends ChatContactInfoProps {}
 
-export default function Chat({
-  avatarUrl,
-  name,
-  company,
-  phone,
-  cnpj,
-  id,
-  erpId,
-  startDate,
-  urgency,
-}: ChatProps) {
+export default function Chat({ avatarUrl, name }: ChatProps) {
+  const { state } = useContext(ChatContext);
+
   return (
-    <div className="grid grid-rows-[6rem_1fr_auto] overflow-hidden rounded-md bg-slate-900 drop-shadow-md">
-      <ChatHeader
-        avatarUrl={avatarUrl}
-        name={name}
-        company={company}
-        phone={phone}
-        cnpj={cnpj}
-        id={id}
-        erpId={erpId}
-        startDate={startDate}
-        urgency={urgency}
-      />
-      <ChatMessagesList />
-      <ChatSendMessageArea />
+    <div className="grid grid-rows-[auto_1fr] overflow-hidden rounded-md bg-slate-900 drop-shadow-md">
+      <ChatHeader avatarUrl={avatarUrl} name={name} />
+      <div className="relative grid grid-rows-[1fr_auto] overflow-hidden">
+        <ChatMessagesList />
+        <ChatSendMessageArea />
+        {state.file && <ChatAttachmentPreview file={state.file} />}
+      </div>
     </div>
   );
 }

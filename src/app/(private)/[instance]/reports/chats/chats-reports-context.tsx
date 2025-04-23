@@ -3,7 +3,13 @@ import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "@/app/(private)/[instance]/socket-context";
 import reportsService from "@/lib/services/reports.service";
 import usersService from "@/lib/services/users.service";
-import { ChatsReport, ChatsReportFormat, ReportStatusEventData, SocketEventType, User } from "@in.pulse-crm/sdk";
+import {
+  ChatsReport,
+  ChatsReportFormat,
+  ReportStatusEventData,
+  SocketEventType,
+  User,
+} from "@in.pulse-crm/sdk";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { usePathname } from "next/navigation";
 import {
@@ -55,20 +61,20 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
         toast.error("Falha ao excluir relatório!\n" + sanitizeErrorMessage(err));
       }
     },
-    [instance],
+    [],
   );
 
   const generateReport = useCallback(
     async (params: GenerateReportParams) => {
       try {
-        const response = await reportsService.generateChatsReport(params);
-        setReports((prev) => [{ ...response.data, progress: 0 }, ...prev]);
+        const report = await reportsService.generateChatsReport(params);
+        setReports((prev) => [{ ...report, progress: 0 }, ...prev]);
         toast.success("Relatório em processamento, você será notificado quando estiver pronto!");
       } catch (err) {
         toast.error("Falha ao criar relatório!\n" + sanitizeErrorMessage(err));
       }
     },
-    [instance],
+    [],
   );
 
   const handleReportStatus = useCallback((data: ReportStatusEventData) => {
@@ -106,8 +112,8 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
 
       reportsService
         .getChatsReports()
-        .then((res) =>
-          setReports(res.data.map((r) => ({ ...r, progress: r.status === "pending" ? 0 : 100 }))),
+        .then((reports) =>
+          setReports(reports.map((r) => ({ ...r, progress: r.status === "pending" ? 0 : 100 }))),
         )
         .catch((err) => toast.error("Falha ao buscar relatórios!\n" + sanitizeErrorMessage(err)));
 
@@ -116,7 +122,7 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
         .then((res) => setUsers(res.data))
         .catch((err) => toast.error("Falha ao buscar usuários!\n" + sanitizeErrorMessage(err)));
     }
-  }, [instance, token, usersService, reportsService]);
+  }, [instance, token]);
 
   useEffect(() => {
     const CHATS_REPORT_ROOM = "reports:chats";
@@ -131,7 +137,7 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
         socket.off(SocketEventType.ReportStatus);
       }
     };
-  }, [socket]);
+  }, [socket, handleReportStatus]);
 
   return (
     <ChatsReportContext.Provider

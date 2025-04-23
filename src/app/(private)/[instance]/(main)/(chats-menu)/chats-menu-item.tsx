@@ -1,6 +1,6 @@
 import { Avatar } from "@mui/material";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
-import { useMemo } from "react";
+import { ReactNode, useMemo } from "react";
 
 interface Tag {
   name: string;
@@ -10,7 +10,7 @@ interface Tag {
 interface ChatsMenuItemProps {
   name: string;
   avatar?: string;
-  message: string;
+  message: ReactNode;
   messageDate: Date | null;
   tags: Tag[];
   isUnread?: boolean;
@@ -54,7 +54,7 @@ export default function ChatsMenuItem({
     <li
       aria-busy={Boolean(isUnread)}
       aria-selected={Boolean(isOpen)}
-      className="group relative grid cursor-pointer grid-cols-[74px_1fr] rounded-md p-3 hover:bg-indigo-500 hover:bg-opacity-20 aria-busy:bg-red-500/10 aria-selected:bg-white/10"
+      className="group relative grid cursor-pointer grid-cols-[74px_1fr] rounded-md p-3 hover:bg-indigo-500 hover:bg-opacity-20 aria-selected:bg-white/10"
       onClick={onClick}
     >
       <div className="flex items-center">
@@ -62,7 +62,7 @@ export default function ChatsMenuItem({
       </div>
       <div className="flex flex-col gap-1 truncate">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm leading-none text-slate-300">{name}</p>
+          <p className="truncate text-sm leading-none text-slate-100">{name}</p>
           <div className="flex items-center gap-2 text-slate-300 group-aria-busy:text-orange-200">
             <p className="text-xs">{lastMessageDateText}</p>
             <div
@@ -71,14 +71,13 @@ export default function ChatsMenuItem({
             ></div>
           </div>
         </div>
-        <p className="truncate text-sm text-slate-100">{message}</p>
+        <div className="truncate text-sm text-slate-300">{message}</div>
         <div className="flex items-center justify-end gap-1">
           {tags.map((tag) => (
             <ChatsMenuItemTag key={tag.name} name={tag.name} color={tag.color} />
           ))}
         </div>
       </div>
-      {/* Unread messages */}
     </li>
   );
 }

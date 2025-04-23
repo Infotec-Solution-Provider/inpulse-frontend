@@ -1,13 +1,11 @@
 "use client"
-import { Button, DialogTitle, FormControl, Tab } from "@mui/material";
+import { Button, DialogTitle, FormControl } from "@mui/material";
 import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk";
 import { useContext, useState } from "react";
 import CloseIcon from '@mui/icons-material/Close';
 import { UsersContext } from "../context";
 import FormGeral from "../(forms)/form-geral";
-import FormTelefonia from "../(forms)/form-telefonia";
-import { StyledDialog, StyledDialogTitle, StyledIconButton, StyledTabs } from "./styles-modal";
-
+import { StyledDialog, StyledIconButton } from "./styles-modal";
 interface UserModalProps {
   user?: User;
 }

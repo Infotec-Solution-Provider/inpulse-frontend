@@ -4,21 +4,44 @@ import AttachFileIcon from "@mui/icons-material/AttachFile";
 import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
 import MicIcon from "@mui/icons-material/Mic";
 import SendIcon from "@mui/icons-material/Send";
-import { useRef, useState } from "react";
+import { useContext, useRef } from "react";
+import { WhatsappContext } from "../../whatsapp-context";
+import { ChatContext } from "./chat-context";
 
 export default function ChatSendMessageArea() {
-  const [text, setText] = useState<string>("");
+  const { currentChat: openedChat } = useContext(WhatsappContext);
+  const { sendMessage } = useContext(ChatContext);
+  const { state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isDisabled = !openedChat || !openedChat.contact || !openedChat.contact?.phone;
 
   const openAttachFile = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
-  }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    dispatch({ type: "change-text", text: e.target.value });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      dispatch({ type: "attach-file", file });
+    }
+  };
 
   return (
-    <div className="flex items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300 max-h-36">
-      <input type="file" className="hidden" id="file-input" ref={fileInputRef} />
+    <div className="flex max-h-36 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300">
+      <input
+        type="file"
+        className="hidden"
+        id="file-input"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+      />
       <div className="flex items-center gap-2">
         <IconButton size="small" color="inherit">
           <ChatBubbleIcon />
@@ -35,21 +58,23 @@ export default function ChatSendMessageArea() {
         fullWidth
         size="small"
         placeholder="Mensagem"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
+        value={state.text}
+        onChange={handleTextChange}
       />
       <IconButton
         size="small"
         color="inherit"
-        aria-hidden={text.length === 0}
+        aria-hidden={state.text.length === 0}
         className="aria-hidden:hidden"
+        disabled={isDisabled}
+        onClick={sendMessage}
       >
         <SendIcon />
       </IconButton>
       <IconButton
         size="small"
         color="inherit"
-        aria-hidden={text.length > 0}
+        aria-hidden={state.text.length > 0}
         className="aria-hidden:hidden"
       >
         <MicIcon />

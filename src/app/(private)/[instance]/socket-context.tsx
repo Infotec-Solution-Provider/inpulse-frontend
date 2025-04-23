@@ -33,11 +33,13 @@ export default function SocketProvider({ children }: SocketProviderProps) {
   }, [token, socket]);
 
   useEffect(() => {
-    socket.current.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
+    const socketClient = socket.current;
+
+    socketClient.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
       openModal(<QRModal qr={qr} phone={phone} onClose={closeModal} />);
     });
 
-    socket.current.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {
+    socketClient.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {
       if (success) {
         toast.success(`Número ${phone} autenticado com sucesso!`);
       } else {
@@ -46,10 +48,10 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     });
 
     return () => {
-      socket.current.off(SocketEventType.WwebjsQr);
-      socket.current.off(SocketEventType.WwebjsAuth);
+      socketClient.off(SocketEventType.WwebjsQr);
+      socketClient.off(SocketEventType.WwebjsAuth);
     };
-  }, [socket]);
+  }, [socket, closeModal, openModal]);
 
   return (
     <SocketContext.Provider
