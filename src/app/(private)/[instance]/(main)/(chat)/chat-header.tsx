@@ -15,26 +15,9 @@ import TransferChatModal from "./(actions)/transfer-chat-modal";
 export interface ChatContactInfoProps {
   name: string;
   avatarUrl?: string | null;
-  company: string;
-  phone: string;
-  cnpj: string;
-  id: number;
-  erpId: string;
-  startDate: Date;
-  urgency: ChatUrgency;
 }
 
-export default function ChatHeader({
-  name,
-  company,
-  phone,
-  cnpj,
-  id,
-  erpId,
-  startDate,
-  urgency,
-  avatarUrl,
-}: ChatContactInfoProps) {
+export default function ChatHeader({ name, avatarUrl }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
 
   const openFinishChatModal = () => {
@@ -42,68 +25,48 @@ export default function ChatHeader({
   };
 
   const openTransferChatModal = () => {
-    openModal(<TransferChatModal chatId={1} />)
-  }
+    openModal(<TransferChatModal chatId={1} />);
+  };
 
   const openScheduleChatModal = () => {
-    openModal(<ScheduleChatModal chatId={1} />)
-  }
+    openModal(<ScheduleChatModal chatId={1} />);
+  };
 
   const openEditContactModal = () => {
-    openModal(<EditContactModal contactId={1} />)
-  }
+    openModal(<EditContactModal contactId={1} />);
+  };
 
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-4 p-2">
-          <Avatar
-            variant="rounded"
-            alt={name}
-            src={avatarUrl || ""}
-            sx={{ width: 64, height: 64 }}
-          />
-          <div>
-            <p>{name}</p>
-            <p>{company}</p>
-            <p>{Formatter.phone(phone)}</p>
-          </div>
-        </div>
-        <div>
-          <p>
-            <b>CNPJ/CPF: </b>
-            {cnpj}
-          </p>
-          <p>
-            <b>Código: </b>
-            {id}
-          </p>
-          <p>
-            <b>Código ERP: </b>
-            {erpId}
-          </p>
-        </div>
+    <div className="flex items-center justify-between gap-4 px-4 py-2">
+      <div className="flex items-center gap-4">
+        <Avatar
+          variant="circular"
+          alt={name}
+          src={avatarUrl || ""}
+          sx={{ width: 32, height: 32 }}
+        />
+        <h2>{name}</h2>
       </div>
 
-      <div className="mr-8 flex items-center">
+      <div className="flex items-center">
         <Tooltip title={<h3 className="text-base">Editar contato</h3>}>
-          <IconButton size="large" onClick={openEditContactModal}>
-            <EditIcon fontSize="large" color="info" />
+          <IconButton onClick={openEditContactModal}>
+            <EditIcon color="info" />
           </IconButton>
         </Tooltip>
         <Tooltip title={<h3 className="text-base">Transferir conversa</h3>}>
-          <IconButton size="large" onClick={openTransferChatModal}>
-            <SyncAltIcon fontSize="large" color="secondary" />
+          <IconButton onClick={openTransferChatModal}>
+            <SyncAltIcon color="secondary" />
           </IconButton>
         </Tooltip>
         <Tooltip title={<h3 className="text-base">Agendar retorno</h3>}>
-          <IconButton size="large" onClick={openScheduleChatModal}>
-            <ScheduleIcon fontSize="large" color="warning" />
+          <IconButton onClick={openScheduleChatModal}>
+            <ScheduleIcon color="warning" />
           </IconButton>
         </Tooltip>
         <Tooltip title={<h3 className="text-base">Finalizar conversa</h3>}>
-          <IconButton size="large" onClick={openFinishChatModal}>
-            <AssignmentTurnedInIcon fontSize="large" color="success" />
+          <IconButton onClick={openFinishChatModal}>
+            <AssignmentTurnedInIcon color="success" />
           </IconButton>
         </Tooltip>
       </div>

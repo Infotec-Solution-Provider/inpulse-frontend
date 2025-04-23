@@ -25,7 +25,7 @@ export default function ChatMessagesList() {
   }, [openedChatMessages]);
 
   return (
-    <ul className="flex flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2" ref={ulRef}>
+    <ul className="flex flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2 w-full h-full" ref={ulRef}>
       {openedChatMessages.map((message) => (
         <Message
           key={`message_${message.id}`}

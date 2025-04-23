@@ -17,9 +17,9 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
 
   const handleClick = (element: ReactNode) => {
     openModal(
-      <div className="flex flex-col gap-2 bg-slate-700 px-2 py-2">
+      <div className="flex flex-col gap-2 bg-slate-800 p-2">
         <header className="flex items-center justify-between gap-2">
-          <h2 className="text-lg"> Visualizando mídia</h2>
+          <h2 className="text-lg">Visualizando mídia</h2>
           <IconButton onClick={closeModal} className="w-max">
             <CloseIcon />
           </IconButton>
@@ -31,11 +31,12 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
 
   const fileComponent = useMemo(() => {
     const url = filesService.getFileDownloadUrl(fileId);
-    const onClickImage = () => {
-      handleClick(<img src={url} alt={fileName} className="contain max-h-[44rem] max-w-[1/2]" />);
-    };
 
     if (fileType.includes("image")) {
+      const onClickImage = () => {
+        handleClick(<img src={url} alt={fileName} className="contain max-h-[44rem] max-w-[1/2]" />);
+      };
+
       return (
         <img
           src={url}
