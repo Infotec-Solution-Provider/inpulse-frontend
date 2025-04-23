@@ -4,6 +4,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
 import ErrorIcon from "@mui/icons-material/Error";
+import DeleteIcon from '@mui/icons-material/Delete';
 import { ReactNode } from "react";
 import MessageFile from "./message-file";
 
@@ -31,6 +32,7 @@ const statusComponents: Record<WppMessageStatus, ReactNode> = {
   READ: <DoneAllIcon className="text-blue-300" />,
   DOWNLOADED: <DownloadDoneIcon className="text-blue-300" />,
   ERROR: <ErrorIcon className="text-red-300" />,
+  REVOKED: <DeleteIcon className="text-slate-300" />,
 };
 
 export default function Message({

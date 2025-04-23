@@ -79,8 +79,8 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   const updateUser = useCallback(async (userId: number, data: UpdateUserDTO) => {
     try {
-      const response = await usersService.updateUser(String(userId), data);
-      setUsers((prev) => prev.map((u) => (u.CODIGO === userId ? response.data : u)));
+      const user = await usersService.updateUser(String(userId), data);
+      setUsers((prev) => prev.map((u) => (u.CODIGO === userId ? user : u)));
       toast.success("Usuário atualizado com sucesso!");
       closeModal();
     } catch (err) {
