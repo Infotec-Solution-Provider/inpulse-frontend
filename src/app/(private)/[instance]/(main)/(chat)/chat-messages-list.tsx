@@ -1,10 +1,11 @@
 import Message from "./message";
-import { useContext } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { WppMessage } from "@in.pulse-crm/sdk";
 
 export default function ChatMessagesList() {
-  const { openedChatMessages, openedChat } = useContext(WhatsappContext);
+  const { openedChatMessages } = useContext(WhatsappContext);
+  const ulRef = useRef<HTMLUListElement>(null);
 
   function getMessageFrom(msg: WppMessage) {
     if (msg.from.startsWith("system:")) {
@@ -17,8 +18,14 @@ export default function ChatMessagesList() {
     return "received";
   }
 
+  useEffect(() => {
+    if (ulRef.current) {
+      ulRef.current.scrollTop = ulRef.current.scrollHeight;
+    }
+  }, [openedChatMessages]);
+
   return (
-    <ul className="flex flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2">
+    <ul className="flex flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2" ref={ulRef}>
       {openedChatMessages.map((message) => (
         <Message
           key={`message_${message.id}`}

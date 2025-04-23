@@ -1,5 +1,5 @@
-"use client"
-import { createContext, ReactElement, ReactNode, useState } from "react";
+"use client";
+import { createContext, ReactElement, ReactNode, useEffect, useState } from "react";
 
 interface AppContextProps {
   modal: ReactNode;
@@ -19,6 +19,12 @@ export default function AppProvider({ children }: { children: ReactNode }) {
   const closeModal = () => {
     setModal(null);
   };
+
+  useEffect(() => {
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   return (
     <AppContext.Provider

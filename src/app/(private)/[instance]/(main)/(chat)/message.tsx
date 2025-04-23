@@ -5,8 +5,9 @@ import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
 import ErrorIcon from "@mui/icons-material/Error";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import MessageFile from "./message-file";
+
 interface MessageProps {
   style: "received" | "sent" | "system";
   text: string;
@@ -23,6 +24,7 @@ const variants = {
   sent: "bg-green-900 ml-auto rounded-br-none",
   system: "bg-yellow-800 mx-auto",
 };
+
 const statusComponents: Record<WppMessageStatus, ReactNode> = {
   PENDING: <AccessTimeIcon className="text-slate-300" />,
   SENT: <DoneIcon className="text-slate-300" />,

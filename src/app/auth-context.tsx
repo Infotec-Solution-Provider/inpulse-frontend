@@ -23,14 +23,14 @@ export default function AuthProvider({ children }: ProviderProps) {
   const signIn = useCallback(
     async (instance: string, { login, password }: AuthSignForm) => {
       try {
-        const { data } = await authService.login(instance, login, password);
+        const session = await authService.login(instance, login, password);
 
-        localStorage.setItem(`@inpulse/${instance}/token`, data.token);
+        localStorage.setItem(`@inpulse/${instance}/token`, session.token);
 
-        setUser(data.user);
-        setToken(data.token);
+        setUser(session.user);
+        setToken(session.token);
 
-        axios.defaults.headers["authorization"] = `Bearer ${data.token}`;
+        axios.defaults.headers["authorization"] = `Bearer ${session.token}`;
         router.replace(`/${instance}`);
       } catch (err) {
         toast.error("Falha ao logar!\n" + sanitizeErrorMessage(err));
@@ -55,15 +55,12 @@ export default function AuthProvider({ children }: ProviderProps) {
 
       authService
         .fetchSessionData(prevToken)
-        .then(async (res) => {
+        .then(async (session) => {
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
           usersService.setAuth(`Bearer ${prevToken}`);
 
-          return await usersService.getUserById(res.data.userId);
-        })
-        .then((res) => {
-          setUser(res.data);
-
+          const user = await usersService.getUserById(session.userId);
+          setUser(user);
           if (pathname.includes("login")) {
             router.replace(`/${instance}`);
           }
