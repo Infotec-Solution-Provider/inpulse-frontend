@@ -103,6 +103,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
     if (token) {
       usersService.setAuth(token);
       setLoading(true);
+
       usersService
         .getUsers()
         .then((res) => {
