@@ -32,12 +32,6 @@ export default function ChatSendMessageArea() {
     }
   };
 
-  const handleAudioChange = (blob: Blob) => {
-    const file = new File([blob], "audio.webm", { type: blob.type });
-
-    dispatch({ type: "set-audio", file });
-  };
-
   return (
     <div className="flex max-h-36 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300">
       <input

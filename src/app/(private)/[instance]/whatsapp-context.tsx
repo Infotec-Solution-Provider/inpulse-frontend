@@ -42,6 +42,7 @@ interface IWhatsappContext {
   sendMessage: (to: string, data: SendMessageData) => void;
   chatFilters: ChatsFiltersState;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
+  finishChat: (chatId: number, resultId: number) => void;
 }
 
 interface WhatsappProviderProps {
@@ -92,6 +93,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       }
     },
     [messages],
+  );
+
+  // Finaliza uma conversa
+  const finishChat = useCallback(
+    (chatId: number, resultId: number) => {
+      api.current.setAuth(token || "");
+      console.log(token);
+      api.current.finishChatById(chatId, resultId).then(() => {
+        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      });
+    },
+    [api, token],
   );
 
   // Envia mensagem
@@ -167,6 +180,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         currentChat: currentChat,
         currentChatMessages: currentChatMessages,
         openChat,
+        finishChat,
         sendMessage,
         wppApi: api.current,
         chatFilters,
