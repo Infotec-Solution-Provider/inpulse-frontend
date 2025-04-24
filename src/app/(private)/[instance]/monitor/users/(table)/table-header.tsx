@@ -32,7 +32,7 @@ export default function UsersTableHeader({
       .then((response: PaginatedResponse<User>) => {
         setUsers(response.data);
         setPage(response.page.current);
-        setTotalPages(response.page.total);
+        setTotalPages(response.page.totalRows)
         setLoading(false);
       });
   }

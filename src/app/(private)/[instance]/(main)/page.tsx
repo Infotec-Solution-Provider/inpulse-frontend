@@ -3,12 +3,11 @@ import { Modal } from "@mui/material";
 import Chat from "./(chat)/chat";
 import ChatsMenu from "./(chats-menu)/chats-menu";
 import { useContext } from "react";
-import { AppContext } from "../app-context";
+import AppProvider, { AppContext } from "../app-context";
 import ChatProvider from "./(chat)/chat-context";
 import { WhatsappContext } from "../whatsapp-context";
 
 export default function Home() {
-  const { modal, closeModal } = useContext(AppContext);
   const { currentChat: openedChat } = useContext(WhatsappContext);
 
   return (
@@ -18,14 +17,13 @@ export default function Home() {
         {openedChat ? (
           <Chat
             name={openedChat.contact?.name || "Contao excluído"}
+            phone={openedChat?.contact?.phone || "N/D"}
             avatarUrl={openedChat.avatarUrl}
+            customerName={openedChat?.customer?.RAZAO || "N/D"}
           />
         ) : (
           <div>Abra uma conversa</div>
         )}
-        <Modal open={!!modal} onClose={closeModal} className="flex items-center justify-center">
-          <>{modal}</>
-        </Modal>
       </div>
     </ChatProvider>
   );

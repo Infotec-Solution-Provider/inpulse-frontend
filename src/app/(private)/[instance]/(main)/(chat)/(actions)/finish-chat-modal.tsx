@@ -24,8 +24,8 @@ export default function FinishChatModal() {
   };
 
   useEffect(() => {
-    wppApi.getResults().then((results) => {
-      setResults(results.filter(r => r.name.trim() !== ""));
+    wppApi.current.getResults().then((results) => {
+      setResults(results.filter((r) => r.name.trim() !== ""));
     });
   }, []);
 
@@ -53,11 +53,10 @@ export default function FinishChatModal() {
                   className: "!text-xsm max-w-[12rem]",
                   sx: {
                     maxHeight: "20rem",
-                  }
-                }
-              }
+                  },
+                },
+              },
             },
-            
           }}
         >
           {results.map((result) => (

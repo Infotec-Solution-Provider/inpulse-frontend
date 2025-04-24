@@ -8,7 +8,7 @@ import { IconButton, Menu, MenuItem, TextField } from "@mui/material";
 import { useContext, useState } from "react";
 import { AppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
-import StartChatModal from "./start-chat-modal";
+import StartChatModal from "./(start-chat-modal)/start-chat-modal";
 import CategoryIcon from "@mui/icons-material/Category";
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {

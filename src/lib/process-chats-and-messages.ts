@@ -26,9 +26,15 @@ export default function processChatsAndMessages(
     }
   }
 
+  const isFromUs = (message: WppMessage) => {
+    return !["system", "me"].some((v) => v.includes(message.from));
+  };
+
   const detailedChats = chats.map((chat) => ({
     ...chat,
-    isUnread: messages.some((m) => m.contactId === chat.contactId && m.status !== "READ"),
+    isUnread: messages.some(
+      (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
+    ),
     lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
   })) as DetailedChat[];
 
