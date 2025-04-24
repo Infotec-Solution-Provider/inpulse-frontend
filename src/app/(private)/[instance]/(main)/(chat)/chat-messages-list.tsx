@@ -8,7 +8,7 @@ export default function ChatMessagesList() {
   const ulRef = useRef<HTMLUListElement>(null);
 
   function getMessageFrom(msg: WppMessage) {
-    if (msg.from.startsWith("system:")) {
+    if (msg.from.startsWith("system")) {
       return "system";
     }
     if (msg.from.startsWith("me:")) {

@@ -4,7 +4,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
 import ErrorIcon from "@mui/icons-material/Error";
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteIcon from "@mui/icons-material/Delete";
 import { ReactNode } from "react";
 import MessageFile from "./message-file";
 
@@ -48,7 +48,13 @@ export default function Message({
   return (
     <li className={`flex items-center gap-2 p-2 ${variants[style]} w-max max-w-[66%] rounded-md`}>
       <div className="flex flex-col gap-1">
-        <p className="text-slate-200">{text}</p>
+        <div className="text-slate-200">
+          {text.split("\n").map((line, index) => (
+            <p key={index} className="break-words text-sm">
+              {line}
+            </p>
+          ))}
+        </div>
 
         {fileId && (
           <MessageFile
@@ -60,7 +66,7 @@ export default function Message({
         )}
 
         <div className="flex items-center gap-2">
-          {status && statusComponents[status]}
+          {style !== "system" && status && statusComponents[status]}
           <p className="text-xs text-slate-300">{date.toLocaleString()}</p>
         </div>
       </div>

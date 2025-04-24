@@ -11,7 +11,7 @@ export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
     color: theme.palette.common.white,
   },
-  "border-bottom": "none",
+  "borderBottom": "none",
   [`&.${tableCellClasses.body}`]: {
     fontSize: 14,
     color: theme.palette.common.white,

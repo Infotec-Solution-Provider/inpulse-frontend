@@ -8,7 +8,7 @@ import { Search } from "@mui/icons-material";
 interface ClientTableHeaderProps {
   setLoading: (loading: boolean) => void;
   setPage: (page: number) => void;
-  setTotalPages: (totalPages: number) => void;
+  setTotalRows: (totalRows: number) => void;
   setClients: (clients: Partial<Customer>[]) => void;
   rowsPerPage: string;
   filters?: RequestFilters<Customer>;
@@ -18,7 +18,7 @@ interface ClientTableHeaderProps {
 export default function ClientTableHeader({
   setLoading,
   setPage,
-  setTotalPages,
+  setTotalRows,
   setClients,
   rowsPerPage,
   filters,
@@ -31,7 +31,7 @@ export default function ClientTableHeader({
       .then((response: PaginatedResponse<Customer>) => {
         setClients(response.data);
         setPage(response.page.current);
-        setTotalPages(response.page.total);
+        setTotalRows(response.page.totalRows);
         setLoading(false);
       });
   }

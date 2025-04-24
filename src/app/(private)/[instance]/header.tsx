@@ -11,35 +11,39 @@ import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import MonitorIcon from "@mui/icons-material/Monitor";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
-import BuildIcon from "@mui/icons-material/Build";
 import { UserRole } from "@in.pulse-crm/sdk";
+
 const monitorRoutes = [
-  { title: "Atendimentos", href: "/monitor/attendances" },
   { title: "Agendamentos", href: "/monitor/schedules" },
-  { title: "Usuários", href: "/monitor/users" },
+  { title: "Conversas", href: "/monitor/chats" },
+  // { title: "Usuários", href: "/monitor/users" },
 ];
 
 const crudsRoutes = [
-  { title: "Atendimentos", href: "/attendances" },
-  { title: "Agendamentos", href: "/schedules" },
+  // { title: "Atendimentos", href: "/attendances" },
+  // { title: "Agendamentos", href: "/schedules" },
   { title: "Usuários", href: "/users" },
   { title: "Clientes", href: "/customers" },
-  { title: "Contatos", href: "/contacts" },
-  { title: "Templates", href: "/templates" },
-  { title: "Tags", href: "/tags" },
+  // { title: "Contatos", href: "/contacts" },
+  // { title: "Templates", href: "/templates" },
+  // { title: "Tags", href: "/tags" },
 ];
 
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
+/*   
   { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
   { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-  { title: "Mensagens por usuário", href: "/reports/messages-by-user" },
+  { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, 
+*/
 ];
 
+/* 
 const toolsRoutes = [
   { title: "Mensagens em massa", href: "/tools/mass-messages" },
   { title: "Mensagens automáticas", href: "/tools/automatic-messages" },
-];
+]; 
+*/
 
 export default function Header() {
   const { signOut, user } = useContext(AuthContext);
@@ -67,9 +71,9 @@ export default function Header() {
               <HeaderNavItem title="Relatórios" routes={reportsRoutes} disabled={!isUserAdmin}>
                 <BarChartIcon />
               </HeaderNavItem>
-              <HeaderNavItem title="Ferramentas" routes={toolsRoutes} disabled={!isUserAdmin}>
+              {/*               <HeaderNavItem title="Ferramentas" routes={toolsRoutes} disabled={!isUserAdmin}>
                 <BuildIcon />
-              </HeaderNavItem>
+              </HeaderNavItem> */}
             </menu>
           </nav>
           <div className="flex items-center gap-4">

@@ -1,5 +1,5 @@
 "use client";
-import ClientTableItem from "./table-item";
+import CustomersTableItem from "./table-item";
 import {
   Button,
   CircularProgress,
@@ -15,15 +15,18 @@ import customersService from "@/lib/services/customers.service";
 import CreateModal from "./(modal)/create-modal";
 import { Customer, PaginatedResponse, RequestFilters } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
-import { toast } from "react-toastify";
 import ClientTableHeader from "./table-header";
+import { AppContext } from "../../../app-context";
+import ContactsModal from "./(modal)/contacts-modal";
 
 export default function ClientsTable() {
+  const { openModal } = useContext(AppContext);
+
   const [clients, setClients] = useState<Partial<Customer>[]>([]);
   const { token } = useContext(AuthContext);
 
   const [page, setPage] = useState<number>(0);
-  const [totalPages, setTotalPages] = useState<number>();
+  const [totalRows, setTotalRows] = useState<number>();
   const [rowsPerPage, setRowsPerPage] = useState<string>("10");
   const [filters, setFilters] = useState<RequestFilters<Customer>>();
 
@@ -39,19 +42,21 @@ export default function ClientsTable() {
       customersService.setAuth(token);
       customersService.getCustomers().then((response: PaginatedResponse<Customer>) => {
         setClients(response.data);
-        setTotalPages(response.page.total);
+        setTotalRows(response.page.totalRows);
         setPage(response.page.current);
         setFirstLoading(false);
         setLoading(false);
       });
-    } else {
-      toast.error("Login expirado, faça login novamente");
     }
   }, [token]);
 
   function openModalHandler(index: number) {
     setSelectedClient(clients[index]);
     setOpenEditModal(true);
+  }
+
+  function openContactModalHandler(customer: Customer) {
+    openModal(<ContactsModal customer={customer} />);
   }
 
   function closeModalHandler(editedCustomer?: Partial<Customer>) {
@@ -75,7 +80,7 @@ export default function ClientsTable() {
         .then((response: PaginatedResponse<Customer>) => {
           setClients(response.data);
           setPage(response.page.current);
-          setTotalPages(response.page.total);
+          setTotalRows(response.page.totalRows);
           setLoading(false);
         });
     } else {
@@ -84,7 +89,7 @@ export default function ClientsTable() {
         .then((response: PaginatedResponse<Customer>) => {
           setClients(response.data);
           setPage(response.page.current);
-          setTotalPages(response.page.total);
+          setTotalRows(response.page.totalRows);
           setLoading(false);
         });
     }
@@ -99,7 +104,7 @@ export default function ClientsTable() {
       .then((response: PaginatedResponse<Customer>) => {
         setClients(response.data);
         setPage(response.page.current);
-        setTotalPages(response.page.total);
+
         setLoading(false);
       });
   }
@@ -109,10 +114,11 @@ export default function ClientsTable() {
       return (
         <TableBody>
           {clients.map((client, index) => (
-            <ClientTableItem
+            <CustomersTableItem
               key={`${client.RAZAO}_${client.CODIGO}`}
-              client={client}
-              openModalHandler={() => openModalHandler(index)}
+              customer={client}
+              openEditModalHandler={() => openModalHandler(index)}
+              openContactModalHandler={openContactModalHandler}
             />
           ))}
         </TableBody>
@@ -150,7 +156,7 @@ export default function ClientsTable() {
             rowsPerPage={rowsPerPage}
             setLoading={setLoading}
             setPage={setPage}
-            setTotalPages={setTotalPages}
+            setTotalRows={setTotalRows}
             setClients={setClients}
             filters={filters}
             setFilters={setFilters}
@@ -165,7 +171,7 @@ export default function ClientsTable() {
           </Button>
           <TablePagination
             component="div"
-            count={totalPages ?? 10}
+            count={totalRows || 0}
             page={page - 1}
             rowsPerPage={+rowsPerPage}
             labelRowsPerPage="Entradas por página"

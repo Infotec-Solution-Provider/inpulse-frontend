@@ -9,11 +9,10 @@ import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
 
 export default function ChatSendMessageArea() {
-  const { currentChat: openedChat } = useContext(WhatsappContext);
-  const { sendMessage } = useContext(ChatContext);
-  const { state, dispatch } = useContext(ChatContext);
+  const { currentChat } = useContext(WhatsappContext);
+  const { sendMessage, state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isDisabled = !openedChat || !openedChat.contact || !openedChat.contact?.phone;
+  const isDisabled = !currentChat || !currentChat.contact || !currentChat.contact?.phone;
 
   const openAttachFile = () => {
     if (fileInputRef.current) {

@@ -7,11 +7,15 @@ interface AppContextProps {
   closeModal: () => void;
 }
 
+interface AppProviderProps {
+  children: ReactNode;
+  modal: ReactNode | null;
+  setModal: (modal: ReactNode | null) => void;
+}
+
 export const AppContext = createContext({} as AppContextProps);
 
-export default function AppProvider({ children }: { children: ReactNode }) {
-  const [modal, setModal] = useState<ReactElement | null>(null);
-
+export default function AppProvider({ children, modal, setModal }: AppProviderProps) {
   const openModal = (modal: ReactElement) => {
     setModal(modal);
   };

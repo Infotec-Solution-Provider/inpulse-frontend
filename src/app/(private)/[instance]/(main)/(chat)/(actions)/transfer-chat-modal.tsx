@@ -2,6 +2,7 @@ import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useContext } from "react";
 import { AppContext } from "../../../app-context";
+import { WhatsappContext } from "../../../whatsapp-context";
 
 /* interface TransferChatModalProps {
   chatId: number;
@@ -9,6 +10,7 @@ import { AppContext } from "../../../app-context";
  */
 export default function TransferChatModal() {
   const { closeModal } = useContext(AppContext);
+  const { wppApi } = useContext(WhatsappContext);
 
   return (
     <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">

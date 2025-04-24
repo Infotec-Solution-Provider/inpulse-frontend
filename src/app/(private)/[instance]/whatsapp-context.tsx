@@ -33,7 +33,7 @@ export interface DetailedChat extends WppChatWithDetails {
   lastMessage: WppMessage | null;
 }
 interface IWhatsappContext {
-  wppApi: WhatsappClient;
+  wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
   messages: Record<number, WppMessage[]>;
   currentChat: DetailedChat | null;
@@ -42,6 +42,9 @@ interface IWhatsappContext {
   sendMessage: (to: string, data: SendMessageData) => void;
   chatFilters: ChatsFiltersState;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
+  finishChat: (chatId: number, resultId: number) => void;
+  startChatByContactId: (contactId: number) => void;
+  updateChatContact: (contactId: number, newName: string) => void;
 }
 
 interface WhatsappProviderProps {
@@ -92,6 +95,50 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       }
     },
     [messages],
+  );
+
+  // Atualiza o nome do contato
+  const updateChatContact = useCallback((contactId: number, newName: string) => {
+    setChats((prev) =>
+      prev.map((chat) => {
+        if (chat.contact && chat.contactId === contactId) {
+          return {
+            ...chat,
+            contact: {
+              ...chat.contact,
+              name: newName,
+            },
+          };
+        }
+        return chat;
+      }),
+    );
+  }, []);
+
+  // Finaliza uma conversa
+  const finishChat = useCallback(
+    (chatId: number, resultId: number) => {
+      api.current.setAuth(token || "");
+      console.log(token);
+      api.current.finishChatById(chatId, resultId).then(() => {
+        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      });
+    },
+    [api, token],
+  );
+
+  const startChatByContactId = useCallback(
+    (contactId: number) => {
+      api.current.startChatByContactId(contactId).then(() => {
+        api.current.getChatsBySession(token || "", true, true).then(({ chats, messages }) => {
+          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+
+          setChats(detailedChats);
+          setMessages(chatsMessages);
+        });
+      });
+    },
+    [api, token],
   );
 
   // Envia mensagem
@@ -167,10 +214,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         currentChat: currentChat,
         currentChatMessages: currentChatMessages,
         openChat,
+        finishChat,
+        startChatByContactId,
         sendMessage,
-        wppApi: api.current,
+        wppApi: api,
         chatFilters,
         changeChatFilters,
+        updateChatContact,
       }}
     >
       {children}

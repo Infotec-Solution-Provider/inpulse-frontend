@@ -2,7 +2,7 @@ import ClientsTable from "./(table)/table";
 
 export default async function ClientsPage() {
   return (
-    <div className="mx-auto box-border grid grid-cols-[80rem] grid-rows-[max-content_1fr] gap-y-8 px-4 py-8">
+    <div className="mx-auto box-border grid grid-cols-[85rem] grid-rows-[max-content_1fr] gap-y-8 px-4 py-8">
       <ClientsTable />
     </div>
   );

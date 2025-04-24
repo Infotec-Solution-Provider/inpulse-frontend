@@ -19,7 +19,7 @@ export default function ScheduleChatModal() {
         </IconButton>
       </header>
       <form className="flex flex-col gap-6">
-        <TextField type="date" required />
+        <TextField type="datetime-local" required />
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"

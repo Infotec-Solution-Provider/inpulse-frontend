@@ -9,13 +9,16 @@ import EditContactModal from "./(actions)/edit-contact-modal";
 import FinishChatModal from "./(actions)/finish-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
+import { Formatter } from "@in.pulse-crm/utils";
 
 export interface ChatContactInfoProps {
   name: string;
+  customerName: string;
+  phone: string;
   avatarUrl?: string | null;
 }
 
-export default function ChatHeader({ name, avatarUrl }: ChatContactInfoProps) {
+export default function ChatHeader({ name, avatarUrl, customerName, phone }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
 
   const openFinishChatModal = () => {
@@ -41,9 +44,13 @@ export default function ChatHeader({ name, avatarUrl }: ChatContactInfoProps) {
           variant="circular"
           alt={name}
           src={avatarUrl || ""}
-          sx={{ width: 32, height: 32 }}
+          sx={{ width: 60, height: 60 }}
         />
-        <h2>{name}</h2>
+        <div>
+          <h2 className="text-slate-200">{name}</h2>
+          <h2 className="text-sm text-slate-300">{customerName}</h2>
+          <h2 className="text-sm text-slate-400">{Formatter.phone(phone)}</h2>
+        </div>
       </div>
 
       <div className="flex items-center">

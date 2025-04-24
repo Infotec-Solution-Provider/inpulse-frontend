@@ -29,7 +29,7 @@ export default function OperatorsTable() {
         .then((response: PaginatedResponse<User>) => {
           console.log(response);
           setUsers(response.data);
-          setTotalPages(response.page.total);
+          setTotalPages(response.page.totalRows);
           setPage(response.page.current);
           setLoading(false);
           setFirstLoading(false);
@@ -50,7 +50,7 @@ export default function OperatorsTable() {
         .then((response: PaginatedResponse<User>) => {
           setUsers(response.data);
           setPage(response.page.current);
-          setTotalPages(response.page.total);
+          setTotalPages(response.page.totalRows);
           setLoading(false);
         });
     } else {
@@ -59,7 +59,7 @@ export default function OperatorsTable() {
         .then((response: PaginatedResponse<User>) => {
           setUsers(response.data);
           setPage(response.page.current);
-          setTotalPages(response.page.total);
+          setTotalPages(response.page.totalRows);
           setLoading(false);
         });
     }
@@ -74,7 +74,7 @@ export default function OperatorsTable() {
       .then((response: PaginatedResponse<User>) => {
         setUsers(response.data);
         setPage(response.page.current);
-        setTotalPages(response.page.total);
+        setTotalPages(response.page.totalRows);
         setLoading(false);
       });
   }
