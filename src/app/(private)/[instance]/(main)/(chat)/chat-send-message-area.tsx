@@ -7,13 +7,13 @@ import SendIcon from "@mui/icons-material/Send";
 import { useContext, useRef } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
+import { AudioRecorder } from "react-audio-voice-recorder";
 
 export default function ChatSendMessageArea() {
-  const { currentChat: openedChat } = useContext(WhatsappContext);
-  const { sendMessage } = useContext(ChatContext);
-  const { state, dispatch } = useContext(ChatContext);
+  const { currentChat } = useContext(WhatsappContext);
+  const { sendMessage, state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isDisabled = !openedChat || !openedChat.contact || !openedChat.contact?.phone;
+  const isDisabled = !currentChat || !currentChat.contact || !currentChat.contact?.phone;
 
   const openAttachFile = () => {
     if (fileInputRef.current) {
@@ -31,6 +31,12 @@ export default function ChatSendMessageArea() {
     if (file) {
       dispatch({ type: "attach-file", file });
     }
+  };
+
+  const handleAudioChange = (blob: Blob) => {
+    const file = new File([blob], "audio.webm", { type: blob.type });
+
+    dispatch({ type: "set-audio", file });
   };
 
   return (
@@ -79,6 +85,7 @@ export default function ChatSendMessageArea() {
       >
         <MicIcon />
       </IconButton>
+      <AudioRecorder onRecordingComplete={handleAudioChange} />
     </div>
   );
 }

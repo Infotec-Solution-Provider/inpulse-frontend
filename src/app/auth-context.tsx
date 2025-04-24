@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 import { AuthContextProps, AuthSignForm } from "@/lib/types/auth-context.types";
 import { ProviderProps } from "@/lib/types/generic.types";
 import authService from "../lib/services/auth.service";
@@ -15,7 +15,7 @@ export const AuthContext = createContext({} as AuthContextProps);
 export default function AuthProvider({ children }: ProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const instance = pathname.split("/")[1];
+  const instanceRef = useRef(pathname.split("/")[1]);
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -24,8 +24,9 @@ export default function AuthProvider({ children }: ProviderProps) {
     async (instance: string, { login, password }: AuthSignForm) => {
       try {
         const session = await authService.login(instance, login, password);
-
         localStorage.setItem(`@inpulse/${instance}/token`, session.token);
+
+        instanceRef.current = instance;
 
         setUser(session.user);
         setToken(session.token);
@@ -40,14 +41,14 @@ export default function AuthProvider({ children }: ProviderProps) {
   );
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(`@inpulse/${instance}/token`);
+    localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
     setUser(null);
     setToken(null);
-    router.replace(`/${instance}/login`);
-  }, [router, instance]);
+    router.replace(`/${instanceRef.current}/login`);
+  }, [router]);
 
   useEffect(() => {
-    const prevToken = localStorage.getItem(`@inpulse/${instance}/token`);
+    const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
     setToken(prevToken);
 
     if (prevToken) {
@@ -56,30 +57,31 @@ export default function AuthProvider({ children }: ProviderProps) {
       authService
         .fetchSessionData(prevToken)
         .then(async (session) => {
+          instanceRef.current = session.instance;
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
           usersService.setAuth(`Bearer ${prevToken}`);
           const user = await usersService.getUserById(session.userId);
           setUser(user);
-        
+
           if (pathname.includes("login")) {
-            router.replace(`/${instance}`);
+            router.replace(`/${instanceRef.current}`);
           }
         })
         .catch((err) => {
           toast.error(err.message || "Sessão expirada, faça o login novamente!");
-          localStorage.removeItem(`@inpulse/${instance}/token`);
+          localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
           setUser(null);
 
           if (!pathname.includes("login")) {
-            router.replace(`/${instance}/login`);
+            router.replace(`/${instanceRef.current}/login`);
           }
         });
     }
 
     if (!prevToken && !pathname.includes("login")) {
-      router.replace(`/${instance}/login`);
+      router.replace(`/${instanceRef.current}/login`);
     }
-  }, [instance, pathname, router]);
+  }, [pathname, router]);
 
   return (
     <AuthContext.Provider
@@ -89,6 +91,7 @@ export default function AuthProvider({ children }: ProviderProps) {
         isAuthenticated: false,
         signIn,
         signOut,
+        instance: instanceRef.current,
       }}
     >
       {children}

@@ -24,6 +24,7 @@
     "pretty-bytes": "^6.1.1",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
+    "react-audio-voice-recorder": "^2.2.0",
     "react-dom": "^19.0.0",
     "react-file-icon": "^1.6.0",
     "react-toastify": "^11.0.5",
