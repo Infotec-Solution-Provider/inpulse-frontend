@@ -34,6 +34,7 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
       PESSOA: (value: unknown) => typeof value === "string" && ["FIS", "JUR"].includes(value),
       CIDADE: (value: unknown) => typeof value === "string",
       ATIVO: (value: unknown) => value === "SIM" || value === "NAO",
+      COD_ERP: (value: unknown) => typeof value === "string" || null || undefined,
     };
 
     const invalidKeys = Object.entries(formData)
@@ -61,7 +62,14 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
   }
 
   return (
-    <Dialog onClose={handleClose} open={open}>
+    <Dialog
+      onClose={(e, reason) => {
+        if (reason !== "backdropClick") {
+          handleClose();
+        }
+      }}
+      open={open}
+    >
       <FormControl>
         <div className="flex h-full w-full flex-col items-center gap-4 bg-slate-800 p-4">
           <DialogTitle sx={{ paddingLeft: 0.5, paddingTop: 0 }} className="w-full text-left">
@@ -115,7 +123,7 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               fullWidth
               required
               onChange={(e) => {
-                formData = { ...formData, CPF_CNPJ: e.target.value };
+                formData = { ...formData, CPF_CNPJ: e.target.value.trim() };
               }}
             />
             <TextField
@@ -137,7 +145,7 @@ export default function EditModal({ onClose, client, open }: EditModalProps) {
               defaultValue={client.COD_ERP}
               fullWidth
               onChange={(e) => {
-                formData = { ...formData, COD_ERP: e.target.value };
+                formData = { ...formData, COD_ERP: e.target.value.trim() ?? "" };
               }}
             />
           </div>

@@ -55,7 +55,14 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
   }
 
   return (
-    <Dialog onClose={handleClose} open={open}>
+    <Dialog
+      onClose={(e, reason) => {
+        if (reason !== "backdropClick") {
+          handleClose();
+        }
+      }}
+      open={open}
+    >
       <FormControl>
         <div className="flex h-full w-full flex-col items-center gap-4 bg-slate-800 p-4">
           <DialogTitle sx={{ paddingLeft: 0.5, paddingTop: 0 }} className="w-full text-left">
@@ -99,14 +106,14 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
           </div>
           <div className="flex flex-row justify-center gap-4">
             <TextField
-              label="CPF"
+              label="CPF/CNPJ"
               name="cpf"
               type="text"
               id="cpf"
               fullWidth
               required
               onChange={(e) => {
-                formData = { ...formData, CPF_CNPJ: e.target.value };
+                formData = { ...formData, CPF_CNPJ: e.target.value.trim() };
               }}
             />
             <TextField
@@ -126,7 +133,7 @@ export default function CreateModal({ onClose, open }: CreateModalProps) {
               type="text"
               fullWidth
               onChange={(e) => {
-                formData = { ...formData, COD_ERP: e.target.value };
+                formData = { ...formData, COD_ERP: e.target.value ?? "" };
               }}
             />
           </div>
