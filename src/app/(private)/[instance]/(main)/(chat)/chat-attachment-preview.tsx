@@ -5,7 +5,6 @@ import SendIcon from "@mui/icons-material/Send";
 import { ChatContext } from "./chat-context";
 import { DefaultExtensionType, FileIcon, defaultStyles } from "react-file-icon";
 import prettyBytes from "pretty-bytes";
-import { useAudioRecorder, AudioRecorder } from "react-audio-voice-recorder";
 
 interface ChatAttachmentPreviewProps {
   file: File;

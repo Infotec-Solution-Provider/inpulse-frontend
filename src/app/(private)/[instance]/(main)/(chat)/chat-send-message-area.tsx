@@ -7,7 +7,6 @@ import SendIcon from "@mui/icons-material/Send";
 import { useContext, useRef } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
-import { AudioRecorder } from "react-audio-voice-recorder";
 
 export default function ChatSendMessageArea() {
   const { currentChat } = useContext(WhatsappContext);
@@ -85,7 +84,6 @@ export default function ChatSendMessageArea() {
       >
         <MicIcon />
       </IconButton>
-      <AudioRecorder onRecordingComplete={handleAudioChange} />
     </div>
   );
 }
