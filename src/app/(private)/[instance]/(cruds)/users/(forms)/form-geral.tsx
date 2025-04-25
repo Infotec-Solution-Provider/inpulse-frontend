@@ -61,26 +61,6 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           onChange={(e) => onFormChange({ SENHA: e.target.value })}
         />
       </div>
-      {/*             <div className="flex w-full flex-row justify-center gap-4">
-                <StyledTextField
-                    label="Nome de exibição"
-                    name="NOME_EXIBICAO"
-                    type="text"
-                    fullWidth
-                    size="small"
-                    value={formData.NOME_EXIBICAO}
-                    onChange={(e) => onFormChange({ NOME_EXIBICAO: e.target.value })}
-                />
-                <StyledTextField
-                    label="Email de exibição"
-                    name="EMAIL_EXIBICAO"
-                    type="text"
-                    fullWidth
-                    size="small"
-                    value={formData.EMAIL_EXIBICAO}
-                    onChange={(e) => onFormChange({ EMAIL_EXIBICAO: e.target.value })}
-                />
-            </div> */}
       <div className="flex w-full flex-row justify-center gap-4">
         <StyledTextField
           label="Setor"
@@ -116,36 +96,15 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
             Supervisor
           </MenuItem>
           <MenuItem value={"ATIVO"} key="ATIVO">
-            Ativo
+            Usuário (Ativo)
           </MenuItem>
           <MenuItem value={"RECEP"} key="RECEP">
-            Recepcivo
+            Usuário (Recep)
           </MenuItem>
           <MenuItem value={"AMBOS"} key="AMBOS">
-            Ambos
+            Usuário (Ambos)
           </MenuItem>
         </StyledTextField>
-        {/*                 <StyledTextField
-                    label="Horário"
-                    name="HORARIO"
-                    select
-                    fullWidth
-                    size="small"
-                    defaultValue={""}
-                    value={formData.HORARIO}
-                    onChange={(e) => onFormChange({ HORARIO: Number(e.target.value) })}
-                    slotProps={selectSlotProps}
-                >
-                    <MenuItem value={"1"} key="MANHA">
-                        Manhã
-                    </MenuItem>
-                    <MenuItem value={"2"} key="TARDE">
-                        Tarde
-                    </MenuItem>
-                    <MenuItem value={"3"} key="INTEGRAL">
-                        Integral
-                    </MenuItem>
-                </StyledTextField> */}
       </div>
       <div className="flex w-1/2 flex-row justify-center gap-4 pr-2">
         <StyledTextField

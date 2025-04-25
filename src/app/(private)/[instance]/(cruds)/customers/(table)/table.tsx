@@ -44,8 +44,8 @@ export default function ClientsTable() {
         setClients(response.data);
         setTotalRows(response.page.totalRows);
         setPage(response.page.current);
-        setLoading(false);
         setFirstLoading(false);
+        setLoading(false);
       });
     }
   }, [token]);
@@ -110,7 +110,6 @@ export default function ClientsTable() {
   }
 
   const rows = useMemo(() => {
-    console.log("calculou memo");
     if (clients && clients.length > 0 && !loading) {
       return (
         <TableBody>
@@ -127,9 +126,15 @@ export default function ClientsTable() {
     } else {
       return (
         <TableBody>
-          <StyledTableRow className="h-32 w-full items-center justify-center text-center text-gray-400">
-            <StyledTableCell colSpan={8} className="flex w-full items-center justify-center gap-2">
-              <CircularProgress /> Carregando clientes...
+          <StyledTableRow className="h-32 w-full">
+            <StyledTableCell
+              colSpan={8}
+              className="flex items-center justify-center text-center text-gray-400"
+            >
+              <div className="flex flex-col items-center">
+                <CircularProgress />
+                <span className="mt-2">Carregando clientes...</span>
+              </div>
             </StyledTableCell>
           </StyledTableRow>
         </TableBody>
