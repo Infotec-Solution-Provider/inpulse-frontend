@@ -8,19 +8,21 @@ import { StyledTableCell } from "./styles-table";
 interface UserTableRowProps {
   user: Partial<User>;
   index: number;
+  sectors: Array<{ id: number; name: string }>;
 }
 
-export default function UsersTableRow({ user, index }: UserTableRowProps) {
+export default function UsersTableRow({ user, index, sectors }: UserTableRowProps) {
   const { openUserModal } = useContext(UsersContext);
+  const sector = sectors.find((s) => s.id === user.SETOR);
 
   return (
-    <TableRow sx={{ background: index % 2 === 0 ? 'transparent' : 'rgba(67, 56, 202, 0.05)' }}>
+    <TableRow sx={{ background: index % 2 === 0 ? "transparent" : "rgba(67, 56, 202, 0.05)" }}>
       <StyledTableCell className="px-2 py-3">{user.CODIGO}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.NOME}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.LOGIN}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.EMAIL}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.NIVEL}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.SETOR}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{sector?.name || "N/D"}</StyledTableCell>
 
       <StyledTableCell className="flex items-center justify-end gap-4 px-2 py-3 pr-8">
         <button

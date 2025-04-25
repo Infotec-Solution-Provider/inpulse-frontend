@@ -14,6 +14,7 @@ import {
 } from "react";
 import { toast } from "react-toastify";
 import UsersModal from "./(modal)/user-modal";
+import { WhatsappContext } from "../../whatsapp-context";
 
 interface IUsersProviderProps {
   children: ReactNode;
@@ -26,6 +27,7 @@ interface IUsersContext {
   order: "desc" | "asc";
   orderBy: keyof User;
   sortedUsers: User[];
+  sectors: Array<{ id: number; name: string }>;
   handleSort: (property: keyof User) => void;
   createUser: (data: CreateUserDTO) => void;
   updateUser: (userId: number, data: UpdateUserDTO) => void;
@@ -37,13 +39,15 @@ const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001
 export const UsersContext = createContext<IUsersContext>({} as IUsersContext);
 
 export default function UsersProvider({ children }: IUsersProviderProps) {
+  const { wppApi } = useContext(WhatsappContext);
   const { token } = useContext(AuthContext);
   const [users, setUsers] = useState<User[]>([]);
   const [modal, setModal] = useState<ReactNode>(null);
   const [loading, setLoading] = useState(true);
   const [orderBy, setOrderBy] = useState<keyof User>("CODIGO");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
-  const apiRef = useRef(new UsersClient(USERS_URL))
+  const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
+  const apiRef = useRef(new UsersClient(USERS_URL));
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
@@ -70,8 +74,8 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   const createUser = useCallback(async (data: CreateUserDTO) => {
     try {
-      const createdUser = await apiRef.current.createUser(data);
-      setUsers((prev) => [createdUser, ...prev]);
+      await apiRef.current.createUser(data);
+      loadUsers();
       toast.success("Usuário criado com sucesso!");
       closeModal();
     } catch (err) {
@@ -81,8 +85,8 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   const updateUser = useCallback(async (userId: number, data: UpdateUserDTO) => {
     try {
-      const user = await apiRef.current.updateUser(String(userId), data);
-      setUsers((prev) => prev.map((u) => (u.CODIGO === userId ? user : u)));
+      await apiRef.current.updateUser(String(userId), data);
+      loadUsers();
       toast.success("Usuário atualizado com sucesso!");
       closeModal();
     } catch (err) {
@@ -101,20 +105,33 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
     setModal(null);
   }, []);
 
+  const loadUsers = useCallback(() => {
+    setLoading(true);
+    apiRef.current
+      .getUsers()
+      .then((res) => {
+        setUsers(res.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
   useEffect(() => {
     if (token) {
       apiRef.current.setAuth(token);
       setLoading(true);
 
-      apiRef.current
-        .getUsers()
-        .then((res) => {
-          setUsers(res.data);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
+      loadUsers();
     }
   }, [token]);
+
+  useEffect(() => {
+    if (wppApi.current) {
+      wppApi.current.getSectors().then((data) => {
+        setSectors(data);
+      });
+    }
+  }, [wppApi]);
 
   return (
     <UsersContext.Provider
@@ -125,6 +142,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         order,
         orderBy,
         sortedUsers,
+        sectors,
         handleSort,
         createUser,
         updateUser,
