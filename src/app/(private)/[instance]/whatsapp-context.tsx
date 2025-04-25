@@ -139,14 +139,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const startChatByContactId = useCallback(
     (contactId: number) => {
-      api.current.startChatByContactId(contactId).then(() => {
-        api.current.getChatsBySession(token || "", true, true).then(({ chats, messages }) => {
-          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
-          setChats(detailedChats);
-          setMessages(chatsMessages);
-        });
-      });
+      api.current.startChatByContactId(contactId);
     },
     [api, token],
   );
@@ -158,10 +151,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
-    api.current.setAuth(token || "");
-
-    if (token) {
-      api.current.getChatsBySession(token, true, true).then(({ chats, messages }) => {
+    if (typeof token === "string" && token.length > 0 && api.current) {
+      api.current.setAuth(token);
+      api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
@@ -171,7 +163,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setChats([]);
       setMessages({});
     }
-  }, [token]);
+  }, [token, api.current]);
 
   // Atribui listeners para eventos de socket do whatsapp
   useEffect(() => {

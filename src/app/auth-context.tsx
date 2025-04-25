@@ -48,6 +48,9 @@ export default function AuthProvider({ children }: ProviderProps) {
   }, [router]);
 
   useEffect(() => {
+    const instance = pathname.split("/")[1];
+    console.log("instance", instance);
+    instanceRef.current = instance;
     const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
     setToken(prevToken);
 
