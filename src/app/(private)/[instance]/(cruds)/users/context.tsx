@@ -126,12 +126,12 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   }, [token]);
 
   useEffect(() => {
-    if (wppApi.current) {
+    if (wppApi.current && token) {
       wppApi.current.getSectors().then((data) => {
         setSectors(data);
       });
     }
-  }, [wppApi]);
+  }, [wppApi, token]);
 
   return (
     <UsersContext.Provider
