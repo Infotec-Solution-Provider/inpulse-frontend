@@ -98,22 +98,32 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   // Atualiza o nome do contato
-  const updateChatContact = useCallback((contactId: number, newName: string) => {
-    setChats((prev) =>
-      prev.map((chat) => {
-        if (chat.contact && chat.contactId === contactId) {
-          return {
-            ...chat,
-            contact: {
-              ...chat.contact,
-              name: newName,
-            },
-          };
-        }
-        return chat;
-      }),
-    );
-  }, []);
+  const updateChatContact = useCallback(
+    (contactId: number, newName: string) => {
+      setChats((prev) =>
+        prev.map((chat) => {
+          if (chat.contact && chat.contactId === contactId) {
+            return {
+              ...chat,
+              contact: {
+                ...chat.contact,
+                name: newName,
+              },
+            };
+          }
+          return chat;
+        }),
+      );
+
+      if (currentChat && currentChat.contactId === contactId && currentChat.contact) {
+        setCurrentChat((prev) => {
+          prev!.contact!.name = newName;
+          return prev;
+        });
+      }
+    },
+    [currentChat],
+  );
 
   // Finaliza uma conversa
   const finishChat = useCallback(

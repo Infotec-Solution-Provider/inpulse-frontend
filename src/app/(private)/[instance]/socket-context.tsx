@@ -36,6 +36,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     const socketClient = socket.current;
 
     socketClient.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
+      console.log("QR Code recebido:", qr, phone)
       openModal(<QRModal qr={qr} phone={phone} onClose={closeModal} />);
     });
 
