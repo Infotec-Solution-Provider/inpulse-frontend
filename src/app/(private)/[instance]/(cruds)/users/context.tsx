@@ -127,6 +127,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   useEffect(() => {
     if (wppApi.current && token) {
+      wppApi.current.setAuth(token);
       wppApi.current.getSectors().then((data) => {
         setSectors(data);
       });
