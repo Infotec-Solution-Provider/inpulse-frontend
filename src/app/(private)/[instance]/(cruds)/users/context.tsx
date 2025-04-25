@@ -1,7 +1,6 @@
 "use client";
 import { AuthContext } from "@/app/auth-context";
-import usersService from "@/lib/services/users.service";
-import { CreateUserDTO, UpdateUserDTO, User } from "@in.pulse-crm/sdk";
+import { CreateUserDTO, UpdateUserDTO, User, UsersClient } from "@in.pulse-crm/sdk";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
   createContext,
@@ -10,6 +9,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { toast } from "react-toastify";
@@ -33,6 +33,7 @@ interface IUsersContext {
   closeModal: () => void;
 }
 
+const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001";
 export const UsersContext = createContext<IUsersContext>({} as IUsersContext);
 
 export default function UsersProvider({ children }: IUsersProviderProps) {
@@ -42,6 +43,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   const [loading, setLoading] = useState(true);
   const [orderBy, setOrderBy] = useState<keyof User>("CODIGO");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const apiRef = useRef(new UsersClient(USERS_URL))
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
@@ -68,7 +70,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   const createUser = useCallback(async (data: CreateUserDTO) => {
     try {
-      const createdUser = await usersService.createUser(data);
+      const createdUser = await apiRef.current.createUser(data);
       setUsers((prev) => [createdUser, ...prev]);
       toast.success("Usuário criado com sucesso!");
       closeModal();
@@ -79,7 +81,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   const updateUser = useCallback(async (userId: number, data: UpdateUserDTO) => {
     try {
-      const user = await usersService.updateUser(String(userId), data);
+      const user = await apiRef.current.updateUser(String(userId), data);
       setUsers((prev) => prev.map((u) => (u.CODIGO === userId ? user : u)));
       toast.success("Usuário atualizado com sucesso!");
       closeModal();
@@ -101,10 +103,10 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
 
   useEffect(() => {
     if (token) {
-      usersService.setAuth(token);
+      apiRef.current.setAuth(token);
       setLoading(true);
 
-      usersService
+      apiRef.current
         .getUsers()
         .then((res) => {
           setUsers(res.data);
