@@ -8,10 +8,12 @@ import { StyledTableCell } from "./styles-table";
 interface UserTableRowProps {
   user: Partial<User>;
   index: number;
+  sectors: Array<{ id: number; name: string }>;
 }
 
-export default function UsersTableRow({ user, index }: UserTableRowProps) {
+export default function UsersTableRow({ user, index, sectors }: UserTableRowProps) {
   const { openUserModal } = useContext(UsersContext);
+  const sector = sectors.find((s) => s.id === user.SETOR);
 
   return (
     <TableRow sx={{ background: index % 2 === 0 ? "transparent" : "rgba(67, 56, 202, 0.05)" }}>

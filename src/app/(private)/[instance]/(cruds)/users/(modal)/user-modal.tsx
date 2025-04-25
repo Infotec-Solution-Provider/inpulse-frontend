@@ -6,6 +6,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { UsersContext } from "../context";
 import FormGeral from "../(forms)/form-geral";
 import { StyledDialog, StyledIconButton } from "./styles-modal";
+
 interface UserModalProps {
   user?: User;
 }
