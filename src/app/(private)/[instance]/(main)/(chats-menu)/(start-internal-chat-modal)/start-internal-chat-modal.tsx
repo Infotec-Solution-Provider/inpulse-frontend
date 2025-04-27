@@ -1,0 +1,45 @@
+import { Button, IconButton } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import { useContext, useEffect, useState } from "react";
+import { AppContext } from "../../../app-context";
+import { InternalContactWithUser } from "@in.pulse-crm/sdk";
+import StartInternalChatModalItem from "./start-internal-chat-modal-item";
+import { InternalChatContext } from "../../../internal-context";
+
+export default function StartInternalChatModal() {
+  const { closeModal } = useContext(AppContext);
+  const { internalApi } = useContext(InternalChatContext);
+  const [contacts, setContacts] = useState<Array<InternalContactWithUser>>([]);
+
+  useEffect(() => {
+    if (internalApi.current) {
+      internalApi.current.getContactsWithUser().then((data) => {
+        setContacts(data);
+      });
+    }
+  }, []);
+
+  return (
+    <div className="w-[35rem] rounded-md bg-slate-800 px-4 py-4">
+      <header className="flex items-center justify-between pb-8">
+        <h1 className="text-xl">Iniciar conversa Interna</h1>
+        <IconButton onClick={closeModal}>
+          <CloseIcon />
+        </IconButton>
+      </header>
+      <div></div>
+      <ul className="flex h-[30rem] flex-col items-center gap-2 overflow-y-auto">
+        {contacts.map(({ user, chatingWith, ...contact }) => {
+          return (
+            <StartInternalChatModalItem
+              key={contact.id}
+              contact={{ ...contact, isDeleted :false}}
+              user={user}
+              chatingWith={chatingWith}
+            />
+          );
+        })}
+      </ul>
+    </div>
+  );
+}

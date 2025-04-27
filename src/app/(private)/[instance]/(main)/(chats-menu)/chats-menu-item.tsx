@@ -73,7 +73,7 @@ export default function ChatsMenuItem({
         </div>
         <div className="truncate text-sm text-slate-300">{message}</div>
         <div className="flex items-center justify-end gap-1">
-          {tags.map((tag) => (
+          {tags?.map((tag) => (
             <ChatsMenuItemTag key={tag.name} name={tag.name} color={tag.color} />
           ))}
         </div>

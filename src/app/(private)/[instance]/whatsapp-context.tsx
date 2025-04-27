@@ -31,6 +31,7 @@ import chatsFilterReducer, {
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
+  chatType: 'wpp'
 }
 interface IWhatsappContext {
   wppApi: React.RefObject<WhatsappClient>;

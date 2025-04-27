@@ -16,9 +16,10 @@ export interface ChatContactInfoProps {
   customerName: string;
   phone: string;
   avatarUrl?: string | null;
+  chatType?: string | null;
 }
 
-export default function ChatHeader({ name, avatarUrl, customerName, phone }: ChatContactInfoProps) {
+export default function ChatHeader({ name, avatarUrl, customerName, phone, chatType }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
 
   const openFinishChatModal = () => {
@@ -49,10 +50,10 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone }: Cha
         <div>
           <h2 className="text-slate-200">{name}</h2>
           <h2 className="text-sm text-slate-300">{customerName}</h2>
-          <h2 className="text-sm text-slate-400">{Formatter.phone(phone)}</h2>
+          <h2 className="text-sm text-slate-400">{chatType=='wpp'?(Formatter.phone(phone)):''}</h2>
         </div>
       </div>
-
+      {chatType === 'wpp' && (
       <div className="flex items-center">
         <Tooltip title={<h3 className="text-base">Editar contato</h3>}>
           <IconButton onClick={openEditContactModal}>
@@ -75,6 +76,8 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone }: Cha
           </IconButton>
         </Tooltip>
       </div>
+    )}
     </div>
+      
   );
 }

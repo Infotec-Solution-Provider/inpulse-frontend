@@ -24,7 +24,7 @@ const crudsRoutes = [
   // { title: "Agendamentos", href: "/schedules" },
   { title: "Usuários", href: "/users" },
   { title: "Clientes", href: "/customers" },
-  // { title: "Contatos", href: "/contacts" },
+  { title: "Grupos Internos", href: "/internal-groups" },
   // { title: "Templates", href: "/templates" },
   // { title: "Tags", href: "/tags" },
 ];

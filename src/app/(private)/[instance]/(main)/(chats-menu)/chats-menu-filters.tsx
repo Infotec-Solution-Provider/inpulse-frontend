@@ -10,6 +10,7 @@ import { AppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
 import StartChatModal from "./(start-chat-modal)/start-chat-modal";
 import CategoryIcon from "@mui/icons-material/Category";
+import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
   all: "",
@@ -36,6 +37,11 @@ export default function ChatsMenuFilters() {
   const openStartChatModal = () => {
     closeMenu();
     openModal(<StartChatModal />);
+  };
+
+  const openStartInternalChatModal = () => {
+    closeMenu();
+    openModal(<StartInternalChatModal />);
   };
 
   const closeMenu = () => setAnchorEl(null);
@@ -70,6 +76,10 @@ export default function ChatsMenuFilters() {
           <MenuItem className="flex items-center gap-2" onClick={openStartChatModal}>
             <MarkChatUnreadIcon />
             <p>Nova Conversa</p>
+          </MenuItem>
+          <MenuItem className="flex items-center gap-2" onClick={openStartInternalChatModal}>
+            <GroupsIcon />
+            <p>Nova Conversa Interna</p>
           </MenuItem>
           <MenuItem className="flex items-center gap-2">
             <GroupsIcon />

@@ -1,17 +1,17 @@
-import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { WppChatWithDetails, WppMessage } from "@in.pulse-crm/sdk";
+import { DetailedChat } from "@/app/(private)/[instance]/internal-context";
+import { InternalChatWithDetails, InternalMessage } from "@in.pulse-crm/sdk";
 
-export default function processChatsAndMessages(
-  chats: WppChatWithDetails[],
-  messages: WppMessage[],
+export default function processInternalChatsAndMessages(
+  chats: InternalChatWithDetails[],
+  messages: InternalMessage[],
 ) {
   messages.sort((a, b) => ((a.timestamp || 0) < (b.timestamp || 0) ? -1 : 1));
 
-  const lastMessages: Record<number, WppMessage> = {};
-  const chatsMessages: Record<number, WppMessage[]> = {};
+  const lastMessages: Record<number, InternalMessage> = {};
+  const chatsMessages: Record<number, InternalMessage[]> = {};
 
   for (const message of messages) {
-    const contactIdOrZero = message.contactId || 0;
+    const contactIdOrZero = message.internalcontactId || 0;
 
     if (!chatsMessages[contactIdOrZero]) {
       chatsMessages[contactIdOrZero] = [];
@@ -26,17 +26,17 @@ export default function processChatsAndMessages(
     }
   }
 
-  const isFromUs = (message: WppMessage) => {
+  const isFromUs = (message: InternalMessage) => {
     return !["system", "me"].some((v) => v.includes(message.from));
   };
 
   const detailedChats = chats.map((chat) => ({
     ...chat,
-    chatType:'wpp',
+    chatType:'internal',
     isUnread: messages.some(
-      (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
+      (m) => m.internalcontactId === chat.internalcontactId && m.status !== "READ" && !isFromUs(m),
     ),
-    lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
+    lastMessage: chat.internalcontactId ? lastMessages[chat.internalcontactId] || null : null,
   })) as DetailedChat[];
 
   detailedChats.sort((a, b) =>

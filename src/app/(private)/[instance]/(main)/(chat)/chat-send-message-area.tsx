@@ -7,13 +7,18 @@ import SendIcon from "@mui/icons-material/Send";
 import { useContext, useRef, useEffect } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
+import { InternalChatContext } from "../../internal-context";
 
 export default function ChatSendMessageArea() {
   const { currentChat } = useContext(WhatsappContext);
+  const { currentInternalChat } = useContext(InternalChatContext);
+
   const { sendMessage, state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isDisabled = !currentChat || !currentChat.contact || !currentChat.contact?.phone;
-
+  const hasWhatsappChat = currentChat && currentChat.contact && currentChat.contact.phone;
+  const hasInternalChat = currentInternalChat && currentInternalChat.contact && currentInternalChat.contact.phone;
+  
+  const isDisabled = !hasWhatsappChat && !hasInternalChat;
   const openAttachFile = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
