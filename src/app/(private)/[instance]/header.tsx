@@ -68,6 +68,9 @@ export default function Header() {
               <HeaderNavItem title="Cadastros" routes={crudsRoutes} disabled={!isUserAdmin}>
                 <AppRegistrationIcon />
               </HeaderNavItem>
+              <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
+                <AppRegistrationIcon />
+              </HeaderNavItem>
               <HeaderNavItem title="Relatórios" routes={reportsRoutes} disabled={!isUserAdmin}>
                 <BarChartIcon />
               </HeaderNavItem>
