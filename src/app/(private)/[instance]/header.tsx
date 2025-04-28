@@ -25,6 +25,7 @@ const crudsRoutes = [
   { title: "Usuários", href: "/users" },
   { title: "Clientes", href: "/customers" },
   { title: "Grupos Internos", href: "/internal-groups" },
+  { title: "Carteiras", href: "/wallets" }
   // { title: "Templates", href: "/templates" },
   // { title: "Tags", href: "/tags" },
 ];
@@ -35,11 +36,11 @@ const userCrudRoutes = [
 ];
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
-/*   
-  { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
-  { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-  { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, 
-*/
+  /*   
+    { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
+    { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
+    { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, 
+  */
 ];
 
 /* 
