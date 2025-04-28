@@ -15,7 +15,7 @@ export default function QRModal({ qr, phone, onClose }: QRModalProps) {
   const { closeModal } = useContext(AppContext);
 
   return (
-    <div className="flex h-max w-max flex-col items-center gap-2 rounded-md bg-slate-800 px-6 py-4">
+    <div className="flex h-max w-max flex-col items-center gap-2 rounded-md bg-slate-600 px-6 py-4">
       <div className="flex w-full items-center justify-between">
         <h1 className="text-lg"> QrCode: {phone} </h1>
         <Button onClick={closeModal}>

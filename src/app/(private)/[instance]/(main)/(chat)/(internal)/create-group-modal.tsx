@@ -1,6 +1,6 @@
 // create-group-modal.tsx
 "use client";
-import { Modal, TextField, Button, Chip, Avatar, Checkbox, FormControlLabel } from "@mui/material";
+import { TextField, Button, Avatar, Checkbox, FormControlLabel } from "@mui/material";
 import { useContext, useState } from "react";
 import { User } from "@in.pulse-crm/sdk";
 import { GroupRule } from "./types/chats.types";
@@ -18,8 +18,8 @@ export default function CreateGroupModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="bg-slate-800 p-4 rounded-md w-96">
-      <h2 className="text-xl mb-4">Criar Novo Grupo</h2>
+    <div className="w-96 rounded-md bg-slate-800 p-4">
+      <h2 className="mb-4 text-xl">Criar Novo Grupo</h2>
       <TextField
         label="Nome do Grupo"
         fullWidth
@@ -27,18 +27,18 @@ export default function CreateGroupModal({ onClose }: { onClose: () => void }) {
         onChange={(e) => setGroupName(e.target.value)}
         className="mb-4"
       />
-      
+
       <div className="mb-4">
         <h3 className="mb-2">Membros</h3>
         <div className="grid grid-cols-2 gap-2">
-          {users.map(user => (
+          {users.map((user) => (
             <FormControlLabel
               key={user.CODIGO}
               control={<Checkbox />}
               label={
                 <div className="flex items-center gap-2">
-                  <Avatar src={user?.avatar} sx={{ width: 24, height: 24 }} />
-                  {user.name}
+                  <Avatar sx={{ width: 24, height: 24 }} alt={user.NOME} />
+                  <span>{user.NOME}</span>
                 </div>
               }
             />
@@ -48,19 +48,19 @@ export default function CreateGroupModal({ onClose }: { onClose: () => void }) {
 
       <div className="mb-4">
         <h3 className="mb-2">Regras do Grupo</h3>
-        <Button 
-          variant="outlined" 
-          onClick={() => setRules([...rules, { type: 'permission', value: '' }])}
+        <Button
+          variant="outlined"
+          onClick={() => setRules([...rules, { type: "permission", value: "" }])}
         >
           Adicionar Regra
         </Button>
         {rules.map((rule, index) => (
-          <div key={index} className="flex gap-2 mt-2">
-            <select 
+          <div key={index} className="mt-2 flex gap-2">
+            <select
               value={rule.type}
               onChange={(e) => {
                 const newRules = [...rules];
-                newRules[index].type = e.target.value;
+                newRules[index].type = e.target.value as GroupRule["type"];
                 setRules(newRules);
               }}
             >

@@ -20,20 +20,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
-          <InternalChatProvider>
-            <ThemeProvider theme={darkTheme}>
-              <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
-                <Header />
-                {children}
-                <Modal
-                  open={!!modal}
-                  onClose={() => setModal(null)}
-                  className="flex items-center justify-center"
-                >
-                  <div>{modal as ReactElement}</div>
-                </Modal>
-              </div>
-            </ThemeProvider>
+            <InternalChatProvider>
+              <ThemeProvider theme={darkTheme}>
+                <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
+                  <Header />
+                  {children}
+                  <Modal
+                    open={!!modal}
+                    onClose={() => setModal(null)}
+                    className="flex items-center justify-center"
+                  >
+                    <div>{modal as ReactElement}</div>
+                  </Modal>
+                </div>
+              </ThemeProvider>
             </InternalChatProvider>
           </WhatsappProvider>
         </SocketProvider>

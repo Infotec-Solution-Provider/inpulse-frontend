@@ -3,6 +3,7 @@ import { Formatter } from "@in.pulse-crm/utils";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
 interface ReceiveMessageCallbackProps {
   message: WppMessage;
@@ -22,7 +23,7 @@ export default function ReceiveMessageHandler(
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
-  chatRef: RefObject<DetailedChat | null>,
+  chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
@@ -50,13 +51,14 @@ export default function ReceiveMessageHandler(
       return newMessages;
     });
 
+    const x = chatRef.current;
     setChats((prev) =>
       prev
         .map((chat) => {
-          if (chat.contactId === message.contactId) {
+          if (chat.contactId === message.contactId && x && x.chatType === "wpp") {
             return {
               ...chat,
-              isUnread: chatRef.current?.contactId !== message.contactId,
+              isUnread: x.contactId !== message.contactId,
               lastMessage: message,
             };
           }
@@ -68,7 +70,7 @@ export default function ReceiveMessageHandler(
         ),
     );
 
-    if (chatRef.current && chatRef.current.contactId === message.contactId) {
+    if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
         if (!prev.some((m) => m.id === message.id)) {
           return [...prev, message];

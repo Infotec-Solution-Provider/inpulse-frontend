@@ -29,7 +29,11 @@ const crudsRoutes = [
   // { title: "Templates", href: "/templates" },
   // { title: "Tags", href: "/tags" },
 ];
-
+const userCrudRoutes = [
+  // { title: "Atendimentos", href: "/attendances" },
+  // { title: "Agendamentos", href: "/schedules" },
+  { title: "Clientes", href: "/customers" },
+];
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
   /*   
@@ -67,6 +71,9 @@ export default function Header() {
                 <MonitorIcon />
               </HeaderNavItem>
               <HeaderNavItem title="Cadastros" routes={crudsRoutes} disabled={!isUserAdmin}>
+                <AppRegistrationIcon />
+              </HeaderNavItem>
+              <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
                 <AppRegistrationIcon />
               </HeaderNavItem>
               <HeaderNavItem title="Relatórios" routes={reportsRoutes} disabled={!isUserAdmin}>

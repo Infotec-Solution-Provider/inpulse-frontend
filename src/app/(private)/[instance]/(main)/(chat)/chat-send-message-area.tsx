@@ -7,18 +7,13 @@ import SendIcon from "@mui/icons-material/Send";
 import { useContext, useRef, useEffect } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
-import { InternalChatContext } from "../../internal-context";
 
 export default function ChatSendMessageArea() {
   const { currentChat } = useContext(WhatsappContext);
-  const { currentInternalChat } = useContext(InternalChatContext);
-
   const { sendMessage, state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasWhatsappChat = currentChat && currentChat.contact && currentChat.contact.phone;
-  const hasInternalChat = currentInternalChat && currentInternalChat.contact && currentInternalChat.contact.phone;
-  
-  const isDisabled = !hasWhatsappChat && !hasInternalChat;
+  const isDisabled = !currentChat;
+
   const openAttachFile = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -39,22 +34,24 @@ export default function ChatSendMessageArea() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        if (!isDisabled && state.text.trim()) {
-          sendMessage();
-        }
-      } else if (e.key === "Enter" && e.shiftKey && document.activeElement === document.querySelector("textarea")) {
-        e.preventDefault();
-        dispatch({ type: "change-text", text: state.text + "\n" });
+      const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;
+      if (e.key !== "Enter") return;
+
+      e.preventDefault();
+      if (e.key === "Enter" && isAuxKeyPressed) {
+        return dispatch({ type: "change-text", text: state.text + "\n" });
+      }
+      if (e.key === "Enter" && !isDisabled && !isAuxKeyPressed) {
+        return sendMessage();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isDisabled, state.text, sendMessage, dispatch]);
+  }, [isDisabled, state.text]);
 
   return (
     <div className="flex max-h-36 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300">

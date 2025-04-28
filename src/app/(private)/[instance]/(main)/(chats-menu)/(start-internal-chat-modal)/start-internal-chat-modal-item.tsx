@@ -1,44 +1,33 @@
-import { InternalContact, User} from "@in.pulse-crm/sdk";
+import { User } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
 import { useContext } from "react";
 import { InternalChatContext } from "../../../internal-context";
+import { WhatsappContext } from "../../../whatsapp-context";
 
 interface StartChatModalItemProps {
-  contact: InternalContact;
-  user?: User | null;
-  chatingWith?: string | null;
+  user: User;
 }
 
-export default function StartInternalChatModalItem({
-  contact,
-  user = null,
-  chatingWith = null,
-}: StartChatModalItemProps) {
-  const { startInternalChatByContactId } = useContext(InternalChatContext);
+export default function StartInternalChatModalItem({ user }: StartChatModalItemProps) {
+  const { sectors } = useContext(WhatsappContext);
+  const { startDirectChat } = useContext(InternalChatContext);
 
   const handleClickStart = () => {
-    startInternalChatByContactId(contact.id);
+    startDirectChat(user.CODIGO);
   };
 
+  const sector = sectors.find((s) => s.id === user.SETOR);
+
   return (
-    <li
-      key={contact.id}
-      className="flex w-full items-center justify-between gap-2 rounded-md bg-slate-700 p-2"
-    >
+    <li className="flex w-full items-center justify-between gap-2 rounded-md bg-slate-700 p-2">
       <div className="flex flex-col">
-        <span className="text-sm font-semibold">{contact.name}</span>
-        {user && <span className="text-xs text-blue-200">{user.SETOR_NOME}</span>}
-        
-        <span className="text-xs text-slate-400">{contact.phone}</span>
+        <span className="text-sm font-semibold">{user.NOME}</span>
+        {sector && <span className="text-xs text-blue-200">{sector.name}</span>}
       </div>
       <div>
-        {chatingWith ? (
-          <p className="text-sm text-red-400">{chatingWith}</p>
-        ) : (
-          <Button size="small" onClick={handleClickStart}>
-            Iniciar
-          </Button>
-        )}
+        <Button size="small" onClick={handleClickStart}>
+          Iniciar
+        </Button>
       </div>
     </li>
   );

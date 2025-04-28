@@ -10,6 +10,7 @@ import FinishChatModal from "./(actions)/finish-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 import { Formatter } from "@in.pulse-crm/utils";
+import { useWhatsappContext } from "../../whatsapp-context";
 
 export interface ChatContactInfoProps {
   name: string;
@@ -21,6 +22,7 @@ export interface ChatContactInfoProps {
 
 export default function ChatHeader({ name, avatarUrl, customerName, phone, chatType }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
+  const { currentChat } = useWhatsappContext();
 
   const openFinishChatModal = () => {
     openModal(<FinishChatModal />);
@@ -50,34 +52,35 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
         <div>
           <h2 className="text-slate-200">{name}</h2>
           <h2 className="text-sm text-slate-300">{customerName}</h2>
-          <h2 className="text-sm text-slate-400">{chatType=='wpp'?(Formatter.phone(phone)):''}</h2>
+          <h2 className="text-sm text-slate-400">
+            {chatType == "wpp" ? Formatter.phone(phone) : ""}
+          </h2>
         </div>
       </div>
-      {chatType === 'wpp' && (
-      <div className="flex items-center">
-        <Tooltip title={<h3 className="text-base">Editar contato</h3>}>
-          <IconButton onClick={openEditContactModal}>
-            <EditIcon color="info" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={<h3 className="text-base">Transferir conversa</h3>}>
-          <IconButton onClick={openTransferChatModal}>
-            <SyncAltIcon color="secondary" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={<h3 className="text-base">Agendar retorno</h3>}>
-          <IconButton onClick={openScheduleChatModal}>
-            <ScheduleIcon color="warning" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={<h3 className="text-base">Finalizar conversa</h3>}>
-          <IconButton onClick={openFinishChatModal}>
-            <AssignmentTurnedInIcon color="success" />
-          </IconButton>
-        </Tooltip>
-      </div>
-    )}
+      {currentChat?.chatType === "wpp" && (
+        <div className="flex items-center">
+          <Tooltip title={<h3 className="text-base">Editar contato</h3>}>
+            <IconButton onClick={openEditContactModal}>
+              <EditIcon color="info" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={<h3 className="text-base">Transferir conversa</h3>}>
+            <IconButton onClick={openTransferChatModal}>
+              <SyncAltIcon color="secondary" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={<h3 className="text-base">Agendar retorno</h3>}>
+            <IconButton onClick={openScheduleChatModal}>
+              <ScheduleIcon color="warning" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={<h3 className="text-base">Finalizar conversa</h3>}>
+            <IconButton onClick={openFinishChatModal}>
+              <AssignmentTurnedInIcon color="success" />
+            </IconButton>
+          </Tooltip>
+        </div>
+      )}
     </div>
-      
   );
 }

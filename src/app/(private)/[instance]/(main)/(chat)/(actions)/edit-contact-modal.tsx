@@ -12,6 +12,11 @@ interface FinishChatModalProps {
 export default function EditContactModal() {
   const { closeModal } = useContext(AppContext);
   const { wppApi, currentChat, updateChatContact } = useContext(WhatsappContext);
+  if (currentChat?.chatType !== "wpp") {
+    closeModal();
+    return <></>;
+  }
+
   const [name, setName] = useState(currentChat!.contact!.name);
 
   const handleEditContact = async () => {
@@ -32,11 +37,7 @@ export default function EditContactModal() {
         </IconButton>
       </header>
       <form className="flex flex-col gap-6">
-        <TextField
-          label="Nome"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <TextField label="Nome" value={name} onChange={(e) => setName(e.target.value)} />
         <TextField label="Whatsapp" defaultValue={currentChat!.contact!.phone} disabled />
         <div className="flex items-center justify-end gap-2">
           <Button

@@ -26,22 +26,21 @@ const initialState: SendMessageDataState = {
 export const ChatContext = createContext({} as IChatContext);
 
 export default function ChatProvider({ children }: ChatProviderProps) {
-  const { sendMessage, currentChat: openedChat } = useContext(WhatsappContext);
-  const { sendMessageInternal, currentInternalChat: openedInternalChat } = useContext(InternalChatContext);
-  const { user} = useContext(AuthContext);
-
+  const { sendMessage, currentChat } = useContext(WhatsappContext);
+  const { sendInternalMessage } = useContext(InternalChatContext);
   const [state, dispatch] = useReducer(messageFormReducer, initialState);
 
   const handleSendMessage = () => {
-    if (openedChat && openedChat.contact) {
-      sendMessage(openedChat.contact.phone, {
+    if (currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
+      sendMessage(currentChat.contact.phone, {
         ...state,
-        contactId: openedChat.contact.id,
-        chatId: openedChat.id,
+        contactId: currentChat.contact.id,
+        chatId: currentChat.id,
       });
     }
-    if (openedInternalChat && openedInternalChat.contact) {
-      sendMessageInternal( openedInternalChat.contact.id,user, state.text)
+
+    if (currentChat && currentChat.chatType === "internal") {
+      sendInternalMessage({ ...state, chatId: currentChat.id });
     }
   };
 

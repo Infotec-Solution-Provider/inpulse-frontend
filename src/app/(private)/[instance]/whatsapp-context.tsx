@@ -27,25 +27,30 @@ import chatsFilterReducer, {
   ChangeFiltersAction,
   ChatsFiltersState,
 } from "@/lib/reducers/chats-filter.reducer";
+import { DetailedInternalChat } from "./internal-context";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
-  chatType: 'wpp'
+  chatType: "wpp";
 }
+
 interface IWhatsappContext {
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
   messages: Record<number, WppMessage[]>;
-  currentChat: DetailedChat | null;
+  sectors: { id: number; name: string }[];
+  currentChat: DetailedChat | DetailedInternalChat | null;
   currentChatMessages: WppMessage[];
   openChat: (chat: DetailedChat) => void;
+  setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
   sendMessage: (to: string, data: SendMessageData) => void;
   chatFilters: ChatsFiltersState;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
   updateChatContact: (contactId: number, newName: string) => void;
+  currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
 }
 
 interface WhatsappProviderProps {
@@ -61,10 +66,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { socket } = useContext(SocketContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
-  const [currentChat, setCurrentChat] = useState<DetailedChat | null>(null); // Conversa que está aberta
-  const currentChatRef = useRef<DetailedChat>(null); // Referência para a conversa atual
+  const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null); // Conversa que está aberta
+  const currentChatRef = useRef<DetailedChat | DetailedInternalChat | null>(null); // Referência para a conversa atual
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]); // Mensagens da conversa aberta
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
+  const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
   const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
 
   // Reducer que controla os filtros de conversas
@@ -116,9 +122,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         }),
       );
 
-      if (currentChat && currentChat.contactId === contactId && currentChat.contact) {
+      if (currentChat && currentChat.chatType === "wpp" && currentChat.contactId === contactId) {
         setCurrentChat((prev) => {
-          prev!.contact!.name = newName;
+          (prev as DetailedChat)!.contact!.name = newName;
           return prev;
         });
       }
@@ -160,6 +166,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
+      api.current.getSectors().then((res) => setSectors(res));
     } else {
       setChats([]);
       setMessages({});
@@ -217,6 +224,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         currentChat: currentChat,
         currentChatMessages: currentChatMessages,
         openChat,
+        setCurrentChat,
         finishChat,
         startChatByContactId,
         sendMessage,
@@ -224,9 +232,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         chatFilters,
         changeChatFilters,
         updateChatContact,
+        sectors,
+        currentChatRef,
       }}
     >
       {children}
     </WhatsappContext.Provider>
   );
 }
+
+export const useWhatsappContext = () => {
+  const context = useContext(WhatsappContext);
+  if (!context) {
+    throw new Error("useWhatsappContext must be used within a WhatsappProvider");
+  }
+  return context;
+};
