@@ -115,7 +115,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   );
 
   useEffect(() => {
-    if (socket && user) {
+    if (socket && user && users.length > 0) {
       // Evento de nova conversa
       socket.on(
         SocketEventType.InternalChatStarted,
@@ -142,7 +142,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         InternalMessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
       );
     }
-  }, [socket, user]);
+  }, [socket, user, users]);
 
   return (
     <InternalChatContext.Provider
