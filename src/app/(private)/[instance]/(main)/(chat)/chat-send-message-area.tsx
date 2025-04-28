@@ -31,7 +31,15 @@ export default function ChatSendMessageArea() {
       dispatch({ type: "attach-file", file });
     }
   };
-
+  function sendMessages() {
+    sendMessage();
+    dispatch({ type: "change-text", text: "" });
+    
+    setTimeout(() => {
+      document.dispatchEvent(new Event("scroll-to-bottom"));
+    }, 100); 
+  }
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;
@@ -42,7 +50,8 @@ export default function ChatSendMessageArea() {
         return dispatch({ type: "change-text", text: state.text + "\n" });
       }
       if (e.key === "Enter" && !isDisabled && !isAuxKeyPressed) {
-        return sendMessage();
+        dispatch({ type: "change-text", text: "" });
+        return sendMessages();
       }
     };
 
@@ -87,7 +96,7 @@ export default function ChatSendMessageArea() {
         aria-hidden={state.text.length === 0}
         className="aria-hidden:hidden"
         disabled={isDisabled}
-        onClick={sendMessage}
+        onClick={sendMessages}
       >
         <SendIcon />
       </IconButton>

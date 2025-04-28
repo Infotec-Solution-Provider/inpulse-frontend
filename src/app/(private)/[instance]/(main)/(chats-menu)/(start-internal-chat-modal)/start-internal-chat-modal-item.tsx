@@ -3,6 +3,7 @@ import { Button } from "@mui/material";
 import { useContext } from "react";
 import { InternalChatContext } from "../../../internal-context";
 import { WhatsappContext } from "../../../whatsapp-context";
+import { AppContext } from "../../../app-context";
 
 interface StartChatModalItemProps {
   user: User;
@@ -11,9 +12,12 @@ interface StartChatModalItemProps {
 export default function StartInternalChatModalItem({ user }: StartChatModalItemProps) {
   const { sectors } = useContext(WhatsappContext);
   const { startDirectChat } = useContext(InternalChatContext);
+  const { closeModal } = useContext(AppContext);
 
   const handleClickStart = () => {
     startDirectChat(user.CODIGO);
+    closeModal();
+
   };
 
   const sector = sectors.find((s) => s.id === user.SETOR);

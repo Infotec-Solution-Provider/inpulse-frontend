@@ -119,7 +119,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       // Evento de nova conversa
       socket.on(
         SocketEventType.InternalChatStarted,
-        InternalChatStartedHandler(socket, users, setInternalChats),
+        InternalChatStartedHandler(socket, users, setInternalChats, openInternalChat),
       );
 
       // Evento de nova mensagem
