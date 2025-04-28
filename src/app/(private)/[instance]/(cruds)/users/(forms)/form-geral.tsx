@@ -2,7 +2,7 @@ import { MenuItem } from "@mui/material";
 import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk";
 import { selectSlotProps, StyledTextField } from "./styles-form";
 import { useContext } from "react";
-import { UsersContext } from "../context";
+import { UsersContext } from "../users-context";
 
 interface FormGeralProps {
   formData: Partial<User>;

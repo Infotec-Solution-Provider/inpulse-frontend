@@ -2,7 +2,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import { TableRow } from "@mui/material";
 import { User } from "@in.pulse-crm/sdk";
 import { useContext } from "react";
-import { UsersContext } from "../context";
+import { UsersContext } from "../users-context";
 import { StyledTableCell } from "./styles-table";
 
 interface UserTableRowProps {
@@ -22,7 +22,7 @@ export default function UsersTableRow({ user, index, sectors }: UserTableRowProp
       <StyledTableCell className="px-2 py-3">{user.LOGIN || "N/D"}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.EMAIL || "N/D"}</StyledTableCell>
       <StyledTableCell className="px-2 py-3">{user.NIVEL || "N/D"}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{user.SETOR || "N/D"}</StyledTableCell>
+      <StyledTableCell className="px-2 py-3">{sector?.name || "N/D"}</StyledTableCell>
 
       <StyledTableCell className="flex items-center justify-end gap-4 px-2 py-3 pr-8">
         <button
