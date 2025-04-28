@@ -6,15 +6,16 @@ import { StyledDialog, StyledDialogTitle } from "./styles-modal";
 export default function CreateWalletModal() {
     const { createWallet, loading } = useContext(WalletsContext);
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ instance: '', name: '' });
+    const [form, setForm] = useState({ name: '' });
 
     const handleSubmit = async () => {
-        if (!form.instance || !form.name) return;
-
-        const success = await createWallet(form.instance, form.name);
+        if (!form.name) return;
+        
+        const success = await createWallet(form.name);
+        console.log('form:', success)
 
         if (success) {
-            setForm({ instance: '', name: '' });
+            setForm({ name: '' });
             setOpen(false);
         }
     };
@@ -29,11 +30,6 @@ export default function CreateWalletModal() {
                     <StyledDialogTitle>Criar nova carteira</StyledDialogTitle>
                     <div className="flex flex-col gap-4">
                         <TextField
-                            label="Instância"
-                            value={form.instance}
-                            onChange={(e) => setForm(p => ({ ...p, instance: e.target.value }))}
-                        />
-                        <TextField
                             label="Nome"
                             value={form.name}
                             onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
@@ -44,7 +40,7 @@ export default function CreateWalletModal() {
                         <Button
                             onClick={handleSubmit}
                             variant="contained"
-                            disabled={!form.instance || !form.name || loading}
+                            disabled={!form.name || loading}
                         >
                             {loading ? "Criando..." : "Criar"}
                         </Button>

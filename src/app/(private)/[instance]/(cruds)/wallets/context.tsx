@@ -1,8 +1,9 @@
 "use client"
-import { WppWallet } from "@in.pulse-crm/sdk";
-import walletsService from "@/lib/services/wallets.service";
+import { useAuthContext } from "@/app/auth-context";
+import { WalletsClient, WppWallet } from "@in.pulse-crm/sdk";
+// import walletsService from "@/lib/services/wallets.service";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import { createContext, ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { createContext, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-toastify";
 
 interface IWalletsProviderProps {
@@ -10,8 +11,9 @@ interface IWalletsProviderProps {
 }
 
 interface IWalletsContext {
+    walletsApi: React.RefObject<WalletsClient>;
     wallets: WppWallet[]
-    createWallet: (instance: string, name: string) => Promise<boolean>
+    createWallet: (name: string) => Promise<boolean>
     deleteWallet: (walletId: number) => Promise<void>
     updateWalletName: (id: number, newName: string) => Promise<void>
     getWalletUsers: (walletId: number) => Promise<number[]>
@@ -29,30 +31,37 @@ interface IWalletsContext {
     loadWalletUsers: () => Promise<void>
 }
 
+const WALLETS_URL = process.env["NEXT_PUBLIC_WALLETS_URL"] || "http://localhost:8005";
+
 export const WalletsContext = createContext<IWalletsContext>({} as IWalletsContext);
 
 export default function WalletsProvider({ children }: IWalletsProviderProps) {
+    const { token } = useAuthContext();
     const [wallets, setWallets] = useState<WppWallet[]>([]);
     const [loading, setLoading] = useState(true);
     const [orderBy, setOrderBy] = useState<keyof WppWallet>('name');
     const [order, setOrder] = useState<'asc' | 'desc'>('asc');
     const [selectedWallet, setSelectedWallet] = useState<WppWallet | null>(null);
     const [walletUsers, setWalletUsers] = useState<number[]>([]);
+    const api = useRef(new WalletsClient(WALLETS_URL));
 
     useEffect(() => {
-        const loadWallets = async () => {
-            try {
-                setLoading(true);
-                const data = await walletsService.getWallets();
-                setWallets(data);
-            } catch (err) {
-                toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadWallets();
-    }, []);
+        if (token) {
+            api.current.setAuth(token)
+            const loadWallets = async () => {
+                try {
+                    setLoading(true);
+                    const data = await api.current.getWallets();
+                    setWallets(data);
+                } catch (err) {
+                    toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            loadWallets();
+        }
+    }, [token]);
 
     const sortedWallets = useMemo(() => {
         return [...wallets].sort((a, b) => {
@@ -85,10 +94,10 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         setOrderBy(property);
     };
 
-    const createWallet = useCallback(async (instance: string, name: string) => {
+    const createWallet = useCallback(async (name: string) => {
         try {
             setLoading(true);
-            const newWallet = await walletsService.createWallet(instance, name);
+            const newWallet = await api.current.createWallet(name);
             setWallets(prev => [{
                 ...newWallet,
                 userIds: newWallet.userIds || []
@@ -106,7 +115,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     const deleteWallet = useCallback(async (walletId: number) => {
         try {
             setLoading(true);
-            await walletsService.deleteWallet(walletId);
+            await api.current.deleteWallet(walletId);
             setWallets(prev => prev.filter(wallet => wallet.id !== walletId));
             toast.success("Carteira excluida com sucesso!");
         } catch (err) {
@@ -119,7 +128,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     const updateWalletName = useCallback(async (id: number, newName: string) => {
         try {
             setLoading(true);
-            const updatedWallet = await walletsService.updateWalletName(id, newName);
+            // const updatedWallet = await api.current.updateWalletName(id, newName);
             setWallets(prev =>
                 prev.map(wallet =>
                     wallet.id === id ? { ...wallet, name: newName } : wallet
@@ -135,7 +144,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
 
     const getWalletUsers = useCallback(async (walletId: number): Promise<number[]> => {
         try {
-            const response = await walletsService.getWalletUsers(walletId);
+            const response = await api.current.getWalletUsers(walletId);
             return Array.isArray(response) ? response : [];
         } catch (err) {
             toast.error(`Falha ao buscar usuários: ${sanitizeErrorMessage(err)}`);
@@ -145,7 +154,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
 
     const getUserWallets = useCallback(async (instance: string, userId: number,) => {
         try {
-            return (await walletsService.getUserWallets(instance, userId));
+            return (await api.current.getUserWallets(instance, userId));
         } catch (err) {
             toast.error(`Falha ao buscar carteiras do usuário: ${sanitizeErrorMessage(err)}`);
             return []
@@ -156,7 +165,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         if (!selectedWallet) return;
         try {
             setLoading(true);
-            const updatedWallet = await walletsService.addUserToWallet(selectedWallet.id, userId);
+            const updatedWallet = await api.current.addUserToWallet(selectedWallet.id, userId);
             setWallets(prev => prev.map(w => {
                 if (w.id === selectedWallet.id) {
                     return {
@@ -181,7 +190,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         if (!selectedWallet) return;
         try {
             setLoading(true);
-            await walletsService.removeUserFromWallet(selectedWallet.id, userId);
+            await api.current.removeUserFromWallet(selectedWallet.id, userId);
             setWallets(prev => prev.map(w =>
                 w.id === selectedWallet.id ? {
                     ...w,
@@ -209,6 +218,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
 
     return (
         <WalletsContext.Provider value={{
+            walletsApi: api,
             wallets,
             createWallet,
             deleteWallet,
