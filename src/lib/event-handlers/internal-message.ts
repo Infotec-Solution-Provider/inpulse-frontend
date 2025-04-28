@@ -1,8 +1,9 @@
-import { InternalChat, InternalChatClient, InternalMessage, } from "@in.pulse-crm/sdk";
+import { InternalChat, InternalChatClient, InternalMessage, User } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
-import { DetailedChat } from "@/app/(private)/[instance]/internal-context";
+import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -21,12 +22,17 @@ export default function InternalReceiveMessageHandler(
   api: InternalChatClient,
   setMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<InternalMessage[]>>,
-  setChats: Dispatch<SetStateAction<DetailedChat[]>>,
-  chatRef: RefObject<DetailedChat | null>,
+  setChats: Dispatch<SetStateAction<DetailedInternalChat[]>>,
+  chatRef: RefObject<DetailedInternalChat | DetailedChat | null>,
+  users: User[],
+  loggedUser: User,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
-    if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
-      new Notification(Formatter.phone(message.from), {
+    const user = users.find((u) => u.CODIGO === +message.from.split(":")[1]);
+
+    if (message.from !== `user:${loggedUser.CODIGO}`) {
+      const name = message.from === "system" ? "InPulse" : user?.NOME || "Desconhecido";
+      new Notification(name, {
         body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
         icon: HorizontalLogo.src,
       });
@@ -34,46 +40,43 @@ export default function InternalReceiveMessageHandler(
 
     setMessages((prev) => {
       const newMessages = { ...prev };
-      const contactId = message.internalcontactId || 0;
+      const id = message.internalChatId;
 
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = [];
+      if (!newMessages[id]) {
+        newMessages[id] = [];
       }
 
-      const findIndex = newMessages[contactId].findIndex((m) => m.id === message.id);
+      const findIndex = newMessages[id].findIndex((m) => m.id === message.id);
       if (findIndex === -1) {
-        newMessages[contactId].push(message);
+        newMessages[id].push(message);
       } else {
-        newMessages[contactId][findIndex] = message;
+        newMessages[id][findIndex] = message;
       }
 
       return newMessages;
     });
 
     setChats((prev) =>
-      prev
-        .map((chat) => {
-          if (chat.internalcontactId === message.internalcontactId) {
-            return {
-              ...chat,
-              isUnread: chatRef.current?.internalcontactId !== message.internalcontactId,
-              lastMessage: message,
-            };
-          }
+      prev.map((chat) => {
+        if (chat.id === message.internalChatId) {
+          return {
+            ...chat,
+            isUnread: chatRef.current?.id !== message.internalChatId,
+            lastMessage: message,
+          };
+        }
 
-          return chat;
-        })
-  
+        return chat;
+      }),
     );
 
-    if (chatRef.current && chatRef.current.internalcontactId === message.internalcontactId) {
+    if (chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId) {
       setCurrentChatMessages((prev) => {
         if (!prev.some((m) => m.id === message.id)) {
           return [...prev, message];
         }
         return prev;
       });
-
     }
   };
 }

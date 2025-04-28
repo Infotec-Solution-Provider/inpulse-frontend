@@ -1,142 +1,162 @@
 import { createContext, useState, useEffect, useRef, useCallback, useContext } from "react";
-import { InternalChatClient, InternalChat, InternalMessage, SocketEventType, InternalChatWithDetails } from "@in.pulse-crm/sdk";
+import {
+  InternalChat,
+  InternalChatClient,
+  InternalMessage,
+  InternalSendMessageData,
+  SocketEventType,
+  User,
+} from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "./socket-context";
 import InternalChatStartedHandler from "@/lib/event-handlers/internal-chat-started";
 import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-status";
 import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
-import processChatsAndMessages from "@/lib/process-chats-and-messages";
 import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
+import usersService from "@/lib/services/users.service";
+import { useWhatsappContext } from "./whatsapp-context";
 
-export interface DetailedChat extends InternalChatWithDetails {
+export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
-  chatType: 'internal'
-  isUnread: boolean|true;
-
+  chatType: "internal";
+  isUnread: boolean | true;
+  users: User[];
+  participants: number[];
 }
 
 interface InternalChatContextType {
   internalApi: React.RefObject<InternalChatClient>;
-  internalChats: DetailedChat[];
+  internalChats: DetailedInternalChat[];
   messages: Record<number, InternalMessage[]>;
-  sendMessageInternal: (to: number,userId:any, content: string) => void;
-  openInternalChat: (chat: DetailedChat) => void;
-  currentInternalChat: DetailedChat | null;
-  startInternalChatByContactId: (contactId: number) => void;
+  sendInternalMessage: (data: InternalSendMessageData) => void;
+  openInternalChat: (chat: DetailedInternalChat) => void;
+  startDirectChat: (userId: number) => void;
   currentInternalChatMessages: InternalMessage[];
+  users: User[];
 }
+
 const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
 
 export const InternalChatContext = createContext({} as InternalChatContextType);
 
 export function InternalChatProvider({ children }: { children: React.ReactNode }) {
   const { socket } = useContext(SocketContext);
+  const { setCurrentChat, currentChatRef } = useWhatsappContext();
 
-  const [internalChats, setInternalChats] = useState<DetailedChat[]>([]);
+  const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
-  const [currentInternalChat, setCurrentChat] = useState<DetailedChat | null>(null);
-  const currentChatRef = useRef<DetailedChat | null>(null);
-  
+
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
-  const { token, user, instance } = useContext(AuthContext);
-
+  const { token, user } = useContext(AuthContext);
 
   const openInternalChat = useCallback(
-    (chat: DetailedChat) => {
+    (chat: DetailedInternalChat) => {
       setCurrentChat(chat);
-      setCurrentChatMessages(messages[chat.internalcontactId || 0] || []);
+      setCurrentChatMessages(messages[chat.id] || []);
       currentChatRef.current = chat;
-      if (chat.internalcontactId) {
-        setInternalChats((prev) =>
-          prev.map((c) => {
-            if (c.id === chat.id) {
-              return {
-                ...c,
-                isUnread: false,
-              };
-            }
-            return c;
-          }),
-        );
-      }
+
+      setInternalChats((prev) =>
+        prev.map((c) => {
+          if (c.id === chat.id) {
+            return {
+              ...c,
+              isUnread: false,
+            };
+          }
+          return c;
+        }),
+      );
     },
     [messages],
   );
-  const sendMessageInternal = useCallback((chatId: any, userId:any, content: string) => {
-    if(token){
-      api.current.setAuth(token);
-      api.current.sendMessageToChat(chatId, userId.CODIGO, content);
-    }
 
-  }, []);
-
-  useEffect(() => {
-
-    if (token) {
-      api.current.setAuth(token);
-      api.current.getChatsBySession(true, true).then(( { chats, messages }) => {
-        const { chatsMessages, detailedChats } = processInternalChatsAndMessages(chats, messages);
-
-        setInternalChats(detailedChats);
-        setMessages(chatsMessages);
-
-      });
-    
-    }else {
-      setInternalChats([]);
-      setMessages({});
-    }
-  }, [token,api.current]);
-  
-  const startInternalChatByContactId = useCallback(
-    (contactId: number) => {
-      api.current.startChatByContactId(contactId);
+  const sendInternalMessage = useCallback(
+    (data: InternalSendMessageData) => {
+      if (token) {
+        api.current.setAuth(token);
+        api.current.sendMessageToChat(data);
+      }
     },
-    [api, token],
+    [token],
   );
 
   useEffect(() => {
-    if (socket) {
-          // Evento de nova conversa
-          socket.on(
-            SocketEventType.InternalChatStarted,
-            InternalChatStartedHandler(api.current, socket, setMessages, setInternalChats),
-          );
-    
-          // Evento de nova mensagem
-          socket.on(
-            SocketEventType.InternalMessage,
-            InternalReceiveMessageHandler(
-              api.current,
-              setMessages,
-              setCurrentChatMessages,
-              setInternalChats,
-              currentChatRef,
-            ),
-          );
-    
-          // Evento de status de mensagem
-          socket.on(
-            SocketEventType.InternalMessageStatus,
-            InternalMessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
-          );
-          
+    if (token && users.length === 0) {
+      usersService.setAuth(token);
+      usersService.getUsers({ perPage: "999" }).then((res) => setUsers(res.data));
     }
-  }, [socket, currentInternalChat]);
-  
+    if (token && user && users.length > 0) {
+      api.current.setAuth(token);
+      api.current.getInternalChatsBySession().then(({ chats, messages }) => {
+        const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
+          user!.CODIGO,
+          users,
+          chats || [],
+          messages || [],
+        );
+
+        setInternalChats(detailedChats || []);
+        setMessages(chatsMessages || []);
+      });
+    } else {
+      setInternalChats([]);
+      setMessages({});
+    }
+  }, [token, api.current, user, users]);
+
+  const startDirectChat = useCallback(
+    (userId: number) => {
+      if (!token || !user) return;
+      api.current.createInternalChat([userId, user!.CODIGO], false, "");
+    },
+    [api, token, user],
+  );
+
+  useEffect(() => {
+    if (socket && user) {
+      // Evento de nova conversa
+      socket.on(
+        SocketEventType.InternalChatStarted,
+        InternalChatStartedHandler(socket, users, setInternalChats),
+      );
+
+      // Evento de nova mensagem
+      socket.on(
+        SocketEventType.InternalMessage,
+        InternalReceiveMessageHandler(
+          api.current,
+          setMessages,
+          setCurrentChatMessages,
+          setInternalChats,
+          currentChatRef,
+          users,
+          user!
+        ),
+      );
+
+      // Evento de status de mensagem
+      socket.on(
+        SocketEventType.InternalMessageStatus,
+        InternalMessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
+      );
+    }
+  }, [socket, user]);
 
   return (
-    <InternalChatContext.Provider value={{
-      internalApi: api,
-      internalChats,
-      messages,
-      sendMessageInternal,
-      startInternalChatByContactId,
-      openInternalChat,
-      currentInternalChat,
-      currentInternalChatMessages
-    }}>
+    <InternalChatContext.Provider
+      value={{
+        internalApi: api,
+        internalChats,
+        messages,
+        sendInternalMessage,
+        startDirectChat,
+        openInternalChat,
+        currentInternalChatMessages,
+        users,
+      }}
+    >
       {children}
     </InternalChatContext.Provider>
   );

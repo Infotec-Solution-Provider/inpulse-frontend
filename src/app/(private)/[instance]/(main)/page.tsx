@@ -1,33 +1,41 @@
 "use client";
-import { Modal } from "@mui/material";
 import Chat from "./(chat)/chat";
 import ChatsMenu from "./(chats-menu)/chats-menu";
 import { useContext } from "react";
-import AppProvider, { AppContext } from "../app-context";
 import ChatProvider from "./(chat)/chat-context";
 import { WhatsappContext } from "../whatsapp-context";
 import { InternalChatContext } from "../internal-context";
+import { AuthContext } from "@/app/auth-context";
 
 export default function Home() {
-  const { currentChat: openedChat } = useContext(WhatsappContext);
-  const { currentInternalChat: openedInternalChat } = useContext(InternalChatContext);
-  const activeChat = openedChat || openedInternalChat;
+  const { currentChat } = useContext(WhatsappContext);
+  const { user, instance } = useContext(AuthContext);
 
   return (
     <ChatProvider>
       <div className="box-border grid grid-cols-[24rem_1fr] grid-rows-1 gap-4 px-4 py-4">
         <ChatsMenu />
-        {activeChat ? (
+        {currentChat?.chatType === "internal" && (
           <Chat
-            name={activeChat.contact?.name || "Contao excluído"}
-            phone={activeChat?.contact?.phone || "N/D"}
-            avatarUrl={activeChat.avatarUrl}
-            customerName={openedChat?.customer?.RAZAO || "N/D"}
-            chatType={activeChat?.chatType}
-
+            name={
+              currentChat.groupName ||
+              currentChat.users.find((u) => u.CODIGO !== user?.CODIGO)?.NOME ||
+              "Grupo excluído"
+            }
+            phone="N/D"
+            avatarUrl=""
+            customerName={instance[0].toUpperCase() + instance.slice(1)}
+            chatType={"internal"}
           />
-        ) : (
-          <div>Abra uma conversa</div>
+        )}
+        {currentChat?.chatType === "wpp" && (
+          <Chat
+            name={currentChat.contact?.name || "Contao excluído"}
+            phone={currentChat?.contact?.phone || "N/D"}
+            avatarUrl={currentChat.avatarUrl}
+            customerName={currentChat?.customer?.RAZAO || "N/D"}
+            chatType={currentChat?.chatType}
+          />
         )}
       </div>
     </ChatProvider>

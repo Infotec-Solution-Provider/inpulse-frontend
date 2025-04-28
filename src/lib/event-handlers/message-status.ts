@@ -2,6 +2,7 @@ import { WppMessage, WppMessageStatus } from "@in.pulse-crm/sdk";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import compareMessageStatus from "../utils/compare-message-status";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
 interface MessageStatusCallbackProps {
   messageId: number;
@@ -12,8 +13,10 @@ interface MessageStatusCallbackProps {
 export default function MessageStatusHandler(
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
-  chatRef: RefObject<DetailedChat | null>,
+  chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
 ) {
+  const x = chatRef.current;
+
   return ({ status, messageId, contactId }: MessageStatusCallbackProps) => {
     setMessages((prev) => {
       const newMsgs = { ...prev };
@@ -33,7 +36,7 @@ export default function MessageStatusHandler(
       return newMsgs;
     });
 
-    if (chatRef.current && chatRef.current.contactId === contactId) {
+    if (x && x.chatType === "wpp" && x.contactId === contactId) {
       setCurrentChatMessages((prev) =>
         prev.map((m) => {
           if (m.id === messageId) {

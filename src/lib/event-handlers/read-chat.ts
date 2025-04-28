@@ -1,3 +1,4 @@
+import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { WppMessage } from "@in.pulse-crm/sdk";
 import { Dispatch, RefObject, SetStateAction } from "react";
@@ -7,7 +8,7 @@ interface ReadChatCallback {
 }
 
 export default function ReadChatHandler(
-  chatRef: RefObject<DetailedChat | null>,
+  chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
@@ -41,7 +42,11 @@ export default function ReadChatHandler(
       }),
     );
 
-    if (chatRef.current && chatRef.current.contactId === contactId) {
+    if (
+      chatRef.current &&
+      chatRef.current.chatType === "wpp" &&
+      chatRef.current.contactId === contactId
+    ) {
       setCurrentChatMessages((prev) =>
         prev.map((m) => {
           if (m.to.startsWith("me") && m.status !== "READ") {
