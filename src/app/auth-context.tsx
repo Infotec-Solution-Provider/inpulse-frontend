@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AuthContextProps, AuthSignForm } from "@/lib/types/auth-context.types";
 import { ProviderProps } from "@/lib/types/generic.types";
 import authService from "../lib/services/auth.service";
@@ -102,4 +102,12 @@ export default function AuthProvider({ children }: ProviderProps) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuthContext() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuthContext must be used within an AuthProvider");
+  }
+  return context;
 }

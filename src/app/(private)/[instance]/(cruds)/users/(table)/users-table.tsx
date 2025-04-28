@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
 import { useContext, useEffect, useMemo, useState } from "react";
-import { UsersContext } from "../context";
+import { UsersContext } from "../users-context";
 import UsersTableRow from "./users-row";
 import { StyledTableCell, StyledTableRow } from "./styles-table";
 

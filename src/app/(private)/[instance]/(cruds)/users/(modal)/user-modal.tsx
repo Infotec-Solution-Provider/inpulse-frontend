@@ -3,7 +3,7 @@ import { Button, DialogTitle, FormControl } from "@mui/material";
 import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk";
 import { useContext, useState } from "react";
 import CloseIcon from "@mui/icons-material/Close";
-import { UsersContext } from "../context";
+import { UsersContext } from "../users-context";
 import FormGeral from "../(forms)/form-geral";
 import { StyledDialog, StyledIconButton } from "./styles-modal";
 
