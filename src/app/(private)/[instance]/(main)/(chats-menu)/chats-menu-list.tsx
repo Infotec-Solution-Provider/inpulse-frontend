@@ -64,15 +64,30 @@ export default function ChatsMenuList() {
     });
   }, [chats, internalChats, chatFilters]);
 
+  const sortedChats = useMemo(() => {
+    return filteredChats.sort((a, b) => {
+      // Prioridade para mensagens não lidas
+      if (a.isUnread !== b.isUnread) {
+        return a.isUnread ? -1 : 1;
+      }
+
+      // Ordenar por timestamp da última mensagem, se existir
+      const aTimestamp = a.lastMessage ? Number(a.lastMessage.timestamp) : 0;
+      const bTimestamp = b.lastMessage ? Number(b.lastMessage.timestamp) : 0;
+
+      return bTimestamp - aTimestamp;
+    });
+  }, [filteredChats]);
+
   return (
     <menu className="flex flex-col gap-2 overflow-y-auto bg-slate-300/5 p-3">
-      {filteredChats.map((chat) => {
+      {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
           const name =
             (chat.isGroup
               ? chat.groupName
               : chat.users.find((u) => u.CODIGO !== user?.CODIGO)?.NOME) || "Grupo excluído";
-              console.log(chat)
+          console.log(chat);
 
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
           const tagColor = chat.isGroup ? "green" : "blue";
