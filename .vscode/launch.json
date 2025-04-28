@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Iniciar Next.js com Interação",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "start dev server",  // Inicia o servidor primeiro
+      "postDebugTask": "",  // Não precisamos de uma tarefa pós-depuração neste caso
+      "runtimeArgs": [
+        "--disable-extensions"  // Desabilita as extensões do Chrome para evitar interferência (opcional)
+      ]
+    }
+  ]
+}

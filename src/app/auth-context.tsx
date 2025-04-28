@@ -27,6 +27,8 @@ export default function AuthProvider({ children }: ProviderProps) {
         localStorage.setItem(`@inpulse/${instance}/token`, session.token);
 
         instanceRef.current = instance;
+        console.log("entrei no session",session)
+        console.log("Usuario",session.user)
 
         setUser(session.user);
         setToken(session.token);

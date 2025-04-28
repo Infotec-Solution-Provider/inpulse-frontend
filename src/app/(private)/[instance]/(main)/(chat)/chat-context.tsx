@@ -1,9 +1,11 @@
-import { createContext, ReactNode, useContext, useReducer } from "react";
+import { createContext, ReactNode, useContext, useId, useReducer } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import messageFormReducer, {
   ChangeMessageDataAction,
   SendMessageDataState,
 } from "@/lib/reducers/message-form.reducer";
+import { InternalChatContext } from "../../internal-context";
+import { AuthContext } from "@/app/auth-context";
 
 interface IChatContext {
   state: SendMessageDataState;
@@ -25,6 +27,9 @@ export const ChatContext = createContext({} as IChatContext);
 
 export default function ChatProvider({ children }: ChatProviderProps) {
   const { sendMessage, currentChat: openedChat } = useContext(WhatsappContext);
+  const { sendMessageInternal, currentInternalChat: openedInternalChat } = useContext(InternalChatContext);
+  const { user} = useContext(AuthContext);
+
   const [state, dispatch] = useReducer(messageFormReducer, initialState);
 
   const handleSendMessage = () => {
@@ -34,6 +39,9 @@ export default function ChatProvider({ children }: ChatProviderProps) {
         contactId: openedChat.contact.id,
         chatId: openedChat.id,
       });
+    }
+    if (openedInternalChat && openedInternalChat.contact) {
+      sendMessageInternal( openedInternalChat.contact.id,user, state.text)
     }
   };
 
