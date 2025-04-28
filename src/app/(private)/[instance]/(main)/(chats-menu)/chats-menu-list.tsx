@@ -80,7 +80,7 @@ export default function ChatsMenuList() {
             <ChatsMenuItem
               isUnread={chat.isUnread}
               isOpen={currentChat?.id === chat.id && currentChat?.chatType === "internal"}
-              key={chat.id}
+              key={`internal-chat:${chat.id}`}
               name={name}
               message={
                 chat.lastMessage
@@ -99,7 +99,7 @@ export default function ChatsMenuList() {
           <ChatsMenuItem
             isUnread={chat.isUnread}
             isOpen={currentChat?.id === chat.id && currentChat?.chatType === "wpp"}
-            key={chat.id}
+            key={`chat:${chat.id}`}
             name={chat.contact?.name || "Contato excluído"}
             avatar={chat.avatarUrl ?? undefined}
             message={
