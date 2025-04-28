@@ -43,7 +43,7 @@ export default function ChatStartedHandler(
       if (chatIndex !== -1) {
         return prev;
       }
-      return [{ ...chat, isUnread, lastMessage, chatType: "whatsapp" }, ...prev];
+      return [{ ...chat, isUnread, lastMessage, chatType: "wpp" }, ...prev];
     });
   };
 }
