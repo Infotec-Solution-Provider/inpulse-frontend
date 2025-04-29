@@ -37,7 +37,7 @@ export default function TransferChatModal() {
         >
           {Array.isArray(users) && users.map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
-              {user.NOME_EXIBICAO}
+              {user.NOME_EXIBICAO || user.NOME}
             </MenuItem>
           ))}
         </TextField>

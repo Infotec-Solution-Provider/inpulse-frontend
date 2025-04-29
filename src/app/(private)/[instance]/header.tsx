@@ -12,6 +12,7 @@ import MonitorIcon from "@mui/icons-material/Monitor";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import { UserRole } from "@in.pulse-crm/sdk";
+import Link from "next/link";
 
 const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
@@ -51,7 +52,7 @@ const toolsRoutes = [
 */
 
 export default function Header() {
-  const { signOut, user } = useContext(AuthContext);
+  const { signOut, user, instance } = useContext(AuthContext);
 
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
 
@@ -60,7 +61,9 @@ export default function Header() {
       <div className="flex items-center bg-slate-900">
         <div className="mx-auto flex w-screen items-center justify-between px-4 py-4">
           <div className="flex items-center gap-8">
-            <Image src={HorizontalLogo} alt={"Logo"} height={36} />
+            <Link href={`/${instance}/`}>
+              <Image src={HorizontalLogo} alt="Logo" height={36} className="cursor-pointer" />
+            </Link>
           </div>
           <nav>
             <menu className="flex items-center gap-4 text-sm font-semibold text-slate-200">

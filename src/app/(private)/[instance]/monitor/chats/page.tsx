@@ -1,16 +1,29 @@
 "use client";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
 import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
 import { useWhatsappContext } from "../../whatsapp-context";
+import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
+import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
+import { AppContext } from "../../app-context";
 
 export default function MonitorAttendances() {
   const { getChatsMonitor,monitorChats } = useWhatsappContext();
 
+  const { openModal } = useContext(AppContext);
+
+  const openFinishChatModal = () => {
+    openModal(<FinishChatModal />);
+  };
+
+  const openTransferChatModal = () => {
+    openModal(<TransferChatModal />);
+  };
+
   useEffect(() => {
-       getChatsMonitor()
-  }, [getChatsMonitor]);
+    getChatsMonitor()
+}, [getChatsMonitor]);
 
   return (
     <div>
@@ -36,8 +49,8 @@ export default function MonitorAttendances() {
               <td className="w-44 px-4 py-2">
                 <div>
                   <IconButton><VisibilityIcon /></IconButton>
-                  <IconButton><SyncAlt color="secondary" /></IconButton>
-                  <IconButton><AssignmentTurnedIn color="success" /></IconButton>
+                  <IconButton onClick={openTransferChatModal}><SyncAlt color="secondary" /></IconButton>
+                  <IconButton onClick={openFinishChatModal}><AssignmentTurnedIn color="success" /></IconButton>
                 </div>
               </td>
               <td className="w-24 px-4 py-2">{chat.id}</td>
@@ -57,3 +70,6 @@ export default function MonitorAttendances() {
     </div>
   );
 }
+
+
+ 
