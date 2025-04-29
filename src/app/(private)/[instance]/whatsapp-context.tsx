@@ -10,9 +10,11 @@ import {
   useState,
 } from "react";
 import {
+  MonitorChat,
   SendMessageData,
   SocketEventType,
   WhatsappClient,
+  WppChatsAndMessages,
   WppChatWithDetails,
   WppMessage,
 } from "@in.pulse-crm/sdk";
@@ -47,12 +49,13 @@ interface IWhatsappContext {
   sendMessage: (to: string, data: SendMessageData) => void;
   transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;
-  getChatsMonitor: (to: string, data: SendMessageData) => void;
+  getChatsMonitor: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
   updateChatContact: (contactId: number, newName: string) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
+  monitorChats: MonitorChat[];
 }
 
 interface WhatsappProviderProps {
@@ -74,6 +77,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
   const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
   const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
+  const [monitorChats, setMonitorChats] = useState<MonitorChat[]>([]);
 
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
@@ -169,14 +173,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, []);
 
   // Carregamento monitoria das conversas 
-  const getChatsMonitor = useCallback(async (to: string, data: SendMessageData) => {
-    api.current.getChatsMonitor(!!to);
+  const getChatsMonitor = useCallback(async () => {
     if (token) {
       api.current.setAuth(token);
+      await api.current.getChatsMonitor().then((res) => {
+        if (res) {
+          console.log(res);
+          setMonitorChats(res);
+          return { data: res };
+        }
+        setMonitorChats([]);
+        return { data: [] };
+       });
     }
 
-  }, [token,api.current]);
-
+  }, [token]);
+  
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -256,7 +268,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         sectors,
         currentChatRef,
         transferAttendance,
-        getChatsMonitor
+        getChatsMonitor,
+        monitorChats,
       }}
     >
       {children}

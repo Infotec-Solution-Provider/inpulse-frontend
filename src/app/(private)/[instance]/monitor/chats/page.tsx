@@ -1,9 +1,24 @@
+"use client";
+import { useEffect, useState } from "react";
 import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
-const MOCK_DATA = [1, 2, 3,4,5,6,7,8];
+import { useWhatsappContext } from "../../whatsapp-context";
+import { MonitorChat } from "@in.pulse-crm/sdk";
+
+
 
 export default function MonitorAttendances() {
+  const { getChatsMonitor } = useWhatsappContext();
+  const [monitorChats, setMonitorChats] = useState<MonitorChat[]>([]);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      await getChatsMonitor();
+    };
+    fetchChats();
+  }, [getChatsMonitor]);
+  
   return (
     <div>
       <table className="mx-auto mt-8">
@@ -23,8 +38,8 @@ export default function MonitorAttendances() {
           </tr>
         </thead>
         <tbody>
-          {MOCK_DATA.map((index) => (
-            <tr className="even:bg-indigo-200/5">
+          {monitorChats.map((chat, index) => (
+            <tr key={index} className="even:bg-indigo-200/5">
               <td className="w-44 px-4 py-2">
                 <div>
                   <IconButton>
@@ -38,16 +53,16 @@ export default function MonitorAttendances() {
                   </IconButton>
                 </div>
               </td>
-              <td className="w-24 px-4 py-2">1</td>
-              <td className="w-32 px-4 py-2">123456</td>
-              <td className="px-4 py-2">Company X</td>
-              <td className="px-4 py-2">John Doe</td>
-              <td className="px-4 py-2">+55 11 91234-5678</td>
-              <td className="px-4 py-2">Vendas</td>
-              <td className="px-4 py-2">Atendente {index}</td>
-              <td className="px-4 py-2">15/04/2025 14:32</td>
-              <td className="px-4 py-2"></td>
-              <td className="px-4 py-2"></td>
+              <td className="w-24 px-4 py-2">{chat.id}</td>
+              <td className="w-32 px-4 py-2">{chat.erpCode}</td>
+              <td className="px-4 py-2">{chat.companyName}</td>
+              <td className="px-4 py-2">{chat.contactName}</td>
+              <td className="px-4 py-2">{chat.whatsappNumber}</td>
+              <td className="px-4 py-2">{chat.sectorName}</td>
+              <td className="px-4 py-2">{chat.attendantName}</td>
+              <td className="px-4 py-2">{chat.startDate}</td>
+              <td className="px-4 py-2">{chat.endDate}</td>
+              <td className="px-4 py-2">{chat.result}</td>
             </tr>
           ))}
         </tbody>
