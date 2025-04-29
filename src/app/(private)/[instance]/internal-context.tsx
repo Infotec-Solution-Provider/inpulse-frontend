@@ -76,7 +76,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     (data: InternalSendMessageData) => {
       if (token) {
         api.current.setAuth(token);
-        api.current.sendMessageToChat(data);
+        api.current.sendMessageToInternalChat(data);
       }
     },
     [token],

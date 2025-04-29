@@ -1,5 +1,5 @@
 "use client";
-import { createContext, ReactElement, ReactNode, useEffect, useState } from "react";
+import { createContext, ReactElement, ReactNode, useContext, useEffect, useState } from "react";
 
 interface AppContextProps {
   modal: ReactNode;
@@ -14,6 +14,14 @@ interface AppProviderProps {
 }
 
 export const AppContext = createContext({} as AppContextProps);
+
+export function useAppContext() {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error("useAppContext must be used within an AppProvider");
+  }
+  return context;
+}
 
 export default function AppProvider({ children, modal, setModal }: AppProviderProps) {
   const openModal = (modal: ReactElement) => {
