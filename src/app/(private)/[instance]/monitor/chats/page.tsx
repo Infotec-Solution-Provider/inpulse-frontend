@@ -1,34 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
-import { IconButton, CircularProgress } from "@mui/material";
+import { useState } from "react";
+import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
-import { useWhatsappContext } from "../../whatsapp-context";
 import { MonitorChat } from "@in.pulse-crm/sdk";
 
 export default function MonitorAttendances() {
-  const { getChatsMonitor } = useWhatsappContext();
-  const [monitorChats, setMonitorChats] = useState<MonitorChat[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchChats =  () => {
-      setLoading(true);
-       getChatsMonitor();
-      if (monitorChats) {
-        setLoading(false);
-      }
-    };
-    fetchChats();
-  }, [getChatsMonitor]);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <CircularProgress size={50} />
-      </div>
-    );
-  }
+  const [monitorChats] = useState<MonitorChat[]>([]);
 
   return (
     <div>

@@ -49,7 +49,6 @@ interface IWhatsappContext {
   sendMessage: (to: string, data: SendMessageData) => void;
   transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;
-  getChatsMonitor: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
@@ -172,24 +171,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api.current.sendMessage(to, data);
   }, []);
 
-  // Carregamento monitoria das conversas 
-  const getChatsMonitor = useCallback( () => {
-    if (token) {
-      api.current.setAuth(token);
-       api.current.getChatsMonitor().then((res) => {
-        if (res) {
-          console.log(res);
-          setMonitorChats(res);
-          return { data: res };
-        }
-        else{
-          setMonitorChats([]);
-          return { data: [] };
-        }
-       });
-    }
-
-  }, [token]);
   
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
@@ -202,6 +183,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setMessages(chatsMessages);
       });
       api.current.getSectors().then((res) => setSectors(res));
+      api.current.getChatsMonitor().then((res) => {
+        if (res) {
+          setMonitorChats(res);
+        }
+       });
     } else {
       setChats([]);
       setMessages({});
@@ -270,7 +256,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         sectors,
         currentChatRef,
         transferAttendance,
-        getChatsMonitor,
         monitorChats,
       }}
     >
