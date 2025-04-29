@@ -66,11 +66,6 @@ export default function ChatsMenuList() {
 
   const sortedChats = useMemo(() => {
     return filteredChats.sort((a, b) => {
-      // Prioridade para mensagens não lidas
-      if (a.isUnread !== b.isUnread) {
-        return a.isUnread ? -1 : 1;
-      }
-
       // Ordenar por timestamp da última mensagem, se existir
       const aTimestamp = a.lastMessage ? Number(a.lastMessage.timestamp) : 0;
       const bTimestamp = b.lastMessage ? Number(b.lastMessage.timestamp) : 0;
