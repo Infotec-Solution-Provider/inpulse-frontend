@@ -15,7 +15,7 @@ export default function ChatStartedHandler(
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
     const { messages, ...chat } = await api.getChatById(chatId);
-    const isUnread = messages.some((m) => m.contactId === chat.contactId && m.status !== "READ");
+    const isUnread = true;
     const lastMessage = messages.find((m) => m.contactId === chat.contactId) || null;
 
     socket.joinRoom(`chat:${chat.id}`);

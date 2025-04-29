@@ -27,12 +27,12 @@ export default function processChatsAndMessages(
   }
 
   const isFromUs = (message: WppMessage) => {
-    return !["system", "me"].some((v) => v.includes(message.from));
+    return message.from.startsWith("me:") || message.from === "system";
   };
 
   const detailedChats = chats.map((chat) => ({
     ...chat,
-    chatType:'wpp',
+    chatType: "wpp",
     isUnread: messages.some(
       (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
     ),

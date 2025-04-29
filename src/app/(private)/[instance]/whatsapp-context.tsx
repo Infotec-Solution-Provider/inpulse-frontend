@@ -91,6 +91,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setCurrentChat(chat);
       setCurrentChatMessages(messages[chat.contactId || 0] || []);
       currentChatRef.current = chat;
+
       if (chat.contactId) {
         api.current.markContactMessagesAsRead(chat.contactId);
 
@@ -142,7 +143,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const finishChat = useCallback(
     (chatId: number, resultId: number) => {
       api.current.setAuth(token || "");
-      console.log(token);
       api.current.finishChatById(chatId, resultId).then(() => {
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
       });
@@ -172,13 +172,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api.current.sendMessage(to, data);
   }, []);
 
-  // Carregamento monitoria das conversas 
+  // Carregamento monitoria das conversas
   const getChatsMonitor = useCallback( () => {
     if (token) {
       api.current.setAuth(token);
        api.current.getChatsMonitor().then((res) => {
         if (res) {
-          console.log(res);
           setMonitorChats(res);
           return { data: res };
         }
@@ -190,7 +189,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
 
   }, [token]);
-  
+
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
