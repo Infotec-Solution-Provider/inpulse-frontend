@@ -24,7 +24,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <UsersProvider>
               <InternalChatProvider>
                 <ThemeProvider theme={darkTheme}>
-                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_1fr)]">
+                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
                     <Header />
                     {children}
                     <Modal
