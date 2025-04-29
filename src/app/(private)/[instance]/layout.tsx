@@ -20,28 +20,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="box-border h-screen w-full overflow-hidden">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
-                  
           <WhatsappProvider>
-          <UsersProvider>
-            <InternalChatProvider>
-              <ThemeProvider theme={darkTheme}>
-                <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
-                  <Header />
-                  {children}
-                  <Modal
-                    open={!!modal}
-                    onClose={() => setModal(null)}
-                    className="flex items-center justify-center"
-                  >
-                    <div>{modal as ReactElement}</div>
-                  </Modal>
-                </div>
-              </ThemeProvider>
-            </InternalChatProvider>
+            <UsersProvider>
+              <InternalChatProvider>
+                <ThemeProvider theme={darkTheme}>
+                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_1fr)]">
+                    <Header />
+                    {children}
+                    <Modal
+                      open={!!modal}
+                      onClose={(_, r) => {
+                        if (r === "backdropClick") return;
+                        setModal(null);
+                      }}
+                      className="flex items-center justify-center"
+                    >
+                      <div>{modal as ReactElement}</div>
+                    </Modal>
+                  </div>
+                </ThemeProvider>
+              </InternalChatProvider>
             </UsersProvider>
-
           </WhatsappProvider>
-
         </SocketProvider>
       </AppProvider>
     </div>

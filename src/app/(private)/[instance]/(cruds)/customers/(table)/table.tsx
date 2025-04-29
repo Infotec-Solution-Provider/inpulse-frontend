@@ -9,180 +9,91 @@ import {
   TablePagination,
 } from "@mui/material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
-import { ChangeEvent, useContext, useEffect, useMemo, useState } from "react";
-import EditModal from "./(modal)/edit-modal";
-import customersService from "@/lib/services/customers.service";
-import CreateModal from "./(modal)/create-modal";
-import { Customer, PaginatedResponse, RequestFilters } from "@in.pulse-crm/sdk";
-import { AuthContext } from "@/app/auth-context";
+import { useContext } from "react";
+import EditCustomerModal from "./(modal)/edit-customer-modal";
+import CreateCustomerModal from "./(modal)/create-customer-modal";
+import { Customer } from "@in.pulse-crm/sdk";
 import ClientTableHeader from "./table-header";
 import { AppContext } from "../../../app-context";
 import ContactsModal from "./(modal)/contacts-modal";
+import { useCustomersContext } from "./customers-context";
 
-export default function ClientsTable() {
+export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
+  const { state, dispatch, loadCustomers } = useCustomersContext();
 
-  const [clients, setClients] = useState<Partial<Customer>[]>([]);
-  const { token } = useContext(AuthContext);
-
-  const [page, setPage] = useState<number>(0);
-  const [totalRows, setTotalRows] = useState<number>();
-  const [rowsPerPage, setRowsPerPage] = useState<string>("10");
-  const [filters, setFilters] = useState<RequestFilters<Customer>>();
-
-  const [openEditModal, setOpenEditModal] = useState(false);
-  const [openCreateModal, setOpenCreateModal] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Partial<Customer>>();
-
-  const [loading, setLoading] = useState<boolean>(true);
-  const [firstLoading, setFirstLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    if (token) {
-      customersService.setAuth(token);
-      customersService.getCustomers().then((response: PaginatedResponse<Customer>) => {
-        setClients(response.data);
-        setTotalRows(response.page.totalRows);
-        setPage(response.page.current);
-        setFirstLoading(false);
-        setLoading(false);
-      });
-    }
-  }, [token]);
-
-  function openModalHandler(index: number) {
-    setSelectedClient(clients[index]);
-    setOpenEditModal(true);
+  function openEditCustomerModal(customer: Customer) {
+    openModal(<EditCustomerModal customer={customer} />);
   }
 
-  function openContactModalHandler(customer: Customer) {
+  function openCreateCustomerModal() {
+    openModal(<CreateCustomerModal />);
+  }
+
+  function openContactModal(customer: Customer) {
     openModal(<ContactsModal customer={customer} />);
   }
 
-  function closeModalHandler(editedCustomer?: Partial<Customer>) {
-    setOpenEditModal(false);
-    setSelectedClient(undefined);
-    if (editedCustomer) {
-      setClients((prevClients) =>
-        prevClients.map((client) =>
-          client.CODIGO === editedCustomer.CODIGO ? editedCustomer : client,
-        ),
-      );
-    }
-  }
+  const onChangePage = (page: number) => {
+    dispatch({ type: "change-page", page });
+    loadCustomers();
+  };
 
-  function pageChangeHandler(next?: boolean) {
-    setLoading(true);
-
-    if (next) {
-      customersService
-        .getCustomers({ ...filters, page: `${page + 1}`, perPage: rowsPerPage })
-        .then((response: PaginatedResponse<Customer>) => {
-          setClients(response.data);
-          setPage(response.page.current);
-          setTotalRows(response.page.totalRows);
-          setLoading(false);
-        });
-    } else {
-      customersService
-        .getCustomers({ ...filters, page: `${page - 1}`, perPage: rowsPerPage })
-        .then((response: PaginatedResponse<Customer>) => {
-          setClients(response.data);
-          setPage(response.page.current);
-          setTotalRows(response.page.totalRows);
-          setLoading(false);
-        });
-    }
-  }
-
-  function rowsPerPageChangeHandler(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    setRowsPerPage(e.target.value);
-    setPage(1);
-    setLoading(true);
-    customersService
-      .getCustomers({ ...filters, perPage: e.target.value })
-      .then((response: PaginatedResponse<Customer>) => {
-        setClients(response.data);
-        setPage(response.page.current);
-
-        setLoading(false);
-      });
-  }
-
-  const rows = useMemo(() => {
-    if (clients && clients.length > 0 && !loading) {
-      return (
-        <TableBody>
-          {clients.map((client, index) => (
-            <CustomersTableItem
-              key={`${client.RAZAO}_${client.CODIGO}`}
-              customer={client}
-              openEditModalHandler={() => openModalHandler(index)}
-              openContactModalHandler={openContactModalHandler}
-            />
-          ))}
-        </TableBody>
-      );
-    } else {
-      return (
-        <TableBody>
-          <StyledTableRow className="h-32 w-full">
-            <StyledTableCell
-              colSpan={8}
-              className="flex items-center justify-center text-center text-gray-400"
-            >
-              <div className="flex flex-col items-center">
-                <CircularProgress />
-                <span className="mt-2">Carregando clientes...</span>
-              </div>
-            </StyledTableCell>
-          </StyledTableRow>
-        </TableBody>
-      );
-    }
-  }, [clients, page, loading, openModalHandler]);
+  const onChangePerPage = (perPage: number) => {
+    dispatch({ type: "change-per-page", perPage });
+    loadCustomers();
+  };
 
   return (
-    <>
-      {selectedClient && (
-        <EditModal onClose={closeModalHandler} open={openEditModal} client={selectedClient} />
-      )}
-
-      <CreateModal onClose={() => setOpenCreateModal(false)} open={openCreateModal} />
-
+    <div>
       <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
         <Table className="max-h-[100%] overflow-auto">
-          <ClientTableHeader
-            rowsPerPage={rowsPerPage}
-            setLoading={setLoading}
-            setPage={setPage}
-            setTotalRows={setTotalRows}
-            setClients={setClients}
-            filters={filters}
-            setFilters={setFilters}
-          />
-          {rows}
+          <ClientTableHeader />
+          <TableBody>
+            {state.isLoading ? (
+              <StyledTableRow className="h-32 w-full">
+                <StyledTableCell
+                  colSpan={8}
+                  className="flex items-center justify-center text-center text-gray-400"
+                >
+                  <div className="flex flex-col items-center">
+                    <CircularProgress />
+                    <span className="mt-2">Carregando clientes...</span>
+                  </div>
+                </StyledTableCell>
+              </StyledTableRow>
+            ) : (
+              state.customers.map((client) => (
+                <CustomersTableItem
+                  key={`${client.RAZAO}_${client.CODIGO}`}
+                  customer={client}
+                  openEditModalHandler={openEditCustomerModal}
+                  openContactModalHandler={openContactModal}
+                />
+              ))
+            )}
+          </TableBody>
         </Table>
       </TableContainer>
-      {!firstLoading && (
+      {!state.isLoading && (
         <div className="flex h-fit w-full justify-center gap-4 px-4 pt-0">
-          <Button onClick={() => setOpenCreateModal(true)} variant="outlined">
+          <Button onClick={openCreateCustomerModal} variant="outlined">
             Cadastrar cliente
           </Button>
           <TablePagination
             component="div"
-            count={totalRows || 0}
-            page={page - 1}
-            rowsPerPage={+rowsPerPage}
+            count={state.totalRows}
+            page={+(state.filters.page ?? 1)}
+            rowsPerPage={+(state.filters.perPage ?? 10)}
             labelRowsPerPage="Entradas por página"
             labelDisplayedRows={({ from, to, count }) => {
               return `${from}-${to} de ${count}`;
             }}
-            onRowsPerPageChange={(e) => rowsPerPageChangeHandler(e)}
-            onPageChange={(e, newPage) => pageChangeHandler(newPage + 1 > page)}
+            onRowsPerPageChange={(e) => onChangePerPage(+e.target.value)}
+            onPageChange={(_, newPage) => onChangePage(newPage)}
           />
         </div>
       )}
-    </>
+    </div>
   );
 }

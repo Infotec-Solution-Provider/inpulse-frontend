@@ -35,8 +35,6 @@ export default function AuthProvider({ children }: ProviderProps) {
         localStorage.setItem(`@inpulse/${instance}/token`, session.token);
 
         instanceRef.current = instance;
-        console.log("entrei no session",session)
-        console.log("Usuario",session.user)
 
         setUser(session.user);
         setToken(session.token);
@@ -59,7 +57,6 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   useEffect(() => {
     const instance = pathname.split("/")[1];
-    console.log("instance", instance);
     instanceRef.current = instance;
     const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
     setToken(prevToken);
