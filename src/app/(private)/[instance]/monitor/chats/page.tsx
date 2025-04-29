@@ -3,10 +3,10 @@ import { useState } from "react";
 import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
-import { MonitorChat } from "@in.pulse-crm/sdk";
+import { useWhatsappContext } from "../../whatsapp-context";
 
 export default function MonitorAttendances() {
-  const [monitorChats] = useState<MonitorChat[]>([]);
+  const { monitorChats } = useWhatsappContext();
 
   return (
     <div>
