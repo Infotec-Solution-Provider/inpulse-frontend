@@ -1,29 +1,40 @@
 "use client";
 import { useEffect, useState } from "react";
-import { IconButton } from "@mui/material";
+import { IconButton, CircularProgress } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { MonitorChat } from "@in.pulse-crm/sdk";
 
-
-
 export default function MonitorAttendances() {
   const { getChatsMonitor } = useWhatsappContext();
   const [monitorChats, setMonitorChats] = useState<MonitorChat[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchChats = async () => {
-      await getChatsMonitor();
+    const fetchChats =  () => {
+      setLoading(true);
+       getChatsMonitor();
+      if (monitorChats) {
+        setLoading(false);
+      }
     };
     fetchChats();
   }, [getChatsMonitor]);
-  
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <CircularProgress size={50} />
+      </div>
+    );
+  }
+
   return (
     <div>
       <table className="mx-auto mt-8">
         <thead>
-          <tr className="bg-indigo-700">
+          <tr className="bg-indigo-700 text-white">
             <th className="w-44 px-4 py-2">Ações</th>
             <th className="w-16 px-4 py-2">Código</th>
             <th className="w-32 px-4 py-2">Código ERP</th>
@@ -42,15 +53,9 @@ export default function MonitorAttendances() {
             <tr key={index} className="even:bg-indigo-200/5">
               <td className="w-44 px-4 py-2">
                 <div>
-                  <IconButton>
-                    <VisibilityIcon />
-                  </IconButton>
-                  <IconButton>
-                    <SyncAlt color="secondary" />
-                  </IconButton>
-                  <IconButton>
-                    <AssignmentTurnedIn color="success" />
-                  </IconButton>
+                  <IconButton><VisibilityIcon /></IconButton>
+                  <IconButton><SyncAlt color="secondary" /></IconButton>
+                  <IconButton><AssignmentTurnedIn color="success" /></IconButton>
                 </div>
               </td>
               <td className="w-24 px-4 py-2">{chat.id}</td>

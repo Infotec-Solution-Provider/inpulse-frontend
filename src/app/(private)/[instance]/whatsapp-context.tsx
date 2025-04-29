@@ -173,17 +173,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, []);
 
   // Carregamento monitoria das conversas 
-  const getChatsMonitor = useCallback(async () => {
+  const getChatsMonitor = useCallback( () => {
     if (token) {
       api.current.setAuth(token);
-      await api.current.getChatsMonitor().then((res) => {
+       api.current.getChatsMonitor().then((res) => {
         if (res) {
           console.log(res);
           setMonitorChats(res);
           return { data: res };
         }
-        setMonitorChats([]);
-        return { data: [] };
+        else{
+          setMonitorChats([]);
+          return { data: [] };
+        }
        });
     }
 
