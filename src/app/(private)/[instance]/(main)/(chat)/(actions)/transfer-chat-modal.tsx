@@ -1,16 +1,23 @@
 import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { WhatsappContext } from "../../../whatsapp-context";
+import { UsersContext } from "../../../(cruds)/users/users-context";
 
-/* interface TransferChatModalProps {
-  chatId: number;
-}
- */
 export default function TransferChatModal() {
   const { closeModal } = useContext(AppContext);
-  const { wppApi } = useContext(WhatsappContext);
+  const { currentChat, transferAttendance } = useContext(WhatsappContext);
+  const { users } = useContext(UsersContext);
+
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+
+  const handleTransfer = () => {
+    if (!selectedUser) return; 
+    if (!currentChat) return; 
+    transferAttendance(currentChat?.id, selectedUser); 
+    closeModal();
+  };
 
   return (
     <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">
@@ -21,11 +28,18 @@ export default function TransferChatModal() {
         </IconButton>
       </header>
       <form className="flex flex-col gap-6">
-        <TextField select label="Usuário" required>
-          <MenuItem value={1}>Diego Lopes</MenuItem>
-          <MenuItem value={2}>Matheus Silva</MenuItem>
-          <MenuItem value={3}>Juliana Martins</MenuItem>
-          <MenuItem value={4}>Giovanna Oliveira</MenuItem>
+        <TextField
+          select
+          label="Usuário"
+          required
+          value={selectedUser ?? ""}
+          onChange={(e) => setSelectedUser(Number(e.target.value))}
+        >
+          {Array.isArray(users) && users.map((user) => (
+            <MenuItem key={user.CODIGO} value={user.CODIGO}>
+              {user.NOME_EXIBICAO}
+            </MenuItem>
+          ))}
         </TextField>
         <div className="flex items-center justify-end gap-2">
           <Button
@@ -42,7 +56,8 @@ export default function TransferChatModal() {
             variant="contained"
             color="primary"
             className="w-32"
-            onClick={closeModal}
+            disabled={!selectedUser}
+            onClick={handleTransfer}
           >
             Transferir
           </Button>

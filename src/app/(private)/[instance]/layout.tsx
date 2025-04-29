@@ -7,6 +7,7 @@ import { Modal, ThemeProvider } from "@mui/material";
 import { ReactElement, ReactNode, useState } from "react";
 import WhatsappProvider from "./whatsapp-context";
 import { InternalChatProvider } from "./internal-context";
+import UsersProvider from "./(cruds)/users/users-context";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -19,7 +20,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="box-border h-screen w-full overflow-hidden">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
+                  
           <WhatsappProvider>
+          <UsersProvider>
             <InternalChatProvider>
               <ThemeProvider theme={darkTheme}>
                 <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
@@ -35,7 +38,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </div>
               </ThemeProvider>
             </InternalChatProvider>
+            </UsersProvider>
+
           </WhatsappProvider>
+
         </SocketProvider>
       </AppProvider>
     </div>
