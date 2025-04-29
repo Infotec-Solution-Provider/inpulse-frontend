@@ -12,6 +12,14 @@ import usersService from "../lib/services/users.service";
 
 export const AuthContext = createContext({} as AuthContextProps);
 
+export function useAuthContext() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuthContext must be used within an AuthProvider");
+  }
+  return context;
+}
+
 export default function AuthProvider({ children }: ProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -102,12 +110,4 @@ export default function AuthProvider({ children }: ProviderProps) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuthContext() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuthContext must be used within an AuthProvider");
-  }
-  return context;
 }
