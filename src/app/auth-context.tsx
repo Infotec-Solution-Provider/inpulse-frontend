@@ -12,6 +12,14 @@ import usersService from "../lib/services/users.service";
 
 export const AuthContext = createContext({} as AuthContextProps);
 
+export function useAuthContext() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuthContext must be used within an AuthProvider");
+  }
+  return context;
+}
+
 export default function AuthProvider({ children }: ProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -27,8 +35,6 @@ export default function AuthProvider({ children }: ProviderProps) {
         localStorage.setItem(`@inpulse/${instance}/token`, session.token);
 
         instanceRef.current = instance;
-        console.log("entrei no session",session)
-        console.log("Usuario",session.user)
 
         setUser(session.user);
         setToken(session.token);
@@ -51,7 +57,6 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   useEffect(() => {
     const instance = pathname.split("/")[1];
-    console.log("instance", instance);
     instanceRef.current = instance;
     const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
     setToken(prevToken);
@@ -102,12 +107,4 @@ export default function AuthProvider({ children }: ProviderProps) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuthContext() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuthContext must be used within an AuthProvider");
-  }
-  return context;
 }

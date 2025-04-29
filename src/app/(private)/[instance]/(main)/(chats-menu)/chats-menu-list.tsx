@@ -12,12 +12,14 @@ type CombinedChat = DetailedChat | DetailedInternalChat;
 
 const matchesFilter = (chat: CombinedChat, search: string) => {
   if (chat.chatType === "wpp") {
+    const onlyDigits = search.replace(/\D/g, "");
     const matchCnpj = chat.customer?.CPF_CNPJ?.includes(search);
     const matchCompanyName = chat.customer?.RAZAO?.toLowerCase().includes(search.toLowerCase());
     const matchCustomerErp = chat.customer?.COD_ERP === search;
     const matchCustomerId = chat.customer?.CODIGO?.toString() === search;
     const matchName = chat.contact?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchContactPhone = chat.contact?.phone?.includes(search.replace(/\D/g, ""));
+    const matchContactPhone =
+      onlyDigits && chat.contact?.phone && chat.contact.phone.includes(onlyDigits);
 
     return (
       matchCnpj ||
@@ -66,11 +68,6 @@ export default function ChatsMenuList() {
 
   const sortedChats = useMemo(() => {
     return filteredChats.sort((a, b) => {
-      // Prioridade para mensagens não lidas
-      if (a.isUnread !== b.isUnread) {
-        return a.isUnread ? -1 : 1;
-      }
-
       // Ordenar por timestamp da última mensagem, se existir
       const aTimestamp = a.lastMessage ? Number(a.lastMessage.timestamp) : 0;
       const bTimestamp = b.lastMessage ? Number(b.lastMessage.timestamp) : 0;

@@ -4,8 +4,8 @@ import { Customer } from "@in.pulse-crm/sdk";
 import { IconButton } from "@mui/material";
 
 interface ClientListItemProps {
-  customer: Partial<Customer>;
-  openEditModalHandler: () => void;
+  customer: Customer;
+  openEditModalHandler: (customer: Customer) => void;
   openContactModalHandler: (customer: Customer) => void;
 }
 
@@ -47,10 +47,10 @@ export default function CustomersTableItem({
       </StyledTableCell>
       <StyledTableCell className="px-2 py-3">
         <div className="flex w-full items-center gap-2">
-          <IconButton title="Editar" onClick={openEditModalHandler}>
+          <IconButton title="Editar" onClick={() => openEditModalHandler(customer)}>
             <Edit />
           </IconButton>
-          <IconButton title="Editar" onClick={() => openContactModalHandler(customer as Customer)}>
+          <IconButton title="Editar" onClick={() => openContactModalHandler(customer)}>
             <ViewAgenda />
           </IconButton>
         </div>

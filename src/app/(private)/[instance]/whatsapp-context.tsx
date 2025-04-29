@@ -10,9 +10,11 @@ import {
   useState,
 } from "react";
 import {
+  MonitorChat,
   SendMessageData,
   SocketEventType,
   WhatsappClient,
+  WppChatsAndMessages,
   WppChatWithDetails,
   WppMessage,
 } from "@in.pulse-crm/sdk";
@@ -45,12 +47,15 @@ interface IWhatsappContext {
   openChat: (chat: DetailedChat) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
   sendMessage: (to: string, data: SendMessageData) => void;
+  transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;
+  getChatsMonitor: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
   updateChatContact: (contactId: number, newName: string) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
+  monitorChats: MonitorChat[];
 }
 
 interface WhatsappProviderProps {
@@ -72,6 +77,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
   const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
   const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
+  const [monitorChats, setMonitorChats] = useState<MonitorChat[]>([]);
 
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
@@ -143,6 +149,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     },
     [api, token],
   );
+  // Atualizar operador atendimento
+  const transferAttendance = useCallback(
+    (chatId: number, selectedUser: number) => {
+      api.current.setAuth(token || "");
+      api.current.transferAttendance(chatId, selectedUser).then(() => {
+        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      });
+    },
+    [api, token],
+  );
 
   const startChatByContactId = useCallback(
     (contactId: number) => {
@@ -156,6 +172,25 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api.current.sendMessage(to, data);
   }, []);
 
+  // Carregamento monitoria das conversas 
+  const getChatsMonitor = useCallback( () => {
+    if (token) {
+      api.current.setAuth(token);
+       api.current.getChatsMonitor().then((res) => {
+        if (res) {
+          console.log(res);
+          setMonitorChats(res);
+          return { data: res };
+        }
+        else{
+          setMonitorChats([]);
+          return { data: [] };
+        }
+       });
+    }
+
+  }, [token]);
+  
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -234,6 +269,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         updateChatContact,
         sectors,
         currentChatRef,
+        transferAttendance,
+        getChatsMonitor,
+        monitorChats,
       }}
     >
       {children}

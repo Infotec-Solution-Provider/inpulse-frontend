@@ -40,6 +40,20 @@ export default function ChatMessagesList() {
     }
   }, [currentChatMessages, currentInternalChatMessages]);
 
+  useEffect(() => {
+    const handleScrollToBottom = () => {
+      if (ulRef.current) {
+        ulRef.current.scrollTop = ulRef.current.scrollHeight;
+      }
+    };
+  
+    document.addEventListener("scroll-to-bottom", handleScrollToBottom);
+  
+    return () => {
+      document.removeEventListener("scroll-to-bottom", handleScrollToBottom);
+    };
+  }, []);
+  
   return (
     <ul
       className="flex h-full w-full flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2"

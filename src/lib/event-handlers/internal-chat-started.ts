@@ -10,25 +10,28 @@ export default function InternalChatStartedHandler(
   socket: SocketClient,
   users: User[],
   setChats: Dispatch<SetStateAction<DetailedInternalChat[]>>,
+  openInternalChat: (chat: DetailedInternalChat) => void, 
 ) {
+  
   return async ({ chat }: HandleChatStartedCallbackProps) => {
     socket.joinRoom(`internal-chat:${chat.id}`);
 
+    const detailedChat: DetailedInternalChat = {
+      ...chat,
+      lastMessage: null,
+      chatType: "internal",
+      isUnread: true,
+      users: users.filter((u) => chat.participants.includes(u.CODIGO)), 
+    };
+
     setChats((prev) => {
-      const chatIndex = prev.findIndex((c) => c.id === chat.id);
-      if (chatIndex !== -1) {
+      const chatExists = prev.some((c) => c.id === chat.id);
+      if (chatExists) {
         return prev;
       }
-      return [
-        {
-          ...chat,
-          lastMessage: null,
-          chatType: "internal",
-          isUnread: true,
-          users: users.filter((u) => chat.participants.includes(u.CODIGO)),
-        },
-        ...prev,
-      ];
+    //  openInternalChat(detailedChat);
+      return [detailedChat, ...prev];
     });
+
   };
 }

@@ -1,40 +1,26 @@
 import { MenuItem, TableHead, TextField } from "@mui/material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
-import { Customer, PaginatedResponse, RequestFilters } from "@in.pulse-crm/sdk";
-import customersService from "@/lib/services/customers.service";
-import { Dispatch, SetStateAction } from "react";
 import { Search } from "@mui/icons-material";
+import { useCustomersContext } from "./customers-context";
+import { Customer } from "@in.pulse-crm/sdk";
+import { useRef } from "react";
 
-interface ClientTableHeaderProps {
-  setLoading: (loading: boolean) => void;
-  setPage: (page: number) => void;
-  setTotalRows: (totalRows: number) => void;
-  setClients: (clients: Partial<Customer>[]) => void;
-  rowsPerPage: string;
-  filters?: RequestFilters<Customer>;
-  setFilters: Dispatch<SetStateAction<RequestFilters<Customer> | undefined>>;
-}
+export default function ClientTableHeader() {
+  const { dispatch, loadCustomers, state } = useCustomersContext();
+  const filtersRef = useRef(state.filters);
 
-export default function ClientTableHeader({
-  setLoading,
-  setPage,
-  setTotalRows,
-  setClients,
-  rowsPerPage,
-  filters,
-  setFilters,
-}: ClientTableHeaderProps) {
-  function setSearchFiltersHandler() {
-    setLoading(true);
-    customersService
-      .getCustomers({ ...filters, perPage: rowsPerPage, page: "1" })
-      .then((response: PaginatedResponse<Customer>) => {
-        setClients(response.data);
-        setPage(response.page.current);
-        setTotalRows(response.page.totalRows);
-        setLoading(false);
-      });
-  }
+  const onChangeFilter = (key: keyof Customer, value: string) => {
+    if (value === "" || value === "none") {
+      delete filtersRef.current[key]; // Remove a chave se o valor for vazio
+    } else {
+      filtersRef.current[key] = value; // Atualiza o valor do filtro
+    }
+  };
+
+  const onClickSearch = () => {
+    dispatch({ type: "change-filters", filters: filtersRef.current });
+    loadCustomers();
+  };
 
   return (
     <TableHead>
@@ -44,23 +30,8 @@ export default function ClientTableHeader({
             label="Código"
             variant="standard"
             slotProps={{ input: { disableUnderline: true } }}
-            value={filters?.CODIGO || ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (!isNaN(Number(value))) {
-                setFilters((prev) => {
-                  const updated = { ...prev };
-
-                  if (value) {
-                    updated.CODIGO = value;
-                  } else {
-                    delete updated.CODIGO;
-                  }
-
-                  return updated;
-                });
-              }
-            }}
+            onChange={(e) => onChangeFilter("CODIGO", e.target.value)}
+            defaultValue={state.filters?.CODIGO || ""}
           />
         </StyledTableCell>
         <StyledTableCell>
@@ -71,20 +42,10 @@ export default function ClientTableHeader({
             style={{ width: "6rem" }}
             select
             slotProps={{ input: { disableUnderline: true } }}
-            value={filters?.ATIVO || ""}
-            onChange={(e) => {
-              setFilters((prevFilters) => {
-                const updatedFilters = { ...prevFilters };
-                if (e.target.value) {
-                  updatedFilters.ATIVO = e.target.value;
-                } else {
-                  delete updatedFilters.ATIVO;
-                }
-                return updatedFilters;
-              });
-            }}
+            onChange={(e) => onChangeFilter("ATIVO", e.target.value)}
+            defaultValue={state.filters?.ATIVO || ""}
           >
-            <MenuItem value="" key="none">
+            <MenuItem value="none" key="none">
               Ambos
             </MenuItem>
             <MenuItem value="SIM" key="SIM">
@@ -97,24 +58,14 @@ export default function ClientTableHeader({
         </StyledTableCell>
         <StyledTableCell>
           <TextField
-            name="PESSOAA"
+            name="PESSOA"
             label="Pessoa"
             variant="standard"
             style={{ width: "7rem" }}
             select
             slotProps={{ input: { disableUnderline: true } }}
-            value={filters?.PESSOA || ""}
-            onChange={(e) => {
-              setFilters((prevFilters) => {
-                const updatedFilters = { ...prevFilters };
-                if (e.target.value) {
-                  updatedFilters.PESSOA = e.target.value;
-                } else {
-                  delete updatedFilters.PESSOA;
-                }
-                return updatedFilters;
-              });
-            }}
+            onChange={(e) => onChangeFilter("PESSOA", e.target.value)}
+            defaultValue={state.filters?.PESSOA || ""}
           >
             <MenuItem value="" key="none">
               Ambos
@@ -131,19 +82,9 @@ export default function ClientTableHeader({
           <TextField
             label="Razão social"
             variant="standard"
-            value={filters?.RAZAO || ""}
             slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) =>
-              setFilters((prevFilters) => {
-                const updatedFilters = { ...prevFilters };
-                if (e.target.value) {
-                  updatedFilters.RAZAO = e.target.value;
-                } else {
-                  delete updatedFilters.RAZAO;
-                }
-                return updatedFilters;
-              })
-            }
+            onChange={(e) => onChangeFilter("RAZAO", e.target.value)}
+            defaultValue={state.filters?.RAZAO || ""}
           />
         </StyledTableCell>
         <StyledTableCell>
@@ -151,60 +92,30 @@ export default function ClientTableHeader({
             label="CPF/CNPJ"
             variant="standard"
             slotProps={{ input: { disableUnderline: true } }}
-            value={filters?.CPF_CNPJ || ""}
-            onChange={(e) =>
-              setFilters((prevFilters) => {
-                const updatedFilters = { ...prevFilters };
-                if (e.target.value) {
-                  updatedFilters.CPF_CNPJ = e.target.value;
-                } else {
-                  delete updatedFilters.CPF_CNPJ;
-                }
-                return updatedFilters;
-              })
-            }
+            onChange={(e) => onChangeFilter("CPF_CNPJ", e.target.value)}
+            defaultValue={state.filters?.CPF_CNPJ || ""}
           />
         </StyledTableCell>
         <StyledTableCell>
           <TextField
             label="Cidade"
             variant="standard"
-            value={filters?.CIDADE || ""}
             slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) =>
-              setFilters((prevFilters) => {
-                const updatedFilters = { ...prevFilters };
-                if (e.target.value) {
-                  updatedFilters.CIDADE = e.target.value;
-                } else {
-                  delete updatedFilters.CIDADE;
-                }
-                return updatedFilters;
-              })
-            }
+            onChange={(e) => onChangeFilter("CIDADE", e.target.value)}
+            defaultValue={state.filters?.CIDADE || ""}
           />
         </StyledTableCell>
         <StyledTableCell>
           <TextField
             label="Código ERP"
             variant="standard"
-            value={filters?.COD_ERP || ""}
             slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) =>
-              setFilters((prevFilters) => {
-                const updatedFilters = { ...prevFilters };
-                if (e.target.value) {
-                  updatedFilters.COD_ERP = e.target.value;
-                } else {
-                  delete updatedFilters.COD_ERP;
-                }
-                return updatedFilters;
-              })
-            }
+            onChange={(e) => onChangeFilter("COD_ERP", e.target.value)}
+            defaultValue={state.filters?.COD_ERP || ""}
           />
         </StyledTableCell>
         <StyledTableCell>
-          <button onClick={setSearchFiltersHandler}>
+          <button onClick={onClickSearch}>
             <Search />
           </button>
         </StyledTableCell>
