@@ -1,12 +1,16 @@
 "use client";
-import { useState } from "react";
+import { useEffect } from "react";
 import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
 import { useWhatsappContext } from "../../whatsapp-context";
 
 export default function MonitorAttendances() {
-  const { monitorChats } = useWhatsappContext();
+  const { getChatsMonitor,monitorChats } = useWhatsappContext();
+
+  useEffect(() => {
+       getChatsMonitor()
+  }, [getChatsMonitor]);
 
   return (
     <div>
