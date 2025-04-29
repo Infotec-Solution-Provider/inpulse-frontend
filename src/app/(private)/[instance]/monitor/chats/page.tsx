@@ -7,29 +7,38 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { AppContext } from "../../app-context";
+import { MonitorChat } from "@in.pulse-crm/sdk";
 
 export default function MonitorAttendances() {
-  const { getChatsMonitor,monitorChats } = useWhatsappContext();
+  const { getChatsMonitor,monitorChats, setCurrentChat, chats } = useWhatsappContext();
 
   const { openModal } = useContext(AppContext);
 
-  const openFinishChatModal = () => {
-    openModal(<FinishChatModal />);
+  const openFinishChatModal = (chat: MonitorChat) => {
+    const foundChat = chats.find((c) => c.id === +chat.id);
+    if (foundChat) {
+
+      openModal(<FinishChatModal />);
+    }
   };
 
-  const openTransferChatModal = () => {
+  const openTransferChatModal = (chat: MonitorChat) => {
+    const foundChat = chats.find((c) => c.id === +chat.id);
+    if (foundChat) {
     openModal(<TransferChatModal />);
+    }
   };
 
   useEffect(() => {
     getChatsMonitor()
 }, [getChatsMonitor]);
 
-  return (
-    <div>
-      <table className="mx-auto mt-8">
-        <thead>
-          <tr className="bg-indigo-700 text-white">
+return (
+  <div className="p-4 flex justify-center">
+    <div className="overflow-auto max-h-[600px] w-full max-w-6xl">
+      <table className="min-w-full border-collapse table-fixed border-0">
+        <thead className="sticky top-0 bg-indigo-700 text-white z-10">
+          <tr>
             <th className="w-44 px-4 py-2">Ações</th>
             <th className="w-16 px-4 py-2">Código</th>
             <th className="w-32 px-4 py-2">Código ERP</th>
@@ -46,29 +55,30 @@ export default function MonitorAttendances() {
         <tbody>
           {monitorChats.map((chat, index) => (
             <tr key={index} className="even:bg-indigo-200/5">
-              <td className="w-44 px-4 py-2">
+              <td className="w-44 px-4 py-2 border-t border-b border-gray-300">
                 <div>
                   <IconButton><VisibilityIcon /></IconButton>
-                  <IconButton onClick={openTransferChatModal}><SyncAlt color="secondary" /></IconButton>
-                  <IconButton onClick={openFinishChatModal}><AssignmentTurnedIn color="success" /></IconButton>
+                  <IconButton onClick={() => { openTransferChatModal(chat) }}><SyncAlt color="secondary" /></IconButton>
+                  <IconButton onClick={() => { openFinishChatModal(chat) }}><AssignmentTurnedIn color="success" /></IconButton>
                 </div>
               </td>
-              <td className="w-24 px-4 py-2">{chat.id}</td>
-              <td className="w-32 px-4 py-2">{chat.erpCode}</td>
-              <td className="px-4 py-2">{chat.companyName}</td>
-              <td className="px-4 py-2">{chat.contactName}</td>
-              <td className="px-4 py-2">{chat.whatsappNumber}</td>
-              <td className="px-4 py-2">{chat.sectorName}</td>
-              <td className="px-4 py-2">{chat.attendantName}</td>
-              <td className="px-4 py-2">{chat.startDate}</td>
-              <td className="px-4 py-2">{chat.endDate}</td>
-              <td className="px-4 py-2">{chat.result}</td>
+              <td className="w-24 px-4 py-2 border-t border-b border-gray-300">{chat.id}</td>
+              <td className="w-32 px-4 py-2 border-t border-b border-gray-300">{chat.erpCode}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.companyName}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.contactName}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.whatsappNumber}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.sectorName}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.attendantName}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.startDate}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.endDate}</td>
+              <td className="px-4 py-2 border-t border-b border-gray-300">{chat.result}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  );
+  </div>
+);
 }
 
 

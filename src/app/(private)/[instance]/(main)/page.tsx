@@ -4,7 +4,6 @@ import ChatsMenu from "./(chats-menu)/chats-menu";
 import { useContext } from "react";
 import ChatProvider from "./(chat)/chat-context";
 import { WhatsappContext } from "../whatsapp-context";
-import { InternalChatContext } from "../internal-context";
 import { AuthContext } from "@/app/auth-context";
 
 export default function Home() {

@@ -15,7 +15,7 @@ export default function Chat({ avatarUrl, name, customerName, phone }: ChatConta
       <div className="relative grid grid-rows-[1fr_auto] overflow-hidden">
         <ChatMessagesList />
         <ChatSendMessageArea />
-        {state.file && <ChatAttachmentPreview file={state.file} />}
+        {state?.file && <ChatAttachmentPreview file={state.file} />}
       </div>
     </div>
   );

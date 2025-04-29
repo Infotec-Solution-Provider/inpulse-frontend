@@ -47,7 +47,7 @@ export default function ChatSendMessageArea() {
 
       e.preventDefault();
       if (e.key === "Enter" && isAuxKeyPressed) {
-        return dispatch({ type: "change-text", text: state.text + "\n" });
+        return dispatch({ type: "change-text", text: state?.text + "\n" });
       }
       if (e.key === "Enter" && !isDisabled && !isAuxKeyPressed) {
         dispatch({ type: "change-text", text: "" });
@@ -60,7 +60,7 @@ export default function ChatSendMessageArea() {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isDisabled, state.text]);
+  }, [isDisabled, state?.text]);
 
   return (
     <div className="flex max-h-36 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300">
@@ -87,13 +87,13 @@ export default function ChatSendMessageArea() {
         fullWidth
         size="small"
         placeholder="Mensagem"
-        value={state.text}
+        value={state?.text}
         onChange={handleTextChange}
       />
       <IconButton
         size="small"
         color="inherit"
-        aria-hidden={state.text.length === 0}
+        aria-hidden={state?.text.length === 0}
         className="aria-hidden:hidden"
         disabled={isDisabled}
         onClick={sendMessages}
@@ -103,7 +103,7 @@ export default function ChatSendMessageArea() {
       <IconButton
         size="small"
         color="inherit"
-        aria-hidden={state.text.length > 0}
+        aria-hidden={state?.text.length > 0}
         className="aria-hidden:hidden"
       >
         <MicIcon />
