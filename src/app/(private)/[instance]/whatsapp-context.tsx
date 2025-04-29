@@ -145,6 +145,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     },
     [api, token],
   );
+  // Atualizar operador atendimento
+  const transferAttendance = useCallback(
+    (chatId: number, selectedUser: number) => {
+      api.current.setAuth(token || "");
+      api.current.transferAttendance(chatId, selectedUser).then(() => {
+        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+      });
+    },
+    [api, token],
+  );
 
   const startChatByContactId = useCallback(
     (contactId: number) => {
