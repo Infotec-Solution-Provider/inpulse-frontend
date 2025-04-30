@@ -4,7 +4,7 @@ function compareMessageStatus(prevStatus: WppMessageStatus, newStatus: WppMessag
   if (prevStatus === "PENDING") {
     return newStatus;
   }
-  if (prevStatus === "SENT" && newStatus !== "PENDING") {
+  if (prevStatus === "SENT" && newStatus === "PENDING") {
     return prevStatus;
   }
   if (prevStatus === "RECEIVED" && ["SENT", "PENDING"].includes(newStatus)) {
