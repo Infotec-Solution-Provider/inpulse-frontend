@@ -13,7 +13,6 @@ import CategoryIcon from "@mui/icons-material/Category";
 import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import SmsIcon from "@mui/icons-material/Sms";
-import EventIcon from "@mui/icons-material/Event";
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
   all: "",

@@ -1,5 +1,5 @@
 "use client";
-import { createContext, ReactElement, ReactNode, useContext, useEffect, useState } from "react";
+import { createContext, ReactElement, ReactNode, useContext, useEffect } from "react";
 
 interface AppContextProps {
   modal: ReactNode;

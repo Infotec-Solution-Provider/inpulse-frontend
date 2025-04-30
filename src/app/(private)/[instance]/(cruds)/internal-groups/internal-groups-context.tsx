@@ -1,4 +1,4 @@
-import { InternalChat, InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup } from "@in.pulse-crm/sdk";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { InternalChatContext } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";

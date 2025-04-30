@@ -1,6 +1,6 @@
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { Customer, WppContact } from "@in.pulse-crm/sdk";
-import { Button, IconButton, List, TextField } from "@mui/material";
+import { Button, IconButton, TextField } from "@mui/material";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ContactItem from "./contact-item";
 import { toast } from "react-toastify";
@@ -113,7 +113,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
   return (
     <div className="rounded-md bg-slate-800 p-4">
       <header className="mb-4 flex items-center justify-between">
-        <h1 className="max-w-80 truncate">Contatos de "{customer.RAZAO}"</h1>
+        <h1 className="max-w-80 truncate">Contatos de &quot;{customer.RAZAO}&quot;</h1>
         <IconButton onClick={closeModal}>
           <Close />
         </IconButton>

@@ -1,4 +1,4 @@
-import { SocketClient, WhatsappClient, WppChatType, WppMessage } from "@in.pulse-crm/sdk";
+import { SocketClient, WppMessage } from "@in.pulse-crm/sdk";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";

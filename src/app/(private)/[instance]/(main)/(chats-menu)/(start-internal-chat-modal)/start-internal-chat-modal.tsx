@@ -1,6 +1,6 @@
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { AppContext } from "../../../app-context";
 
 import StartInternalChatModalItem from "./start-internal-chat-modal-item";

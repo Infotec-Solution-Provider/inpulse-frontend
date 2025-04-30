@@ -8,10 +8,9 @@ import { AppContext } from "../app-context";
 interface QRModalProps {
   qr: string;
   phone: string;
-  onClose: () => void;
 }
 
-export default function QRModal({ qr, phone, onClose }: QRModalProps) {
+export default function QRModal({ qr, phone }: QRModalProps) {
   const { closeModal } = useContext(AppContext);
 
   return (

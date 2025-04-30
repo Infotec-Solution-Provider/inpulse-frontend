@@ -1,5 +1,5 @@
 "use client";
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { IconButton } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AppContext } from "../../app-context";
@@ -15,7 +15,7 @@ export default function InternalMonitorAttendances() {
     if (foundChat) {
       openModal(
         <Chat
-          avatarUrl={''}  
+          avatarUrl={''}
           name={foundChat.users[0].NOME}
           customerName={foundChat.users[0].NOME_EXIBICAO || ""}
           phone={foundChat.users[0].SETOR_NOME || ""}
@@ -65,9 +65,9 @@ export default function InternalMonitorAttendances() {
       </div>
     </div>
   );
-  
-  
-  
-  
+
+
+
+
 }
 

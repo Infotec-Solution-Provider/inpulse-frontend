@@ -1,10 +1,10 @@
 import { Button, IconButton, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../app-context";
-import { WhatsappContext } from "../../../whatsapp-context";
+import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
 import { toast } from "react-toastify";
-/* 
+/*
 interface FinishChatModalProps {
   contactId: number;
 } */
@@ -12,21 +12,24 @@ interface FinishChatModalProps {
 export default function EditContactModal() {
   const { closeModal } = useContext(AppContext);
   const { wppApi, currentChat, updateChatContact } = useContext(WhatsappContext);
-  if (currentChat?.chatType !== "wpp") {
-    closeModal();
-    return <></>;
-  }
+  const chat: DetailedChat = currentChat! as DetailedChat;
 
-  const [name, setName] = useState(currentChat!.contact!.name);
+  const [name, setName] = useState(chat!.contact!.name);
 
   const handleEditContact = async () => {
-    if (!currentChat || !wppApi.current || !currentChat.contact) return;
-    const { contact } = currentChat;
+    if (!currentChat || !wppApi.current || !chat.contact) return;
+    const { contact } = chat;
     await wppApi.current.updateContact(contact.id, name);
     toast.success("Contato atualizado com sucesso!");
     updateChatContact(contact.id, name);
     closeModal();
   };
+
+  useEffect(() => {
+    if (currentChat?.chatType !== "wpp") {
+      closeModal();
+    }
+  }, [currentChat]);
 
   return (
     <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">
@@ -38,7 +41,7 @@ export default function EditContactModal() {
       </header>
       <form className="flex flex-col gap-6">
         <TextField label="Nome" value={name} onChange={(e) => setName(e.target.value)} />
-        <TextField label="Whatsapp" defaultValue={currentChat!.contact!.phone} disabled />
+        <TextField label="Whatsapp" defaultValue={chat!.contact!.phone} disabled />
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"

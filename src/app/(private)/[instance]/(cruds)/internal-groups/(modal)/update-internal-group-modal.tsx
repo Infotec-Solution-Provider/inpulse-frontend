@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
 import { useAppContext } from "../../../app-context";
-import { HourglassBottom, PersonAdd } from "@mui/icons-material";
+import { PersonAdd } from "@mui/icons-material";
 import { InternalGroup, User } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";

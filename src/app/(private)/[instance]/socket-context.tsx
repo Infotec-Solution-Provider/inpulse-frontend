@@ -36,7 +36,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     const socketClient = socket.current;
 
     socketClient.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
-      openModal(<QRModal qr={qr} phone={phone} onClose={closeModal} />);
+      openModal(<QRModal qr={qr} phone={phone} />);
     });
 
     socketClient.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {

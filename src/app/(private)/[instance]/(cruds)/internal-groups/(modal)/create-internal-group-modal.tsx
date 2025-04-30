@@ -2,16 +2,14 @@ import {
   TextField,
   Button,
   List,
-  MenuItem,
   ListItem,
   ListItemText,
   IconButton,
   Autocomplete,
-  AutocompleteProps,
 } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
 import { useAppContext } from "../../../app-context";
-import { HourglassBottom, PersonAdd } from "@mui/icons-material";
+import { PersonAdd } from "@mui/icons-material";
 import { User } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";

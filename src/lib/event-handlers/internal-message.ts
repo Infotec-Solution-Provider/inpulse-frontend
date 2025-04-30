@@ -1,5 +1,4 @@
-import { InternalChat, InternalChatClient, InternalMessage, User } from "@in.pulse-crm/sdk";
-import { Formatter } from "@in.pulse-crm/utils";
+import { InternalChatClient, InternalMessage, User } from "@in.pulse-crm/sdk";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
