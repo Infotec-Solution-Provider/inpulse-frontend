@@ -34,12 +34,12 @@ export default function ChatSendMessageArea() {
   function sendMessages() {
     sendMessage();
     dispatch({ type: "change-text", text: "" });
-    
+
     setTimeout(() => {
       document.dispatchEvent(new Event("scroll-to-bottom"));
-    }, 100); 
+    }, 100);
   }
-  
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;

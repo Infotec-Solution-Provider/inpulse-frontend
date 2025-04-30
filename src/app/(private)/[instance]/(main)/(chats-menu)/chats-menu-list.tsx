@@ -84,7 +84,6 @@ export default function ChatsMenuList() {
             (chat.isGroup
               ? chat.groupName
               : chat.users.find((u) => u.CODIGO !== user?.CODIGO)?.NOME) || "Grupo excluído";
-          console.log(chat);
 
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
           const tagColor = chat.isGroup ? "green" : "blue";

@@ -4,8 +4,10 @@ import {
   InternalChatClient,
   InternalMessage,
   InternalSendMessageData,
+  RequestFilters,
   SocketEventType,
   User,
+  WhatsappClient,
 } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "./socket-context";
@@ -33,6 +35,8 @@ interface InternalChatContextType {
   startDirectChat: (userId: number) => void;
   currentInternalChatMessages: InternalMessage[];
   users: User[];
+  menuUsers: User[];
+  updateMenuUsers: (filters?: RequestFilters<User>) => void;
 }
 
 const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
@@ -45,6 +49,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [menuUsers, setMenuUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
@@ -82,10 +87,15 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     [token],
   );
 
+  const updateMenuUsers = useCallback((filters?: RequestFilters<User>) => {
+    usersService.getUsers({ ...filters, perPage: "999" }).then((res) => setMenuUsers(res.data));
+  }, []);
+
   useEffect(() => {
     if (token && users.length === 0) {
       usersService.setAuth(token);
-      usersService.getUsers({ perPage: "999" }).then((res) => setUsers(res.data));
+      usersService.getUsers({ perPage: "999" }).then((res) => {setUsers(res.data); setMenuUsers(res.data)});
+
     }
     if (token && user && users.length > 0) {
       api.current.setAuth(token);
@@ -155,6 +165,8 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         openInternalChat,
         currentInternalChatMessages,
         users,
+        menuUsers,
+        updateMenuUsers,
       }}
     >
       {children}
