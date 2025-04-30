@@ -19,6 +19,7 @@ export default function Home() {
             name={
               currentChat.groupName ||
               currentChat.users.find((u) => u.CODIGO !== user?.CODIGO)?.NOME ||
+              user?.NOME ||
               "Grupo excluído"
             }
             phone="N/D"
