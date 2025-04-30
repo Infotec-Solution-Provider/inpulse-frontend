@@ -25,7 +25,6 @@ export default function UsersTableHeader({
   setFilters,
 }: UsersTableHeaderProps) {
   function setSearchFiltersHandler() {
-    console.log(filters);
     setLoading(true);
     usersService
       .getUsers({ ...filters, perPage: rowsPerPage, page: "1" })
