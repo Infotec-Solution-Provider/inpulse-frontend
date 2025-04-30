@@ -10,9 +10,9 @@ export default function CreateWalletModal() {
 
     const handleSubmit = async () => {
         if (!form.name) return;
-        
+
         const success = await createWallet(form.name);
-        console.log('form:', success)
+        console.log('form:', form)
 
         if (success) {
             setForm({ name: '' });

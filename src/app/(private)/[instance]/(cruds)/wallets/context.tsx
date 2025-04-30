@@ -1,18 +1,25 @@
 "use client"
 import { useAuthContext } from "@/app/auth-context";
 import { WalletsClient, WppWallet } from "@in.pulse-crm/sdk";
-// import walletsService from "@/lib/services/wallets.service";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { createContext, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-toastify";
 
+type SortOrder = "desc" | "asc"
 interface IWalletsProviderProps {
-    children: ReactNode;
+    children: ReactNode
 }
 
 interface IWalletsContext {
     walletsApi: React.RefObject<WalletsClient>;
     wallets: WppWallet[]
+    loading: boolean
+    order: SortOrder
+    orderBy: keyof WppWallet
+    sortedWallets: WppWallet[]
+    selectedWallet: WppWallet | null
+    walletUsers: number[]
+
     createWallet: (name: string) => Promise<boolean>
     deleteWallet: (walletId: number) => Promise<void>
     updateWalletName: (id: number, newName: string) => Promise<void>
@@ -20,48 +27,42 @@ interface IWalletsContext {
     getUserWallets: (instance: string, userId: number) => Promise<WppWallet[]>
     addUserToWallet: (userId: number) => Promise<void>
     removeUserFromWallet: (userId: number) => Promise<void>
-    loading: boolean
-    order: "desc" | "asc"
-    orderBy: keyof WppWallet
-    sortedWallets: WppWallet[]
     handleSort: (property: keyof WppWallet) => void
-    selectedWallet: WppWallet | null
     setSelectedWallet: (wallet: WppWallet | null) => void
-    walletUsers: number[]
     loadWalletUsers: () => Promise<void>
 }
 
-const WALLETS_URL = process.env["NEXT_PUBLIC_WALLETS_URL"] || "http://localhost:8005";
-
-export const WalletsContext = createContext<IWalletsContext>({} as IWalletsContext);
+const WALLETS_URL = process.env["NEXT_PUBLIC_WALLETS_URL"] || "http://localhost:8005"
+export const WalletsContext = createContext<IWalletsContext>({} as IWalletsContext)
 
 export default function WalletsProvider({ children }: IWalletsProviderProps) {
-    const { token } = useAuthContext();
-    const [wallets, setWallets] = useState<WppWallet[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [orderBy, setOrderBy] = useState<keyof WppWallet>('name');
-    const [order, setOrder] = useState<'asc' | 'desc'>('asc');
-    const [selectedWallet, setSelectedWallet] = useState<WppWallet | null>(null);
-    const [walletUsers, setWalletUsers] = useState<number[]>([]);
-    const api = useRef(new WalletsClient(WALLETS_URL));
+    const { token } = useAuthContext()
+    const api = useRef(new WalletsClient(WALLETS_URL))
+
+    const [wallets, setWallets] = useState<WppWallet[]>([])
+    const [loading, setLoading] = useState(true)
+    const [order, setOrder] = useState<SortOrder>('asc')
+    const [orderBy, setOrderBy] = useState<keyof WppWallet>('name')
+    const [selectedWallet, setSelectedWallet] = useState<WppWallet | null>(null)
+    const [walletUsers, setWalletUsers] = useState<number[]>([])
 
     useEffect(() => {
-        if (token) {
-            api.current.setAuth(token)
-            const loadWallets = async () => {
-                try {
-                    setLoading(true);
-                    const data = await api.current.getWallets();
-                    setWallets(data);
-                } catch (err) {
-                    toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            loadWallets();
+        if (!token) return;
+
+        const loadWallets = async () => {
+            try {
+                setLoading(true)
+                api.current.setAuth(token)
+                const data = await api.current.getWallets()
+                setWallets(data)
+            } catch (err) {
+                toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`)
+            } finally {
+                setLoading(false)
+            }
         }
-    }, [token]);
+        loadWallets()
+    }, [token])
 
     const sortedWallets = useMemo(() => {
         return [...wallets].sort((a, b) => {
@@ -128,7 +129,7 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     const updateWalletName = useCallback(async (id: number, newName: string) => {
         try {
             setLoading(true);
-            // const updatedWallet = await api.current.updateWalletName(id, newName);
+            const updatedWallet = await api.current.updateWalletName(id, newName);
             setWallets(prev =>
                 prev.map(wallet =>
                     wallet.id === id ? { ...wallet, name: newName } : wallet
@@ -149,15 +150,6 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         } catch (err) {
             toast.error(`Falha ao buscar usuários: ${sanitizeErrorMessage(err)}`);
             return [];
-        }
-    }, []);
-
-    const getUserWallets = useCallback(async (instance: string, userId: number,) => {
-        try {
-            return (await api.current.getUserWallets(instance, userId));
-        } catch (err) {
-            toast.error(`Falha ao buscar carteiras do usuário: ${sanitizeErrorMessage(err)}`);
-            return []
         }
     }, []);
 
@@ -206,6 +198,15 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         }
     }, [selectedWallet]);
 
+    const getUserWallets = useCallback(async (instance: string, userId: number,) => {
+        try {
+            return (await api.current.getUserWallets(instance, userId));
+        } catch (err) {
+            toast.error(`Falha ao buscar carteiras do usuário: ${sanitizeErrorMessage(err)}`);
+            return []
+        }
+    }, []);
+
     const loadWalletUsers = useCallback(async () => {
         if (!selectedWallet) return;
         try {
@@ -232,8 +233,6 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
             orderBy,
             sortedWallets,
             handleSort,
-
-
             selectedWallet,
             setSelectedWallet,
             walletUsers,
