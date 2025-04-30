@@ -3,6 +3,7 @@ import { Formatter } from "@in.pulse-crm/utils";
 import { Button } from "@mui/material";
 import { useContext } from "react";
 import { WhatsappContext } from "../../../whatsapp-context";
+import { useAppContext } from "../../../app-context";
 
 interface StartChatModalItemProps {
   contact: WppContact;
@@ -15,10 +16,12 @@ export default function StartChatModalItem({
   customer = null,
   chatingWith = null,
 }: StartChatModalItemProps) {
+  const { closeModal } = useAppContext();
   const { startChatByContactId } = useContext(WhatsappContext);
 
   const handleClickStart = () => {
     startChatByContactId(contact.id);
+    closeModal();
   };
 
   return (
