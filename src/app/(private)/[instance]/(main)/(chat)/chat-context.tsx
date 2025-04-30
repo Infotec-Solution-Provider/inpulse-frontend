@@ -5,7 +5,6 @@ import messageFormReducer, {
   SendMessageDataState,
 } from "@/lib/reducers/message-form.reducer";
 import { InternalChatContext } from "../../internal-context";
-import { AuthContext } from "@/app/auth-context";
 
 interface IChatContext {
   state: SendMessageDataState;
