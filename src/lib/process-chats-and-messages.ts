@@ -1,7 +1,8 @@
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { WppChatWithDetails, WppMessage } from "@in.pulse-crm/sdk";
+import { SocketClient, WppChatWithDetails, WppMessage } from "@in.pulse-crm/sdk";
 
 export default function processChatsAndMessages(
+  /* socketClient: SocketClient, */
   chats: WppChatWithDetails[],
   messages: WppMessage[],
 ) {
@@ -30,14 +31,20 @@ export default function processChatsAndMessages(
     return message.from.startsWith("me:") || message.from === "system";
   };
 
-  const detailedChats = chats.map((chat) => ({
-    ...chat,
-    chatType: "wpp",
-    isUnread: messages.some(
-      (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
-    ),
-    lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
-  })) as DetailedChat[];
+  const detailedChats: DetailedChat[] = [];
+
+  for (const chat of chats) {
+    const detailedChat: DetailedChat = {
+      ...chat,
+      chatType: "wpp",
+      isUnread: messages.some(
+        (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
+      ),
+      lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
+    };
+
+    detailedChats.push(detailedChat);
+  }
 
   detailedChats.sort((a, b) =>
     (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
