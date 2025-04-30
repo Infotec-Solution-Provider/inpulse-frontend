@@ -7,10 +7,9 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { AppContext } from "../../app-context";
-import { MonitorChat } from "@in.pulse-crm/sdk";
 
 export default function MonitorAttendances() {
-  const { getChatsMonitor,monitorChats, setCurrentChat, chats } = useWhatsappContext();
+  const { getChatsMonitor, monitorChats } = useWhatsappContext();
 
   const { openModal } = useContext(AppContext);
 
@@ -22,10 +21,9 @@ export default function MonitorAttendances() {
     openModal(<TransferChatModal />);
   };
 
-
   useEffect(() => {
-    getChatsMonitor()
-}, [getChatsMonitor]);
+    getChatsMonitor();
+  }, [getChatsMonitor]);
 
   return (
     <div>
@@ -50,9 +48,15 @@ export default function MonitorAttendances() {
             <tr key={index} className="even:bg-indigo-200/5">
               <td className="w-44 px-4 py-2">
                 <div>
-                  <IconButton><VisibilityIcon /></IconButton>
-                  <IconButton onClick={openTransferChatModal}><SyncAlt color="secondary" /></IconButton>
-                  <IconButton onClick={openFinishChatModal}><AssignmentTurnedIn color="success" /></IconButton>
+                  <IconButton>
+                    <VisibilityIcon />
+                  </IconButton>
+                  <IconButton onClick={openTransferChatModal}>
+                    <SyncAlt color="secondary" />
+                  </IconButton>
+                  <IconButton onClick={openFinishChatModal}>
+                    <AssignmentTurnedIn color="success" />
+                  </IconButton>
                 </div>
               </td>
               <td className="w-24 px-4 py-2">{chat.id}</td>
@@ -72,7 +76,3 @@ export default function MonitorAttendances() {
     </div>
   );
 }
-
-
-
- 
