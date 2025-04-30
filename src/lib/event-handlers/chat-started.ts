@@ -1,7 +1,8 @@
-import { SocketClient, WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
+import { SocketClient, WhatsappClient, WppChatType, WppMessage } from "@in.pulse-crm/sdk";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
 interface HandleChatStartedCallbackProps {
   chatId: number;
@@ -12,8 +13,11 @@ export default function ChatStartedHandler(
   socket: SocketClient,
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
+  setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>,
+  setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
+    console.log("chat started", chatId);
     const { messages, ...chat } = await api.getChatById(chatId);
     const isUnread = true;
     const lastMessage = messages.find((m) => m.contactId === chat.contactId) || null;
@@ -24,6 +28,8 @@ export default function ChatStartedHandler(
       body: `Contato: ${chat.contact?.name || "Contato excluído"}`,
       icon: HorizontalLogo.src,
     });
+
+    const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage, chatType: "wpp" };
 
     setMessages((prev) => {
       const newMessages = { ...prev };
@@ -43,7 +49,12 @@ export default function ChatStartedHandler(
       if (chatIndex !== -1) {
         return prev;
       }
-      return [{ ...chat, isUnread, lastMessage, chatType: "wpp" }, ...prev];
+      return [parsedChat, ...prev];
     });
+
+    if (chat.type === WppChatType.RECEPTIVE) {
+      setCurrentChat(parsedChat);
+      setCurrentChatMessages(messages);
+    }
   };
 }

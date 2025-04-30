@@ -26,6 +26,7 @@ export default function ReceiveMessageHandler(
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
+    console.log("Received message", message);
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
       new Notification(Formatter.phone(message.from), {
         body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
@@ -72,10 +73,15 @@ export default function ReceiveMessageHandler(
 
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
-        if (!prev.some((m) => m.id === message.id)) {
-          return [...prev, message];
+        const newMessages = [...prev];
+        const i = newMessages.findIndex((m) => m.id === message.id);
+        if (i === -1) {
+          newMessages.push(message);
+        } else {
+          newMessages[i] = message;
         }
-        return prev;
+
+        return newMessages;
       });
 
       // TODO: Change the logic to only update the received message;

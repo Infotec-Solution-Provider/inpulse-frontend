@@ -18,21 +18,20 @@ export default function MessageStatusHandler(
   const x = chatRef.current;
 
   return ({ status, messageId, contactId }: MessageStatusCallbackProps) => {
+    console.log("message status", messageId, status);
     setMessages((prev) => {
-      const newMsgs = { ...prev };
-
-      if (newMsgs[contactId]) {
-        newMsgs[contactId] = newMsgs[contactId].map((m) => {
-          if (m.id === messageId) {
-            return {
-              ...m,
-              status: compareMessageStatus(m.status, status),
-            };
-          }
-          return m;
-        });
+      if (!prev[contactId]) {
+        return prev;
       }
+      const newMsgs = { ...prev };
+      const findIndex = newMsgs[contactId].findIndex((m) => m.id === messageId);
 
+      if (findIndex !== -1) {
+        newMsgs[contactId][findIndex].status = compareMessageStatus(
+          newMsgs[contactId][findIndex].status,
+          status,
+        );
+      }
       return newMsgs;
     });
 
