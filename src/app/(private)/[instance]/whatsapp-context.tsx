@@ -14,7 +14,6 @@ import {
   SendMessageData,
   SocketEventType,
   WhatsappClient,
-  WppChatsAndMessages,
   WppChatWithDetails,
   WppMessage,
 } from "@in.pulse-crm/sdk";
@@ -30,6 +29,7 @@ import chatsFilterReducer, {
   ChatsFiltersState,
 } from "@/lib/reducers/chats-filter.reducer";
 import { DetailedInternalChat } from "./internal-context";
+import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -143,9 +143,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const finishChat = useCallback(
     (chatId: number, resultId: number) => {
       api.current.setAuth(token || "");
-      api.current.finishChatById(chatId, resultId).then(() => {
-        setChats((prev) => prev.filter((chat) => chat.id !== chatId));
-      });
+      api.current.finishChatById(chatId, resultId);
     },
     [api, token],
   );
@@ -173,21 +171,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, []);
 
   // Carregamento monitoria das conversas
-  const getChatsMonitor = useCallback( () => {
+  const getChatsMonitor = useCallback(() => {
     if (token) {
       api.current.setAuth(token);
-       api.current.getChatsMonitor().then((res) => {
+      api.current.getChatsMonitor().then((res) => {
         if (res) {
           setMonitorChats(res);
           return { data: res };
-        }
-        else{
+        } else {
           setMonitorChats([]);
           return { data: [] };
         }
-       });
+      });
     }
-
   }, [token]);
 
   // Carregamento inicial das conversas e mensagens
@@ -219,7 +215,28 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       // Evento de nova conversa
       socket.on(
         SocketEventType.WppChatStarted,
-        ChatStartedHandler(api.current, socket, setMessages, setChats),
+        ChatStartedHandler(
+          api.current,
+          socket,
+          setMessages,
+          setChats,
+          setCurrentChat,
+          setCurrentChatMessages,
+        ),
+      );
+
+      // Evento de conversa finalizada
+      socket.on(
+        SocketEventType.WppChatFinished,
+        ChatFinishedHandler(
+          socket,
+          chats,
+          currentChat,
+          setMessages,
+          setChats,
+          setCurrentChat,
+          setCurrentChatMessages,
+        ),
       );
 
       // Evento de nova mensagem
@@ -239,16 +256,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         SocketEventType.WppMessageStatus,
         MessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
       );
-    }
 
-    return () => {
-      if (socket) {
+      return () => {
         socket.off(SocketEventType.WppMessage);
         socket.off(SocketEventType.WppChatStarted);
         socket.off(SocketEventType.WppContactMessagesRead);
-      }
-    };
-  }, [socket]);
+      };
+    }
+  }, [socket, chats, currentChat]);
 
   return (
     <WhatsappContext.Provider
