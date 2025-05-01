@@ -53,7 +53,7 @@ export default function UnifiedMonitorAttendances() {
 
   const openWhatsappChat = (chat: any) => {
 
-    const found = chats.find((c) => c.id === chat.id);
+    const found = chats.find((c) => c.id == chat.id);
     console.log("found", found);
     console.log("chat", chat);
       console.log("chats :", chats);
@@ -83,7 +83,7 @@ export default function UnifiedMonitorAttendances() {
   };
 
   const openInternalChatById = (chat: any) => {
-    const found = internalChats.find((c) => c.id === chat.id);
+    const found = internalChats.find((c) => c.id == chat.id);
     if (found) {
       setCurrentInternalChat(found);
       openInternalChat(found);
