@@ -56,6 +56,8 @@ interface IWhatsappContext {
   updateChatContact: (contactId: number, newName: string) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: MonitorChat[];
+  getChats: () => void;
+
 }
 
 interface WhatsappProviderProps {
@@ -185,7 +187,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       });
     }
   }, [token]);
+  // Carregamento inicial das conversas e mensagens
+  const getChats= useCallback(()  => {
+    if (typeof token === "string" && token.length > 0 && api.current) {
+      api.current.setAuth(token);
+      api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
+        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
+        setChats(detailedChats);
+        setMessages(chatsMessages);
+      });
+      api.current.getSectors().then((res) => setSectors(res));
+    } else {
+      setChats([]);
+      setMessages({});
+    }
+  }, [token, api.current]);
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -286,6 +303,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         transferAttendance,
         getChatsMonitor,
         monitorChats,
+        getChats,
       }}
     >
       {children}

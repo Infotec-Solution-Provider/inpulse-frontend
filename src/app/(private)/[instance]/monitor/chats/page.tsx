@@ -19,6 +19,7 @@ export default function UnifiedMonitorAttendances() {
     setCurrentChat,
     openChat,
     chats,
+    getChats
   } = useWhatsappContext();
 
   const {
@@ -30,8 +31,9 @@ export default function UnifiedMonitorAttendances() {
   const { openModal, closeModal } = useContext(AppContext);
 
   useEffect(() => {
+    getChats()
     getChatsMonitor();
-  }, [getChatsMonitor]);
+  }, [getChatsMonitor,getChats]);
 
   const openFinishChatModal = () => openModal(<FinishChatModal />);
   const openTransferChatModal = () => openModal(<TransferChatModal />);
