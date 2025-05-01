@@ -50,10 +50,11 @@ export default function UnifiedMonitorAttendances() {
     );
 
   const openWhatsappChat = (chat: any) => {
-    const found = chats.find((c) => c.id === chat.id);
-    console.log("foundopenWhatsappChat", found);
-    console.log("foundopenWhatsappChat", chat);
 
+    const found = chats.find((c) => c.id === chat.id);
+    console.log("found", found);
+    console.log("chat", chat);
+      console.log("chats :", chats);
     if (found) {
       setCurrentChat(found);
       openChat(found);
