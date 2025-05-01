@@ -150,7 +150,7 @@ export default function UnifiedMonitorAttendances() {
                   </td>
                   <td className="px-4 py-2 text-center">
                     {isInternal
-                      ? chat.users.map((u) => u.NOME).join(", ")
+                      ? chat.users.map((u:any) => u.NOME).join(", ")
                       : chat.contactName || chat.customer?.RAZAO}
                   </td>
                   <td className="px-4 py-2 text-center">
