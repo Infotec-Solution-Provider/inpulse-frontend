@@ -14,7 +14,7 @@ import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-
 import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
 import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
 import usersService from "@/lib/services/users.service";
-import { useWhatsappContext } from "./whatsapp-context";
+import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -31,6 +31,8 @@ interface InternalChatContextType {
   sendInternalMessage: (data: InternalSendMessageData) => void;
   openInternalChat: (chat: DetailedInternalChat) => void;
   startDirectChat: (userId: number) => void;
+  setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
+
   currentInternalChatMessages: InternalMessage[];
   users: User[];
 }
@@ -150,6 +152,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         internalApi: api,
         internalChats,
         messages,
+        setCurrentChat,
         sendInternalMessage,
         startDirectChat,
         openInternalChat,

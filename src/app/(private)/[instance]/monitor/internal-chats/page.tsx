@@ -5,21 +5,46 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AppContext } from "../../app-context";
 import { InternalChatContext } from "../../internal-context";
 import Chat from "../../(main)/(chat)/chat";
+import ChatMessagesList from "../../(main)/(chat)/chat-messages-list";
+import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
+import ChatHeader from "../../(main)/(chat)/chat-header";
 
 export default function InternalMonitorAttendances() {
-  const { internalChats, openInternalChat } = useContext(InternalChatContext);
-  const { openModal } = useContext(AppContext);
+  const { internalChats, openInternalChat,currentInternalChatMessages, setCurrentChat} = useContext(InternalChatContext);
+  const { openModal,closeModal } = useContext(AppContext);
 
   function openInternalChatById(chat: any) {
     const foundChat = internalChats.find((c) => c.id === chat.id);
     if (foundChat) {
+      setCurrentChat(foundChat);
+      openInternalChat(foundChat);
+
       openModal(
-        <Chat
-          avatarUrl={''}
-          name={foundChat.users[0].NOME}
-          customerName={foundChat.users[0].NOME_EXIBICAO || ""}
-          phone={foundChat.users[0].SETOR_NOME || ""}
-        />
+        <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
+          <button
+            onClick={() => closeModal?.()}
+            className="absolute right-2 top-2 z-10 text-white hover:text-red-400"
+          >
+            ✕
+          </button>
+
+          <div className="shrink-0 border-b border-slate-700">
+            <ChatHeader
+              avatarUrl={''}
+              name={foundChat.users[0].NOME}
+              customerName={foundChat.users[0].NOME_EXIBICAO || ""}
+              phone={foundChat.users[0].SETOR_NOME || ""}
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <ChatMessagesList />
+          </div>
+
+          <div className="shrink-0 border-t border-slate-700">
+            <ChatSendMessageArea />
+          </div>
+        </div>
       );
     }
   }
