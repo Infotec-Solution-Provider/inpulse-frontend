@@ -13,8 +13,6 @@ export default function TransferChatModal() {
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
   const handleTransfer = () => {
-    console.log("Transferindo conversa para o usuário:", selectedUser);
-    console.log("Transferindo conversa:", currentChat);
     if (!selectedUser) return;
     if (!currentChat) return;
     transferAttendance(currentChat?.id, selectedUser);

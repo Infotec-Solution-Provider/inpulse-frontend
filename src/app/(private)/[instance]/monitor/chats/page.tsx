@@ -11,6 +11,7 @@ import ChatMessagesList from "../../(main)/(chat)/chat-messages-list";
 import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
+import ChatProvider from "../../(main)/(chat)/chat-context";
 
 export default function UnifiedMonitorAttendances() {
   const {
@@ -40,6 +41,7 @@ export default function UnifiedMonitorAttendances() {
     if (found) {
       setCurrentChat(found);
       openModal(<FinishChatModal />);
+      updateChats()
     }
   }
   const openTransferChatModal = (chat: any) => {
@@ -47,6 +49,7 @@ export default function UnifiedMonitorAttendances() {
     if (found) {
       setCurrentChat(found);
       openModal(<TransferChatModal />);
+      updateChats()
   }
   }
   const openChatModal = (content: React.ReactNode) =>
@@ -62,60 +65,80 @@ export default function UnifiedMonitorAttendances() {
       </div>
     );
 
-  const openWhatsappChat = (chat: any) => {
+    const openWhatsappChat = (chat: any) => {
+      const found = chats.find((c) => c.id == chat.id);
+      if (!found) return;
 
-    const found = chats.find((c) => c.id == chat.id);
-    if (found) {
       setCurrentChat(found);
       openChat(found);
 
-      openChatModal(
-        <>
-          <div className="shrink-0 border-b border-slate-700">
-            <ChatHeader
-              avatarUrl={found?.avatarUrl}
-              name={found.contact?.name || "Contato excluído"}
-              customerName={found.customer?.RAZAO || "N/D"}
-              phone={found.contact?.phone || "N/D"}
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <ChatMessagesList />
-          </div>
-          <div className="shrink-0 border-t border-slate-700">
-            <ChatSendMessageArea />
-          </div>
-        </>
+      openModal(
+        <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
+          <button
+            onClick={() => closeModal?.()}
+            className="absolute right-2 top-2 z-10 text-white hover:text-red-400"
+          >
+            ✕
+          </button>
+
+          <ChatProvider>
+            <div className="shrink-0 border-b border-slate-700">
+              <ChatHeader
+                avatarUrl={found.avatarUrl}
+                name={found.contact?.name || "Contato excluído"}
+                customerName={found.customer?.RAZAO || "N/D"}
+                phone={found.contact?.phone || "N/D"}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <ChatMessagesList />
+            </div>
+            <div className="shrink-0 border-t border-slate-700">
+              <ChatSendMessageArea />
+            </div>
+          </ChatProvider>
+        </div>
       );
-    }
-  };
+    };
 
   const openInternalChatById = (chat: any) => {
     const found = internalChats.find((c) => c.id == chat.id);
     if (found) {
       setCurrentInternalChat(found);
       openInternalChat(found);
-      openChatModal(
-        <>
-          <div className="shrink-0 border-b border-slate-700">
+      openModal(
+        <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
+          <button
+            onClick={() => closeModal?.()}
+            className="absolute right-2 top-2 z-10 text-white hover:text-red-400"
+          >
+            ✕
+          </button>
+
+          <ChatProvider>
+            <div className="shrink-0 border-b border-slate-700">
             <ChatHeader
               avatarUrl={""}
               name={found.groupName || found.users[0].NOME}
               customerName={found.groupDescription || found.users[0].NOME_EXIBICAO || ""}
               phone={found.users[0].SETOR_NOME || ""}
             />
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <ChatMessagesList />
-          </div>
-          <div className="shrink-0 border-t border-slate-700">
-            <ChatSendMessageArea />
-          </div>
-        </>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <ChatMessagesList />
+            </div>
+            <div className="shrink-0 border-t border-slate-700">
+              <ChatSendMessageArea />
+            </div>
+          </ChatProvider>
+        </div>
       );
     }
   };
-
+  const updateChats = () => {
+    getChatsMonitor()
+    getChats()
+  }
   return (
     <div className="p-4 flex justify-center">
       <div className="overflow-auto max-h-[600px] w-full max-w-7xl rounded">
