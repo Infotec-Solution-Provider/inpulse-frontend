@@ -123,27 +123,30 @@ export default function UnifiedMonitorAttendances() {
               return (
                 <tr key={index} className="even:bg-indigo-200/5">
                   <td className="px-4 py-2 text-center">
-                    <IconButton
-                      size="small"
-                      onClick={() =>
-                        isInternal
-                          ? openInternalChatById(chat)
-                          : openWhatsappChat(chat)
-                      }
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
-                    {!isInternal && (
-                      <>
-                        <IconButton onClick={openTransferChatModal}>
-                          <SyncAlt color="secondary" fontSize="small" />
-                        </IconButton>
-                        <IconButton onClick={openFinishChatModal}>
-                          <AssignmentTurnedIn color="success" fontSize="small" />
-                        </IconButton>
-                      </>
-                    )}
+                    <div className="flex justify-center gap-1">
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          isInternal
+                            ? openInternalChatById(chat)
+                            : openWhatsappChat(chat)
+                        }
+                      >
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                      {!isInternal && (
+                        <>
+                          <IconButton onClick={openTransferChatModal}>
+                            <SyncAlt color="secondary" fontSize="small" />
+                          </IconButton>
+                          <IconButton onClick={openFinishChatModal}>
+                            <AssignmentTurnedIn color="success" fontSize="small" />
+                          </IconButton>
+                        </>
+                      )}
+                    </div>
                   </td>
+
                   <td className="px-4 py-2 text-center">{chat.id}</td>
                   <td className="px-4 py-2 text-center">
                     {isInternal ? "Interno" : "WhatsApp"}
