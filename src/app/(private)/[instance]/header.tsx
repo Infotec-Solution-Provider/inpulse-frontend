@@ -17,7 +17,6 @@ import Link from "next/link";
 const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
-{ title: "Conversas Internas", href: "/monitor/internal-chats" },
 ];
 
 const crudsRoutes = [
@@ -37,18 +36,18 @@ const userCrudRoutes = [
 ];
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
-  /*   
+  /*
     { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
     { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-    { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, 
+    { title: "Mensagens por usuário", href: "/reports/messages-by-user" },
   */
 ];
 
-/* 
+/*
 const toolsRoutes = [
   { title: "Mensagens em massa", href: "/tools/mass-messages" },
   { title: "Mensagens automáticas", href: "/tools/automatic-messages" },
-]; 
+];
 */
 
 export default function Header() {
