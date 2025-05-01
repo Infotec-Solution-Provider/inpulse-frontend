@@ -76,7 +76,7 @@ export default function UnifiedMonitorAttendances() {
         <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
           <button
             onClick={() => closeModal?.()}
-            className="absolute right-2 top-2 z-10 text-white hover:text-red-400"
+            className="absolute right-2 top-1 z-10 text-white hover:text-red-400"
           >
             ✕
           </button>
@@ -110,8 +110,8 @@ export default function UnifiedMonitorAttendances() {
         <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
           <button
             onClick={() => closeModal?.()}
-            className="absolute right-2 top-2 z-10 text-white hover:text-red-400"
-          >
+            className="absolute right-2 top-1 z-10 text-white hover:text-red-400"
+            >
             ✕
           </button>
 
