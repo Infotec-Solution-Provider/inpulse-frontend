@@ -35,9 +35,20 @@ export default function UnifiedMonitorAttendances() {
     getChatsMonitor();
   }, [getChatsMonitor,getChats]);
 
-  const openFinishChatModal = () => openModal(<FinishChatModal />);
-  const openTransferChatModal = () => openModal(<TransferChatModal />);
-
+  const openFinishChatModal = (chat: any) => {
+    const found = chats.find((c) => c.id == chat.id);
+    if (found) {
+      setCurrentChat(found);
+      openModal(<FinishChatModal />);
+    }
+  }
+  const openTransferChatModal = (chat: any) => {
+    const found = chats.find((c) => c.id == chat.id);
+    if (found) {
+      setCurrentChat(found);
+      openModal(<TransferChatModal />);
+  }
+  }
   const openChatModal = (content: React.ReactNode) =>
     openModal(
       <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
@@ -140,10 +151,10 @@ export default function UnifiedMonitorAttendances() {
                       </IconButton>
                       {!isInternal && (
                         <>
-                          <IconButton onClick={openTransferChatModal}>
+                          <IconButton onClick={() =>{openTransferChatModal(chat)}}>
                             <SyncAlt color="secondary" fontSize="small" />
                           </IconButton>
-                          <IconButton onClick={openFinishChatModal}>
+                          <IconButton onClick={() =>{openFinishChatModal(chat)}}>
                             <AssignmentTurnedIn color="success" fontSize="small" />
                           </IconButton>
                         </>
