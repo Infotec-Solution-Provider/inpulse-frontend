@@ -7,11 +7,14 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { AppContext } from "../../app-context";
+import ChatHeader from "../../(main)/(chat)/chat-header";
+import ChatMessagesList from "../../(main)/(chat)/chat-messages-list";
+import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 
 export default function MonitorAttendances() {
-  const { getChatsMonitor, monitorChats } = useWhatsappContext();
+  const { getChatsMonitor, monitorChats,setCurrentChat, openChat,chats } = useWhatsappContext();
 
-  const { openModal } = useContext(AppContext);
+  const { openModal,closeModal } = useContext(AppContext);
 
   const openFinishChatModal = () => {
     openModal(<FinishChatModal />);
@@ -20,6 +23,42 @@ export default function MonitorAttendances() {
   const openTransferChatModal = () => {
     openModal(<TransferChatModal />);
   };
+  function openChatById(chat: any) {
+    const foundChat = chats.find((c) => c.id === chat.id);
+    if (foundChat) {
+      setCurrentChat(foundChat);
+      openChat(foundChat);
+
+      openModal(
+        <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
+          <button
+            onClick={() => closeModal?.()}
+            className="absolute right-2 top-2 z-10 text-white hover:text-red-400"
+          >
+            ✕
+          </button>
+
+          <div className="shrink-0 border-b border-slate-700">
+            <ChatHeader
+              avatarUrl={foundChat.avatarUrl}
+              name={foundChat.contact?.name || "Contao excluído"}
+              customerName={foundChat?.customer?.RAZAO || "N/D"}
+              phone={foundChat?.contact?.phone || "N/D"}
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <ChatMessagesList />
+          </div>
+
+          <div className="shrink-0 border-t border-slate-700">
+            <ChatSendMessageArea />
+          </div>
+        </div>
+      );
+    }
+  }
+
 
   useEffect(() => {
     getChatsMonitor();
@@ -48,7 +87,7 @@ export default function MonitorAttendances() {
             <tr key={index} className="even:bg-indigo-200/5">
               <td className="w-44 px-4 py-2">
                 <div>
-                  <IconButton>
+                  <IconButton onClick={() => openChatById(chat)}>
                     <VisibilityIcon />
                   </IconButton>
                   <IconButton onClick={openTransferChatModal}>
