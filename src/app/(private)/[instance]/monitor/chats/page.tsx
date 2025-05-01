@@ -54,9 +54,6 @@ export default function UnifiedMonitorAttendances() {
   const openWhatsappChat = (chat: any) => {
 
     const found = chats.find((c) => c.id == chat.id);
-    console.log("found", found);
-    console.log("chat", chat);
-      console.log("chats :", chats);
     if (found) {
       setCurrentChat(found);
       openChat(found);
@@ -92,8 +89,8 @@ export default function UnifiedMonitorAttendances() {
           <div className="shrink-0 border-b border-slate-700">
             <ChatHeader
               avatarUrl={""}
-              name={found.users[0].NOME}
-              customerName={found.users[0].NOME_EXIBICAO || ""}
+              name={found.groupName || found.users[0].NOME}
+              customerName={found.groupDescription || found.users[0].NOME_EXIBICAO || ""}
               phone={found.users[0].SETOR_NOME || ""}
             />
           </div>
