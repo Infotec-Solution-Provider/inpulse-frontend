@@ -7,5 +7,12 @@ export default {
 		"./src/app/**/*.{js,ts,jsx,tsx,mdx}",
 		"./src/**/*.{js,ts,jsx,tsx,mdx}",
 	],
+  theme: {
+    extend: {
+      fontFamily: {
+        emoji: ['"Noto Color Emoji"', 'sans-serif']
+      }
+    }
+  },
 	plugins: [],
 } satisfies Config;

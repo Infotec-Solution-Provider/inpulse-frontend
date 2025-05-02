@@ -1,7 +1,9 @@
 import {
   ActionDispatch,
   createContext,
+  Dispatch,
   ReactNode,
+  SetStateAction,
   useCallback,
   useContext,
   useEffect,
@@ -45,7 +47,8 @@ interface IWhatsappContext {
   currentChat: DetailedChat | DetailedInternalChat | null;
   currentChatMessages: WppMessage[];
   openChat: (chat: DetailedChat) => void;
-  setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
+  setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
+  setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageData) => void;
   transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;
@@ -294,6 +297,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         finishChat,
         startChatByContactId,
         sendMessage,
+        setCurrentChatMessages,
         wppApi: api,
         chatFilters,
         changeChatFilters,

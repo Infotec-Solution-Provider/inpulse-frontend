@@ -14,7 +14,8 @@ import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-
 import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
 import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
 import usersService from "@/lib/services/users.service";
-import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
+import { useWhatsappContext } from "./whatsapp-context";
+import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -43,7 +44,11 @@ export const InternalChatContext = createContext({} as InternalChatContextType);
 
 export function InternalChatProvider({ children }: { children: React.ReactNode }) {
   const { socket } = useContext(SocketContext);
-  const { setCurrentChat, currentChatRef } = useWhatsappContext();
+  const {
+    setCurrentChat,
+    currentChatRef,
+    setCurrentChatMessages: setWppCurrMsgs,
+  } = useWhatsappContext();
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -57,6 +62,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     (chat: DetailedInternalChat) => {
       setCurrentChat(chat);
       setCurrentChatMessages(messages[chat.id] || []);
+      setWppCurrMsgs([]);
       currentChatRef.current = chat;
 
       setInternalChats((prev) =>
@@ -121,7 +127,20 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       // Evento de nova conversa
       socket.on(
         SocketEventType.InternalChatStarted,
-        InternalChatStartedHandler(socket, users, setInternalChats),
+        InternalChatStartedHandler(socket, users, setInternalChats, setMessages),
+      );
+
+      socket.on(
+        SocketEventType.InternalChatFinished,
+        InternalChatFinishedHandler(
+          socket,
+          internalChats,
+          currentChatRef,
+          setMessages,
+          setInternalChats,
+          setCurrentChat,
+          setCurrentChatMessages,
+        ),
       );
 
       // Evento de nova mensagem
@@ -134,7 +153,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           setInternalChats,
           currentChatRef,
           users,
-          user!
+          user!,
         ),
       );
 

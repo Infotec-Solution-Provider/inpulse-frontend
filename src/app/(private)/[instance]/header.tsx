@@ -17,18 +17,26 @@ import Link from "next/link";
 const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
+  { title: "Conversas Internas", href: "/monitor/internal-chats" },
 ];
 
-const crudsRoutes = [
-  // { title: "Atendimentos", href: "/attendances" },
-  // { title: "Agendamentos", href: "/schedules" },
-  { title: "Usuários", href: "/users" },
-  { title: "Clientes", href: "/customers" },
-  { title: "Grupos Internos", href: "/internal-groups" },
-  // { title: "Carteiras", href: "/wallets" }
-  // { title: "Templates", href: "/templates" },
-  // { title: "Tags", href: "/tags" },
-];
+const crudsRoutes = (instance: string, sectorId?: number) => {
+  const arr = [
+    // { title: "Atendimentos", href: "/attendances" },
+    // { title: "Agendamentos", href: "/schedules" },
+    { title: "Usuários", href: "/users" },
+    { title: "Clientes", href: "/customers" },
+    // { title: "Carteiras", href: "/wallets" }
+    // { title: "Templates", href: "/templates" },
+    // { title: "Tags", href: "/tags" },
+  ];
+
+  if (instance !== "nunes" || sectorId == 3) {
+    arr.push({ title: "Grupos Internos", href: "/internal-groups" });
+  }
+
+  return arr;
+};
 const userCrudRoutes = [
   // { title: "Atendimentos", href: "/attendances" },
   // { title: "Agendamentos", href: "/schedules" },
@@ -72,7 +80,7 @@ export default function Header() {
               <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
                 <MonitorIcon />
               </HeaderNavItem>
-              <HeaderNavItem title="Cadastros" routes={crudsRoutes} disabled={!isUserAdmin}>
+              <HeaderNavItem title="Cadastros" routes={crudsRoutes(instance, user?.SETOR)} disabled={!isUserAdmin}>
                 <AppRegistrationIcon />
               </HeaderNavItem>
               <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
