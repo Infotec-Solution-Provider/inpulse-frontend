@@ -14,7 +14,7 @@ import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-
 import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
 import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
 import usersService from "@/lib/services/users.service";
-import { useWhatsappContext } from "./whatsapp-context";
+import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
 
 export interface DetailedInternalChat extends InternalChat {
