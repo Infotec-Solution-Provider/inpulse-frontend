@@ -17,7 +17,6 @@ import Link from "next/link";
 const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
-  { title: "Conversas Internas", href: "/monitor/internal-chats" },
 ];
 
 const crudsRoutes = (instance: string, sectorId?: number) => {
