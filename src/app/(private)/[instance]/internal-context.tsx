@@ -32,6 +32,8 @@ interface InternalChatContextType {
   sendInternalMessage: (data: InternalSendMessageData) => void;
   openInternalChat: (chat: DetailedInternalChat) => void;
   startDirectChat: (userId: number) => void;
+  setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
+
   currentInternalChatMessages: InternalMessage[];
   users: User[];
 }
@@ -169,6 +171,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         internalApi: api,
         internalChats,
         messages,
+        setCurrentChat,
         sendInternalMessage,
         startDirectChat,
         openInternalChat,
