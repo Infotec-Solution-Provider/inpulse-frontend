@@ -1,19 +1,12 @@
-import { IconButton, Menu, TextField } from "@mui/material";
+import { IconButton, TextField } from "@mui/material";
 import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
-import MicIcon from "@mui/icons-material/Mic";
 import SendIcon from "@mui/icons-material/Send";
-import { useContext, useRef, useEffect, useState, useCallback } from "react";
+import { useContext, useRef, useEffect, useCallback } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
-import EmojiPicker, {
-  EmojiClickData,
-  Theme,
-  EmojiStyle,
-  SuggestionMode,
-  Categories,
-} from "emoji-picker-react";
+import EmojiPicker, { EmojiClickData, Theme, EmojiStyle, SuggestionMode } from "emoji-picker-react";
 import AudioRecorder from "./audio-recorder";
 import { Close } from "@mui/icons-material";
 
@@ -121,13 +114,13 @@ export default function ChatSendMessageArea() {
         </div>
       </div>
       {state.sendAsAudio && state.file ? (
-        <div className="flex w-full items-center gap-2 justify-center">
-          <audio controls src={URL.createObjectURL(state.file!)} className="flex-grow max-w-[35rem] h-8"/>
-          <IconButton
-
-            color="inherit"
-            onClick={() => dispatch({ type: "remove-file" })}
-          >
+        <div className="flex w-full items-center justify-center gap-2">
+          <audio
+            controls
+            src={URL.createObjectURL(state.file!)}
+            className="h-8 max-w-[35rem] flex-grow"
+          />
+          <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
             <Close />
           </IconButton>
         </div>
