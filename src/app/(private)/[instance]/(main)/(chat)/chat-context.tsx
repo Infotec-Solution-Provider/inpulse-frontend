@@ -1,9 +1,9 @@
 import { createContext, ReactNode, useContext, useReducer } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
-import messageFormReducer, {
+import ChatReducer, {
   ChangeMessageDataAction,
   SendMessageDataState,
-} from "@/lib/reducers/message-form.reducer";
+} from "@/app/(private)/[instance]/(main)/(chat)/chat-reducer";
 import { InternalChatContext } from "../../internal-context";
 
 interface IChatContext {
@@ -20,6 +20,7 @@ const initialState: SendMessageDataState = {
   text: "",
   sendAsAudio: false,
   sendAsDocument: false,
+  isEmojiMenuOpen: false,
 };
 
 export const ChatContext = createContext({} as IChatContext);
@@ -27,7 +28,7 @@ export const ChatContext = createContext({} as IChatContext);
 export default function ChatProvider({ children }: ChatProviderProps) {
   const { sendMessage, currentChat } = useContext(WhatsappContext);
   const { sendInternalMessage } = useContext(InternalChatContext);
-  const [state, dispatch] = useReducer(messageFormReducer, initialState);
+  const [state, dispatch] = useReducer(ChatReducer, initialState);
 
   const handleSendMessage = () => {
     if (currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
@@ -41,6 +42,8 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     if (currentChat && currentChat.chatType === "internal") {
       sendInternalMessage({ ...state, chatId: currentChat.id });
     }
+
+    dispatch({ type: "reset" });
   };
 
   return (

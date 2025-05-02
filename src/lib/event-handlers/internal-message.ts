@@ -27,6 +27,7 @@ export default function InternalReceiveMessageHandler(
   loggedUser: User,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
+    console.log("message", message);
     const user = users.find((u) => u.CODIGO === +message.from.split(":")[1]);
 
     if (message.from !== `user:${loggedUser.CODIGO}`) {
