@@ -16,6 +16,7 @@ import {
   SendMessageData,
   SocketEventType,
   WhatsappClient,
+  WppChat,
   WppChatWithDetails,
   WppMessage,
 } from "@in.pulse-crm/sdk";
@@ -32,6 +33,8 @@ import chatsFilterReducer, {
 } from "@/lib/reducers/chats-filter.reducer";
 import { DetailedInternalChat } from "./internal-context";
 import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
+import { toast } from "react-toastify";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -60,7 +63,7 @@ interface IWhatsappContext {
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: MonitorChat[];
   getChats: () => void;
-
+  createSchedule: (chat: WppChat, date: Date) => void;
 }
 
 interface WhatsappProviderProps {
@@ -190,8 +193,26 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       });
     }
   }, [token]);
-  // Carregamento inicial das conversas e mensagens
-  const getChats= useCallback(()  => {
+
+  const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
+    try {
+      await api.current.createSchedule({
+        contactId: chat.contactId!,
+        scheduledFor: chat.userId!,
+        sectorId: chat.sectorId!,
+        date,
+      });
+
+
+      toast.success("Agendamento criado com sucesso!");
+    } catch (err) {
+      toast.error("Falha ao criar agendamento\n" + sanitizeErrorMessage(err));
+      console.error("Falha ao criar agendamento", err);
+    }
+  }, []);
+
+  // Função para obter e processar as conversas e mensagens
+  const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
@@ -206,6 +227,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setMessages({});
     }
   }, [token, api.current]);
+
   // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -308,6 +330,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         getChatsMonitor,
         monitorChats,
         getChats,
+        createSchedule,
       }}
     >
       {children}
