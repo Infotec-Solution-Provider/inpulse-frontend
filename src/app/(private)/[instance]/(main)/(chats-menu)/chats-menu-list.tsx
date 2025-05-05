@@ -80,7 +80,7 @@ export default function ChatsMenuList() {
     <menu className="flex flex-col gap-2 overflow-y-auto bg-slate-300/5 p-3">
       {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
-          const names = chat.users.map((u) => u.NOME).join(" e ");
+          const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
 
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
           const tagColor = chat.isGroup ? "green" : "blue";
