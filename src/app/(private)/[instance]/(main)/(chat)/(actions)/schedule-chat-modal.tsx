@@ -1,14 +1,25 @@
 import { Button, IconButton, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AppContext } from "../../../app-context";
-
-/* interface ScheduleChatModalProps {
-  chatId: number;
-} */
+import { WhatsappContext } from "../../../whatsapp-context";
 
 export default function ScheduleChatModal() {
   const { closeModal } = useContext(AppContext);
+  const { createSchedule, currentChat } = useContext(WhatsappContext);
+  const [date, setDate] = useState<Date | null>(null);
+
+  const handleClickSchedule = () => {
+    console.log("1")
+    if (currentChat?.chatType !== "wpp" || !date) return;
+
+    createSchedule(currentChat, date);
+  };
+
+  const handleChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedDate = new Date(e.currentTarget.value);
+    setDate(selectedDate);
+  };
 
   return (
     <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">
@@ -19,7 +30,7 @@ export default function ScheduleChatModal() {
         </IconButton>
       </header>
       <form className="flex flex-col gap-6">
-        <TextField type="datetime-local" required />
+        <TextField type="datetime-local" required onChange={handleChangeDate} />
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"
@@ -35,7 +46,7 @@ export default function ScheduleChatModal() {
             variant="contained"
             color="primary"
             className="w-32"
-            onClick={closeModal}
+            onClick={handleClickSchedule}
           >
             Agendar
           </Button>
