@@ -4,10 +4,6 @@ import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
 import { toast } from "react-toastify";
-/*
-interface FinishChatModalProps {
-  contactId: number;
-} */
 
 export default function EditContactModal() {
   const { closeModal } = useContext(AppContext);
