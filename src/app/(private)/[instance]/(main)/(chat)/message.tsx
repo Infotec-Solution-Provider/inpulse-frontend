@@ -50,7 +50,7 @@ export default function Message({
       className={`flex items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
     >
       <div className="flex flex-col gap-1">
-        <div className="font-emoji text-slate-200">
+        <div className="text-slate-200">
           {text.split("\n").map((line, index) => (
             <p key={index} className="break-words text-sm">
               {line}
