@@ -80,10 +80,7 @@ export default function ChatsMenuList() {
     <menu className="flex flex-col gap-2 overflow-y-auto bg-slate-300/5 p-3">
       {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
-          const name =
-            (chat.isGroup
-              ? chat.groupName
-              : chat.users.find((u) => u.CODIGO !== user?.CODIGO)?.NOME) || user?.NOME || "Grupo excluído";
+          const names = chat.users.map((u) => u.NOME).join(" e ");
 
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
           const tagColor = chat.isGroup ? "green" : "blue";
@@ -92,7 +89,7 @@ export default function ChatsMenuList() {
               isUnread={chat.isUnread}
               isOpen={currentChat?.id === chat.id && currentChat?.chatType === "internal"}
               key={`internal-chat:${chat.id}`}
-              name={name}
+              name={names}
               message={
                 chat.lastMessage
                   ? chat.lastMessage.type !== "chat"
