@@ -244,7 +244,7 @@ const openTransferChatModal = (chat: any) => {
             </StyledTableRow>
           </TableHead>
           <tbody>
-            {filtered?.map((chat: any, idx) => {
+            {filtered.map((chat: any, idx) => {
               const isInternal = !!chat.users;
               return (
                 <tr key={idx} className="even:bg-indigo-200/5">
@@ -280,7 +280,7 @@ const openTransferChatModal = (chat: any) => {
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {isInternal
-                      ? chat.users?.map((u: any) => u.NOME).join(", ")
+                      ? chat.users.map((u: any) => u.NOME).join(", ")
                       : chat.contactName || chat.customer?.RAZAO}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
