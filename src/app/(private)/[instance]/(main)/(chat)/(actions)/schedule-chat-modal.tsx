@@ -10,10 +10,10 @@ export default function ScheduleChatModal() {
   const [date, setDate] = useState<Date | null>(null);
 
   const handleClickSchedule = () => {
-    console.log("1")
     if (currentChat?.chatType !== "wpp" || !date) return;
 
     createSchedule(currentChat, date);
+    closeModal();
   };
 
   const handleChangeDate = (e: React.ChangeEvent<HTMLInputElement>) => {

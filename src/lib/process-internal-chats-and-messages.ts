@@ -21,9 +21,14 @@ export default function processInternalChatsAndMessages(
     // Atualizar status de leitura com base no `lastReadAt`
     const chat = chatsMap.get(message.internalChatId);
     const participant = chat?.participants.find((p) => p.userId === userId);
+
+
     if (participant && participant.lastReadAt) {
       const lastReadAtTimestamp = new Date(participant.lastReadAt).getTime();
-      const messageTimestamp = new Date(message.timestamp).getTime();
+      const messageTimestamp = +message.timestamp
+
+      console.log("lastReadAtTimestamp", lastReadAtTimestamp);
+      console.log("messageTimestamp", messageTimestamp);
 
       if (lastReadAtTimestamp > messageTimestamp && message.status !== "READ") {
         message.status = "READ";

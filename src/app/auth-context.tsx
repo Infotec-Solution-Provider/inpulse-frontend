@@ -49,10 +49,10 @@ export default function AuthProvider({ children }: ProviderProps) {
   );
 
   const signOut = useCallback(() => {
-    localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
-    setUser(null);
     setToken(null);
+    localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
     router.replace(`/${instanceRef.current}/login`);
+    setUser(null);
   }, [router]);
 
   useEffect(() => {
