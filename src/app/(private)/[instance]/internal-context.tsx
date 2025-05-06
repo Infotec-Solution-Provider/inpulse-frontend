@@ -66,6 +66,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat) => {
+      console.log("openInternalChat", chat);
       setCurrentChat(chat);
       setCurrentChatMessages(messages[chat.id] || []);
       setWppCurrMsgs([]);
@@ -143,6 +144,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
         setMonitorInternalChats(detailedChats || []);
         setMonitorMessages(chatsMessages || []);
+        monitorMessages
       });
     } else {
       setInternalChats([]);

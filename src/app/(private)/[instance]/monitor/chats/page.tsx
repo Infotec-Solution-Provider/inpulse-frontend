@@ -109,8 +109,8 @@ export default function UnifiedMonitorAttendances() {
   };
 
   const openInternalChatById = (chat: any) => {
-    const found = monitorInternalChats.find((c) => c.id == chat.id);
     if (!chat) return;
+    console.log("openInternalChatById", chat);
     setCurrentInternalChat(chat);
     openInternalChat(chat);
     openModal(
