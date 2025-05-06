@@ -177,7 +177,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
     data.text = `*${user?.NOME}*: ${data.text}`;
     api.current.sendMessage(to, data);
-  }, []);
+  }, [user]);
 
   // Carregamento monitoria das conversas
   const getChatsMonitor = useCallback(() => {
