@@ -31,11 +31,11 @@ export default function GroupMessage({
     <li
       className={`flex items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md ${groupFirst ? "rounded-tl-none" : ""}`}
     >
-      <div className="flex flex-col gap-1">
+      <div className="flex w-full flex-col gap-1">
         {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
-        <div className="text-slate-200">
+        <div className="w-full text-slate-200">
           {text.split("\n").map((line, index) => (
-            <p key={index} className="break-words text-sm max-w-[60rem]">
+            <p key={index} className="max-w-[100%] break-words text-sm">
               {line}
             </p>
           ))}
