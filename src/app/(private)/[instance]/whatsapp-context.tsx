@@ -196,13 +196,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
     try {
+
       await api.current.createSchedule({
         contactId: chat.contactId!,
         scheduledFor: chat.userId!,
         sectorId: chat.sectorId!,
         date,
       });
-
 
       toast.success("Agendamento criado com sucesso!");
     } catch (err) {

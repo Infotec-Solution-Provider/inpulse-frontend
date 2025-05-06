@@ -52,7 +52,7 @@ export default function Message({
       <div className="flex flex-col gap-1">
         <div className="text-slate-200">
           {text.split("\n").map((line, index) => (
-            <p key={index} className="break-words text-sm">
+            <p key={index} className="max-w-[60rem] break-words text-sm">
               {line}
             </p>
           ))}

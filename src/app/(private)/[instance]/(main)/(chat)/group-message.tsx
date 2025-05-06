@@ -33,9 +33,9 @@ export default function GroupMessage({
     >
       <div className="flex flex-col gap-1">
         {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
-        <div className="font-emoji text-slate-200">
+        <div className="text-slate-200">
           {text.split("\n").map((line, index) => (
-            <p key={index} className="break-words text-sm">
+            <p key={index} className="break-words text-sm max-w-[60rem]">
               {line}
             </p>
           ))}
