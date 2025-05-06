@@ -75,7 +75,7 @@ const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhos
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
@@ -175,6 +175,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Envia mensagem
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
+    data.text = `*${user?.NOME}*: ${data.text}`;
     api.current.sendMessage(to, data);
   }, []);
 
@@ -196,7 +197,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
     try {
-
       await api.current.createSchedule({
         contactId: chat.contactId!,
         scheduledFor: chat.userId!,
