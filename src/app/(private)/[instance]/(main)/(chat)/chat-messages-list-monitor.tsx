@@ -70,7 +70,8 @@ export default function ChatMessagesListMonitor() {
       ref={ulRef}
     >
       {currentChat?.chatType === "wpp" &&
-        currentChatMessages.map((m) => (
+      currentChatMessages &&
+        currentChatMessages?.map((m) => (
           <Message
             key={`message_${m.id}`}
             style={getWppMessageStyle(m)}
@@ -85,8 +86,8 @@ export default function ChatMessagesListMonitor() {
         ))}
 
       {currentChat?.chatType === "internal" &&
-          usersMap.size > 0 &&
-        currentInternalChatMessages.map((m, i, arr) => {
+          usersMap.size > 0 && currentInternalChatMessages &&
+        currentInternalChatMessages?.map((m, i, arr) => {
           const userId = Number(m.from.split(":")[1]);
           const findUser = usersMap.get(userId);
           const prev = i > 0 ? arr[i - 1] : null;
