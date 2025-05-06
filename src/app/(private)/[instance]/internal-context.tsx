@@ -34,8 +34,10 @@ interface InternalChatContextType {
   openInternalChat: (chat: DetailedInternalChat) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
-
+  monitorInternalChats:DetailedInternalChat[];
   currentInternalChatMessages: InternalMessage[];
+  getInternalChatsMonitor: () => void;
+
   users: User[];
 }
 
@@ -54,6 +56,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
+  const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
@@ -123,7 +126,30 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     },
     [api, token, user],
   );
-
+  // Carregamento monitoria das conversas
+  const getInternalChatsMonitor = useCallback(() => {
+    if (token) {
+      api.current.setAuth(token);
+      api.current.getInternalChatsMonitor().then((res) => {
+        if (res) {
+          setMonitorInternalChats(
+            res.chats.map((chat) => ({
+              ...chat,
+              lastMessage: null,
+              chatType: "internal",
+              isUnread: true,
+              users: [],
+              participants: chat.participants,
+            }))
+          );
+          return { data: res };
+        } else {
+          setMonitorInternalChats([]);
+          return { data: [] };
+        }
+      });
+    }
+  }, [token]);
   useEffect(() => {
     if (socket && user && users.length > 0) {
       // Evento de nova conversa
@@ -179,6 +205,8 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         openInternalChat,
         currentInternalChatMessages,
         users,
+        monitorInternalChats,
+        getInternalChatsMonitor
       }}
     >
       {children}

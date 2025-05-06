@@ -31,8 +31,9 @@ export default function UnifiedMonitorAttendances() {
     getChats,
   } = useWhatsappContext();
   const {
-    internalChats,
     openInternalChat,
+    getInternalChatsMonitor,
+    monitorInternalChats,
     setCurrentChat: setCurrentInternalChat,
   } = useContext(InternalChatContext);
   const { openModal, closeModal } = useContext(AppContext);
@@ -47,11 +48,13 @@ export default function UnifiedMonitorAttendances() {
   useEffect(() => {
     getChats();
     getChatsMonitor();
-  }, [getChats, getChatsMonitor]);
+    getInternalChatsMonitor()
 
-  const combined = useMemo(() => [...monitorChats, ...internalChats], [
+  }, [getChats, getChatsMonitor,getInternalChatsMonitor]);
+
+  const combined = useMemo(() => [...monitorChats, ...monitorInternalChats], [
     monitorChats,
-    internalChats,
+    monitorInternalChats,
   ]);
   const filtered = useMemo(() => {
     return combined.filter((chat: any) => {
@@ -106,7 +109,7 @@ export default function UnifiedMonitorAttendances() {
   };
 
   const openInternalChatById = (chat: any) => {
-    const found = internalChats.find((c) => c.id == chat.id);
+    const found = monitorInternalChats.find((c) => c.id == chat.id);
     if (!found) return;
     setCurrentInternalChat(found);
     openInternalChat(found);
