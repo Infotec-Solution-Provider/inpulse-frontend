@@ -110,9 +110,9 @@ export default function UnifiedMonitorAttendances() {
 
   const openInternalChatById = (chat: any) => {
     const found = monitorInternalChats.find((c) => c.id == chat.id);
-    if (!found) return;
-    setCurrentInternalChat(found);
-    openInternalChat(found);
+    if (!chat) return;
+    setCurrentInternalChat(chat);
+    openInternalChat(chat);
     openModal(
       <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
         <button
@@ -124,11 +124,11 @@ export default function UnifiedMonitorAttendances() {
         <ChatProvider>
           <ChatHeader
             avatarUrl={""}
-            name={found.groupName || found.users[0].NOME}
+            name={chat.groupName || chat.users[0].NOME}
             customerName={
-              found.groupDescription || found.users[0].NOME_EXIBICAO || ""
+              chat.groupDescription || chat.users[0].NOME_EXIBICAO || ""
             }
-            phone={found.users[0].SETOR_NOME || ""}
+            phone={chat.users[0].SETOR_NOME || ""}
           />
           <div className="flex-1 overflow-y-auto">
             <ChatMessagesList />
