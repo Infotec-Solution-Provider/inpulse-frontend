@@ -1,18 +1,35 @@
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
-import { InternalChat, InternalMessage, User } from "@in.pulse-crm/sdk";
+import { InternalChat, InternalChatMember, InternalMessage, User } from "@in.pulse-crm/sdk";
 
 export default function processInternalChatsAndMessages(
   userId: number,
   users: User[],
-  chats: (InternalChat & { participants: number[] })[],
+  chats: (InternalChat & { participants: InternalChatMember[] })[],
   messages: InternalMessage[],
 ) {
+  // Criar um mapa de chats por `internalChatId` para acesso rápido
+  const chatsMap = new Map<number, InternalChat & { participants: InternalChatMember[] }>();
+  chats.forEach((chat) => chatsMap.set(chat.id, chat));
+
+  // Ordenar mensagens por timestamp
   messages.sort((a, b) => ((a.timestamp || 0) < (b.timestamp || 0) ? -1 : 1));
 
   const lastMessages: Record<number, InternalMessage> = {};
   const chatsMessages: Record<number, InternalMessage[]> = {};
 
   for (const message of messages) {
+    // Atualizar status de leitura com base no `lastReadAt`
+    const chat = chatsMap.get(message.internalChatId);
+    const participant = chat?.participants.find((p) => p.userId === userId);
+    if (participant && participant.lastReadAt) {
+      const lastReadAtTimestamp = new Date(participant.lastReadAt).getTime();
+      const messageTimestamp = new Date(message.timestamp).getTime();
+
+      if (lastReadAtTimestamp > messageTimestamp && message.status !== "READ") {
+        message.status = "READ";
+      }
+    }
+
     if (!chatsMessages[message.internalChatId]) {
       chatsMessages[message.internalChatId] = [];
     }
@@ -40,7 +57,7 @@ export default function processInternalChatsAndMessages(
     chatType: "internal",
     isUnread: messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
     lastMessage: lastMessages[chat.id] || null,
-    users: users.filter((user) => chat.participants.includes(user.CODIGO)),
+    users: users.filter((user) => chat.participants.some((p) => p.userId === user.CODIGO)),
   })) as DetailedInternalChat[];
 
   detailedChats.sort((a, b) =>

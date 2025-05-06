@@ -1,9 +1,15 @@
-import { SocketClient, InternalChat, User, InternalMessage } from "@in.pulse-crm/sdk";
+import {
+  SocketClient,
+  InternalChat,
+  User,
+  InternalMessage,
+  InternalChatMember,
+} from "@in.pulse-crm/sdk";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
 interface HandleChatStartedCallbackProps {
-  chat: InternalChat & { participants: number[]; messages: InternalMessage[] };
+  chat: InternalChat & { participants: InternalChatMember[]; messages: InternalMessage[] };
 }
 
 export default function InternalChatStartedHandler(
@@ -13,7 +19,6 @@ export default function InternalChatStartedHandler(
   setMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
 ) {
   return async ({ chat }: HandleChatStartedCallbackProps) => {
-    console.log("joining room", `internal-chat:${chat.id}`);
     socket.joinRoom(`internal-chat:${chat.id}`);
 
     const detailedChat: DetailedInternalChat = {
@@ -21,7 +26,7 @@ export default function InternalChatStartedHandler(
       lastMessage: chat.messages[chat.messages.length - 1] || null,
       chatType: "internal",
       isUnread: true,
-      users: users.filter((u) => chat.participants.includes(u.CODIGO)),
+      users: users.filter((u) => chat.participants.some((p) => p.userId === u.CODIGO)),
     };
 
     setChats((prev) => {

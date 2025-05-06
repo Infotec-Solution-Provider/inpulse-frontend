@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, useRef, useCallback, useContext } f
 import {
   InternalChat,
   InternalChatClient,
+  InternalChatMember,
   InternalMessage,
   InternalSendMessageData,
   SocketEventType,
@@ -22,7 +23,7 @@ export interface DetailedInternalChat extends InternalChat {
   chatType: "internal";
   isUnread: boolean | true;
   users: User[];
-  participants: number[];
+  participants: InternalChatMember[];
 }
 
 interface InternalChatContextType {
@@ -65,6 +66,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       setWppCurrMsgs([]);
       currentChatRef.current = chat;
 
+      api.current.markChatMessagesAsRead(chat.id);
       setInternalChats((prev) =>
         prev.map((c) => {
           if (c.id === chat.id) {
