@@ -133,7 +133,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     if (token && user && users.length > 0) {
       api.current.setAuth(token);
-      api.current.getInternalChatsBySession().then(({ chats, messages }) => {
+      api.current.getInternalChatsMonitor().then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
           user!.CODIGO,
           users,
