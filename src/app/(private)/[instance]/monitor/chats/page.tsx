@@ -20,6 +20,7 @@ import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { StyledTableCell, StyledTableRow } from "./(table)/mui-style";
+import ChatMessagesListMonitor from "../../(main)/(chat)/chat-messages-list-monitor";
 
 export default function UnifiedMonitorAttendances() {
   const {
@@ -110,7 +111,6 @@ export default function UnifiedMonitorAttendances() {
 
   const openInternalChatById = (chat: any) => {
     if (!chat) return;
-    console.log("openInternalChatById", chat);
     setCurrentInternalChat(chat);
     openInternalChat(chat);
     openModal(
@@ -131,7 +131,7 @@ export default function UnifiedMonitorAttendances() {
             phone={chat.users[0].SETOR_NOME || ""}
           />
           <div className="flex-1 overflow-y-auto">
-            <ChatMessagesList />
+            <ChatMessagesListMonitor />
           </div>
           <ChatSendMessageArea />
         </ChatProvider>
