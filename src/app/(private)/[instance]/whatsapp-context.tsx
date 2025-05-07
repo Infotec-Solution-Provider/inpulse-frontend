@@ -12,7 +12,6 @@ import {
   useState,
 } from "react";
 import {
-  MonitorChat,
   SendMessageData,
   SocketEventType,
   WhatsappClient,
@@ -181,19 +180,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Carregamento monitoria das conversas
   const getChatsMonitor = useCallback(() => {
-    if (token) {
+    if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
-      api.current.getChatsMonitor().then((res) => {
-        if (res) {
-          setMonitorChats(res);
-          return { data: res };
-        } else {
-          setMonitorChats([]);
-          return { data: [] };
-        }
+      api.current.getChatsMonitor().then(({ chats, messages }) => {
+        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+
+        setMonitorChats(detailedChats);
+        setMessages(chatsMessages);
       });
+    } else {
+      setMonitorChats([]);
+      setMessages({});
     }
-  }, [token]);
+  }, [token, api.current]);
 
   const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
     try {
@@ -237,8 +236,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         setChats(detailedChats);
         setMessages(chatsMessages);
-        console.log("chats", chats);
-        console.log("messages", messages);
       });
       api.current.getSectors().then((res) => setSectors(res));
     } else {
