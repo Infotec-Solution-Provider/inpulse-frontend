@@ -100,7 +100,7 @@ export default function ChatMessagesList() {
         ))}
 
       {currentChat?.chatType === "internal" &&
-        currentChat.isGroup && usersMap.size > 0 &&
+        currentChat.isGroup && usersMap.size > 0 && currentInternalChatMessages && currentInternalChatMessages.length > 0 &&
         currentInternalChatMessages.map((m, i, arr) => {
           const userId = Number(m.from.split(":")[1]);
           const findUser = usersMap.get(userId);
