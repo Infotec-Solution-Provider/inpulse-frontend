@@ -84,7 +84,7 @@ export default function ChatMessagesList() {
           />
         ))}
       {currentChat?.chatType === "internal" &&
-        !currentChat.isGroup &&
+        !currentChat.isGroup && currentInternalChatMessages && currentInternalChatMessages.length > 0 &&
         currentInternalChatMessages.map((m) => (
           <Message
             key={`message_${m.id}`}
