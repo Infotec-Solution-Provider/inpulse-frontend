@@ -167,17 +167,6 @@ export default function MonitorInternalAttendances() {
 
                 />
               </StyledTableCell>
-              <StyledTableCell>
-                <TextField
-                  value={fResult}
-                  onChange={(e) => setFResult(e.target.value)}
-                  placeholder="Resultado"
-                  size="small"
-                  variant="standard"
-                  slotProps={{ input: { disableUnderline: true } }}
-                  className="w-full"
-                />
-              </StyledTableCell>
             </StyledTableRow>
           </TableHead>
           <tbody>

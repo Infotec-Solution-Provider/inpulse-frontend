@@ -33,6 +33,7 @@ interface IUsersContext {
   updateUser: (userId: number, data: UpdateUserDTO) => void;
   openUserModal: (user?: User) => void;
   closeModal: () => void;
+  loadUsers: () => void;
 }
 
 const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001";
@@ -107,6 +108,8 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   }, []);
 
   const loadUsers = useCallback(() => {
+    if (!token) return;
+    apiRef.current.setAuth(token);
     setLoading(true);
     apiRef.current
       .getUsers()
@@ -150,6 +153,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         updateUser,
         openUserModal,
         closeModal,
+        loadUsers,
       }}
     >
       {children}

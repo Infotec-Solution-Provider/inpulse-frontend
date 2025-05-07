@@ -33,6 +33,7 @@ interface IUsersContext {
   updateUser: (userId: number, data: UpdateUserDTO) => void;
   openUserModal: (user?: User) => void;
   closeModal: () => void;
+  loadUsers: () => void;
 }
 
 const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001";
@@ -145,6 +146,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         sortedUsers,
         sectors,
         handleSort,
+        loadUsers,
         createUser,
         updateUser,
         openUserModal,

@@ -11,7 +11,6 @@ import {
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
 import { useWhatsappContext } from "../../whatsapp-context";
-import { InternalChatContext } from "../../internal-context";
 import { AppContext } from "../../app-context";
 import ChatProvider from "../../(main)/(chat)/chat-context";
 import ChatHeader from "../../(main)/(chat)/chat-header";
@@ -20,9 +19,9 @@ import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { StyledTableCell, StyledTableRow } from "./(table)/mui-style";
-import ChatMessagesListMonitor from "../../(main)/(chat)/chat-messages-list-monitor";
+import { UsersContext } from "../../(cruds)/users/users-context";
 
-export default function UnifiedMonitorAttendances() {
+export default function MonitorAttendances() {
   const {
     getChatsMonitor,
     monitorChats,
@@ -33,6 +32,7 @@ export default function UnifiedMonitorAttendances() {
   } = useWhatsappContext();
 
   const { openModal, closeModal } = useContext(AppContext);
+  const { users,loadUsers } = useContext(UsersContext);
 
   const [fCode, setFCode] = useState("");
   const [fOrigin, setFOrigin] = useState("");
@@ -43,8 +43,10 @@ export default function UnifiedMonitorAttendances() {
 
   useEffect(() => {
     getChats();
+    console.log("monitorChat userss", users);
     getChatsMonitor();
-  }, [getChats, getChatsMonitor]);
+    loadUsers();
+  }, [getChats, getChatsMonitor,loadUsers]);
 
   const monitorChatsMemo = useMemo(() => [...monitorChats], [
     monitorChats,
@@ -71,6 +73,7 @@ export default function UnifiedMonitorAttendances() {
   }, [monitorChatsMemo, fCode, fOrigin, fPart, fStart, fEnd, fResult]);
 
   const openWhatsappChat = (chat: any) => {
+
     if (!chat) return;
     setCurrentChat(chat);
     openChat(chat);
@@ -99,12 +102,12 @@ export default function UnifiedMonitorAttendances() {
   };
 
 
-const openTransferChatModal = (chat: any) => {
-  if (chat) {
-    setCurrentChat(chat);
-    openModal(<TransferChatModal />);
+  const openTransferChatModal = (chat: any) => {
+    if (chat) {
+      setCurrentChat(chat);
+      openModal(<TransferChatModal />);
+    }
   }
-}
 
   const openFinishChatModal = (chat: any) => {
     if (chat) {
@@ -122,7 +125,7 @@ const openTransferChatModal = (chat: any) => {
         <Table className="max-h-[100%] overflow-auto">
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900 z-50 ">
-            <StyledTableCell className="px-2 py-2 text-center">Ações</StyledTableCell>
+              <StyledTableCell className="px-2 py-2 text-center">Ações</StyledTableCell>
 
               <StyledTableCell>
                 <TextField
@@ -134,6 +137,18 @@ const openTransferChatModal = (chat: any) => {
                   variant="standard"
                   style={{ width: "5rem" }}
 
+                />
+              </StyledTableCell>
+              <StyledTableCell>
+                <TextField
+                  value={fCode}
+                  slotProps={{ input: { disableUnderline: true } }}
+
+                  onChange={(e) => setFPart(e.target.value)}
+                  placeholder="Código ERP"
+                  size="small"
+                  variant="standard"
+                  className="w-full"
                 />
               </StyledTableCell>
               <StyledTableCell>
@@ -154,7 +169,45 @@ const openTransferChatModal = (chat: any) => {
                   slotProps={{ input: { disableUnderline: true } }}
 
                   onChange={(e) => setFPart(e.target.value)}
-                  placeholder="Contato"
+                  placeholder="Número"
+                  size="small"
+                  variant="standard"
+                  className="w-full"
+                />
+              </StyledTableCell>
+              <StyledTableCell>
+              <TextField
+                value={fPart}
+                slotProps={{ input: { disableUnderline: true } }}
+
+                onChange={(e) => setFPart(e.target.value)}
+                placeholder="Contato"
+                size="small"
+                variant="standard"
+                className="w-full"
+              />
+              </StyledTableCell>
+
+              <StyledTableCell>
+                <TextField
+                  value={fPart}
+                  slotProps={{ input: { disableUnderline: true } }}
+
+                  onChange={(e) => setFPart(e.target.value)}
+                  placeholder="Razão Social"
+                  size="small"
+                  variant="standard"
+                  className="w-full"
+                />
+              </StyledTableCell>
+
+              <StyledTableCell>
+                <TextField
+                  value={fPart}
+                  slotProps={{ input: { disableUnderline: true } }}
+
+                  onChange={(e) => setFPart(e.target.value)}
+                  placeholder="Operador"
                   size="small"
                   variant="standard"
                   className="w-full"
@@ -171,33 +224,11 @@ const openTransferChatModal = (chat: any) => {
                   className="w-full"
                 />
               </StyledTableCell>
-              <StyledTableCell>
-                <TextField
-                  value={fEnd}
-                  onChange={(e) => setFEnd(e.target.value)}
-                  placeholder="Data Fim"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                  slotProps={{ input: { disableUnderline: true } }}
-
-                />
-              </StyledTableCell>
-              <StyledTableCell>
-                <TextField
-                  value={fResult}
-                  onChange={(e) => setFResult(e.target.value)}
-                  placeholder="Resultado"
-                  size="small"
-                  variant="standard"
-                  slotProps={{ input: { disableUnderline: true } }}
-                  className="w-full"
-                />
-              </StyledTableCell>
             </StyledTableRow>
           </TableHead>
           <tbody>
             {filtered.map((chat: any, idx) => {
+              console.log("chat", chat);
               return (
                 <tr key={idx} className="even:bg-indigo-200/5">
                   <td className="px-4 py-2 text-center">
@@ -217,22 +248,27 @@ const openTransferChatModal = (chat: any) => {
                     {chat.id}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    { chat.contactName || chat.customer?.RAZAO}
+                    {chat.customer?.CODIGOERP}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    { chat.whatsappNumber}
+                  { chat.customer?.RAZAO || chat.contactName }
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    {new Date(chat?.startDate || chat?.startedAt).toLocaleDateString()}
+                    {chat.contact.phone}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    {chat?.endDate || chat?.finishedAt
-                      ? new Date(chat?.endDate || chat?.finishedAt).toLocaleDateString()
-                      : ""}
+                    {chat.contact.name}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    {chat?.result || ""}
+                    {chat.customer?.RAZAO}
                   </StyledTableCell>
+                  <StyledTableCell className="px-2 py-3">
+                    {users.find((user: any) => user.CODIGO === chat?.useId)?.NOME}
+                  </StyledTableCell>
+                  <StyledTableCell className="px-2 py-3">
+                    {new Date(chat?.startAt || chat?.startedAt).toLocaleDateString()}
+                  </StyledTableCell>
+
                 </tr>
               );
             })}
