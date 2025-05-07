@@ -40,6 +40,11 @@ export default function MonitorAttendances() {
   const [fStart, setFStart] = useState("");
   const [fEnd, setFEnd] = useState("");
   const [fResult, setFResult] = useState("");
+  const [fCodeERP, setFCodeERP] = useState("");
+  const [fPhone, setFPhone] = useState("");
+  const [fContactName, setFContactName] = useState("");
+  const [fCustomerName, setFCustomerName] = useState("");
+  const [fOperator, setFOperator] = useState("");
 
   useEffect(() => {
     getChats();
@@ -51,26 +56,42 @@ export default function MonitorAttendances() {
   const monitorChatsMemo = useMemo(() => [...monitorChats], [
     monitorChats,
   ]);
-  const filtered = useMemo(() => {
-    return monitorChatsMemo.filter((chat: any) => {
-      const isInternal = !!chat.users;
-      if (fCode && !String(chat.id).includes(fCode)) return false;
-      const part = isInternal
-        ? chat.users.map((u: any) => u.NOME).join(", ")
-        : chat.contactName || chat.customer?.RAZAO || "";
-      if (fPart && !part.toLowerCase().includes(fPart.toLowerCase())) return false;
-      const start = new Date(chat.startDate || chat.startedAt).toLocaleDateString();
-      if (fStart && !start.includes(fStart)) return false;
-      const end = chat.endDate || chat.finishedAt
-        ? new Date(chat.endDate || chat.finishedAt).toLocaleDateString()
-        : "";
-      if (fEnd && !end.includes(fEnd)) return false;
-      const res = chat.result || "";
-      if (fResult && !res.toLowerCase().includes(fResult.toLowerCase()))
-        return false;
-      return true;
-    });
-  }, [monitorChatsMemo, fCode, fOrigin, fPart, fStart, fEnd, fResult]);
+const filtered = useMemo(() => {
+  return monitorChatsMemo.filter((chat: any) => {
+    const isInternal = !!chat.users;
+
+    if (fCode && !String(chat.id).includes(fCode)) return false;
+    if (fCodeERP && !String(chat.customer?.CODIGOERP || "").includes(fCodeERP)) return false;
+
+    const client = chat.customer?.RAZAO || chat.contactName || "";
+    if (fPart && !client.toLowerCase().includes(fPart.toLowerCase())) return false;
+
+    const phone = chat.contact?.phone || "";
+    if (fPhone && !phone.includes(fPhone)) return false;
+
+    const contactName = chat.contact?.name || "";
+    if (fContactName && !contactName.toLowerCase().includes(fContactName.toLowerCase())) return false;
+
+    const customerName = chat.customer?.RAZAO || "";
+    if (fCustomerName && !customerName.toLowerCase().includes(fCustomerName.toLowerCase())) return false;
+
+    const operator = chat?.user?.NOME || "";
+    if (fOperator && !operator.toLowerCase().includes(fOperator.toLowerCase())) return false;
+
+    const start = new Date(chat.startDate || chat.startedAt).toLocaleDateString();
+    if (fStart && !start.includes(fStart)) return false;
+
+    const end = chat.endDate || chat.finishedAt
+      ? new Date(chat.endDate || chat.finishedAt).toLocaleDateString()
+      : "";
+    if (fEnd && !end.includes(fEnd)) return false;
+
+    const res = chat.result || "";
+    if (fResult && !res.toLowerCase().includes(fResult.toLowerCase())) return false;
+
+    return true;
+  });
+}, [monitorChatsMemo, fCode, fCodeERP, fPart, fPhone, fContactName, fCustomerName, fOperator, fStart, fEnd, fResult]);
 
   const openWhatsappChat = (chat: any) => {
 
@@ -141,10 +162,10 @@ export default function MonitorAttendances() {
               </StyledTableCell>
               <StyledTableCell>
                 <TextField
-                  value={fCode}
+                  value={fCodeERP}
                   slotProps={{ input: { disableUnderline: true } }}
 
-                  onChange={(e) => setFPart(e.target.value)}
+                  onChange={(e) => setFCodeERP(e.target.value)}
                   placeholder="Código ERP"
                   size="small"
                   variant="standard"
@@ -165,10 +186,10 @@ export default function MonitorAttendances() {
               </StyledTableCell>
               <StyledTableCell>
                 <TextField
-                  value={fPart}
+                  value={fPhone}
                   slotProps={{ input: { disableUnderline: true } }}
 
-                  onChange={(e) => setFPart(e.target.value)}
+                  onChange={(e) => setFPhone(e.target.value)}
                   placeholder="Número"
                   size="small"
                   variant="standard"
@@ -177,10 +198,10 @@ export default function MonitorAttendances() {
               </StyledTableCell>
               <StyledTableCell>
               <TextField
-                value={fPart}
+                value={fContactName}
                 slotProps={{ input: { disableUnderline: true } }}
 
-                onChange={(e) => setFPart(e.target.value)}
+                onChange={(e) => setFContactName(e.target.value)}
                 placeholder="Contato"
                 size="small"
                 variant="standard"
@@ -190,10 +211,10 @@ export default function MonitorAttendances() {
 
               <StyledTableCell>
                 <TextField
-                  value={fPart}
+                  value={fCustomerName}
                   slotProps={{ input: { disableUnderline: true } }}
 
-                  onChange={(e) => setFPart(e.target.value)}
+                  onChange={(e) => setFCustomerName(e.target.value)}
                   placeholder="Razão Social"
                   size="small"
                   variant="standard"
@@ -203,10 +224,10 @@ export default function MonitorAttendances() {
 
               <StyledTableCell>
                 <TextField
-                  value={fPart}
+                  value={fOperator}
                   slotProps={{ input: { disableUnderline: true } }}
 
-                  onChange={(e) => setFPart(e.target.value)}
+                  onChange={(e) => setFOperator(e.target.value)}
                   placeholder="Operador"
                   size="small"
                   variant="standard"
@@ -263,7 +284,7 @@ export default function MonitorAttendances() {
                     {chat.customer?.RAZAO}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    {users.find((user: any) => user.CODIGO === chat?.useId)?.NOME}
+                  {users.find((user: any) => user.CODIGO === chat?.userId)?.NOME}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {new Date(chat?.startAt || chat?.startedAt).toLocaleDateString()}
