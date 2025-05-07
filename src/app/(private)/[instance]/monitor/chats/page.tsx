@@ -48,9 +48,8 @@ export default function MonitorAttendances() {
 
   useEffect(() => {
     getChats();
-    console.log("monitorChat userss", users);
-    getChatsMonitor();
     loadUsers();
+    getChatsMonitor();
   }, [getChats, getChatsMonitor,loadUsers]);
 
   const monitorChatsMemo = useMemo(() => [...monitorChats], [
@@ -249,7 +248,6 @@ const filtered = useMemo(() => {
           </TableHead>
           <tbody>
             {filtered.map((chat: any, idx) => {
-              console.log("chat", chat);
               return (
                 <tr key={idx} className="even:bg-indigo-200/5">
                   <td className="px-4 py-2 text-center">
@@ -284,7 +282,7 @@ const filtered = useMemo(() => {
                     {chat.customer?.RAZAO}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                  {users.find((user: any) => user.CODIGO === chat?.userId)?.NOME}
+                  {users.find((user: any) => String(user.CODIGO) === String(chat?.userId))?.NOME}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {new Date(chat?.startAt || chat?.startedAt).toLocaleDateString()}

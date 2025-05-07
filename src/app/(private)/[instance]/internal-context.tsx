@@ -66,7 +66,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat) => {
-      console.log("openInternalChat", chat);
       setCurrentChat(chat);
       setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id]);
       setWppCurrMsgs([]);
