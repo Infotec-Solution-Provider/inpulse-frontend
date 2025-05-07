@@ -86,7 +86,7 @@ export default function ChatMessagesListMonitor() {
         ))}
 
       {currentChat?.chatType === "internal" &&
-          usersMap.size > 0 && currentInternalChatMessages.length > 0 &&
+          usersMap.size > 0 && currentInternalChatMessages && currentInternalChatMessages.length > 0 &&
         currentInternalChatMessages.map((m, i, arr) => {
           const userId = Number(m.from.split(":")[1]);
           const findUser = usersMap.get(userId);
