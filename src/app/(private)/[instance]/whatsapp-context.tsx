@@ -61,7 +61,7 @@ interface IWhatsappContext {
   startChatByContactId: (contactId: number) => void;
   updateChatContact: (contactId: number, newName: string) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
-  monitorChats: MonitorChat[];
+  monitorChats: DetailedChat[];
   getChats: () => void;
   createSchedule: (chat: WppChat, date: Date) => void;
 }
@@ -85,7 +85,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
   const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
   const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
-  const [monitorChats, setMonitorChats] = useState<MonitorChat[]>([]);
+  const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
 
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
@@ -237,6 +237,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         setChats(detailedChats);
         setMessages(chatsMessages);
+        console.log("chats", chats);
+        console.log("messages", messages);
       });
       api.current.getSectors().then((res) => setSectors(res));
     } else {

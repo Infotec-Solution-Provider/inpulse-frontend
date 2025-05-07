@@ -43,6 +43,8 @@ const userCrudRoutes = [
 ];
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
+  { title: "Conversas Internas", href: "/reports/internal-chats" },
+
   /*
     { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
     { title: "Mensagens por contato", href: "/reports/messages-by-contact" },

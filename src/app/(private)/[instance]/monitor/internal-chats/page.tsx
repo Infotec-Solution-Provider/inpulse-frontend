@@ -9,29 +9,22 @@ import {
   Table,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { InternalChatContext } from "../../internal-context";
 import { AppContext } from "../../app-context";
 import ChatProvider from "../../(main)/(chat)/chat-context";
 import ChatHeader from "../../(main)/(chat)/chat-header";
-import ChatMessagesList from "../../(main)/(chat)/chat-messages-list";
 import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
-import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
-import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { StyledTableCell, StyledTableRow } from "./(table)/mui-style";
 import ChatMessagesListMonitor from "../../(main)/(chat)/chat-messages-list-monitor";
 
-export default function UnifiedMonitorAttendances() {
+export default function MonitorInternalAttendances() {
   const {
-    getChatsMonitor,
-    monitorChats,
-    setCurrentChat,
-    openChat,
-    chats,
-    getChats,
-  } = useWhatsappContext();
-
+    openInternalChat,
+    getInternalChatsMonitor,
+    monitorInternalChats,
+    setCurrentChat: setCurrentInternalChat,
+  } = useContext(InternalChatContext);
   const { openModal, closeModal } = useContext(AppContext);
 
   const [fCode, setFCode] = useState("");
@@ -42,18 +35,20 @@ export default function UnifiedMonitorAttendances() {
   const [fResult, setFResult] = useState("");
 
   useEffect(() => {
-    getChats();
-    getChatsMonitor();
-  }, [getChats, getChatsMonitor]);
+    getInternalChatsMonitor()
 
-  const monitorChatsMemo = useMemo(() => [...monitorChats], [
-    monitorChats,
+  }, [getInternalChatsMonitor]);
+
+  const monitorInternalChatsMemo = useMemo(() => [...monitorInternalChats], [
+    monitorInternalChats,
   ]);
   const filtered = useMemo(() => {
-    return monitorChatsMemo.filter((chat: any) => {
-      const isInternal = !!chat.users;
+    return monitorInternalChatsMemo.filter((chat: any) => {
+      const isGroup = !!chat.groupName;
       if (fCode && !String(chat.id).includes(fCode)) return false;
-      const part = isInternal
+      const origin = isGroup ? "grupo" : "chat";
+      if (fOrigin && origin !== fOrigin) return false;
+      const part = isGroup
         ? chat.users.map((u: any) => u.NOME).join(", ")
         : chat.contactName || chat.customer?.RAZAO || "";
       if (fPart && !part.toLowerCase().includes(fPart.toLowerCase())) return false;
@@ -68,12 +63,12 @@ export default function UnifiedMonitorAttendances() {
         return false;
       return true;
     });
-  }, [monitorChatsMemo, fCode, fOrigin, fPart, fStart, fEnd, fResult]);
+  }, [monitorInternalChatsMemo, fCode, fOrigin, fPart, fStart, fEnd, fResult]);
 
-  const openWhatsappChat = (chat: any) => {
+  const openInternalChatById = (chat: any) => {
     if (!chat) return;
-    setCurrentChat(chat);
-    openChat(chat);
+    setCurrentInternalChat(chat);
+    openInternalChat(chat);
     openModal(
       <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
         <button
@@ -84,34 +79,20 @@ export default function UnifiedMonitorAttendances() {
         </button>
         <ChatProvider>
           <ChatHeader
-            avatarUrl={chat.avatarUrl}
-            name={chat.contact?.name || "Contato excluído"}
-            customerName={chat.customer?.RAZAO || "N/D"}
-            phone={chat.contact?.phone || "N/D"}
+            avatarUrl={""}
+            name={chat.groupName || chat.users[0].NOME}
+            customerName={
+              chat.groupDescription || chat.users[0].NOME_EXIBICAO || ""
+            }
+            phone={chat.users[0].SETOR_NOME || ""}
           />
           <div className="flex-1 overflow-y-auto">
-            <ChatMessagesList />
+            <ChatMessagesListMonitor />
           </div>
           <ChatSendMessageArea />
         </ChatProvider>
       </div>
     );
-  };
-
-
-const openTransferChatModal = (chat: any) => {
-  if (chat) {
-    setCurrentChat(chat);
-    openModal(<TransferChatModal />);
-  }
-}
-
-  const openFinishChatModal = (chat: any) => {
-    if (chat) {
-      setCurrentChat(chat);
-      openModal(<FinishChatModal />);
-      getChatsMonitor();
-    }
   };
 
   return (
@@ -138,15 +119,18 @@ const openTransferChatModal = (chat: any) => {
               </StyledTableCell>
               <StyledTableCell>
                 <TextField
-                  value={fPart}
-                  slotProps={{ input: { disableUnderline: true } }}
-
-                  onChange={(e) => setFPart(e.target.value)}
-                  placeholder="Cliente"
-                  size="small"
+                  name="Tipo"
+                  label="Tipo"
                   variant="standard"
-                  className="w-full"
-                />
+                  style={{ width: "7rem",marginTop: "-12px" }}
+                  select
+                  slotProps={{ input: { disableUnderline: true } }}
+                  onChange={(e) => setFOrigin(e.target.value)}
+                >
+                  <MenuItem value="" key="none">Todos</MenuItem>
+                  <MenuItem value="grupo" key="grupo">Grupo</MenuItem>
+                  <MenuItem value="chat" key="chat">Chat</MenuItem>
+                </TextField>
               </StyledTableCell>
               <StyledTableCell>
                 <TextField
@@ -154,7 +138,7 @@ const openTransferChatModal = (chat: any) => {
                   slotProps={{ input: { disableUnderline: true } }}
 
                   onChange={(e) => setFPart(e.target.value)}
-                  placeholder="Contato"
+                  placeholder="Participantes"
                   size="small"
                   variant="standard"
                   className="w-full"
@@ -198,29 +182,28 @@ const openTransferChatModal = (chat: any) => {
           </TableHead>
           <tbody>
             {filtered.map((chat: any, idx) => {
+              const isGroup = !!chat.groupName;
               return (
                 <tr key={idx} className="even:bg-indigo-200/5">
                   <td className="px-4 py-2 text-center">
                     <div className="flex justify-center gap-1">
-                      <IconButton size="small" onClick={() => openWhatsappChat(chat)}>
+                      <IconButton
+                        size="small"
+                        onClick={() =>openInternalChatById(chat) }
+                      >
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
-                      <IconButton onClick={() => openTransferChatModal(chat)}>
-                        <SyncAlt color="secondary" fontSize="small" />
-                      </IconButton>
-                      <IconButton onClick={() => openFinishChatModal(chat)}>
-                        <AssignmentTurnedIn color="success" fontSize="small" />
-                      </IconButton>
+
                     </div>
                   </td>
                   <StyledTableCell className="px-2 py-3">
                     {chat.id}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    { chat.contactName || chat.customer?.RAZAO}
+                    {isGroup ? "Grupo" : "Chat"}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                    { chat.whatsappNumber}
+                    {chat.users.map((u: any) => u.NOME).join(", ")}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {new Date(chat?.startDate || chat?.startedAt).toLocaleDateString()}
@@ -230,9 +213,7 @@ const openTransferChatModal = (chat: any) => {
                       ? new Date(chat?.endDate || chat?.finishedAt).toLocaleDateString()
                       : ""}
                   </StyledTableCell>
-                  <StyledTableCell className="px-2 py-3">
-                    {chat?.result || ""}
-                  </StyledTableCell>
+
                 </tr>
               );
             })}

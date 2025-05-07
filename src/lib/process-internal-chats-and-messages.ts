@@ -27,9 +27,6 @@ export default function processInternalChatsAndMessages(
       const lastReadAtTimestamp = new Date(participant.lastReadAt).getTime();
       const messageTimestamp = +message.timestamp
 
-      console.log("lastReadAtTimestamp", lastReadAtTimestamp);
-      console.log("messageTimestamp", messageTimestamp);
-
       if (lastReadAtTimestamp > messageTimestamp && message.status !== "READ") {
         message.status = "READ";
       }
