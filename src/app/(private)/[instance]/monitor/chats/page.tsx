@@ -19,7 +19,7 @@ import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { StyledTableCell, StyledTableRow } from "./(table)/mui-style";
-import { UsersContext } from "../../(cruds)/users/users-context";
+import { UsersContext } from "../../(cruds)/users/context";
 
 export default function MonitorAttendances() {
   const {

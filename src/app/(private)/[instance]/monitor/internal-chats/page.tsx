@@ -9,7 +9,6 @@ import {
   Table,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { useWhatsappContext } from "../../whatsapp-context";
 import { InternalChatContext } from "../../internal-context";
 import { AppContext } from "../../app-context";
 import ChatProvider from "../../(main)/(chat)/chat-context";

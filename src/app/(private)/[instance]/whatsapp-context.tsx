@@ -34,7 +34,6 @@ import { DetailedInternalChat } from "./internal-context";
 import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
 import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import { UsersContext } from "./(cruds)/users/users-context";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -77,7 +76,6 @@ export const WhatsappContext = createContext({} as IWhatsappContext);
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
-  const {loadUsers } = useContext(UsersContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null); // Conversa que está aberta
@@ -238,7 +236,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         setChats(detailedChats);
         setMessages(chatsMessages);
-        loadUsers();
 
       });
       api.current.getSectors().then((res) => setSectors(res));

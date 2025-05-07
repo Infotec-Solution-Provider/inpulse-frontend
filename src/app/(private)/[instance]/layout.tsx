@@ -8,6 +8,7 @@ import { ReactElement, ReactNode, useState } from "react";
 import WhatsappProvider from "./whatsapp-context";
 import { InternalChatProvider } from "./internal-context";
 import UsersProvider from "./(cruds)/users/users-context";
+import UsersProviders from "./(cruds)/users/context";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -20,6 +21,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="box-border h-screen w-full overflow-hidden">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
+        <UsersProviders>
+
           <WhatsappProvider>
             <UsersProvider>
               <InternalChatProvider>
@@ -42,6 +45,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </InternalChatProvider>
             </UsersProvider>
           </WhatsappProvider>
+          </UsersProviders>
         </SocketProvider>
       </AppProvider>
     </div>

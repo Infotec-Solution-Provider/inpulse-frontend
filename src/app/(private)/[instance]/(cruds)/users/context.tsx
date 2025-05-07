@@ -40,7 +40,6 @@ const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001
 export const UsersContext = createContext<IUsersContext>({} as IUsersContext);
 
 export default function UsersProvider({ children }: IUsersProviderProps) {
-  const { wppApi } = useContext(WhatsappContext);
   const { token } = useContext(AuthContext);
   const [users, setUsers] = useState<User[]>([]);
   const [modal, setModal] = useState<ReactNode>(null);
@@ -126,14 +125,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
     }
   }, [token]);
 
-  useEffect(() => {
-    if (wppApi.current && token) {
-      wppApi.current.setAuth(token);
-      wppApi.current.getSectors().then((data) => {
-        setSectors(data);
-      });
-    }
-  }, [wppApi, token]);
+
 
   return (
     <UsersContext.Provider
