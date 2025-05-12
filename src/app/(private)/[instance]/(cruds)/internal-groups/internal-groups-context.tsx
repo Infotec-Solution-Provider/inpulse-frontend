@@ -28,7 +28,7 @@ interface IInternalGroupsContext {
   deleteInternalGroup: (id: number) => Promise<void>;
   updateInternalGroup: (
     id: number,
-    data: { name: string; participants: number[] },
+    data: { name: string; participants: number[], wppGroupId: string | null },
   ) => Promise<void>;
 }
 
