@@ -69,7 +69,7 @@ interface WhatsappProviderProps {
   children: ReactNode;
 }
 
-const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
+export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
 
 export const WhatsappContext = createContext({} as IWhatsappContext);
 

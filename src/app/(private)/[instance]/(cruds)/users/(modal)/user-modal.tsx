@@ -16,7 +16,8 @@ export default function UserModal({ user }: UserModalProps) {
   const [formData, setFormData] = useState<CreateUserDTO>({
     NOME: user ? user.NOME : "",
     LOGIN: user ? user.LOGIN : "",
-    EMAIL: user ? user.EMAIL : undefined,
+    EMAIL: user ? user.EMAIL || "" : undefined,
+    WHATSAPP: user ? user.WHATSAPP || "" : undefined,
     SENHA: user ? user.SENHA! : "",
     SETOR: user ? user.SETOR : null!,
     NIVEL: user ? (user.NIVEL as UserRole) : ("" as UserRole),

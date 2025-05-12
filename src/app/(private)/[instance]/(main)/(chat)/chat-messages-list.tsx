@@ -44,6 +44,15 @@ export default function ChatMessagesList() {
     return map;
   }, [users]);
 
+  const usersPhoneMap = useMemo(() => {
+    const map = new Map<string, User>();
+    for (const user of users) {
+      const phone = user.WHATSAPP;
+      phone && map.set(phone, user);
+    }
+    return map;
+  }, [users]);
+
   useEffect(() => {
     if (ulRef.current) {
       ulRef.current.scrollTop = ulRef.current.scrollHeight;
@@ -84,7 +93,9 @@ export default function ChatMessagesList() {
           />
         ))}
       {currentChat?.chatType === "internal" &&
-        !currentChat.isGroup && currentInternalChatMessages && currentInternalChatMessages.length > 0 &&
+        !currentChat.isGroup &&
+        currentInternalChatMessages &&
+        currentInternalChatMessages.length > 0 &&
         currentInternalChatMessages.map((m) => (
           <Message
             key={`message_${m.id}`}
@@ -100,18 +111,34 @@ export default function ChatMessagesList() {
         ))}
 
       {currentChat?.chatType === "internal" &&
-        currentChat.isGroup && usersMap.size > 0 && currentInternalChatMessages && currentInternalChatMessages.length > 0 &&
+        currentChat.isGroup &&
+        usersMap.size > 0 &&
+        currentInternalChatMessages &&
+        currentInternalChatMessages.length > 0 &&
         currentInternalChatMessages.map((m, i, arr) => {
-          const userId = Number(m.from.split(":")[1]);
-          const findUser = usersMap.get(userId);
+          let name: string | null = null;
           const prev = i > 0 ? arr[i - 1] : null;
-          const groupFirst = !findUser || !prev || prev.from !== m.from;
+          const groupFirst = !prev || prev.from !== m.from;
+
+          if (m.from.startsWith("user:")) {
+            const userId = Number(m.from.split(":")[1]);
+            const findUser = usersMap.get(userId);
+            name = findUser ? findUser.NOME : null;
+          }
+          if (m.from.startsWith("external:")) {
+            // apenas digitos replace
+            const phone = m.from.split(":")[2].replace(/\D/g, "");
+            const findUser = usersPhoneMap.get(phone);
+            name = findUser ? findUser.NOME : null;
+            console.log(phone, findUser, usersPhoneMap.values());
+          }
+
           return (
             <GroupMessage
               key={`message_${m.id}`}
               style={getInternalMessageStyle(m, user!.CODIGO)}
               groupFirst={groupFirst}
-              sentBy={findUser ? findUser.NOME : "Desconhecido"}
+              sentBy={name || "Desconhecido"}
               text={m.body}
               date={new Date(+m.timestamp)}
               status={m.status}

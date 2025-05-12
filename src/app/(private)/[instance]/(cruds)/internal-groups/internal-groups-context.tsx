@@ -2,14 +2,28 @@ import { InternalGroup } from "@in.pulse-crm/sdk";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { InternalChatContext } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
+import axios from "axios";
+import { WPP_BASE_URL } from "../../whatsapp-context";
 
 interface IInternalGroupsProviderProps {
   children: ReactNode;
 }
 
+export interface IWppGroup {
+  id: {
+    _serialized: string;
+  };
+  name: string;
+}
+
 interface IInternalGroupsContext {
   internalGroups: Array<InternalGroup>;
-  createInternalGroup: (data: { name: string; participants: number[] }) => Promise<void>;
+  wppGroups: Array<IWppGroup>;
+  createInternalGroup: (data: {
+    name: string;
+    participants: number[];
+    groupId: string | null;
+  }) => Promise<void>;
   updateInternalGroup: (
     id: number,
     data: { name: string; participants: number[] },
@@ -29,6 +43,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
   const { token } = useContext(AuthContext);
   const { internalApi } = useContext(InternalChatContext);
   const [internalGroups, setInternalGroups] = useState<Array<InternalGroup>>([]);
+  const [wppGroups, setWppGroups] = useState<Array<IWppGroup>>([]);
 
   const updateInternalGroup = async (
     id: number,
@@ -48,12 +63,17 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     }
   };
 
-  const createInternalGroup = async (data: { name: string; participants: number[] }) => {
+  const createInternalGroup = async (data: {
+    name: string;
+    groupId: string | null;
+    participants: number[];
+  }) => {
     if (internalApi.current) {
       const created = await internalApi.current.createInternalChat(
         data.participants,
         true,
         data.name,
+        data.groupId,
       );
 
       setInternalGroups((prev) => [created as InternalGroup, ...prev]);
@@ -66,12 +86,23 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       internalApi.current.getInternalGroups().then((groups) => {
         setInternalGroups(groups);
       });
+
+      axios
+        .get(WPP_BASE_URL + "/api/whatsapp/groups", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((res) => {
+          console.log(res.data.data);
+          setWppGroups(res.data.data);
+        });
     }
   }, [token]);
 
   return (
     <InternalGroupsContext.Provider
-      value={{ internalGroups, updateInternalGroup, createInternalGroup }}
+      value={{ internalGroups, wppGroups, updateInternalGroup, createInternalGroup }}
     >
       {children}
     </InternalGroupsContext.Provider>

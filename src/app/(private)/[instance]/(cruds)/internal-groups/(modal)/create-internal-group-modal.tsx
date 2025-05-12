@@ -14,17 +14,27 @@ import { User } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
+import { IWppGroup } from "../internal-groups-context";
 
 interface CreateInternalGroupModalProps {
-  onSubmit: (data: { name: string; participants: number[] }) => Promise<void>;
+  onSubmit: (data: {
+    name: string;
+    participants: number[];
+    groupId: string | null;
+  }) => Promise<void>;
+  wppGroups: IWppGroup[];
 }
 
-export default function CreateInternalGroupModal({ onSubmit }: CreateInternalGroupModalProps) {
+export default function CreateInternalGroupModal({
+  onSubmit,
+  wppGroups,
+}: CreateInternalGroupModalProps) {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
   const [name, setName] = useState("");
   const [participants, setParticipants] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<IWppGroup | null>(null);
 
   const userOptions = useMemo(() => {
     return users.filter((user) => !participants.some((p) => p.CODIGO === user.CODIGO));
@@ -33,9 +43,17 @@ export default function CreateInternalGroupModal({ onSubmit }: CreateInternalGro
   const handleSubmit = async () => {
     if (!name || participants.length === 0) return;
 
-    await onSubmit({ name, participants: participants.map((p) => p.CODIGO) });
+    await onSubmit({
+      name,
+      participants: participants.map((p) => p.CODIGO),
+      groupId: selectedGroup?.id._serialized || null,
+    });
     toast.success("Grupo criado com sucesso!");
     closeModal();
+  };
+
+  const handleSelectGroup = (group: IWppGroup | null) => {
+    setSelectedGroup(group);
   };
 
   const handleChangeUser = (user: User | null) => {
@@ -59,6 +77,15 @@ export default function CreateInternalGroupModal({ onSubmit }: CreateInternalGro
         <header>Criar novo grupo</header>
         <div className="flex flex-col gap-4">
           <TextField label="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+          <Autocomplete
+            options={wppGroups}
+            getOptionLabel={(option) => option.name}
+            getOptionKey={(option) => option.id._serialized}
+            className="w-full"
+            renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
+            value={selectedGroup} // Define o valor atual do Autocomplete
+            onChange={(_, group) => handleSelectGroup(group)}
+          />
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="flex gap-2">

@@ -106,7 +106,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           </MenuItem>
         </StyledTextField>
       </div>
-      <div className="flex w-1/2 flex-row justify-center gap-4 pr-2">
+      <div className="flex w-full flex-row justify-center gap-4">
         <StyledTextField
           label="Código ERP"
           name="CODIGO_ERP"
@@ -115,6 +115,15 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           size="small"
           value={formData.CODIGO_ERP || ""}
           onChange={(e) => onFormChange({ CODIGO_ERP: e.target.value })}
+        />
+        <StyledTextField
+          label="Whatsapp"
+          name="WHATSAPP"
+          id="WHATSAPP"
+          fullWidth
+          size="small"
+          value={formData.WHATSAPP || ""}
+          onChange={(e) => onFormChange({ WHATSAPP: e.target.value })}
         />
       </div>
     </div>

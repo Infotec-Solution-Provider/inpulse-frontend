@@ -8,10 +8,10 @@ import CreateInternalGroupModal from "./(modal)/create-internal-group-modal";
 export default function InternalGroupsPage() {
   const { openModal } = useAppContext();
 
-  const { createInternalGroup } = useInternalGroupsContext();
+  const { createInternalGroup, wppGroups } = useInternalGroupsContext();
 
   const openCreateGroupModal = () => {
-    openModal(<CreateInternalGroupModal onSubmit={createInternalGroup} />);
+    openModal(<CreateInternalGroupModal onSubmit={createInternalGroup} wppGroups={wppGroups} />);
   };
 
   return (
