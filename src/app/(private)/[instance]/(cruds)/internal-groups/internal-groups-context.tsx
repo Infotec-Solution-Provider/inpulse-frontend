@@ -4,6 +4,7 @@ import { InternalChatContext } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
 import axios from "axios";
 import { WPP_BASE_URL } from "../../whatsapp-context";
+import { toast } from "react-toastify";
 
 interface IInternalGroupsProviderProps {
   children: ReactNode;
@@ -11,7 +12,7 @@ interface IInternalGroupsProviderProps {
 
 export interface IWppGroup {
   id: {
-    _serialized: string;
+    user: string;
   };
   name: string;
 }
@@ -24,6 +25,7 @@ interface IInternalGroupsContext {
     participants: number[];
     groupId: string | null;
   }) => Promise<void>;
+  deleteInternalGroup: (id: number) => Promise<void>;
   updateInternalGroup: (
     id: number,
     data: { name: string; participants: number[] },
@@ -80,6 +82,18 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     }
   };
 
+  const deleteInternalGroup = async (id: number) => {
+    if (internalApi.current) {
+      try {
+        await internalApi.current.deleteInternalChat(id);
+        toast.success("Grupo deletado com sucesso!");
+        setInternalGroups((prev) => prev.filter((group) => group.id !== id));
+      } catch (error) {
+        toast.error("Erro ao deletar grupo");
+      }
+    }
+  };
+
   useEffect(() => {
     if (token && internalApi.current) {
       internalApi.current.setAuth(token);
@@ -102,7 +116,13 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
 
   return (
     <InternalGroupsContext.Provider
-      value={{ internalGroups, wppGroups, updateInternalGroup, createInternalGroup }}
+      value={{
+        internalGroups,
+        wppGroups,
+        updateInternalGroup,
+        createInternalGroup,
+        deleteInternalGroup,
+      }}
     >
       {children}
     </InternalGroupsContext.Provider>

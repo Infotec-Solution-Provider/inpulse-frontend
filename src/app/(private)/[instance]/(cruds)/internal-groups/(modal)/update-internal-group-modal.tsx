@@ -14,20 +14,29 @@ import { InternalGroup, User } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
+import { IWppGroup } from "../internal-groups-context";
 
 interface UpdateInternalGroupModalProps {
   group: InternalGroup;
-  onSubmit: (id: number, data: { name: string; participants: number[] }) => Promise<void>;
+  wppGroups: IWppGroup[];
+  onSubmit: (
+    id: number,
+    data: { name: string; participants: number[]; wppGroupId: string | null },
+  ) => Promise<void>;
 }
 
 export default function UpdateInternalGroupModal({
   group,
+  wppGroups,
   onSubmit,
 }: UpdateInternalGroupModalProps) {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<IWppGroup | null>(
+    wppGroups.find((g) => g.id.user === group.wppGroupId) || null,
+  );
   const [participants, setParticipants] = useState<User[]>(
     users.filter((u) => group.participants.some((p) => p.userId === u.CODIGO)),
   );
@@ -39,13 +48,21 @@ export default function UpdateInternalGroupModal({
   const handleSubmit = async () => {
     if (!name || participants.length === 0) return;
 
-    await onSubmit(group.id, { name, participants: participants.map((p) => p.CODIGO) });
+    await onSubmit(group.id, {
+      name,
+      participants: participants.map((p) => p.CODIGO),
+      wppGroupId: selectedGroup?.id.user || null,
+    });
     toast.success("Grupo atualizado com sucesso!");
     closeModal();
   };
 
   const handleChangeUser = (user: User | null) => {
     setSelectedUser(user);
+  };
+
+  const handleSelectGroup = (group: IWppGroup | null) => {
+    setSelectedGroup(group);
   };
 
   const handleAddUser = () => {
@@ -65,6 +82,16 @@ export default function UpdateInternalGroupModal({
         <header>Criar novo grupo</header>
         <div className="flex flex-col gap-4">
           <TextField label="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+          <Autocomplete
+            options={wppGroups}
+            getOptionLabel={(option) => option.name}
+            getOptionKey={(option) => option.id.user}
+            defaultValue={wppGroups.find((g) => g.id.user === group.wppGroupId)}
+            className="w-full"
+            renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
+            value={selectedGroup} // Define o valor atual do Autocomplete
+            onChange={(_, group) => handleSelectGroup(group)}
+          />
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="flex gap-2">

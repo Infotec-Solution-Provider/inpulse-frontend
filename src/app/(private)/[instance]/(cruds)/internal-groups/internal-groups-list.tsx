@@ -7,6 +7,8 @@ import { IconButton } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useAppContext } from "../../app-context";
 import UpdateInternalGroupModal from "./(modal)/update-internal-group-modal";
+import { Delete } from "@mui/icons-material";
+import DeleteInternalGroupModal from "./(modal)/delete-internal-group-moda";
 
 function getCreator(users: User[], creatorId: number) {
   const creator = users.find((user) => user.CODIGO === creatorId);
@@ -16,10 +18,27 @@ function getCreator(users: User[], creatorId: number) {
 export default function InternalGroupsList() {
   const { users } = useContext(InternalChatContext);
   const { openModal } = useAppContext();
-  const { internalGroups, updateInternalGroup } = useInternalGroupsContext();
+  const { internalGroups, updateInternalGroup, wppGroups, deleteInternalGroup } =
+    useInternalGroupsContext();
 
   const openUpdateGroupModal = (group: InternalGroup) => () => {
-    openModal(<UpdateInternalGroupModal onSubmit={updateInternalGroup} group={group} />);
+    openModal(
+      <UpdateInternalGroupModal
+        onSubmit={updateInternalGroup}
+        group={group}
+        wppGroups={wppGroups}
+      />,
+    );
+  };
+
+  const openDeleteGroupModal = (group: InternalGroup) => () => {
+    openModal(
+      <DeleteInternalGroupModal
+        groupId={group.id}
+        groupName={group.groupName || ""}
+        deleteGroup={deleteInternalGroup}
+      />,
+    );
   };
 
   return (
@@ -48,6 +67,9 @@ export default function InternalGroupsList() {
               <td className="w-24 truncate px-2 py-6 pr-16 text-lg">
                 <IconButton onClick={openUpdateGroupModal(group)}>
                   <SettingsIcon />
+                </IconButton>
+                <IconButton onClick={openDeleteGroupModal(group)}>
+                  <Delete />
                 </IconButton>
               </td>
             </tr>

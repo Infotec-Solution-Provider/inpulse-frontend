@@ -5,6 +5,7 @@ import { InternalMessage, User, WppMessage } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
 import GroupMessage from "./group-message";
+import { Formatter } from "@in.pulse-crm/utils";
 
 function getWppMessageStyle(msg: WppMessage) {
   if (msg.from.startsWith("system")) {
@@ -129,7 +130,7 @@ export default function ChatMessagesList() {
             // apenas digitos replace
             const phone = m.from.split(":")[2].replace(/\D/g, "");
             const findUser = usersPhoneMap.get(phone);
-            name = findUser ? findUser.NOME : null;
+            name = findUser ? findUser.NOME : Formatter.phone(phone);
             console.log(phone, findUser, usersPhoneMap.values());
           }
 

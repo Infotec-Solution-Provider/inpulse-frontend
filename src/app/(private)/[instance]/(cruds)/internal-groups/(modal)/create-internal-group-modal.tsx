@@ -46,7 +46,7 @@ export default function CreateInternalGroupModal({
     await onSubmit({
       name,
       participants: participants.map((p) => p.CODIGO),
-      groupId: selectedGroup?.id._serialized || null,
+      groupId: selectedGroup?.id.user || null,
     });
     toast.success("Grupo criado com sucesso!");
     closeModal();
@@ -80,7 +80,7 @@ export default function CreateInternalGroupModal({
           <Autocomplete
             options={wppGroups}
             getOptionLabel={(option) => option.name}
-            getOptionKey={(option) => option.id._serialized}
+            getOptionKey={(option) => option.id.user}
             className="w-full"
             renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
             value={selectedGroup} // Define o valor atual do Autocomplete
