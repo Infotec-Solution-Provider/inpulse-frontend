@@ -49,7 +49,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
 
   const updateInternalGroup = async (
     id: number,
-    data: { name: string; participants: number[] },
+    data: { name: string; participants: number[], wppGroupId: string | null },
   ) => {
     if (internalApi.current) {
       const res = await internalApi.current.updateInternalGroup(id, data);
