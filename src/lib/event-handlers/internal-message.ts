@@ -77,6 +77,10 @@ export default function InternalReceiveMessageHandler(
         }
         return prev;
       });
+
+      if (message.from !== `user:${loggedUser.CODIGO}`) {
+        api.markChatMessagesAsRead(message.internalChatId);
+      }
     }
   };
 }
