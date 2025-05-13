@@ -79,7 +79,7 @@ export default function ChatMessagesList() {
       className="flex h-full w-full flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2"
       ref={ulRef}
     >
-      {currentChat?.chatType === "wpp" &&
+      {user && currentChat?.chatType === "wpp" &&
         currentChatMessages.map((m) => (
           <Message
             key={`message_${m.id}`}
@@ -93,7 +93,8 @@ export default function ChatMessagesList() {
             fileSize={m.fileSize}
           />
         ))}
-      {currentChat?.chatType === "internal" &&
+      {user &&
+        currentChat?.chatType === "internal" &&
         !currentChat.isGroup &&
         currentInternalChatMessages &&
         currentInternalChatMessages.length > 0 &&
@@ -111,7 +112,8 @@ export default function ChatMessagesList() {
           />
         ))}
 
-      {currentChat?.chatType === "internal" &&
+      {user &&
+        currentChat?.chatType === "internal" &&
         currentChat.isGroup &&
         usersMap.size > 0 &&
         currentInternalChatMessages &&
@@ -137,7 +139,7 @@ export default function ChatMessagesList() {
           return (
             <GroupMessage
               key={`message_${m.id}`}
-              style={getInternalMessageStyle(m, user!.CODIGO)}
+              style={getInternalMessageStyle(m, user.CODIGO)}
               groupFirst={groupFirst}
               sentBy={name || "Desconhecido"}
               text={m.body}
