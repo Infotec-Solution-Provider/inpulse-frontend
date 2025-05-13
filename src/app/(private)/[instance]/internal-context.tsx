@@ -34,7 +34,7 @@ interface InternalChatContextType {
   openInternalChat: (chat: DetailedInternalChat) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
-  monitorInternalChats:DetailedInternalChat[];
+  monitorInternalChats: DetailedInternalChat[];
   currentInternalChatMessages: InternalMessage[];
   getInternalChatsMonitor: () => void;
   monitorMessages: Record<number, InternalMessage[]>;
@@ -67,7 +67,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat) => {
       setCurrentChat(chat);
-      setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id]);
+      setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
       setWppCurrMsgs([]);
       currentChatRef.current = chat;
 
@@ -130,7 +130,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   );
   // Carregamento monitoria das conversas
   const getInternalChatsMonitor = useCallback(() => {
-
     if (token && user && users.length > 0) {
       api.current.setAuth(token);
       api.current.getInternalChatsMonitor().then(({ chats, messages }) => {
@@ -190,8 +189,15 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         SocketEventType.InternalMessageStatus,
         InternalMessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
       );
+
+      return () => {
+        socket.off(SocketEventType.InternalChatStarted);
+        socket.off(SocketEventType.InternalMessage);
+        socket.off(SocketEventType.InternalMessageStatus);
+        socket.off(SocketEventType.InternalChatFinished);
+      };
     }
-  }, [socket, user, users]);
+  }, [socket, user, users, currentInternalChatMessages]);
 
   return (
     <InternalChatContext.Provider
@@ -207,7 +213,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         users,
         monitorInternalChats,
         getInternalChatsMonitor,
-        monitorMessages
+        monitorMessages,
       }}
     >
       {children}

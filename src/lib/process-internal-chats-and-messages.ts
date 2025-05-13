@@ -18,26 +18,32 @@ export default function processInternalChatsAndMessages(
   const chatsMessages: Record<number, InternalMessage[]> = {};
 
   for (const message of messages) {
-    // Atualizar status de leitura com base no `lastReadAt`
+    // Atualizar status de leitura com base no `lastReadAt`'
     const chat = chatsMap.get(message.internalChatId);
-    const participant = chat?.participants.find((p) => p.userId === userId);
+    // Encontra o participante que cooresponde ao usuário logado
+    const userParticipant = chat?.participants.find((p) => p.userId === userId);
 
+    // Caso o o participante tenha o `lastReadAt` definido
+    // Atualiza o status da mensagem para "READ" se a mensagem for mais antiga que o `lastReadAt`
+    if (userParticipant && userParticipant.lastReadAt) {
+      const lastReadAtTimestamp = new Date(userParticipant.lastReadAt).getTime();
+      const messageTimestamp = +message.timestamp;
+      const isCurrentUser = message.from === `user:${userId}`;
 
-    if (participant && participant.lastReadAt) {
-      const lastReadAtTimestamp = new Date(participant.lastReadAt).getTime();
-      const messageTimestamp = +message.timestamp
-
-      if (lastReadAtTimestamp > messageTimestamp && message.status !== "READ") {
+      if (lastReadAtTimestamp >= messageTimestamp && message.status !== "READ" && !isCurrentUser) {
         message.status = "READ";
       }
     }
 
+    // Caso este chat não tenha mensagens previas, inicializa o array de msgs
     if (!chatsMessages[message.internalChatId]) {
       chatsMessages[message.internalChatId] = [];
     }
 
+    // Adiciona a mensagem ao array de mensagens do chat
     chatsMessages[message.internalChatId].push(message);
 
+    // Atualiza a última mensagem do chat, caso a mensagem atual seja mais recente que a última mensagem do chat
     if (
       !lastMessages[message.internalChatId] ||
       message.timestamp > lastMessages[message.internalChatId].timestamp

@@ -28,7 +28,7 @@ interface IInternalGroupsContext {
   deleteInternalGroup: (id: number) => Promise<void>;
   updateInternalGroup: (
     id: number,
-    data: { name: string; participants: number[], wppGroupId: string | null },
+    data: { name: string; participants: number[]; wppGroupId: string | null },
   ) => Promise<void>;
 }
 
@@ -49,7 +49,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
 
   const updateInternalGroup = async (
     id: number,
-    data: { name: string; participants: number[], wppGroupId: string | null },
+    data: { name: string; participants: number[]; wppGroupId: string | null },
   ) => {
     if (internalApi.current) {
       const res = await internalApi.current.updateInternalGroup(id, data);
@@ -71,14 +71,21 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     participants: number[];
   }) => {
     if (internalApi.current) {
-      const created = await internalApi.current.createInternalChat(
-        data.participants,
-        true,
-        data.name,
-        data.groupId,
-      );
+      try {
+        const created = await internalApi.current.createInternalChat(
+          data.participants,
+          true,
+          data.name,
+          data.groupId,
+        );
 
-      setInternalGroups((prev) => [created as InternalGroup, ...prev]);
+        console.log("created", created);
+        toast.success("Grupo criado com sucesso!");
+        setInternalGroups((prev) => [created as InternalGroup, ...prev]);
+      } catch (error) {
+        console.error("Error creating internal group", error);
+        toast.error("Erro ao criar grupo");
+      }
     }
   };
 

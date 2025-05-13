@@ -27,10 +27,28 @@ export default function InternalReceiveMessageHandler(
   loggedUser: User,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
-    console.log("message", message);
+    const isCurrentChat =
+      chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
+    const isCurrentUser = message.from === `user:${loggedUser.CODIGO}`;
+
+    if (isCurrentChat && !isCurrentUser) {
+      api.markChatMessagesAsRead(message.internalChatId);
+      message = { ...message, status: "READ" };
+    }
+    if (isCurrentChat) {
+      setCurrentChatMessages((prev) => {
+        if (!prev.some((m) => m.id === message.id)) {
+          return [...prev, message];
+        }
+        return prev;
+      });
+    }
+
+    console.log("Chegando mensagem interna", message);
     const user = users.find((u) => u.CODIGO === +message.from.split(":")[1]);
 
     if (message.from !== `user:${loggedUser.CODIGO}`) {
+      console.log("Gerando notificação");
       const name = message.from === "system" ? "InPulse" : user?.NOME || "Desconhecido";
       new Notification(name, {
         body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
@@ -69,18 +87,5 @@ export default function InternalReceiveMessageHandler(
         return chat;
       }),
     );
-
-    if (chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId) {
-      setCurrentChatMessages((prev) => {
-        if (!prev.some((m) => m.id === message.id)) {
-          return [...prev, message];
-        }
-        return prev;
-      });
-
-      if (message.from !== `user:${loggedUser.CODIGO}`) {
-        api.markChatMessagesAsRead(message.internalChatId);
-      }
-    }
   };
 }
