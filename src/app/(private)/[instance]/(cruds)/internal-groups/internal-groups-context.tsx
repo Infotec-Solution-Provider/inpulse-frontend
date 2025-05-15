@@ -30,6 +30,7 @@ interface IInternalGroupsContext {
     id: number,
     data: { name: string; participants: number[]; wppGroupId: string | null },
   ) => Promise<void>;
+  updateInternalGroupImage: (id: number, file: File) => Promise<void>;
 }
 
 const InternalGroupsContext = createContext({} as IInternalGroupsContext);
@@ -65,10 +66,31 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     }
   };
 
+  const updateInternalGroupImage = async (id: number, file: File) => {
+    if (internalApi.current) {
+      try {
+        const res = await internalApi.current.updateInternalGroupImage(id, file);
+        setInternalGroups((prev) =>
+          prev.map((group) => {
+            if (group.id === id) {
+              return { ...group, groupImageFileId: res.groupImageFileId };
+            }
+            return group;
+          }),
+        );
+        toast.success("Imagem do grupo atualizada com sucesso!");
+      } catch (error) {
+        console.error("Error updating internal group image", error);
+        toast.error("Erro ao atualizar imagem do grupo");
+      }
+    }
+  };
+
   const createInternalGroup = async (data: {
     name: string;
     groupId: string | null;
     participants: number[];
+    groupImage?: File | null;
   }) => {
     if (internalApi.current) {
       try {
@@ -77,6 +99,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
           true,
           data.name,
           data.groupId,
+          data.groupImage,
         );
 
         console.log("created", created);
@@ -129,6 +152,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         updateInternalGroup,
         createInternalGroup,
         deleteInternalGroup,
+        updateInternalGroupImage,
       }}
     >
       {children}

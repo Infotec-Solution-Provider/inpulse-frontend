@@ -22,6 +22,7 @@ interface CreateInternalGroupModalProps {
     name: string;
     participants: number[];
     groupId: string | null;
+    groupImage?: File | null;
   }) => Promise<void>;
   wppGroups: IWppGroup[];
 }
@@ -51,6 +52,7 @@ export default function CreateInternalGroupModal({
       name,
       participants: participants.map((p) => p.CODIGO),
       groupId: selectedGroup?.id.user || null,
+      groupImage: groupImageRef.current,
     });
     toast.success("Grupo criado com sucesso!");
     closeModal();
@@ -100,7 +102,7 @@ export default function CreateInternalGroupModal({
       reader.onload = (ev) => setImagePreview(ev.target?.result as string);
       reader.readAsDataURL(file);
     }
-  }
+  };
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
@@ -109,7 +111,7 @@ export default function CreateInternalGroupModal({
         <div className="flex gap-4">
           <div>
             <button
-              className="borde h-32 w-32 rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10 overflow-hidden"
+              className="borde h-32 w-32 overflow-hidden rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10"
               onClick={() => {
                 if (groupImageInputRef.current) {
                   groupImageInputRef.current.click();
@@ -123,7 +125,7 @@ export default function CreateInternalGroupModal({
                   className="h-full w-full rounded-md border border-slate-600 object-cover"
                 />
               ) : (
-                <ImageIcon fontSize="large"/>
+                <ImageIcon fontSize="large" />
               )}
             </button>
             <input

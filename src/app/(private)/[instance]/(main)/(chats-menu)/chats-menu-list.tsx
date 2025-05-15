@@ -7,6 +7,7 @@ import {
   InternalChatContext,
 } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
+import filesService from "@/lib/services/files.service";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
@@ -81,9 +82,14 @@ export default function ChatsMenuList() {
       {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
-
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
           const tagColor = chat.isGroup ? "green" : "blue";
+          let avatar: string | undefined = undefined;
+
+          if (chat.isGroup && chat.groupImageFileId) {
+            avatar = filesService.getFileDownloadUrl(chat.groupImageFileId);
+          }
+
           return (
             <ChatsMenuItem
               isUnread={chat.isUnread}
@@ -100,6 +106,7 @@ export default function ChatsMenuList() {
               messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}
               tags={[{ color: tagColor, name: tagName }]}
               onClick={() => openInternalChat(chat)}
+              avatar={avatar}
             />
           );
         }

@@ -3,6 +3,7 @@ import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import { Formatter } from "@in.pulse-crm/utils";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -44,12 +45,21 @@ export default function InternalReceiveMessageHandler(
       });
     }
 
-    console.log("Chegando mensagem interna", message);
-    const user = users.find((u) => u.CODIGO === +message.from.split(":")[1]);
-
     if (message.from !== `user:${loggedUser.CODIGO}`) {
-      console.log("Gerando notificação");
-      const name = message.from === "system" ? "InPulse" : user?.NOME || "Desconhecido";
+      let name = "Desconhecido";
+      if (message.from === "system") {
+        name = "InPulse";
+      }
+      if (message.from.startsWith("user:")) {
+        name = users.find((u) => u.CODIGO === +message.from.split(":")[1])?.NOME || "Desconhecido";
+      }
+      if (message.from.startsWith("external:")) {
+        const user = users.find((u) => u.WHATSAPP === message.from.split(":")[1]);
+        name = user
+          ? user.NOME || Formatter.phone(user.WHATSAPP!)
+          : Formatter.phone(message.from.split(":")[1]);
+      }
+
       new Notification(name, {
         body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
         icon: HorizontalLogo.src,

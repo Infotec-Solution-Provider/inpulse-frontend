@@ -18,13 +18,19 @@ function getCreator(users: User[], creatorId: number) {
 export default function InternalGroupsList() {
   const { users } = useContext(InternalChatContext);
   const { openModal } = useAppContext();
-  const { internalGroups, updateInternalGroup, wppGroups, deleteInternalGroup } =
-    useInternalGroupsContext();
+  const {
+    internalGroups,
+    updateInternalGroup,
+    wppGroups,
+    deleteInternalGroup,
+    updateInternalGroupImage,
+  } = useInternalGroupsContext();
 
   const openUpdateGroupModal = (group: InternalGroup) => () => {
     openModal(
       <UpdateInternalGroupModal
         onSubmit={updateInternalGroup}
+        onSubmitImage={updateInternalGroupImage}
         group={group}
         wppGroups={wppGroups}
       />,
