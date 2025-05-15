@@ -5,6 +5,7 @@ import { useContext } from "react";
 import ChatProvider from "./(chat)/chat-context";
 import { WhatsappContext } from "../whatsapp-context";
 import { AuthContext } from "@/app/auth-context";
+import filesService from "@/lib/services/files.service";
 
 export default function Home() {
   const { currentChat } = useContext(WhatsappContext);
@@ -23,7 +24,15 @@ export default function Home() {
               "Grupo excluído"
             }
             phone="N/D"
-            avatarUrl=""
+            avatarUrl={(() => {
+              let avatar: string | undefined = undefined;
+
+              if (currentChat.isGroup && currentChat.groupImageFileId) {
+                avatar = filesService.getFileDownloadUrl(currentChat.groupImageFileId);
+              }
+
+              return avatar;
+            })()}
             customerName={instance[0].toUpperCase() + instance.slice(1)}
             chatType={"internal"}
           />
