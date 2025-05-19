@@ -44,7 +44,7 @@ const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://loca
 
 export default function ReadyMessagesProvider({ children }: IReadyMessagesProviderProps) {
   const { token } = useContext(AuthContext);
-  const [readyMessages, setReadyMessages] = useState<Array<ReadyMessage>>([]);
+  const [readyMessages, setReadyMessages] = useState<ReadyMessage[]>([]);
   const api = useRef(new ReadyMessageClient(INTENAL_BASE_URL));
   const variables: Variable[] = [
     { name: "@saudação_tempo", replaceFor: "currentSaudation" },
@@ -96,9 +96,9 @@ function replaceVariables({
           TITULO, TEXTO_MENSAGEM
         );
 
-        setReadyMessages((prev) => [created as ReadyMessage, ...prev]);
+        setReadyMessages((prev) => [created as ReadyMessage, ...(prev || [])]);
       } catch (error) {
-        console.error("Error creating internal readyMessage", error);
+        console.error("Error creating readyMessage", error);
         toast.error("Erro ao criar Mensagem pronta");
       }
     }
