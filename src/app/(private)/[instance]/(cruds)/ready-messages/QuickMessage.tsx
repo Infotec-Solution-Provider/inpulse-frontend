@@ -114,9 +114,9 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        {readyMessages.length ? (
+        {readyMessages && readyMessages.length ? (
           <List>
-            {readyMessages.map((msg) => (
+            {readyMessages?.map((msg) => (
               <ListItemButton
                 key={msg.CODIGO}
                 selected={selectedMessage?.CODIGO === msg.CODIGO}

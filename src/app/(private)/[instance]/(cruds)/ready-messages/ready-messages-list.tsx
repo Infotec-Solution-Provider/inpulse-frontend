@@ -57,7 +57,7 @@ export default function ReadyMessagesList() {
           </tr>
         </thead>
         <tbody className="py-2">
-          {readyMessages.map((readyMessage) => (
+          {readyMessages?.map((readyMessage) => (
             <tr className="even:bg-indigo-700/5" key={readyMessage.CODIGO}>
               <td className="w-32 truncate px-2 py-6 pl-16 text-lg">{readyMessage.CODIGO}</td>
               <td className="w-72 truncate px-2 py-6 text-lg">{readyMessage.TITULO}</td>
