@@ -90,6 +90,13 @@ export default function ChatsMenuList() {
             avatar = filesService.getFileDownloadUrl(chat.groupImageFileId);
           }
 
+          if (!chat.isGroup) {
+            const otherUser = chat.users.find((u) => u.CODIGO !== user?.CODIGO);
+            const avatarUrl =
+              otherUser?.AVATAR_ID && filesService.getFileDownloadUrl(otherUser.AVATAR_ID);
+            avatar = avatarUrl || undefined;
+          }
+
           return (
             <ChatsMenuItem
               isUnread={chat.isUnread}

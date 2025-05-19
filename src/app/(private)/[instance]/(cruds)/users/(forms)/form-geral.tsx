@@ -1,45 +1,48 @@
-import { MenuItem } from "@mui/material";
+import { MenuItem, TextField } from "@mui/material";
 import { CreateUserDTO, UpdateUserDTO, User, UserRole } from "@in.pulse-crm/sdk";
-import { selectSlotProps, StyledTextField } from "./styles-form";
 import { useContext } from "react";
 import { UsersContext } from "../users-context";
+import AvatarInput from "@/lib/components/avatar-input";
 
 interface FormGeralProps {
   formData: Partial<User>;
   onFormChange: (data: CreateUserDTO | UpdateUserDTO) => void;
+  onAvatarChange?: (file: File | null) => void;
+  initialImage?: string | null;
 }
 
-export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
+export default function FormGeral({ formData, onFormChange, initialImage, onAvatarChange }: FormGeralProps) {
   const { sectors } = useContext(UsersContext);
 
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledTextField
-          label="Nome"
-          name="NOME"
-          id="NOME"
-          type="text"
-          fullWidth
-          size="small"
-          required
-          value={formData.NOME}
-          onChange={(e) => onFormChange({ NOME: e.target.value })}
-        />
-        <StyledTextField
-          label="Login"
-          name="LOGIN"
-          id="LOGIN"
-          type="text"
-          fullWidth
-          size="small"
-          required
-          value={formData.LOGIN}
-          onChange={(e) => onFormChange({ LOGIN: e.target.value })}
-        />
+        <AvatarInput initialImage={initialImage} onChange={onAvatarChange} />
+        <div className="flex flex-grow flex-col gap-4">
+          <TextField
+            label="Nome"
+            name="NOME"
+            id="NOME"
+            type="text"
+            fullWidth
+            required
+            value={formData.NOME}
+            onChange={(e) => onFormChange({ NOME: e.target.value })}
+          />
+          <TextField
+            label="Login"
+            name="LOGIN"
+            id="LOGIN"
+            type="text"
+            fullWidth
+            required
+            value={formData.LOGIN}
+            onChange={(e) => onFormChange({ LOGIN: e.target.value })}
+          />
+        </div>
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledTextField
+        <TextField
           label="Email"
           name="EMAIL"
           id="EMAIL"
@@ -49,7 +52,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           value={formData.EMAIL || ""}
           onChange={(e) => onFormChange({ EMAIL: e.target.value })}
         />
-        <StyledTextField
+        <TextField
           label="Senha"
           name="SENHA"
           id="SENHA"
@@ -62,7 +65,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
         />
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledTextField
+        <TextField
           label="Setor"
           name="SETOR"
           id="SETOR"
@@ -72,15 +75,14 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           required
           value={formData.SETOR || ""}
           onChange={(e) => onFormChange({ SETOR: Number(e.target.value) })}
-          slotProps={selectSlotProps}
         >
           {sectors.map((sector) => (
             <MenuItem value={sector.id} key={sector.id}>
               {sector.name}
             </MenuItem>
           ))}
-        </StyledTextField>
-        <StyledTextField
+        </TextField>
+        <TextField
           label="Nível"
           name="NIVEL"
           select
@@ -90,7 +92,6 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           defaultValue={""}
           value={formData.NIVEL}
           onChange={(e) => onFormChange({ NIVEL: e.target.value as UserRole })}
-          slotProps={selectSlotProps}
         >
           <MenuItem value={"ADMIN"} key="ADMIN">
             Supervisor
@@ -104,10 +105,10 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           <MenuItem value={"AMBOS"} key="AMBOS">
             Usuário (Ambos)
           </MenuItem>
-        </StyledTextField>
+        </TextField>
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledTextField
+        <TextField
           label="Código ERP"
           name="CODIGO_ERP"
           type="text"
@@ -116,7 +117,7 @@ export default function FormGeral({ formData, onFormChange }: FormGeralProps) {
           value={formData.CODIGO_ERP || ""}
           onChange={(e) => onFormChange({ CODIGO_ERP: e.target.value })}
         />
-        <StyledTextField
+        <TextField
           label="Whatsapp"
           name="WHATSAPP"
           id="WHATSAPP"

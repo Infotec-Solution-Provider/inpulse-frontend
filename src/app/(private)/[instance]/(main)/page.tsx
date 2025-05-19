@@ -8,6 +8,7 @@ import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 
 export default function Home() {
+
   const { currentChat } = useContext(WhatsappContext);
   const { user, instance } = useContext(AuthContext);
 
@@ -29,6 +30,13 @@ export default function Home() {
 
               if (currentChat.isGroup && currentChat.groupImageFileId) {
                 avatar = filesService.getFileDownloadUrl(currentChat.groupImageFileId);
+              }
+
+              if (!currentChat.isGroup) {
+                const otherUser = currentChat.users.find((u) => u.CODIGO !== user?.CODIGO);
+                const avatarUrl =
+                  otherUser?.AVATAR_ID && filesService.getFileDownloadUrl(otherUser.AVATAR_ID);
+                avatar = avatarUrl || undefined;
               }
 
               return avatar;
