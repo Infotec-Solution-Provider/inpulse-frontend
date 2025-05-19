@@ -9,11 +9,10 @@ import {
   List,
   ListItemButton,
 } from "@mui/material";
-import ImageIcon from "@mui/icons-material/Image";
 import { useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
-import { UsersContext } from "../../users/context";
+import { UsersContext } from "../../users/users-context";
 import { VariablesMenu } from "./Variables";
 import { useReadyMessagesContext } from "../ready-messages-context";
 import filesService from "@/lib/services/files.service";

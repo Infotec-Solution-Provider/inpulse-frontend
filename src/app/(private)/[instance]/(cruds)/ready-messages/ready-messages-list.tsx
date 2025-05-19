@@ -60,9 +60,12 @@ export default function ReadyMessagesList() {
           {readyMessages && readyMessages.length > 0  && readyMessages?.filter(item => item).map((readyMessage) => (
             <tr className="even:bg-indigo-700/5" key={readyMessage.CODIGO}>
               <td className="w-32 truncate px-2 py-6 pl-16 text-lg">{readyMessage.CODIGO}</td>
-              <td className="w-72 truncate px-2 py-6 text-lg">{readyMessage.TITULO}</td>
-              <td className="w-72 truncate px-2 py-6 text-lg">{readyMessage.ARQUIVO}</td>
-              <td className="w-72 truncate px-2 py-6 text-lg">{readyMessage.TEXTO_MENSAGEM}</td>
+              <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.TITULO}>{readyMessage.TITULO}</td>
+              <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.ARQUIVO}>{readyMessage.ARQUIVO}</td>
+              <td   className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.TEXTO_MENSAGEM}
+              >
+              {readyMessage.TEXTO_MENSAGEM}
+                </td>
               <td className="w-72 truncate px-2 py-6 text-lg">{Formatter.date(readyMessage.LAST_UPDATE)}</td>
               <td className="w-24 truncate px-2 py-6 pr-16 text-lg">
                 <IconButton onClick={openUpdateGroupModal(readyMessage)}>

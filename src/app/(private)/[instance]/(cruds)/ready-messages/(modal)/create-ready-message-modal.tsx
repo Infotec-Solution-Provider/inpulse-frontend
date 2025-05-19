@@ -12,9 +12,9 @@ import {
 import { useContext, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
-import { UsersContext } from "../../users/context";
 import { VariablesMenu } from "./Variables";
 import { useReadyMessagesContext } from "../ready-messages-context";
+import { UsersContext } from "../../users/users-context";
 
 interface Props {
   onSubmit: (data: {
@@ -40,7 +40,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [filter, setFilter] = useState("");
   const { variables = [] } = useReadyMessagesContext() || {};
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     fileRef.current = file;
@@ -115,15 +115,22 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
       toast.error("Texto da mensagem deve ter pelo menos 10 caracteres");
       return;
     }
-    await onSubmit({
-      TITULO: title,
-      TEXTO_MENSAGEM: text,
-      SETOR: sector,
-      ARQUIVO: fileRef.current,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        TITULO: title,
+        TEXTO_MENSAGEM: text,
+        SETOR: sector,
+        ARQUIVO: fileRef.current,
+      });
 
-    toast.success("Mensagem rápida criada com sucesso!");
-    closeModal();
+      toast.success("Mensagem rápida criada com sucesso!");
+      closeModal();
+    } catch (err: any) {
+      toast.error("Erro ao criar mensagem rápida");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -218,10 +225,10 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={title.length < 6 || text.length < 10}
-        >
-          Cadastrar
-        </Button>
+          disabled={isSubmitting}
+          >
+      {isSubmitting ? "Cadastrando..." : "Cadastrar"}
+      </Button>
       </div>
 
       {/* Modal de variáveis */}

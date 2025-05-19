@@ -32,6 +32,7 @@ interface IReadyMessagesContext {
   updateReadyMessage: (id: number, data: ReadyMessage, file?: File) => Promise<void>;
   variables: Array<Variable>;
   replaceVariables: (props: ReplaceVariablesOptions) => string;
+  fetchReadyMessages: () => Promise<void>;
 }
 
 const ReadyMessagesContext = createContext({} as IReadyMessagesContext);
@@ -123,6 +124,13 @@ function replaceVariables({
   },
   [token],
 );
+const fetchReadyMessages = useCallback(async () => {
+  if (token && api.current) {
+    api.current.setAuth(token);
+    const msgs = await api.current.getReadyMessages();
+    setReadyMessages(msgs);
+  }
+}, [token]);
 
   useEffect(() => {
     if (token && api.current) {
@@ -142,7 +150,8 @@ function replaceVariables({
         createReadyMessage,
         deleteReadyMessage,
         variables,
-        replaceVariables
+        replaceVariables,
+        fetchReadyMessages
       }}
     >
       {children}
