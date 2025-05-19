@@ -1,4 +1,4 @@
-import { IconButton, TextField } from "@mui/material";
+import { IconButton, Modal, TextField } from "@mui/material";
 import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
@@ -9,12 +9,18 @@ import { ChatContext } from "./chat-context";
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle, SuggestionMode } from "emoji-picker-react";
 import AudioRecorder from "./audio-recorder";
 import { Close } from "@mui/icons-material";
+import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
+import { useState } from "react";
 
 export default function ChatSendMessageArea() {
   const { currentChat } = useContext(WhatsappContext);
   const { sendMessage, state, dispatch } = useContext(ChatContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDisabled = !currentChat;
+  const [quickMessageOpen, setQuickMessageOpen] = useState(false);
+  const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
+  const openQuickMessages = () => setQuickMessageOpen(true);
+  const openQuickTemplate = () => setQuickTemplateOpen(true);
 
   const openAttachFile = () => {
     if (fileInputRef.current) {
@@ -90,7 +96,8 @@ export default function ChatSendMessageArea() {
         onChange={handleFileChange}
       />
       <div className="flex items-center gap-2">
-        <IconButton size="small" color="inherit">
+        <IconButton size="small" color="inherit" onClick={openQuickMessages}
+        >
           <ChatBubbleIcon />
         </IconButton>
         <IconButton size="small" color="inherit" onClick={openAttachFile}>
@@ -148,6 +155,21 @@ export default function ChatSendMessageArea() {
       <div className="aria-hidden:hidden" aria-hidden={state?.text.length > 0 || state.sendAsAudio}>
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
+      {quickMessageOpen && (
+  <Modal open onClose={() => setQuickMessageOpen(false)}>
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+      {currentChat && <QuickMessage chat={currentChat} onClose={() => setQuickMessageOpen(false)} />}
+    </div>
+  </Modal>
+)}
+
+{quickTemplateOpen && (
+  <Modal open onClose={() => setQuickTemplateOpen(false)}>
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+  </div>
+  </Modal>
+)}
+
     </div>
   );
 }
