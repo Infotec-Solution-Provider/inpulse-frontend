@@ -51,8 +51,9 @@ export default function ReadyMessagesList() {
             <th className="w-32 px-2 py-6 pl-16 text-left text-lg">Codigo</th>
             <th className="w-64 px-2 py-6 text-left text-lg">Titulo</th>
             <th className="w-64 px-2 py-6 text-left text-lg">Arquivo</th>
-            <th className="w-64 px-2 py-6 text-left text-lg">Setor</th>
-            <th className="w-32 px-2 py-6 text-left text-lg">Ultima modificação</th>
+            <th className="w-64 px-2 py-6 text-left text-lg">Mensagem</th>
+{/*             <th className="w-64 px-2 py-6 text-left text-lg">Setor</th>
+ */}            <th className="w-32 px-2 py-6 text-left text-lg">Ultima modificação</th>
             <th className="w-24 px-2 py-6 pr-16 text-left text-lg"></th>
           </tr>
         </thead>
@@ -62,7 +63,7 @@ export default function ReadyMessagesList() {
               <td className="w-32 truncate px-2 py-6 pl-16 text-lg">{readyMessage.CODIGO}</td>
               <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.TITULO}>{readyMessage.TITULO}</td>
               <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.ARQUIVO}>{readyMessage.ARQUIVO}</td>
-              <td   className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.TEXTO_MENSAGEM}
+              <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg" title={readyMessage.TEXTO_MENSAGEM}
               >
               {readyMessage.TEXTO_MENSAGEM}
                 </td>

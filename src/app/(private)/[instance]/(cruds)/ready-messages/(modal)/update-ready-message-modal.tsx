@@ -150,7 +150,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          <TextField
+{/*           <TextField
             select
             label="Setor"
             fullWidth
@@ -165,7 +165,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
                 {s.name}
               </MenuItem>
             ))}
-          </TextField>
+          </TextField> */}
         </div>
       </div>
 
