@@ -1,6 +1,5 @@
-import { Switch } from "@mui/material";
+import { FormControlLabel, Switch, TextField } from "@mui/material";
 import { User } from "@in.pulse-crm/sdk";
-import { StyledFormControlLabel, StyledTextField } from "./styles-form";
 
 interface FormTelefoniaProps {
   formData: Partial<User>;
@@ -9,19 +8,21 @@ interface FormTelefoniaProps {
 
 export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaProps) {
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledFormControlLabel
+        <FormControlLabel
           label="Visualiza compras"
           labelPlacement="start"
           control={
             <Switch
               checked={formData.VISUALIZA_COMPRAS === "SIM"}
-              onChange={(e) => onFormChange({ VISUALIZA_COMPRAS: e.target.checked ? "SIM" : "NAO" })}
+              onChange={(e) =>
+                onFormChange({ VISUALIZA_COMPRAS: e.target.checked ? "SIM" : "NAO" })
+              }
             />
           }
         />
-        <StyledFormControlLabel
+        <FormControlLabel
           label="Edita/insere contatos"
           labelPlacement="start"
           control={
@@ -31,19 +32,21 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
             />
           }
         />
-        <StyledFormControlLabel
+        <FormControlLabel
           label="Liga pra representante"
           labelPlacement="start"
           control={
             <Switch
               checked={formData.LIGA_REPRESENTANTE === "SIM"}
-              onChange={(e) => onFormChange({ LIGA_REPRESENTANTE: e.target.checked ? "SIM" : "NAO" })}
+              onChange={(e) =>
+                onFormChange({ LIGA_REPRESENTANTE: e.target.checked ? "SIM" : "NAO" })
+              }
             />
           }
         />
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledTextField
+        <TextField
           label="Liga pra representante dias"
           name="LIGA_REPRESENTANTE_DIAS"
           type="number"
@@ -52,7 +55,7 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
           value={formData.LIGA_REPRESENTANTE_DIAS}
           onChange={(e) => onFormChange({ LIGA_REPRESENTANTE_DIAS: Number(e.target.value) })}
         />
-        <StyledTextField
+        <TextField
           label="Limite diário de agendamento"
           name="limite_diario_agendamento"
           type="number"
@@ -63,7 +66,7 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
         />
       </div>
       <div className="flex w-full flex-row justify-center gap-4">
-        <StyledTextField
+        <TextField
           label="CodTelefonia"
           name="CODTELEFONIA"
           fullWidth
@@ -71,7 +74,7 @@ export default function FormTelefonia({ formData, onFormChange }: FormTelefoniaP
           value={formData.CODTELEFONIA}
           onChange={(e) => onFormChange({ CODTELEFONIA: e.target.value })}
         />
-        <StyledTextField
+        <TextField
           label="OMNI"
           name="OMNI"
           type="number"
