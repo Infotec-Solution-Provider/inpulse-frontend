@@ -95,7 +95,8 @@ function replaceVariables({
           file,
           TITULO, TEXTO_MENSAGEM
         );
-        setReadyMessages((prev) => [created, ...(prev || [])]);
+        if(created)
+         setReadyMessages((prev) => [created, ...(prev || [])]);
       } catch (error) {
         console.error("Error creating readyMessage", error);
         toast.error("Erro ao criar Mensagem pronta");
