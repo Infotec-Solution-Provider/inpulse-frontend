@@ -1,5 +1,5 @@
 import { ReadyMessage, ReadyMessageClient } from "@in.pulse-crm/sdk";
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AuthContext } from "@/app/auth-context";
 import axios from "axios";
 import { WPP_BASE_URL } from "../../whatsapp-context";
@@ -67,8 +67,9 @@ function replaceVariables({
 }
 
 
-  const updateReadyMessage = async (id: number,data: ReadyMessage, file?: File) => {
-    if (api.current) {
+  const updateReadyMessage = useCallback(
+    async (id: number,data: ReadyMessage, file?: File) => {
+    if (token) {
       try {
         if (!file) return
         const res = await api.current.updateReadyMessage(id, data, file);
@@ -86,10 +87,13 @@ function replaceVariables({
         toast.error("Erro ao atualizar Arquivo do Mensagem pronta");
       }
     }
-  };
+  },
+  [token],
+);
 
-  const createReadyMessage = async (file?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null) => {
-    if (api.current) {
+  const createReadyMessage = useCallback(
+    async (file?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null) => {
+    if (token) {
       try {
         const created = await api.current.createReadyMessage(
           file,
@@ -101,10 +105,13 @@ function replaceVariables({
         toast.error("Erro ao criar Mensagem pronta");
       }
     }
-  };
+  },
+  [token],
+);
 
-  const deleteReadyMessage = async (id: number) => {
-    if (api.current) {
+  const deleteReadyMessage = useCallback(
+    async (id: number) => {
+    if (token) {
       try {
         await api.current.deleteReadyMessage(id);
         toast.success("Mensagem pronta  deletado com sucesso!");
@@ -113,7 +120,9 @@ function replaceVariables({
         toast.error("Erro ao deletar Mensagem pronta");
       }
     }
-  };
+  },
+  [token],
+);
 
   useEffect(() => {
     if (token && api.current) {
@@ -123,7 +132,7 @@ function replaceVariables({
       });
 
     }
-  }, [token]);
+  }, [token,api.current]);
 
   return (
     <ReadyMessagesContext.Provider

@@ -9,7 +9,6 @@ import {
   List,
   ListItemButton,
 } from "@mui/material";
-import ImageIcon from "@mui/icons-material/Image";
 import { useContext, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
