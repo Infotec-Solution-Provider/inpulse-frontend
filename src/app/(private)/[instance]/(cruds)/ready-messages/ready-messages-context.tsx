@@ -93,12 +93,12 @@ function replaceVariables({
 );
 
   const createReadyMessage = useCallback(
-    async (file?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null) => {
+    async (file?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null, SETOR?: number) => {
     if (token) {
       try {
         const created = await api.current.createReadyMessage(
           file,
-          TITULO, TEXTO_MENSAGEM
+          TITULO, TEXTO_MENSAGEM, SETOR
         );
         setReadyMessages((prev) => [created, ...(prev || [])]);
       } catch (error) {

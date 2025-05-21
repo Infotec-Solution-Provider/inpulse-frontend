@@ -15,6 +15,7 @@ import { useAppContext } from "../../../app-context";
 import { VariablesMenu } from "./Variables";
 import { useReadyMessagesContext } from "../ready-messages-context";
 import { UsersContext } from "../../users/users-context";
+import { AuthContext } from "@/app/auth-context";
 
 interface Props {
   onSubmit: (data: {
@@ -27,7 +28,7 @@ interface Props {
 
 export default function CreateReadyMessageModal({ onSubmit }: Props) {
   const { closeModal } = useAppContext();
-
+  const { user, instance } = useContext(AuthContext);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [sector, setSector] = useState<number | null>(null);
@@ -146,11 +147,12 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
             onChange={(e) => setTitle(e.target.value)}
           />
 
- {/*          <TextField
+          <TextField
             select
             label="Setor"
             fullWidth
-            value={sector ?? ""}
+            disabled={!(instance === "nunes" && user?.SETOR === 3)}
+            value={sector ?? user?.SETOR ?? ""}
             onChange={(e) =>
               setSector(e.target.value === "" ? null : Number(e.target.value))
             }
@@ -161,7 +163,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
                 {s.name}
               </MenuItem>
             ))}
-          </TextField> */}
+          </TextField>
         </div>
       </div>
 
