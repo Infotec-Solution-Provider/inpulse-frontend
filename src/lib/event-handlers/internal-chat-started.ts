@@ -17,11 +17,12 @@ export default function InternalChatStartedHandler(
   users: User[],
   setChats: Dispatch<SetStateAction<DetailedInternalChat[]>>,
   setMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
+  user: User,
+  openChat: (chat: DetailedInternalChat) => void,
 ) {
   return async ({ chat }: HandleChatStartedCallbackProps) => {
     socket.joinRoom(`internal-chat:${chat.id}`);
 
-    console.log("Iniciando chat interno", chat);
     const detailedChat: DetailedInternalChat = {
       ...chat,
       lastMessage: chat.messages[chat.messages.length - 1] || null,
@@ -30,7 +31,6 @@ export default function InternalChatStartedHandler(
       users: users.filter((u) => chat.participants.some((p) => p.userId === u.CODIGO)),
     };
 
-    console.log("Detalhes do chat", detailedChat);
     setChats((prev) => {
       const chatExists = prev.some((c) => c.id === chat.id);
 
@@ -40,7 +40,6 @@ export default function InternalChatStartedHandler(
 
       return [detailedChat, ...prev];
     });
-    console.log("Mensagens do chat", chat.messages);
 
     setMessages((prev) => {
       const chatMessages = prev[chat.id] || [];
@@ -51,5 +50,9 @@ export default function InternalChatStartedHandler(
         [chat.id]: [...newMessages, ...chatMessages],
       };
     });
+
+    if (user.CODIGO === chat.creatorId) {
+      openChat(detailedChat);
+    }
   };
 }

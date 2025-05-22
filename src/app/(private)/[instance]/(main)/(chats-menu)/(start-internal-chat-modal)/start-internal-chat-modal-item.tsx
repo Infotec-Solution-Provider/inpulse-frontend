@@ -7,9 +7,13 @@ import { AppContext } from "../../../app-context";
 
 interface StartChatModalItemProps {
   user: User;
+  isStarted?: boolean;
 }
 
-export default function StartInternalChatModalItem({ user }: StartChatModalItemProps) {
+export default function StartInternalChatModalItem({
+  user,
+  isStarted = false,
+}: StartChatModalItemProps) {
   const { sectors } = useContext(WhatsappContext);
   const { startDirectChat } = useContext(InternalChatContext);
   const { closeModal } = useContext(AppContext);
@@ -31,8 +35,8 @@ export default function StartInternalChatModalItem({ user }: StartChatModalItemP
         {sector && <span className="text-xs text-blue-200">{sector.name}</span>}
       </div>
       <div>
-        <Button size="small" onClick={handleClickStart}>
-        {loading ? "Iniciando..." : "Iniciar"}
+        <Button size="small" onClick={handleClickStart} disabled={isStarted}>
+          {isStarted ? "Conversa já iniciada" : "Iniciar conversa"}
         </Button>
       </div>
     </li>

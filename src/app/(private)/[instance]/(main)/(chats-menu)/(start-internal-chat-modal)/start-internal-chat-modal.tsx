@@ -1,6 +1,6 @@
 import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { AppContext } from "../../../app-context";
 import StartInternalChatModalItem from "./start-internal-chat-modal-item";
 import { InternalChatContext } from "../../../internal-context";
@@ -8,14 +8,17 @@ import { InternalChatContext } from "../../../internal-context";
 export default function StartInternalChatModal() {
   const { closeModal } = useContext(AppContext);
   const { users, internalChats } = useContext(InternalChatContext);
+  
+  const startedChats: Array<number> = useMemo(() => {
+    const directChats = internalChats.filter((c) => !c.isGroup);
+    const usersSet: Set<number> = new Set();
 
-  const directChats = internalChats.filter((chat) => chat.participants.length === 2);
+    directChats.forEach((chat) => {
+      chat.participants.forEach((p) => usersSet.add(p.userId));
+    });
 
-  const filteredUsers = users.filter((user) => {
-    return !directChats.some((chat) =>
-      chat.participants.some((p) => p.userId === user.CODIGO)
-    );
-  });
+    return Array.from(usersSet);
+  }, [internalChats]);
 
   return (
     <div className="w-[35rem] rounded-md bg-slate-800 px-4 py-4">
@@ -27,9 +30,15 @@ export default function StartInternalChatModal() {
       </header>
 
       <ul className="flex h-[30rem] flex-col items-center gap-2 overflow-y-auto">
-        {filteredUsers.map((user) => (
-          <StartInternalChatModalItem key={user.CODIGO} user={user} />
-        ))}
+        {users.map((u) => {
+          return (
+            <StartInternalChatModalItem
+              key={u.CODIGO}
+              user={u}
+              isStarted={startedChats.some((su) => su === u.CODIGO)}
+            />
+          );
+        })}
       </ul>
     </div>
   );

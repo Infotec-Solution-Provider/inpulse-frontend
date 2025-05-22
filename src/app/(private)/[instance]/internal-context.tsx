@@ -52,6 +52,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     setCurrentChat,
     currentChatRef,
     setCurrentChatMessages: setWppCurrMsgs,
+    chats: wppChats,
   } = useWhatsappContext();
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
@@ -63,6 +64,22 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
   const { token, user } = useContext(AuthContext);
+
+  useEffect(() => {
+    const originalTitle = "InPulse";
+    const chats = [...internalChats, ...wppChats];
+    const unreadChats = chats.filter((chat) => chat.isUnread);
+
+    if (unreadChats.length > 0) {
+      document.title = `🔔 InPulse (${unreadChats.length})`;
+    } else {
+      document.title = originalTitle;
+    }
+
+    return () => {
+      document.title = originalTitle;
+    };
+  }, [internalChats, wppChats]);
 
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat) => {
@@ -154,7 +171,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       // Evento de nova conversa
       socket.on(
         SocketEventType.InternalChatStarted,
-        InternalChatStartedHandler(socket, users, setInternalChats, setMessages),
+        InternalChatStartedHandler(socket, users, setInternalChats, setMessages, user, openInternalChat),
       );
 
       socket.on(
