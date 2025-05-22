@@ -1,7 +1,7 @@
 import { useReadyMessagesContext } from "./ready-messages-context";
 import { ReadyMessage, User } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
-import { IconButton } from "@mui/material";
+import { Button, IconButton, Table, TableContainer } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useAppContext } from "../../app-context";
 import UpdateReadyMessageModal from "./(modal)/update-ready-message-modal";
@@ -9,11 +9,24 @@ import { Delete } from "@mui/icons-material";
 import DeleteReadyMessageModal from "./(modal)/delete-ready-message-moda";
 import { UsersContext } from "../users/users-context";
 import { useContext } from "react";
+import CreateReadyMessageModal from "./(modal)/create-ready-message-modal";
 
 
 export default function ReadyMessagesList() {
   const { openModal } = useAppContext();
   const { sectors } = useContext(UsersContext);
+
+  const { createReadyMessage } = useReadyMessagesContext();
+
+  const openCreateGroupModal = () => {
+    openModal(
+      <CreateReadyMessageModal
+        onSubmit={({ TITULO, TEXTO_MENSAGEM, SETOR, ARQUIVO}) =>
+          createReadyMessage(ARQUIVO, TITULO, TEXTO_MENSAGEM, SETOR ?? undefined)
+        }
+      />
+    );
+  };
 
   const {
     readyMessages,
@@ -30,6 +43,7 @@ export default function ReadyMessagesList() {
             TITULO,
             TEXTO_MENSAGEM,
             SETOR: SETOR ?? 0,
+            ARQUIVO: ARQUIVO ? ARQUIVO.name : ""
           })
         }
         readyMessage={readyMessage}
@@ -48,8 +62,10 @@ export default function ReadyMessagesList() {
   };
 
   return (
-    <div className="mx-auto w-max overflow-y-auto bg-indigo-700/5">
-      <table className="w-max text-sm">
+    <div className="relative flex h-[calc(100vh-100px)] flex-col">
+      <TableContainer className="mx-auto w-full flex-1 bg-indigo-700 bg-opacity-5 shadow-md">
+
+      <Table className="w-max text-sm">
         <thead className="sticky top-0 z-10 rounded-md bg-indigo-900">
           <tr>
             <th className="w-32 px-2 py-6 pl-16 text-left text-lg">Codigo</th>
@@ -58,7 +74,7 @@ export default function ReadyMessagesList() {
             <th className="w-64 px-2 py-6 text-left text-lg">Mensagem</th>
             <th className="w-64 px-2 py-6 text-left text-lg">Setor</th>
             <th className="w-32 px-2 py-6 text-left text-lg">Ultima modificação</th>
-            <th className="w-24 px-2 py-6 pr-16 text-left text-lg"></th>
+            <th className="w-24 px-2 py-6 pr-16 text-left text-lg">Ações</th>
           </tr>
         </thead>
         <tbody className="py-2">
@@ -84,7 +100,15 @@ export default function ReadyMessagesList() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
+      </TableContainer>
+
+      <div className="flex h-max  justify-end ">
+        <Button variant="outlined" size="large" onClick={openCreateGroupModal}>
+          Cadastrar
+        </Button>
+      </div>
     </div>
+
   );
 }

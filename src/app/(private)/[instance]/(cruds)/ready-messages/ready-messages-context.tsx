@@ -27,7 +27,7 @@ interface Variable {
 }
 interface IReadyMessagesContext {
   readyMessages: Array<ReadyMessage>;
-  createReadyMessage: (File?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null) => Promise<void>;
+  createReadyMessage: (File?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null, SETOR?: number ) => Promise<void>;
   deleteReadyMessage: (id: number) => Promise<void>;
   updateReadyMessage: (id: number, data: ReadyMessage, file?: File) => Promise<void>;
   variables: Array<Variable>;
