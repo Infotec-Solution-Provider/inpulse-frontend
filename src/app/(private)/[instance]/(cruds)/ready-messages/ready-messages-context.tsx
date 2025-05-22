@@ -27,11 +27,12 @@ interface Variable {
 }
 interface IReadyMessagesContext {
   readyMessages: Array<ReadyMessage>;
-  createReadyMessage: (File?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null) => Promise<void>;
+  createReadyMessage: (File?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null, SETOR?: number ) => Promise<void>;
   deleteReadyMessage: (id: number) => Promise<void>;
   updateReadyMessage: (id: number, data: ReadyMessage, file?: File) => Promise<void>;
   variables: Array<Variable>;
   replaceVariables: (props: ReplaceVariablesOptions) => string;
+  fetchReadyMessages: () => Promise<void>;
 }
 
 const ReadyMessagesContext = createContext({} as IReadyMessagesContext);
@@ -92,12 +93,12 @@ function replaceVariables({
 );
 
   const createReadyMessage = useCallback(
-    async (file?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null) => {
+    async (file?: File | null, TITULO?: string | null, TEXTO_MENSAGEM?: string | null, SETOR?: number) => {
     if (token) {
       try {
         const created = await api.current.createReadyMessage(
           file,
-          TITULO, TEXTO_MENSAGEM
+          TITULO, TEXTO_MENSAGEM, SETOR
         );
         setReadyMessages((prev) => [created, ...(prev || [])]);
       } catch (error) {
@@ -123,6 +124,13 @@ function replaceVariables({
   },
   [token],
 );
+const fetchReadyMessages = useCallback(async () => {
+  if (token && api.current) {
+    api.current.setAuth(token);
+    const msgs = await api.current.getReadyMessages();
+    setReadyMessages(msgs);
+  }
+}, [token]);
 
   useEffect(() => {
     if (token && api.current) {
@@ -142,7 +150,8 @@ function replaceVariables({
         createReadyMessage,
         deleteReadyMessage,
         variables,
-        replaceVariables
+        replaceVariables,
+        fetchReadyMessages
       }}
     >
       {children}

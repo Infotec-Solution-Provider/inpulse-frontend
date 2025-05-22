@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import {
   Dialog,
@@ -32,7 +32,7 @@ function isWhatsappChat(chat: any): chat is DetailedChat {
 }
 
 export const QuickMessage = ({ chat, onClose }: Props) => {
-  const { readyMessages, replaceVariables } = useReadyMessagesContext();
+  const { readyMessages, replaceVariables, fetchReadyMessages } = useReadyMessagesContext();
   const { user } = useContext(AuthContext);
   const { sendMessage: sendWppMessage } = useContext(WhatsappContext);
   const { sendInternalMessage } = useContext(InternalChatContext);
@@ -102,6 +102,9 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
       toast.error("Erro ao enviar mensagem");
     }
   };
+  useEffect(() => {
+    fetchReadyMessages();
+  }, []);
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">

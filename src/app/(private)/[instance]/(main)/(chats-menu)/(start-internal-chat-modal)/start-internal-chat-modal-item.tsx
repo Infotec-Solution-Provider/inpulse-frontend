@@ -1,6 +1,6 @@
 import { User } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { InternalChatContext } from "../../../internal-context";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { AppContext } from "../../../app-context";
@@ -17,8 +17,11 @@ export default function StartInternalChatModalItem({
   const { sectors } = useContext(WhatsappContext);
   const { startDirectChat } = useContext(InternalChatContext);
   const { closeModal } = useContext(AppContext);
+  const [loading, setLoading] = useState(false);
 
   const handleClickStart = () => {
+    if (loading) return;
+    setLoading(true);
     startDirectChat(user.CODIGO);
     closeModal();
   };

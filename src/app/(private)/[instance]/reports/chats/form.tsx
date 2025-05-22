@@ -45,25 +45,28 @@ export default function ChatReportForm() {
       <Autocomplete
         className="w-96"
         size="small"
-        defaultValue={{ label: "Todos", value: "*" }}
         options={[
           ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
           { label: "Todos", value: "*" },
         ]}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="Usuário"
-            onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-          />
-        )}
+        value={
+          [
+            ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
+            { label: "Todos", value: "*" },
+          ].find((opt) => opt.value === formData.userId) || { label: "Todos", value: "*" }
+        }
+        onChange={(_, option) => {
+          setFormData({ ...formData, userId: option?.value ?? "*" });
+        }}
+        renderInput={(params) => <TextField {...params} label="Usuário" />}
       />
+
       <div className="ml-4 flex items-center gap-2">
         <TextField
           className="w-52"
           type="date"
           size="small"
-          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
         />
         <ArrowRightAltIcon />
         <TextField

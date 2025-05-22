@@ -9,15 +9,15 @@ import {
   List,
   ListItemButton,
 } from "@mui/material";
-import ImageIcon from "@mui/icons-material/Image";
 import { useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
-import { UsersContext } from "../../users/context";
+import { UsersContext } from "../../users/users-context";
 import { VariablesMenu } from "./Variables";
 import { useReadyMessagesContext } from "../ready-messages-context";
 import filesService from "@/lib/services/files.service";
 import { ReadyMessage } from "@in.pulse-crm/sdk";
+import { AuthContext } from "@/app/auth-context";
 
 interface Props {
   readyMessage: ReadyMessage;
@@ -33,7 +33,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   const { closeModal } = useAppContext();
   const { sectors } = useContext(UsersContext);
   const { variables = [] } = useReadyMessagesContext() || {};
-
+  const { user, instance } = useContext(AuthContext);
   const [title, setTitle] = useState(readyMessage.TITULO || "");
   const [text, setText] = useState(readyMessage.TEXTO_MENSAGEM || "");
   const [sector, setSector] = useState<number | null>(readyMessage.SETOR || null);
@@ -156,6 +156,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
             label="Setor"
             fullWidth
             value={sector ?? ""}
+            disabled={!(instance === "nunes" && user?.SETOR === 3)}
             onChange={(e) =>
               setSector(e.target.value === "" ? null : Number(e.target.value))
             }

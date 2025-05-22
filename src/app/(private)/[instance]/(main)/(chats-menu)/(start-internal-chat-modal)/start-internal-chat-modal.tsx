@@ -2,14 +2,13 @@ import { IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useContext, useMemo } from "react";
 import { AppContext } from "../../../app-context";
-
 import StartInternalChatModalItem from "./start-internal-chat-modal-item";
 import { InternalChatContext } from "../../../internal-context";
 
 export default function StartInternalChatModal() {
   const { closeModal } = useContext(AppContext);
   const { users, internalChats } = useContext(InternalChatContext);
-
+  
   const startedChats: Array<number> = useMemo(() => {
     const directChats = internalChats.filter((c) => !c.isGroup);
     const usersSet: Set<number> = new Set();
@@ -29,7 +28,7 @@ export default function StartInternalChatModal() {
           <CloseIcon />
         </IconButton>
       </header>
-      <div></div>
+
       <ul className="flex h-[30rem] flex-col items-center gap-2 overflow-y-auto">
         {users.map((u) => {
           return (
