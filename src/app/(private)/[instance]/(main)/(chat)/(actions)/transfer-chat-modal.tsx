@@ -1,6 +1,6 @@
 import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { UsersContext } from "../../../(cruds)/users/users-context";
@@ -8,7 +8,7 @@ import { UsersContext } from "../../../(cruds)/users/users-context";
 export default function TransferChatModal() {
   const { closeModal } = useContext(AppContext);
   const { currentChat, transferAttendance } = useContext(WhatsappContext);
-  const { users } = useContext(UsersContext);
+  const { users,loadUsers } = useContext(UsersContext);
 
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
@@ -18,6 +18,9 @@ export default function TransferChatModal() {
     transferAttendance(currentChat?.id, selectedUser);
     closeModal();
   };
+  useEffect(() => {
+      loadUsers();
+  }, []);
 
   return (
     <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">
@@ -35,7 +38,7 @@ export default function TransferChatModal() {
           value={selectedUser ?? ""}
           onChange={(e) => setSelectedUser(Number(e.target.value))}
         >
-          {Array.isArray(users) && users.map((user) => (
+          {users?.map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
               {user.NOME_EXIBICAO || user.NOME}
             </MenuItem>
