@@ -70,9 +70,10 @@ export default function ChatMessagesListMonitor() {
       ref={ulRef}
     >
       {currentChat?.chatType === "wpp" &&
-      currentChatMessages.length > 0 &&
+        currentChatMessages.length > 0 &&
         currentChatMessages.map((m) => (
           <Message
+            id={m.id}
             key={`message_${m.id}`}
             style={getWppMessageStyle(m)}
             text={m.body}
@@ -86,7 +87,9 @@ export default function ChatMessagesListMonitor() {
         ))}
 
       {currentChat?.chatType === "internal" &&
-          usersMap.size > 0 && currentInternalChatMessages && currentInternalChatMessages.length > 0 &&
+        usersMap.size > 0 &&
+        currentInternalChatMessages &&
+        currentInternalChatMessages.length > 0 &&
         currentInternalChatMessages.map((m, i, arr) => {
           const userId = Number(m.from.split(":")[1]);
           const findUser = usersMap.get(userId);
@@ -94,6 +97,7 @@ export default function ChatMessagesListMonitor() {
           const groupFirst = !findUser || !prev || prev.from !== m.from;
           return (
             <GroupMessage
+              id={m.id}
               key={`message_${m.id}`}
               style={getInternalMessageStyle(m, user!.CODIGO)}
               groupFirst={groupFirst}
