@@ -87,7 +87,7 @@ export default function ReadyMessagesList() {
               >
               {readyMessage.TEXTO_MENSAGEM}
                 </td>
-              <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg">{sectors.find(s => s.id === readyMessage.SETOR)?.name}</td>
+              <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg">{sectors?.find(s => s.id === readyMessage.SETOR)?.name}</td>
               <td className="w-72 truncate px-2 py-6 text-lg">{Formatter.date(readyMessage.LAST_UPDATE)}</td>
               <td className="w-24 truncate px-2 py-6 pr-16 text-lg">
                 <IconButton onClick={openUpdateGroupModal(readyMessage)}>
