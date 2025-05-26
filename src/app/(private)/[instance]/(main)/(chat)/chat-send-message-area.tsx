@@ -3,7 +3,7 @@ import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
 import SendIcon from "@mui/icons-material/Send";
-import { useContext, useRef, useEffect, useCallback } from "react";
+import { useContext, useRef, useEffect, useCallback, useMemo } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle, SuggestionMode } from "emoji-picker-react";
@@ -11,10 +11,15 @@ import AudioRecorder from "./audio-recorder";
 import { Close } from "@mui/icons-material";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useState } from "react";
+import { getInternalMessageStyle } from "./render-internal-chat-messages";
+import { InternalMessage } from "@in.pulse-crm/sdk";
+import { AuthContext } from "@/app/auth-context";
 
 export default function ChatSendMessageArea() {
   const { currentChat } = useContext(WhatsappContext);
-  const { sendMessage, state, dispatch } = useContext(ChatContext);
+  const { sendMessage, state, dispatch, quotedMessage, handleQuoteMessageRemove } =
+    useContext(ChatContext);
+  const { user } = useContext(AuthContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDisabled = !currentChat;
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
@@ -86,6 +91,20 @@ export default function ChatSendMessageArea() {
     };
   }, [isDisabled, state?.text]);
 
+  const quotedMessageStyle = useMemo(() => {
+    if (quotedMessage?.from.includes("user:") && user) {
+      return getInternalMessageStyle(quotedMessage as InternalMessage, user.CODIGO);
+    }
+    if (quotedMessage?.from.includes("external:")) {
+      return "received"; // Assuming external messages are received
+    }
+    if (quotedMessage?.from.startsWith("me:")) {
+      return "sent";
+    }
+
+    return "received";
+  }, [quotedMessage]);
+
   return (
     <div className="flex max-h-36 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300">
       <input
@@ -96,8 +115,7 @@ export default function ChatSendMessageArea() {
         onChange={handleFileChange}
       />
       <div className="flex items-center gap-2">
-        <IconButton size="small" color="inherit" onClick={openQuickMessages}
-        >
+        <IconButton size="small" color="inherit" onClick={openQuickMessages}>
           <ChatBubbleIcon />
         </IconButton>
         <IconButton size="small" color="inherit" onClick={openAttachFile}>
@@ -120,28 +138,53 @@ export default function ChatSendMessageArea() {
           </div>
         </div>
       </div>
-      {state.sendAsAudio && state.file ? (
-        <div className="flex w-full items-center justify-center gap-2">
-          <audio
-            controls
-            src={URL.createObjectURL(state.file!)}
-            className="h-8 max-w-[35rem] flex-grow"
+      <div className="flex w-full flex-col gap-2">
+        {quotedMessage && (
+          <div
+            className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/5 p-2"
+            onClick={handleQuoteMessageRemove}
+          >
+            <div className="text-sm text-slate-200">
+              {quotedMessage.body.split("\n").map((line, index) => (
+                <p key={index} className="max-w-[100%] break-words text-sm">
+                  {line}
+                </p>
+              ))}
+              {quotedMessage.fileId && (
+                <span className="text-xs text-slate-400">
+                  {quotedMessage.fileName || "Arquivo anexado"}
+                </span>
+              )}
+            </div>
+            <IconButton size="small" color="inherit">
+              <Close />
+            </IconButton>
+          </div>
+        )}
+
+        {state.sendAsAudio && state.file ? (
+          <div className="flex w-full items-center justify-center gap-2">
+            <audio
+              controls
+              src={URL.createObjectURL(state.file!)}
+              className="h-8 max-w-[35rem] flex-grow"
+            />
+            <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
+              <Close />
+            </IconButton>
+          </div>
+        ) : (
+          <TextField
+            multiline
+            fullWidth
+            maxRows={5}
+            size="small"
+            placeholder="Mensagem"
+            value={state?.text}
+            onChange={handleTextChange}
           />
-          <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
-            <Close />
-          </IconButton>
-        </div>
-      ) : (
-        <TextField
-          multiline
-          fullWidth
-          maxRows={5}
-          size="small"
-          placeholder="Mensagem"
-          value={state?.text}
-          onChange={handleTextChange}
-        />
-      )}
+        )}
+      </div>
       <IconButton
         size="small"
         color="inherit"
@@ -156,20 +199,20 @@ export default function ChatSendMessageArea() {
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
       {quickMessageOpen && (
-  <Modal open onClose={() => setQuickMessageOpen(false)}>
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      {currentChat && <QuickMessage chat={currentChat} onClose={() => setQuickMessageOpen(false)} />}
-    </div>
-  </Modal>
-)}
+        <Modal open onClose={() => setQuickMessageOpen(false)}>
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            {currentChat && (
+              <QuickMessage chat={currentChat} onClose={() => setQuickMessageOpen(false)} />
+            )}
+          </div>
+        </Modal>
+      )}
 
-{quickTemplateOpen && (
-  <Modal open onClose={() => setQuickTemplateOpen(false)}>
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-  </div>
-  </Modal>
-)}
-
+      {quickTemplateOpen && (
+        <Modal open onClose={() => setQuickTemplateOpen(false)}>
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"></div>
+        </Modal>
+      )}
     </div>
   );
 }
