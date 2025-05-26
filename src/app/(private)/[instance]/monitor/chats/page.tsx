@@ -19,7 +19,7 @@ import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { StyledTableCell, StyledTableRow } from "./(table)/mui-style";
-import { UsersContext } from "../../(cruds)/users/context";
+import { InternalChatContext } from "../../internal-context";
 
 export default function MonitorAttendances() {
   const {
@@ -30,10 +30,9 @@ export default function MonitorAttendances() {
     chats,
     getChats,
   } = useWhatsappContext();
+  const { users } = useContext(InternalChatContext);
 
   const { openModal, closeModal } = useContext(AppContext);
-  const { users,loadUsers } = useContext(UsersContext);
-
   const [fCode, setFCode] = useState("");
   const [fOrigin, setFOrigin] = useState("");
   const [fPart, setFPart] = useState("");
@@ -48,9 +47,8 @@ export default function MonitorAttendances() {
 
   useEffect(() => {
     getChats();
-    loadUsers();
     getChatsMonitor();
-  }, [getChats, getChatsMonitor,loadUsers]);
+  }, [getChats, getChatsMonitor]);
 
   const monitorChatsMemo = useMemo(() => [...monitorChats], [
     monitorChats,

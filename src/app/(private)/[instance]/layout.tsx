@@ -7,8 +7,6 @@ import { Modal, ThemeProvider } from "@mui/material";
 import { ReactElement, ReactNode, useState } from "react";
 import WhatsappProvider from "./whatsapp-context";
 import { InternalChatProvider } from "./internal-context";
-import UsersProvider from "./(cruds)/users/users-context";
-import UsersProviders from "./(cruds)/users/context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
 
 interface AppLayoutProps {
@@ -22,13 +20,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="box-border h-screen w-full overflow-hidden">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
-        <UsersProviders>
-
           <WhatsappProvider>
-            <UsersProvider>
-              <InternalChatProvider>
+            <InternalChatProvider>
               <ReadyMessagesProvider>
-
                 <ThemeProvider theme={darkTheme}>
                   <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
                     <Header />
@@ -45,12 +39,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </Modal>
                   </div>
                 </ThemeProvider>
-                </ReadyMessagesProvider>
-
-              </InternalChatProvider>
-            </UsersProvider>
+              </ReadyMessagesProvider>
+            </InternalChatProvider>
           </WhatsappProvider>
-          </UsersProviders>
         </SocketProvider>
       </AppProvider>
     </div>

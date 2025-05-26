@@ -1,14 +1,14 @@
 import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { WhatsappContext } from "../../../whatsapp-context";
-import { UsersContext } from "../../../(cruds)/users/users-context";
+import { InternalChatContext } from "../../../internal-context";
 
 export default function TransferChatModal() {
   const { closeModal } = useContext(AppContext);
   const { currentChat, transferAttendance } = useContext(WhatsappContext);
-  const { users,loadUsers } = useContext(UsersContext);
+  const { users } = useContext(InternalChatContext);
 
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
@@ -18,9 +18,6 @@ export default function TransferChatModal() {
     transferAttendance(currentChat?.id, selectedUser);
     closeModal();
   };
-  useEffect(() => {
-      loadUsers();
-  }, []);
 
   return (
     <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">
@@ -37,6 +34,17 @@ export default function TransferChatModal() {
           required
           value={selectedUser ?? ""}
           onChange={(e) => setSelectedUser(Number(e.target.value))}
+          slotProps={{
+            select: {
+              MenuProps: {
+                PaperProps: {
+                  style: {
+                    maxHeight: 48 * 5 + 8, // 5 itens de 48px + padding
+                  },
+                },
+              },
+            },
+          }}
         >
           {users?.map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
