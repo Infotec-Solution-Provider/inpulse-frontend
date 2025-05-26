@@ -1,3 +1,5 @@
+import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
+
 export interface SendMessageDataState {
   text: string;
   file?: File;
@@ -5,6 +7,7 @@ export interface SendMessageDataState {
   sendAsAudio: boolean;
   sendAsDocument: boolean;
   isEmojiMenuOpen: boolean;
+  quotedId?: number | null;
 }
 
 type ChangeTextAction = { type: "change-text"; text: string };
@@ -14,6 +17,14 @@ type AttachFileIdAction = { type: "attach-file-id"; fileId: number };
 type SetAudioAction = { type: "set-audio"; file: File };
 type RemoveFileAction = { type: "remove-file" };
 type ToggleEmojiMenuAction = { type: "toggle-emoji-menu" };
+type QuoteMessageAction = {
+  type: "quote-message";
+  id: number;
+};
+type RemoveQuotedMessageAction = {
+  type: "remove-quoted-message";
+};
+
 type ResetAction = { type: "reset" };
 
 export type ChangeMessageDataAction =
@@ -24,7 +35,9 @@ export type ChangeMessageDataAction =
   | SetAudioAction
   | RemoveFileAction
   | ToggleEmojiMenuAction
-  | ResetAction;
+  | ResetAction
+  | QuoteMessageAction
+  | RemoveQuotedMessageAction;
 
 export default function ChatReducer(
   state: SendMessageDataState,
@@ -78,6 +91,14 @@ export default function ChatReducer(
         ...state,
         isEmojiMenuOpen: !state.isEmojiMenuOpen,
       };
+    case "quote-message":
+      return {
+        ...state,
+        quotedId: action.id,
+      };
+    case "remove-quoted-message":
+      delete state.quotedId;
+      return state;
     default:
       return {
         ...state,

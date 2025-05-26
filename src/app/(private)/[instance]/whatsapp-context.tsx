@@ -174,6 +174,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Envia mensagem
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
+    console.log("Enviando mensagem", to, data);
     data.text = `*${user?.NOME}*: ${data.text}`;
     api.current.sendMessage(to, data);
   }, [user]);
