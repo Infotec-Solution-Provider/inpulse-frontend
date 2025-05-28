@@ -43,9 +43,9 @@ export default function ChatMessagesList() {
           className="flex h-full w-full flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2"
           ref={ulRef}
         >
-          {isWhatsappChat && RenderWhatsappChatMessages()}
-          {isInternalChat && RenderInternalChatMessages()}
-          {isInternalGroup && RenderInternalGroupMessages()}
+        {isWhatsappChat && <RenderWhatsappChatMessages />}
+        {isInternalChat && <RenderInternalChatMessages />}
+        {isInternalGroup && <RenderInternalGroupMessages />}
         </ul>
       )}
     </>
