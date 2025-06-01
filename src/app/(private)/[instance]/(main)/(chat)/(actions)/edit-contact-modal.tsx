@@ -55,7 +55,7 @@ export default function EditContactModal() {
             className="w-32"
             onClick={handleEditContact}
           >
-            Finalizar
+            SALVAR
           </Button>
         </div>
       </form>
