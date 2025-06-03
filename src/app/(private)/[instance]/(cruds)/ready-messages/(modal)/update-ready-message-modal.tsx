@@ -18,6 +18,7 @@ import { useReadyMessagesContext } from "../ready-messages-context";
 import filesService from "@/lib/services/files.service";
 import { ReadyMessage } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
+import { useWhatsappContext } from "../../../whatsapp-context";
 
 interface Props {
   readyMessage: ReadyMessage;
@@ -31,7 +32,7 @@ interface Props {
 
 export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Props) {
   const { closeModal } = useAppContext();
-  const { sectors } = useContext(UsersContext);
+  const { sectors } = useWhatsappContext();
   const { variables = [] } = useReadyMessagesContext() || {};
   const { user, instance } = useContext(AuthContext);
   const [title, setTitle] = useState(readyMessage.TITULO || "");
@@ -162,7 +163,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
             }
           >
             <MenuItem value="">Nenhum</MenuItem>
-            {sectors.map((s) => (
+            {sectors?.map((s) => (
               <MenuItem key={s.id} value={s.id}>
                 {s.name}
               </MenuItem>

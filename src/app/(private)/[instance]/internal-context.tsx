@@ -86,7 +86,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       setCurrentChat(chat);
       setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
       setWppCurrMsgs([]);
-      currentChatRef.current = chat;
+      currentChatRef.current = chat as unknown as DetailedChat;
 
       api.current.markChatMessagesAsRead(chat.id);
       setInternalChats((prev) =>

@@ -48,7 +48,7 @@ export default function RenderInternalGroupMessages() {
         const findQuoted =
           m.internalChatId &&
           m.quotedId &&
-          (getMessageById(m.internalChatId, m.quotedId) as InternalMessage);
+          (getMessageById(m.internalChatId, m.quotedId,true) as InternalMessage);
 
         const quotedMsg = findQuoted
           ? getQuotedMsgProps(findQuoted, getInternalMessageStyle(findQuoted, user!.CODIGO), users)
@@ -63,16 +63,29 @@ export default function RenderInternalGroupMessages() {
           const findUser = usersMap.get(userId);
           name = findUser ? findUser.NOME : null;
         }
-        if (m.from.startsWith("external:")) {
-          // apenas digitos replace
-          const phone = m.from.split(":")[2].replace(/\D/g, "");
-          const findUser = usersPhoneMap.get(phone);
-          name = findUser ? findUser.NOME : Formatter.phone(phone);
-          console.log(phone, findUser, usersPhoneMap.values());
-        }
+          if (m.from.startsWith("external:")) {
+            const parts = m.from.split(":");
+            let raw = "";
+            if (parts.length === 3) {
+              raw = parts[2];
+            } else if (parts.length === 2) {
+              raw = parts[1];
+            }
+            const phone = raw.split("@")[0].replace(/\D/g, "");
+            const findUser = usersPhoneMap.get(phone);
+          name = findUser
+            ? findUser.NOME
+            : (phone
+                ? phone.length <= 13
+                  ? Formatter.phone(phone)
+                  : phone
+                : "Sem número");
+
+          }
 
         return (
           <GroupMessage
+            id={m.id}
             key={`message_${m.id}`}
             style={getInternalMessageStyle(m, user!.CODIGO)}
             groupFirst={groupFirst}
@@ -84,7 +97,6 @@ export default function RenderInternalGroupMessages() {
             fileName={m.fileName}
             fileType={m.fileType}
             fileSize={m.fileSize}
-            id={m.id}
             quotedMessage={quotedMsg}
             onQuote={() => {
               handleQuoteMessage(m);

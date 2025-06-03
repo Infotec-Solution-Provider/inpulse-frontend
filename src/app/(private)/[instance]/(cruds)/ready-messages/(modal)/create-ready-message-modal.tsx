@@ -14,8 +14,8 @@ import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
 import { VariablesMenu } from "./Variables";
 import { useReadyMessagesContext } from "../ready-messages-context";
-import { UsersContext } from "../../users/users-context";
 import { AuthContext } from "@/app/auth-context";
+import { useWhatsappContext } from "../../../whatsapp-context";
 
 interface Props {
   onSubmit: (data: {
@@ -35,7 +35,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileRef = useRef<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sectors } = useContext(UsersContext);
+  const { sectors } = useWhatsappContext();
   const [varModal, setVarModal] = useState(false);
   const textFieldRef = useRef<HTMLInputElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -158,7 +158,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
             }
           >
             <MenuItem value="">Nenhum</MenuItem>
-            {sectors.map((s) => (
+            {sectors?.map((s) => (
               <MenuItem key={s.id} value={s.id}>
                 {s.name}
               </MenuItem>

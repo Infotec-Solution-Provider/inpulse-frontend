@@ -7,14 +7,13 @@ import { useAppContext } from "../../app-context";
 import UpdateReadyMessageModal from "./(modal)/update-ready-message-modal";
 import { Delete } from "@mui/icons-material";
 import DeleteReadyMessageModal from "./(modal)/delete-ready-message-moda";
-import { UsersContext } from "../users/users-context";
-import { useContext } from "react";
 import CreateReadyMessageModal from "./(modal)/create-ready-message-modal";
+import { useWhatsappContext } from "../../whatsapp-context";
 
 
 export default function ReadyMessagesList() {
   const { openModal } = useAppContext();
-  const { sectors } = useContext(UsersContext);
+  const { sectors } = useWhatsappContext();
 
   const { createReadyMessage } = useReadyMessagesContext();
 

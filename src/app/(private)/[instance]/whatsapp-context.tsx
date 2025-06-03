@@ -59,7 +59,7 @@ interface IWhatsappContext {
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
   updateChatContact: (contactId: number, newName: string) => void;
-  currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
+  currentChatRef: React.RefObject<DetailedChat | null>;
   monitorChats: DetailedChat[];
   getChats: () => void;
   createSchedule: (chat: WppChat, date: Date) => void;
@@ -79,7 +79,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null); // Conversa que está aberta
-  const currentChatRef = useRef<DetailedChat | DetailedInternalChat | null>(null); // Referência para a conversa atual
+  const currentChatRef = useRef<DetailedChat | null>(null); // Referência para a conversa atual
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]); // Mensagens da conversa aberta
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
   const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
@@ -151,6 +151,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     (chatId: number, resultId: number) => {
       api.current.setAuth(token || "");
       api.current.finishChatById(chatId, resultId);
+      getChatsMonitor();
     },
     [api, token],
   );
@@ -160,6 +161,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.setAuth(token || "");
       api.current.transferAttendance(chatId, selectedUser).then(() => {
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+        getChatsMonitor();
       });
     },
     [api, token],
@@ -174,7 +176,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Envia mensagem
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
-    console.log("Enviando mensagem", to, data);
     data.text = `*${user?.NOME}*: ${data.text}`;
     api.current.sendMessage(to, data);
   }, [user]);
@@ -291,6 +292,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setCurrentChatMessages,
           setChats,
           currentChatRef,
+          chats,
         ),
       );
 

@@ -76,7 +76,7 @@ export default function FormGeral({ formData, onFormChange, initialImage, onAvat
           value={formData.SETOR || ""}
           onChange={(e) => onFormChange({ SETOR: Number(e.target.value) })}
         >
-          {sectors.map((sector) => (
+          {sectors?.map((sector) => (
             <MenuItem value={sector.id} key={sector.id}>
               {sector.name}
             </MenuItem>

@@ -23,16 +23,25 @@ export default function ReceiveMessageHandler(
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
-  chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
+  chatRef: RefObject<DetailedChat | null>,
+  chats: (DetailedChat )[],
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     console.log("Received message", message);
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
-      new Notification(Formatter.phone(message.from), {
-        body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
-        icon: HorizontalLogo.src,
-      });
-    }
+          const matchedChat = chats.find((chat) => {
+              return chat.contactId === message.contactId;
+          });
+
+          const contactName = matchedChat?.contact?.name;
+          new Notification(contactName || Formatter.phone(message.from), {
+            body:
+              message.type !== "chat"
+                ? types[message.type] || "Enviou um arquivo"
+                : message.body,
+            icon: HorizontalLogo.src,
+          });
+        }
 
     setMessages((prev) => {
       const newMessages = { ...prev };
@@ -53,10 +62,11 @@ export default function ReceiveMessageHandler(
     });
 
     const x = chatRef.current;
+    console.log("chatRef.current", x);
     setChats((prev) =>
       prev
         .map((chat) => {
-          if (chat.contactId === message.contactId && x && x.chatType === "wpp") {
+          if (chat.contactId === message.contactId && x) {
             return {
               ...chat,
               isUnread: x.contactId !== message.contactId,
@@ -71,7 +81,8 @@ export default function ReceiveMessageHandler(
         ),
     );
 
-    if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
+
+    if (x && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
         const newMessages = [...prev];
         const i = newMessages.findIndex((m) => m.id === message.id);

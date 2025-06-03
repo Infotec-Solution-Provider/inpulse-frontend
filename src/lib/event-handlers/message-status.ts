@@ -18,7 +18,6 @@ export default function MessageStatusHandler(
   const x = chatRef.current;
 
   return ({ status, messageId, contactId }: MessageStatusCallbackProps) => {
-    console.log("message status", messageId, status);
     setMessages((prev) => {
       if (!prev[contactId]) {
         return prev;

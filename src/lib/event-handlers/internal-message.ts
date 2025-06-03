@@ -56,8 +56,10 @@ export default function InternalReceiveMessageHandler(
       if (message.from.startsWith("external:")) {
         const user = users.find((u) => u.WHATSAPP === message.from.split(":")[1]);
         name = user
-          ? user.NOME || Formatter.phone(user.WHATSAPP!)
-          : Formatter.phone(message.from.split(":")[1]);
+          ? user.NOME || (user.WHATSAPP && user.WHATSAPP.length <= 13 ? Formatter.phone(user.WHATSAPP) : "Sem número")
+          : (message.from.split(":")[1].length <= 13
+              ? Formatter.phone(message.from.split(":")[1])
+              : message.from.split(":")[1]);
       }
 
       new Notification(name, {

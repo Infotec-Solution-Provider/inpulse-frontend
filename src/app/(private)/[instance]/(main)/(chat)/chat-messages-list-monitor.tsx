@@ -90,7 +90,7 @@ export default function ChatMessagesListMonitor() {
         usersMap.size > 0 &&
         currentInternalChatMessages &&
         currentInternalChatMessages.length > 0 &&
-        currentInternalChatMessages.map((m, i, arr) => {
+        currentInternalChatMessages.map((m: InternalMessage, i: number, arr: any[]) => {
           const userId = Number(m.from.split(":")[1]);
           const findUser = usersMap.get(userId);
           const prev = i > 0 ? arr[i - 1] : null;

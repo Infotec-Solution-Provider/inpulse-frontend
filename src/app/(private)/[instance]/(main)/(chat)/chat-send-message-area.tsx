@@ -63,10 +63,9 @@ export default function ChatSendMessageArea() {
   function sendMessages() {
     sendMessage();
     dispatch({ type: "change-text", text: "" });
+    handleQuoteMessageRemove();
+    document.dispatchEvent(new Event("scroll-to-bottom"));
 
-    setTimeout(() => {
-      document.dispatchEvent(new Event("scroll-to-bottom"));
-    }, 100);
   }
 
   useEffect(() => {

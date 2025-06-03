@@ -35,12 +35,6 @@ export default function RenderWhatsappChatMessages() {
             )
           : null;
 
-        console.log(m);
-
-        if (quotedMsg) {
-          console.log("quotedMsg", quotedMsg);
-        }
-
         return (
           <Message
             id={m.id}
