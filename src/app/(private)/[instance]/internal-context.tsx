@@ -17,6 +17,7 @@ import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-me
 import usersService from "@/lib/services/users.service";
 import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
+import { toast } from "react-toastify";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -38,6 +39,7 @@ interface InternalChatContextType {
   currentInternalChatMessages: InternalMessage[];
   getInternalChatsMonitor: () => void;
   monitorMessages: Record<number, InternalMessage[]>;
+  deleteInternalChat: (id: number) => Promise<void>;
 
   users: User[];
 }
@@ -103,7 +105,17 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     },
     [messages],
   );
-
+  const deleteInternalChat = async (id: number) => {
+  if (api.current) {
+    try {
+      await api.current.deleteInternalChat(id);
+      toast.success("Chat deletado com sucesso!");
+      setInternalChats((prev) => prev.filter((chat) => chat.id !== id));
+    } catch (error) {
+      toast.error("Erro ao deletar Chat");
+    }
+  }
+};
   const sendInternalMessage = useCallback(
     (data: InternalSendMessageData) => {
       if (token) {
@@ -231,6 +243,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         monitorInternalChats,
         getInternalChatsMonitor,
         monitorMessages,
+        deleteInternalChat,
       }}
     >
       {children}

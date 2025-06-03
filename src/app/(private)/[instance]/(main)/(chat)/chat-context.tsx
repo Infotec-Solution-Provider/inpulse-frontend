@@ -71,7 +71,6 @@ export default function ChatProvider({ children }: ChatProviderProps) {
       id: number,
       isInternal: boolean = false,
     ): InternalMessage | WppMessage | null => {
-      console.log(internalMsgs, contextId, id);
       if (isInternal) {
         return internalMsgs[contextId]?.find((msg) => msg.id === id) || null;
       }

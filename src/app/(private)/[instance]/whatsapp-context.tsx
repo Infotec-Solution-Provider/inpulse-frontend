@@ -59,7 +59,7 @@ interface IWhatsappContext {
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
   updateChatContact: (contactId: number, newName: string) => void;
-  currentChatRef: React.RefObject<DetailedChat | null>;
+  currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: DetailedChat[];
   getChats: () => void;
   createSchedule: (chat: WppChat, date: Date) => void;

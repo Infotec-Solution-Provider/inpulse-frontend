@@ -11,6 +11,7 @@ import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 import { Formatter } from "@in.pulse-crm/utils";
 import { useWhatsappContext } from "../../whatsapp-context";
+import DeleteChatModal from "./(actions)/delete-internal-chat-modal";
 
 export interface ChatContactInfoProps {
   name: string;
@@ -27,7 +28,9 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
   const openFinishChatModal = () => {
     openModal(<FinishChatModal />);
   };
-
+  const openDeleteChatModal = () => {
+    openModal(<DeleteChatModal />);
+  };
   const openTransferChatModal = () => {
     openModal(<TransferChatModal />);
   };
@@ -57,6 +60,15 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
           </h2>
         </div>
       </div>
+            {currentChat?.chatType === "internal" && !currentChat.isGroup && (
+        <div className="flex items-center">
+          <Tooltip title={<h3 className="text-base">Deletar conversa</h3>}>
+            <IconButton onClick={openDeleteChatModal}>
+              <AssignmentTurnedInIcon color="success" />
+            </IconButton>
+          </Tooltip>
+        </div>
+      )}
       {currentChat?.chatType === "wpp" && (
         <div className="flex items-center">
           <Tooltip title={<h3 className="text-base">Editar contato</h3>}>
