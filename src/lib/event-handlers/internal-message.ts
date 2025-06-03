@@ -17,7 +17,7 @@ const types: Record<string, string> = {
   document: "Enviou um documento.",
   file: "Enviou um arquivo.",
 };
-
+const notifiedMessages = new Set<number>();
 export default function InternalReceiveMessageHandler(
   api: InternalChatClient,
   setMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
@@ -28,6 +28,8 @@ export default function InternalReceiveMessageHandler(
   loggedUser: User,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
+     if (notifiedMessages.has(message.id)) return;
+     notifiedMessages.add(message.id);
     const isCurrentChat =
       chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
     const isCurrentUser = message.from === `user:${loggedUser.CODIGO}`;
@@ -54,12 +56,21 @@ export default function InternalReceiveMessageHandler(
         name = users.find((u) => u.CODIGO === +message.from.split(":")[1])?.NOME || "Desconhecido";
       }
       if (message.from.startsWith("external:")) {
-        const user = users.find((u) => u.WHATSAPP === message.from.split(":")[1]);
+
+       const parts = message.from.split(":");
+          let raw = "";
+          if (parts.length === 3) {
+            raw = parts[2];
+          } else if (parts.length === 2) {
+            raw = parts[1];
+          }
+        const phone = raw.split("@")[0].replace(/\D/g, "");
+        const user = users.find((u) => u.WHATSAPP === phone);
         name = user
           ? user.NOME || (user.WHATSAPP && user.WHATSAPP.length <= 13 ? Formatter.phone(user.WHATSAPP) : "Sem número")
-          : (message.from.split(":")[1].length <= 13
-              ? Formatter.phone(message.from.split(":")[1])
-              : message.from.split(":")[1]);
+          : (phone.length <= 13
+              ? Formatter.phone(phone)
+              : phone);
       }
 
       new Notification(name, {

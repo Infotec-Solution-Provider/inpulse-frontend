@@ -27,14 +27,21 @@ export default function ReceiveMessageHandler(
   chats: (DetailedChat )[],
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
-    console.log("Received message", message);
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
           const matchedChat = chats.find((chat) => {
               return chat.contactId === message.contactId;
           });
+       const parts = message.from.split(":");
+          let raw = "";
+          if (parts.length === 3) {
+            raw = parts[2];
+          } else if (parts.length === 2) {
+            raw = parts[1];
 
+          }
+        const phone = raw.split("@")[0].replace(/\D/g, "");
           const contactName = matchedChat?.contact?.name;
-          new Notification(contactName || Formatter.phone(message.from), {
+          new Notification(contactName || Formatter.phone(phone), {
             body:
               message.type !== "chat"
                 ? types[message.type] || "Enviou um arquivo"
@@ -62,7 +69,6 @@ export default function ReceiveMessageHandler(
     });
 
     const x = chatRef.current;
-    console.log("chatRef.current", x);
     setChats((prev) =>
       prev
         .map((chat) => {
