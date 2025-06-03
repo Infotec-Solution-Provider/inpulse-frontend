@@ -29,7 +29,6 @@ export default function RenderInternalGroupMessages() {
     for (const user of users) {
       map.set(user.CODIGO, user);
     }
-
     return map;
   }, [users]);
 
@@ -37,7 +36,9 @@ export default function RenderInternalGroupMessages() {
     const map = new Map<string, User>();
     for (const user of users) {
       const phone = user.WHATSAPP;
-      phone && map.set(phone, user);
+      if (phone) {
+        map.set(phone, user);
+      }
     }
     return map;
   }, [users]);
@@ -48,10 +49,15 @@ export default function RenderInternalGroupMessages() {
         const findQuoted =
           m.internalChatId &&
           m.quotedId &&
-          (getMessageById(m.internalChatId, m.quotedId,true) as InternalMessage);
+          (getMessageById(m.internalChatId, m.quotedId, true) as InternalMessage);
 
         const quotedMsg = findQuoted
-          ? getQuotedMsgProps(findQuoted, getInternalMessageStyle(findQuoted, user!.CODIGO), users)
+          ? getQuotedMsgProps(
+              findQuoted,
+              getInternalMessageStyle(findQuoted, user!.CODIGO),
+              users,
+              null
+            )
           : null;
 
         const prev = i > 0 ? arr[i - 1] : null;
@@ -63,25 +69,25 @@ export default function RenderInternalGroupMessages() {
           const findUser = usersMap.get(userId);
           name = findUser ? findUser.NOME : null;
         }
-          if (m.from.startsWith("external:")) {
-            const parts = m.from.split(":");
-            let raw = "";
-            if (parts.length === 3) {
-              raw = parts[2];
-            } else if (parts.length === 2) {
-              raw = parts[1];
-            }
-            const phone = raw.split("@")[0].replace(/\D/g, "");
-            const findUser = usersPhoneMap.get(phone);
+
+        if (m.from.startsWith("external:")) {
+          const parts = m.from.split(":");
+          let raw = "";
+          if (parts.length === 3) {
+            raw = parts[2];
+          } else if (parts.length === 2) {
+            raw = parts[1];
+          }
+          const phone = raw.split("@")[0].replace(/\D/g, "");
+          const findUser = usersPhoneMap.get(phone);
           name = findUser
             ? findUser.NOME
-            : (phone
-                ? phone.length <= 13
-                  ? Formatter.phone(phone)
-                  : phone
-                : "Sem número");
-
-          }
+            : phone
+            ? phone.length <= 13
+              ? Formatter.phone(phone)
+              : phone
+            : "Sem número";
+        }
 
         return (
           <GroupMessage

@@ -13,12 +13,18 @@ export default function getQuotedMsgProps(
 
   let authorName: string | null = null;
 
-  if ("internalChatId" in quotedMsg && quotedMsg.from.startsWith("user:")) {
-    const userId = +quotedMsg.from.split(":")[1];
-    const user = users.find((u) => u.CODIGO === userId);
+    if (quotedMsg?.from?.startsWith("user:")) {
+      const userId = +quotedMsg.from.split(":")[1];
+      const user = users.find((u) => u.CODIGO === userId);
+      authorName = user ? user.NOME : null;
 
-    authorName = user ? user.NOME : null;
-  }
+    } else if (quotedMsg?.from?.startsWith("external:")) {
+      const parts = quotedMsg.from.split(":");
+      let raw = parts.length === 3 ? parts[2] : parts[1];
+      const phone = raw.split("@")[0].replace(/\D/g, "");
+      const user = users.find((u) => u.WHATSAPP === phone);
+      authorName = user ? user.NOME : phone;
+    }
 
   if (chat && "contactId" in quotedMsg) {
     const phone = chat.contact?.phone;
