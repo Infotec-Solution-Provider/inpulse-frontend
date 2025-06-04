@@ -137,7 +137,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
         />
         <p className="w-32"></p>
       </div>
-      <ul className="max-h-[20rem] overflow-y-auto">
+      <ul className="max-h-[20rem] scrollbar-whatsapp">
         {filteredContacts.map((c) => (
           <ContactItem key={c.id} contact={c} handleEdit={handleEdit} handleDelete={handleDelete} />
         ))}

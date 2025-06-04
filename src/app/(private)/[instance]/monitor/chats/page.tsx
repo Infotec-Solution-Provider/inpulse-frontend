@@ -7,6 +7,7 @@ import {
   TableHead,
   TableContainer,
   Table,
+  TableBody,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
@@ -53,42 +54,42 @@ export default function MonitorAttendances() {
   const monitorChatsMemo = useMemo(() => [...monitorChats], [
     monitorChats,
   ]);
-const filtered = useMemo(() => {
-  return monitorChatsMemo.filter((chat: any) => {
-    const isInternal = !!chat.users;
+  const filtered = useMemo(() => {
+    return monitorChatsMemo.filter((chat: any) => {
+      const isInternal = !!chat.users;
 
-    if (fCode && !String(chat.id).includes(fCode)) return false;
-    if (fCodeERP && !String(chat.customer?.CODIGOERP || "").includes(fCodeERP)) return false;
+      if (fCode && !String(chat.id).includes(fCode)) return false;
+      if (fCodeERP && !String(chat.customer?.CODIGOERP || "").includes(fCodeERP)) return false;
 
-    const client = chat.customer?.RAZAO || chat.contactName || "";
-    if (fPart && !client.toLowerCase().includes(fPart.toLowerCase())) return false;
+      const client = chat.customer?.RAZAO || chat.contactName || "";
+      if (fPart && !client.toLowerCase().includes(fPart.toLowerCase())) return false;
 
-    const phone = chat.contact?.phone || "";
-    if (fPhone && !phone.includes(fPhone)) return false;
+      const phone = chat.contact?.phone || "";
+      if (fPhone && !phone.includes(fPhone)) return false;
 
-    const contactName = chat.contact?.name || "";
-    if (fContactName && !contactName.toLowerCase().includes(fContactName.toLowerCase())) return false;
+      const contactName = chat.contact?.name || "";
+      if (fContactName && !contactName.toLowerCase().includes(fContactName.toLowerCase())) return false;
 
-    const customerName = chat.customer?.RAZAO || "";
-    if (fCustomerName && !customerName.toLowerCase().includes(fCustomerName.toLowerCase())) return false;
+      const customerName = chat.customer?.RAZAO || "";
+      if (fCustomerName && !customerName.toLowerCase().includes(fCustomerName.toLowerCase())) return false;
 
-    const operator = chat?.user?.NOME || "";
-    if (fOperator && !operator.toLowerCase().includes(fOperator.toLowerCase())) return false;
+      const operator = chat?.user?.NOME || "";
+      if (fOperator && !operator.toLowerCase().includes(fOperator.toLowerCase())) return false;
 
-    const start = new Date(chat.startDate || chat.startedAt).toLocaleDateString();
-    if (fStart && !start.includes(fStart)) return false;
+      const start = new Date(chat.startDate || chat.startedAt).toLocaleDateString();
+      if (fStart && !start.includes(fStart)) return false;
 
-    const end = chat.endDate || chat.finishedAt
-      ? new Date(chat.endDate || chat.finishedAt).toLocaleDateString()
-      : "";
-    if (fEnd && !end.includes(fEnd)) return false;
+      const end = chat.endDate || chat.finishedAt
+        ? new Date(chat.endDate || chat.finishedAt).toLocaleDateString()
+        : "";
+      if (fEnd && !end.includes(fEnd)) return false;
 
-    const res = chat.result || "";
-    if (fResult && !res.toLowerCase().includes(fResult.toLowerCase())) return false;
+      const res = chat.result || "";
+      if (fResult && !res.toLowerCase().includes(fResult.toLowerCase())) return false;
 
-    return true;
-  });
-}, [monitorChatsMemo, fCode, fCodeERP, fPart, fPhone, fContactName, fCustomerName, fOperator, fStart, fEnd, fResult]);
+      return true;
+    });
+  }, [monitorChatsMemo, fCode, fCodeERP, fPart, fPhone, fContactName, fCustomerName, fOperator, fStart, fEnd, fResult]);
 
   const openWhatsappChat = (chat: any) => {
 
@@ -96,12 +97,13 @@ const filtered = useMemo(() => {
     setCurrentChat(chat);
     openChat(chat);
     openModal(
-      <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
+      <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
         <button
           onClick={() => closeModal?.()}
-          className="absolute right-2 top-1 z-10 text-white hover:text-red-400"
+          className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"
         >
           ✕
+
         </button>
         <ChatProvider>
           <ChatHeader
@@ -110,10 +112,13 @@ const filtered = useMemo(() => {
             customerName={chat.customer?.RAZAO || "N/D"}
             phone={chat.contact?.phone || "N/D"}
           />
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 scrollbar-whatsapp bg-white text-black dark:bg-slate-900 dark:text-white drop-shadow-md">
             <ChatMessagesList />
           </div>
-          <ChatSendMessageArea />
+          <div className="bg-white text-black dark:bg-slate-900 p-2 border-t border-gray-200 dark:border-gray-700">
+            <ChatSendMessageArea />
+
+          </div>
         </ChatProvider>
       </div>
     );
@@ -137,10 +142,10 @@ const filtered = useMemo(() => {
 
   return (
 
-    <div className="mx-auto box-border grid grid-cols-[85rem] gap-y-8 px-4 py-8">
+    <div className="flex flex-col  px-10 pt-5 w-screen  h-screen box-border relative bg-white text-black dark:bg-gray-900 dark:text-white">
 
-      <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
-        <Table className="max-h-[100%] overflow-auto">
+      <TableContainer className="mx-auto max-h-[75vh] overflow-auto scrollbar-whatsapp rounded-md bg-indigo-700 bg-opacity-5 shadow-md dark:bg-slate-900">
+        <Table className="max-h-[80%] overflow-auto">
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900 z-50 ">
               <StyledTableCell className="px-2 py-2 text-center">Ações</StyledTableCell>
@@ -194,16 +199,16 @@ const filtered = useMemo(() => {
                 />
               </StyledTableCell>
               <StyledTableCell>
-              <TextField
-                value={fContactName}
-                slotProps={{ input: { disableUnderline: true } }}
+                <TextField
+                  value={fContactName}
+                  slotProps={{ input: { disableUnderline: true } }}
 
-                onChange={(e) => setFContactName(e.target.value)}
-                placeholder="Contato"
-                size="small"
-                variant="standard"
-                className="w-full"
-              />
+                  onChange={(e) => setFContactName(e.target.value)}
+                  placeholder="Contato"
+                  size="small"
+                  variant="standard"
+                  className="w-full"
+                />
               </StyledTableCell>
 
               <StyledTableCell>
@@ -244,11 +249,11 @@ const filtered = useMemo(() => {
               </StyledTableCell>
             </StyledTableRow>
           </TableHead>
-          <tbody>
+          <TableBody>
             {filtered.map((chat: any, idx) => {
               return (
-                <tr key={idx} className="even:bg-indigo-200/5">
-                  <td className="px-4 py-2 text-center">
+                <StyledTableRow key={idx} >
+                  <StyledTableCell className="px-4 py-2 text-center">
                     <div className="flex justify-center gap-1">
                       <IconButton size="small" onClick={() => openWhatsappChat(chat)}>
                         <VisibilityIcon fontSize="small" />
@@ -260,7 +265,7 @@ const filtered = useMemo(() => {
                         <AssignmentTurnedIn color="success" fontSize="small" />
                       </IconButton>
                     </div>
-                  </td>
+                  </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {chat.id}
                   </StyledTableCell>
@@ -268,7 +273,7 @@ const filtered = useMemo(() => {
                     {chat.customer?.CODIGOERP}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                  { chat.customer?.RAZAO || chat.contactName }
+                    {chat.customer?.RAZAO || chat.contactName}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {chat.contact.phone}
@@ -280,16 +285,16 @@ const filtered = useMemo(() => {
                     {chat.customer?.RAZAO}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
-                  {users.find((user: any) => String(user.CODIGO) === String(chat?.userId))?.NOME}
+                    {users.find((user: any) => String(user.CODIGO) === String(chat?.userId))?.NOME}
                   </StyledTableCell>
                   <StyledTableCell className="px-2 py-3">
                     {new Date(chat?.startAt || chat?.startedAt).toLocaleDateString()}
                   </StyledTableCell>
 
-                </tr>
+                </StyledTableRow>
               );
             })}
-          </tbody>
+          </TableBody>
         </Table>
       </TableContainer>
     </div>

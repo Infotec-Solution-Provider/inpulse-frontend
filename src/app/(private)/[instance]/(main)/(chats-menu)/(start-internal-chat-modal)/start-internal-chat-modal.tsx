@@ -8,7 +8,7 @@ import { InternalChatContext } from "../../../internal-context";
 export default function StartInternalChatModal() {
   const { closeModal } = useContext(AppContext);
   const { users, internalChats } = useContext(InternalChatContext);
-  
+
   const startedChats: Array<number> = useMemo(() => {
     const directChats = internalChats.filter((c) => !c.isGroup);
     const usersSet: Set<number> = new Set();
@@ -29,7 +29,7 @@ export default function StartInternalChatModal() {
         </IconButton>
       </header>
 
-      <ul className="flex h-[30rem] flex-col items-center gap-2 overflow-y-auto">
+      <ul className="flex h-[30rem] flex-col items-center gap-2 scrollbar-whatsapp">
         {users.map((u) => {
           return (
             <StartInternalChatModalItem

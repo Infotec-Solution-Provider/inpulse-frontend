@@ -35,10 +35,12 @@ export interface MessageProps {
 }
 
 export const msgStyleVariants = {
-  received: "bg-slate-900 rounded-bl-none",
-  sent: "bg-green-900 rounded-br-none",
-  system: "bg-yellow-800",
+  received: "bg-slate-100 text-black dark:bg-slate-700 dark:text-slate-200 rounded-bl-none",
+  sent: "bg-green-100 text-black dark:bg-green-900 dark:text-slate-200 rounded-br-none",
+  system: "bg-yellow-100 text-black dark:bg-yellow-900 dark:text-white",
 };
+
+
 
 export const liStyleVariants = {
   received: "flex-row",
@@ -79,7 +81,11 @@ export default function Message({
       >
         {quotedMessage && (
           <div
-            className={`flex w-full flex-col gap-1 rounded-sm border-l-2 bg-slate-600/50 p-2 ${quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"}`}
+            className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${quotedMessage.style === "sent"
+                ? "border-indigo-600 dark:border-indigo-400"
+                : "border-orange-600 dark:border-orange-400"
+              }`}
+
             onClick={() => {
               // focus on quoted message
               const quotedElement = document.getElementById(String(quotedMessage.id));
@@ -93,12 +99,10 @@ export default function Message({
               }
             }}
           >
-            <h2
-              className={`${quotedMessage.style === "sent" ? "text-indigo-400" : "text-orange-400"}`}
-            >
+            <h2 className={`${quotedMessage.style === "sent" ? "text-indigo-400 dark:text-indigo-600" : "text-orange-400 dark:text-orange-600"}`}>
               {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
             </h2>
-            <div className="w-full text-slate-200">
+            <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
               {quotedMessage.text.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
                   {line}
@@ -118,7 +122,7 @@ export default function Message({
         )}
 
         <div className="flex w-full flex-col gap-1">
-          <div className="w-full text-slate-200">
+          <div className="w-full text-slate-900 dark:text-slate-200">
             {text.split("\n").map((line, index) => (
               <p key={index} className="max-w-[100%] break-words text-sm">
                 {line}
@@ -137,7 +141,7 @@ export default function Message({
 
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
-            <p className="text-xs text-slate-300">{date.toLocaleString()}</p>
+            <p className="text-xs text-slate-900 dark:text-slate-200">{date.toLocaleString()}</p>
           </div>
         </div>
       </div>

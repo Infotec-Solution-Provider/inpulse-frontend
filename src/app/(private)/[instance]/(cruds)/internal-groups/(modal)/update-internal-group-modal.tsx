@@ -196,7 +196,7 @@ export default function UpdateInternalGroupModal({
           </div>
           <div className="flex min-h-0 flex-1 flex-col rounded border-[1px] border-slate-600 p-2">
             <h1 className="border-b border-slate-200/25 p-2">Integrantes</h1>
-            <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2">
+            <div className="mt-2 min-h-0 flex-1 scrollbar-whatsapp px-2">
               <List dense sx={{ maxHeight: 300, minHeight: 300, overflow: "auto" }}>
                 {participants.map((p) => {
                   return (

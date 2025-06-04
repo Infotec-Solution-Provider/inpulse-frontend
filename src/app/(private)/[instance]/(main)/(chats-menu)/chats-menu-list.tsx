@@ -78,7 +78,7 @@ export default function ChatsMenuList() {
   }, [filteredChats]);
 
   return (
-    <menu className="flex flex-col gap-2 overflow-y-auto bg-slate-300/5 p-3">
+<menu className="flex flex-col gap-2 scrollbar-whatsapp bg-slate-300/5 dark:bg-slate-800/50 p-3">
       {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");

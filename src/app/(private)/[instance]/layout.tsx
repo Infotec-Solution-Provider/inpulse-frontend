@@ -3,11 +3,13 @@ import Header from "@/app/(private)/[instance]/header";
 import AppProvider from "@/app/(private)/[instance]/app-context";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import darkTheme from "@/lib/themes/dark";
-import { Modal, ThemeProvider } from "@mui/material";
+import { Modal } from "@mui/material";
 import { ReactElement, ReactNode, useState } from "react";
 import WhatsappProvider from "./whatsapp-context";
 import { InternalChatProvider } from "./internal-context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
+import { ThemeProvider } from "@/app/theme-context";
+import CustomersProvider from "./(cruds)/customers/customers-context";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -23,8 +25,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <WhatsappProvider>
             <InternalChatProvider>
               <ReadyMessagesProvider>
-                <ThemeProvider theme={darkTheme}>
-                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
+                <CustomersProvider>
+
+                <ThemeProvider>
+                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)] bg-white dark:bg-gray-900 text-black dark:text-white">
                     <Header />
                     {children}
                     <Modal
@@ -39,6 +43,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </Modal>
                   </div>
                 </ThemeProvider>
+                </CustomersProvider>
               </ReadyMessagesProvider>
             </InternalChatProvider>
           </WhatsappProvider>

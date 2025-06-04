@@ -8,7 +8,7 @@ export default function SqlReportHistoryList() {
   const { history, loading } = useContext(SqlReportsContext);
 
   return (
-    <aside className="bg-white p-4 border rounded-md shadow-md max-h-[600px] overflow-y-auto">
+    <aside className="bg-white p-4 border rounded-md shadow-md max-h-[600px] scrollbar-whatsapp">
       <h2 className="mb-4 font-semibold text-lg text-gray-800">Execuções Recentes</h2>
       {loading && <p>Carregando histórico...</p>}
       {!loading && history?.length === 0 && <p>Nenhum relatório gerado ainda.</p>}

@@ -152,7 +152,7 @@ export default function WalletManagementModal() {
                         <h1 className="p-2 border-b-[1px] border-blue-500">
                             Integrantes
                         </h1>
-                        <div className="px-2 mt-2 flex-1 min-h-0 overflow-y-auto">
+                        <div className="px-2 mt-2 flex-1 min-h-0 scrollbar-whatsapp">
                             {loadingUsers ? (
                                 <div className="flex justify-center py-4">
                                     <HourglassBottomIcon className="animate-spin" />

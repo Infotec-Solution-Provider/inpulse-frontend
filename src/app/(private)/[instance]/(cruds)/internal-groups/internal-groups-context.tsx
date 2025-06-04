@@ -124,6 +124,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     }
   };
 
+
   useEffect(() => {
     if (token && internalApi.current) {
       internalApi.current.setAuth(token);

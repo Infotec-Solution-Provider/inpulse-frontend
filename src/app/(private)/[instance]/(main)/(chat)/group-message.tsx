@@ -46,14 +46,14 @@ export default function GroupMessage({
         <div className="flex w-full flex-col gap-1">
           {quotedMessage && (
             <div
-              className={`flex w-full flex-col gap-1 rounded-sm border-l-2 bg-slate-600/50 p-2 ${quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"}`}
+              className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"}`}
             >
               <h2
-                className={`${quotedMessage.style === "sent" ? "text-indigo-400" : "text-orange-400"}`}
+                className={`${quotedMessage.style === "sent" ? "border-indigo-600 dark:border-indigo-400" : "border-orange-600 dark:border-orange-400"}`}
               >
                 {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
               </h2>
-              <div className="w-full text-slate-200">
+              <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
                 {quotedMessage.text.split("\n").map((line, index) => (
                   <p key={index} className="max-w-[100%] break-words text-sm">
                     {line}
@@ -73,7 +73,7 @@ export default function GroupMessage({
           )}
 
           {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
-          <div className="w-full text-slate-200">
+          <div className="w-full text-slate-900 dark:text-slate-200">
             {text.split("\n").map((line, index) => (
               <p key={index} className="max-w-[100%] break-words text-sm">
                 {line}
@@ -92,7 +92,7 @@ export default function GroupMessage({
 
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
-            <p className="text-xs text-slate-300">{date.toLocaleString()}</p>
+            <p className="text-xs text-slate-900 dark:text-slate-200">{date.toLocaleString()}</p>
           </div>
         </div>
       </div>

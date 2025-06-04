@@ -44,7 +44,7 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2">
+    <div className="flex items-center justify-between gap-4 px-4 py-2 bg-gray-50 border-b border-gray-300 dark:bg-transparent dark:border-none">
       <div className="flex items-center gap-4">
         <Avatar
           variant="circular"
@@ -53,16 +53,16 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
           sx={{ width: 60, height: 60 }}
         />
         <div>
-          <h2 className="text-slate-200">{name}</h2>
-          <h2 className="text-sm text-slate-300">{customerName}</h2>
-          <h2 className="text-sm text-slate-400">
+          <h2 className="font-semibold dark:font-normal text-slate-800 dark:text-slate-100">{name}</h2>
+          <h2 className="text-sm text-slate-700 dark:text-slate-200">{customerName}</h2>
+          <h2 className="text-sm text-slate-400 dark:text-slate-300">
             {chatType == "wpp" ? Formatter.phone(phone) : ""}
           </h2>
         </div>
       </div>
-            {currentChat?.chatType === "internal" && !currentChat.isGroup && (
+      {currentChat?.chatType === "internal" && !currentChat.isGroup && (
         <div className="flex items-center">
-          <Tooltip title={<h3 className="text-base">Deletar conversa</h3>}>
+          <Tooltip title={<h3 className="text-base dark:text-white">Deletar conversa</h3>}>
             <IconButton onClick={openDeleteChatModal}>
               <AssignmentTurnedInIcon color="success" />
             </IconButton>
@@ -71,22 +71,22 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
       )}
       {currentChat?.chatType === "wpp" && (
         <div className="flex items-center">
-          <Tooltip title={<h3 className="text-base">Editar contato</h3>}>
+          <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
             <IconButton onClick={openEditContactModal}>
               <EditIcon color="info" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={<h3 className="text-base">Transferir conversa</h3>}>
+          <Tooltip title={<h3 className="text-base dark:text-white">Transferir conversa</h3>}>
             <IconButton onClick={openTransferChatModal}>
               <SyncAltIcon color="secondary" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={<h3 className="text-base">Agendar retorno</h3>}>
+          <Tooltip title={<h3 className="text-base dark:text-white">Agendar retorno</h3>}>
             <IconButton onClick={openScheduleChatModal}>
               <ScheduleIcon color="warning" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={<h3 className="text-base">Finalizar conversa</h3>}>
+          <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
             <IconButton onClick={openFinishChatModal}>
               <AssignmentTurnedInIcon color="success" />
             </IconButton>

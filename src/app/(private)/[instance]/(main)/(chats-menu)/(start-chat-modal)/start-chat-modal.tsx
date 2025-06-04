@@ -28,7 +28,7 @@ export default function StartChatModal() {
         </IconButton>
       </header>
       <div></div>
-      <ul className="flex h-[30rem] flex-col items-center gap-2 overflow-y-auto">
+      <ul className="flex h-[30rem] flex-col items-center gap-2 scrollbar-whatsapp">
         {contacts.map(({ customer, chatingWith, ...contact }) => {
           return (
             <StartChatModalItem

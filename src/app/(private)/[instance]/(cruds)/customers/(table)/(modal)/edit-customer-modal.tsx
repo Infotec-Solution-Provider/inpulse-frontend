@@ -3,8 +3,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import { Customer, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
 import { toast } from "react-toastify";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
-import { useCustomersContext } from "../customers-context";
 import { useRef } from "react";
+import { useCustomersContext } from "../../customers-context";
 
 export interface EditModalProps {
   customer: Customer;
@@ -72,8 +72,8 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
   };
 
   return (
-    <aside className="flex h-full w-full flex-col items-center gap-4 bg-slate-800 p-4">
-      <header className="flex w-full items-center justify-between py-2">
+    <aside className="flex h-full w-full flex-col items-center gap-4 bg-white p-4 dark:bg-slate-800">
+      <header className="flex text-lg w-full font-semibold font-medium items-center justify-between py-2 text-slate-800 dark:text-white">
         <h1>Editar cliente</h1>
         <IconButton onClick={closeModal}>
           <CloseIcon />

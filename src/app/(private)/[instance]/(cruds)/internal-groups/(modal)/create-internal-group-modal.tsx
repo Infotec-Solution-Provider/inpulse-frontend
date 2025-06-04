@@ -106,8 +106,11 @@ export default function CreateInternalGroupModal({
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <div className="flex flex-col gap-6 bg-slate-800 px-[2rem] py-[1rem]">
-        <header>Criar novo grupo</header>
+<div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800">
+    <div className="border-b border-black/10 pb-2 dark:border-white/20">
+
+        <header className="text-xl font-semibold text-slate-800 dark:text-white">Criar novo grupo</header>
+    </div>
         <div className="flex gap-4">
           <div>
             <button
@@ -173,7 +176,7 @@ export default function CreateInternalGroupModal({
           </div>
           <div className="flex min-h-0 flex-1 flex-col rounded border-[1px] border-slate-600 p-2">
             <h1 className="border-b border-slate-200/25 p-2">Integrantes</h1>
-            <div className="mt-2 min-h-0 flex-1 overflow-y-auto px-2">
+            <div className="mt-2 min-h-0 flex-1 scrollbar-whatsapp px-2">
               <List dense sx={{ maxHeight: 300, minHeight: 300, overflow: "auto" }}>
                 {participants.map((p) => {
                   return (

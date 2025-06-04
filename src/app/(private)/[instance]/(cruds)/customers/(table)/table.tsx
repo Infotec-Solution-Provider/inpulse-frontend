@@ -16,18 +16,19 @@ import { Customer } from "@in.pulse-crm/sdk";
 import ClientTableHeader from "./table-header";
 import { AppContext } from "../../../app-context";
 import ContactsModal from "./(modal)/contacts-modal";
-import { useCustomersContext } from "./customers-context";
+import { CustomersContext, useCustomersContext } from "../customers-context";
 
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
-  const { state, dispatch, loadCustomers } = useCustomersContext();
+  const { state, dispatch, loadCustomers } = useContext(CustomersContext);
 
   function openEditCustomerModal(customer: Customer) {
     openModal(<EditCustomerModal customer={customer} />);
   }
 
   function openCreateCustomerModal() {
-    openModal(<CreateCustomerModal />);
+    openModal(<CreateCustomerModal />
+    );
   }
 
   function openContactModal(customer: Customer) {
@@ -46,15 +47,15 @@ export default function CustomersTable() {
 
   return (
     <div>
-      <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
-        <Table className="max-h-[100%] overflow-auto">
+      <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+        <Table className="max-h-[100%] overflow-auto scrollbar-whatsapp">
           <ClientTableHeader />
           <TableBody>
             {state.isLoading ? (
               <StyledTableRow className="h-32 w-full">
                 <StyledTableCell
                   colSpan={8}
-                  className="flex items-center justify-center text-center text-gray-400"
+                  className="flex items-center justify-center text-center text-gray-600 dark:text-gray-300"
                 >
                   <div className="flex flex-col items-center">
                     <CircularProgress />

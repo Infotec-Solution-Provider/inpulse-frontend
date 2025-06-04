@@ -85,7 +85,7 @@ export default function MonitorInternalAttendances() {
             }
             phone={chat.users[0].SETOR_NOME || ""}
           />
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 scrollbar-whatsapp">
             <ChatMessagesListMonitor />
           </div>
           <ChatSendMessageArea />
@@ -96,9 +96,9 @@ export default function MonitorInternalAttendances() {
 
   return (
 
-    <div className="mx-auto box-border grid grid-cols-[85rem] gap-y-8 px-4 py-8">
+<div className="flex flex-col  px-10 pt-5 w-screen  h-screen box-border relative bg-white text-black dark:bg-gray-900 dark:text-white">
 
-      <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
+      <TableContainer className="mx-auto max-h-[75vh] overflow-auto  scrollbar-whatsapp rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
         <Table className="max-h-[100%] overflow-auto">
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900 z-50 ">

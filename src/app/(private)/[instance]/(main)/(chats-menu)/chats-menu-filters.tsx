@@ -59,7 +59,7 @@ export default function ChatsMenuFilters() {
 
   return (
     <div className="flex flex-col gap-1 rounded-t-md p-3">
-      <header className="mb-1 flex w-full items-center justify-between">
+      <header className="mb-1 flex w-full items-center justify-between font-semibold dark:font-normal">
         <h1>Conversas {SHOWING_TYPE_TEXT[chatFilters.showingType]}</h1>
         <div className="flex items-center gap-2">
           <IconButton id="filter-chats-button" onClick={openFilterMenu}>
@@ -70,7 +70,17 @@ export default function ChatsMenuFilters() {
           </IconButton>
         </div>
         {/* Menu de adicionar conversa/agendamento/chat interno*/}
-        <Menu open={isStartMenuOpen} anchorEl={anchorEl} onClose={closeMenu}>
+        <Menu
+          open={isStartMenuOpen}
+          anchorEl={anchorEl}
+          onClose={closeMenu}
+          PaperProps={{
+            sx: {
+              bgcolor: 'background.paper',
+              color: 'text.primary',
+            },
+          }}
+          >
           <MenuItem className="flex items-center gap-2" onClick={openStartChatModal}>
             <WhatsAppIcon />
             <p>Nova Conversa</p>

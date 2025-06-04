@@ -66,9 +66,10 @@ export default function ChatMessagesListMonitor() {
 
   return (
     <ul
-      className="flex h-full w-full flex-col gap-2 overflow-y-auto bg-slate-300/10 p-2"
+          className="flex h-full w-full flex-col gap-2 scrollbar-whatsapp bg-slate-300/10 dark:bg-slate-700/40 p-2"
       ref={ulRef}
     >
+
       {currentChat?.chatType === "wpp" &&
         currentChatMessages.length > 0 &&
         currentChatMessages.map((m) => (

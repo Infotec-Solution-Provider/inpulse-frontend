@@ -13,6 +13,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import { UserRole } from "@in.pulse-crm/sdk";
 import Link from "next/link";
+import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 
 const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
@@ -67,43 +68,43 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-20 shadow-2xl">
       <div className="flex items-center bg-slate-900">
-        <div className="mx-auto flex w-screen items-center justify-between px-4 py-4">
+        <div className="mx-auto flex w-screen items-center justify-between px-4 py-4 bg-white dark:bg-slate-900">
           <div className="flex items-center gap-8">
             <Link href={`/${instance}/`}>
               <Image src={HorizontalLogo} alt="Logo" height={36} className="cursor-pointer" />
             </Link>
           </div>
           <nav>
-            <menu className="flex items-center gap-4 text-sm font-semibold text-slate-200">
+            <menu className="flex items-center gap-4 text-sm font-semibold text-gray-900 dark:text-slate-200">
               <HeaderNavItem title="Área de Atendimento" href="/">
-                <HeadsetMicIcon />
+                <HeadsetMicIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
               <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
-                <MonitorIcon />
+                <MonitorIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
               <HeaderNavItem title="Cadastros" routes={crudsRoutes(instance, user?.SETOR)} disabled={!isUserAdmin}>
-                <AppRegistrationIcon />
+                <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
               <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
-                <AppRegistrationIcon />
+                <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
               <HeaderNavItem title="Relatórios" routes={reportsRoutes} disabled={!isUserAdmin}>
-                <BarChartIcon />
+                <BarChartIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
-              {/*               <HeaderNavItem title="Ferramentas" routes={toolsRoutes} disabled={!isUserAdmin}>
-                <BuildIcon />
-              </HeaderNavItem> */}
             </menu>
           </nav>
+
           <div className="flex items-center gap-4">
-            <h1 className="truncate">{user?.NOME}</h1>
-            <IconButton title="notifications" type="button">
-              <NotificationsIcon />
+            <ThemeToggleButton />
+            <h1 className="truncate text-gray-900 dark:text-slate-200">{user?.NOME}</h1>
+            <IconButton title="notifications" type="button" >
+              <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
             <IconButton title="logout" type="button" onClick={signOut}>
-              <LogoutIcon />
+              <LogoutIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
           </div>
+
         </div>
       </div>
     </header>

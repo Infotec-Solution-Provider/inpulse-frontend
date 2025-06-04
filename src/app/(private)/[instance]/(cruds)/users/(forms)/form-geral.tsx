@@ -15,7 +15,8 @@ export default function FormGeral({ formData, onFormChange, initialImage, onAvat
   const { sectors } = useContext(UsersContext);
 
   return (
-    <div className="flex w-full flex-col gap-4">
+<div className="flex w-full flex-col gap-4 bg-white dark:bg-slate-800 text-black dark:text-white">
+
       <div className="flex w-full flex-row justify-center gap-4">
         <AvatarInput initialImage={initialImage} onChange={onAvatarChange} />
         <div className="flex flex-grow flex-col gap-4">

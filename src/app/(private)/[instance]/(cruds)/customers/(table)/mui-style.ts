@@ -9,12 +9,12 @@ import {
 
 export const StyledTableCell = styled(TableCell)(({ theme }) => ({
   [`&.${tableCellClasses.head}`]: {
-    color: theme.palette.common.white,
+    color: theme.palette.text.primary,
   },
   "borderBottom": "none",
   [`&.${tableCellClasses.body}`]: {
     fontSize: 14,
-    color: theme.palette.common.white,
+    color: theme.palette.text.primary,
   },
 }));
 
@@ -30,15 +30,15 @@ export const StyledTableRow = styled(TableRow)(() => ({
 
 export const StyledPagination = styled(TablePagination)(({ theme }) => ({
   [`& .${paginationItemClasses.root}`]: {
-    color: theme.palette.common.white,
+    color: theme.palette.text.primary,
 
     "&.Mui-selected": {
       backgroundColor: theme.palette.primary.main,
-      color: theme.palette.common.white,
+      color: theme.palette.text.primary,
     },
     "&:hover": {
       backgroundColor: theme.palette.primary.main,
-      color: theme.palette.common.white,
+      color: theme.palette.text.primary,
     },
   },
 }));

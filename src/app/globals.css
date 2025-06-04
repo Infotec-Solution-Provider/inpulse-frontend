@@ -6,7 +6,40 @@
 
 
 body {
-  color-scheme: dark;
-  scrollbar-width: thin; /* Define a largura da barra de rolagem (pode ser auto, thin ou none) */
-  scrollbar-color: rgb(113, 109, 207) rgb(56, 56, 82); /* Cor do polegar e do fundo */
+  scrollbar-width: thin;
 }
+
+body {
+  @apply bg-white text-black;
+}
+
+.dark body {
+  @apply bg-gray-900 text-white;
+}
+.scrollbar-whatsapp {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
+  overflow-y: auto;
+}
+
+.scrollbar-whatsapp::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-whatsapp::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-whatsapp::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background-color 0.3s;
+}
+
+.scrollbar-whatsapp:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.input-dark {
+  @apply bg-slate-800 text-white;
+}
+

@@ -20,9 +20,9 @@ export default function TransferChatModal() {
   };
 
   return (
-    <div className="w-[26rem] rounded-md bg-slate-700 px-4 py-4">
-      <header className="flex items-center justify-between pb-8">
-        <h1 className="text-xl">Transferir conversa</h1>
+<div className="w-[26rem] rounded-md bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-white px-4 py-4">
+  <header className="flex items-center justify-between pb-8">
+     <h1 className="text-xl">Transferir conversa</h1>
         <IconButton onClick={closeModal}>
           <CloseIcon />
         </IconButton>
@@ -38,6 +38,7 @@ export default function TransferChatModal() {
             select: {
               MenuProps: {
                 PaperProps: {
+                  className: "scrollbar-whatsapp",
                   style: {
                     maxHeight: 48 * 5 + 8, // 5 itens de 48px + padding
                   },

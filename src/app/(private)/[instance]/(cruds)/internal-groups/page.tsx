@@ -15,7 +15,7 @@ export default function InternalGroupsPage() {
   };
 
   return (
-    <div className="mx-auto box-border grid max-w-[75rem] grid-cols-[75rem] grid-rows-[1fr_auto] gap-8 py-8">
+<div className="mx-auto box-border grid max-w-[75rem] grid-cols-[75rem] grid-rows-[1fr_auto] gap-8 py-8 bg-white dark:bg-gray-900 text-black dark:text-white">
       <InternalGroupsList />
       <div className="flex h-max w-full justify-end">
         <Button variant="outlined" size="large" onClick={openCreateGroupModal}>

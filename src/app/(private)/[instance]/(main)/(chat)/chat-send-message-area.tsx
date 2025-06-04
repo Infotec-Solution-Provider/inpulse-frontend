@@ -105,7 +105,8 @@ export default function ChatSendMessageArea() {
   }, [quotedMessage]);
 
   return (
-    <div className="flex max-h-36 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300">
+    <div className="flex max-h-36 bg-white/20 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300
+                dark:bg-slate-800 dark:bg-opacity-80 dark:text-indigo-400">
       <input
         type="file"
         className="hidden"
@@ -114,14 +115,14 @@ export default function ChatSendMessageArea() {
         onChange={handleFileChange}
       />
       <div className="flex items-center gap-2">
-        <IconButton size="small" color="inherit" onClick={openQuickMessages}>
+        <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openQuickMessages}>
           <ChatBubbleIcon />
         </IconButton>
-        <IconButton size="small" color="inherit" onClick={openAttachFile}>
+        <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openAttachFile}>
           <AttachFileIcon />
         </IconButton>
         <div className="relative">
-          <IconButton size="small" color="inherit" onClick={toggleEmojiPicker}>
+          <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={toggleEmojiPicker}>
             <EmojiEmotionsOutlinedIcon />
           </IconButton>
           <div className="absolute bottom-full">
@@ -140,22 +141,22 @@ export default function ChatSendMessageArea() {
       <div className="flex w-full flex-col gap-2">
         {quotedMessage && (
           <div
-            className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/5 p-2"
-            onClick={handleQuoteMessageRemove}
+            className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2
+                   dark:bg-indigo-600/20"            onClick={handleQuoteMessageRemove}
           >
-            <div className="text-sm text-slate-200">
+            <div className="text-sm text-black dark:text-slate-300">
               {quotedMessage.body.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
                   {line}
                 </p>
               ))}
               {quotedMessage.fileId && (
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-400 dark:text-slate-500">
                   {quotedMessage.fileName || "Arquivo anexado"}
                 </span>
               )}
             </div>
-            <IconButton size="small" color="inherit">
+            <IconButton size="small" className="bg-white/20 dark:text-indigo-400">
               <Close />
             </IconButton>
           </div>
@@ -181,14 +182,14 @@ export default function ChatSendMessageArea() {
             placeholder="Mensagem"
             value={state?.text}
             onChange={handleTextChange}
+
           />
         )}
       </div>
       <IconButton
         size="small"
-        color="inherit"
         aria-hidden={state?.text.length === 0 && !state.sendAsAudio}
-        className="aria-hidden:hidden"
+        className="bg-white/20 dark:text-indigo-400"
         disabled={isDisabled}
         onClick={sendMessages}
       >

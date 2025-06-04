@@ -14,7 +14,7 @@ export default function Home() {
 
   return (
     <ChatProvider>
-      <div className="box-border grid grid-cols-[24rem_1fr] grid-rows-1 gap-4 px-4 py-4">
+<div className="box-border grid grid-cols-[24rem_1fr] grid-rows-1 gap-4 px-4 py-4 bg-white text-black dark:bg-gray-900 dark:text-white">
         <ChatsMenu />
         {currentChat?.chatType === "internal" && (
           <Chat

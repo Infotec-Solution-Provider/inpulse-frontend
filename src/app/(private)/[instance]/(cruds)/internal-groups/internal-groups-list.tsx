@@ -48,9 +48,9 @@ export default function InternalGroupsList() {
   };
 
   return (
-    <div className="mx-auto w-max overflow-y-auto bg-indigo-700/5">
+<div className="mx-auto w-max scrollbar-whatsapp dark:bg-indigo-900/10 text-black dark:text-white">
       <table className="w-max text-sm">
-        <thead className="sticky top-0 z-10 rounded-md bg-indigo-900">
+<thead className="sticky top-0 z-10 rounded-md bg-gray-100 dark:bg-indigo-900 text-black dark:text-white shadow-md">
           <tr>
             <th className="w-32 px-2 py-6 pl-16 text-left text-lg">id</th>
             <th className="w-64 px-2 py-6 text-left text-lg">Nome do grupo</th>

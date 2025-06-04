@@ -1,9 +1,9 @@
 import { MenuItem, TableHead, TextField } from "@mui/material";
 import { StyledTableCell, StyledTableRow } from "./mui-style";
 import { Search } from "@mui/icons-material";
-import { useCustomersContext } from "./customers-context";
 import { Customer } from "@in.pulse-crm/sdk";
 import { useRef } from "react";
+import { useCustomersContext } from "../customers-context";
 
 export default function ClientTableHeader() {
   const { dispatch, loadCustomers, state } = useCustomersContext();
@@ -24,7 +24,7 @@ export default function ClientTableHeader() {
 
   return (
     <TableHead>
-      <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
+<StyledTableRow className="sticky top-0 rounded-md bg-indigo-100 dark:bg-indigo-900">
         <StyledTableCell>
           <TextField
             label="Código"

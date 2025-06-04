@@ -2,48 +2,41 @@ import {
   ActionDispatch,
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useReducer,
   useRef,
+  useState,
 } from "react";
-import customersReducer, {
-  ChangeCustomersStateAction,
-  CustomersContextState,
-} from "./customers-reducer";
+
 import { CreateCustomerDTO, CustomersClient, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
 import { useAuthContext } from "@/app/auth-context";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
+import customersReducer, { ChangeCustomersStateAction, CustomersContextState } from "./(table)/customers-reducer";
 
-interface ICustomersContextProviderProps {
+interface ICustomersProviderProps {
   children: ReactNode;
 }
 
 interface ICustomersContext {
   state: CustomersContextState;
   dispatch: ActionDispatch<[ChangeCustomersStateAction]>;
-  updateCustomer: (id: number, data: UpdateCustomerDTO) => Promise<void>;
-  createCustomer: (data: CreateCustomerDTO) => Promise<void>;
-  loadCustomers: () => Promise<void>;
+  updateCustomer: (id: number, data: UpdateCustomerDTO) => void;
+  createCustomer: (data: CreateCustomerDTO) => void;
+  loadCustomers: () => void;
 }
 
-const CustomersContext = createContext({} as ICustomersContext);
+export const CustomersContext = createContext<ICustomersContext>({} as ICustomersContext);
 export const useCustomersContext = () => {
   const context = useContext(CustomersContext);
-  if (!context) {
-    throw new Error("useCustomersContext must be used within a CustomersProvider");
-  }
   return context;
 };
 
-const CUSTOMERS_BASE_URL: string = process.env["NEXT_PUBLIC_CUSTOMERS_URL"]!;
+const CUSTOMERS_BASE_URL: string = process.env["NEXT_PUBLIC_CUSTOMERS_URL"] || "http://localhost:8002";
 
-if (!CUSTOMERS_BASE_URL) {
-  throw new Error("NEXT_PUBLIC_CUSTOMERS_URL is not defined");
-}
-
-export default function CustomersProvider({ children }: ICustomersContextProviderProps) {
+export default function CustomersProvider({ children }: ICustomersProviderProps) {
   const api = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
   const { token } = useAuthContext();
 
@@ -54,30 +47,34 @@ export default function CustomersProvider({ children }: ICustomersContextProvide
     isLoading: false,
   });
 
-  const createCustomer = async (data: CreateCustomerDTO) => {
+  const createCustomer = useCallback(async (data: CreateCustomerDTO) => {
     try {
+      if (token) {
       await api.current.createCustomer(data);
       toast.success("Cliente cadastrado com sucesso!");
+      }
     } catch (err) {
       Logger.error("Error creating customer", err as Error);
       toast.error("Falha ao cadastrar cliente!");
     } finally {
       loadCustomers();
     }
-  };
+ }, [token]);
 
-  const updateCustomer = async (id: number, data: UpdateCustomerDTO) => {
+  const updateCustomer = useCallback(async (id: number, data: UpdateCustomerDTO) => {
     try {
+      if (token) {
       await api.current.updateCustomer(id, data);
       dispatch({ type: "update-customer", id, data });
       toast.success("Cliente atualizado com sucesso!");
+      }
     } catch (err) {
       Logger.error("Error updating customer", err as Error);
       toast.error("Falha ao atualizar cliente!");
     }
-  };
+ }, []);
 
-  const loadCustomers = async () => {
+  const loadCustomers = useCallback(async () => {
     dispatch({ type: "change-loading", isLoading: true });
 
     try {
@@ -95,13 +92,13 @@ export default function CustomersProvider({ children }: ICustomersContextProvide
       Logger.error("Error loading customers", err as Error);
       toast.error("Falha ao carregar clientes!");
     }
-  };
+ }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !api.current) return;
     api.current.setAuth(token);
     loadCustomers();
-  }, [token]);
+  }, [token,api.current]);
 
   return (
     <CustomersContext.Provider

@@ -62,8 +62,8 @@ export default function ChatsMenuItem({
       </div>
       <div className="flex flex-col gap-1 truncate">
         <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm leading-none text-slate-100">{name}</p>
-          <div className="flex items-center gap-2 text-slate-300 group-aria-busy:text-orange-200">
+<p className="truncate text-sm leading-none text-gray-900 dark:text-slate-100">{name}</p>
+<div className="flex items-center gap-2 text-gray-700 dark:text-slate-300 group-aria-busy:text-orange-200">
             <p className="text-xs">{lastMessageDateText}</p>
             <div
               className="h-3 w-3 rounded-full bg-red-600 aria-hidden:hidden"
@@ -71,7 +71,7 @@ export default function ChatsMenuItem({
             ></div>
           </div>
         </div>
-        <div className="truncate text-sm text-slate-300 font-emoji">{message}</div>
+<div className="truncate text-sm text-gray-700 dark:text-slate-300 font-emoji">{message}</div>
         <div className="flex items-center justify-end gap-1">
           {tags?.map((tag) => (
             <ChatsMenuItemTag key={tag.name} name={tag.name} color={tag.color} />
