@@ -135,7 +135,10 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
   };
 
   return (
-    <div className="flex flex-col gap-6 bg-slate-800 px-8 py-6 rounded-md w-full max-w-3xl"  style={{ width: 500 }}>
+<div
+  className="flex flex-col gap-6 bg-white text-gray-800 dark:bg-slate-800 dark:text-white px-8 py-6 rounded-md w-full max-w-3xl"
+  style={{ width: 500 }}
+>
       <Typography variant="h6">Cadastrar nova mensagem rápida</Typography>
 
       <div className="flex gap-4 items-center">

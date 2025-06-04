@@ -3,12 +3,13 @@ import { useInternalGroupsContext } from "./internal-groups-context";
 import { InternalChatContext } from "../../internal-context";
 import { InternalGroup, User } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
-import { IconButton } from "@mui/material";
+import { Button, IconButton } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useAppContext } from "../../app-context";
 import UpdateInternalGroupModal from "./(modal)/update-internal-group-modal";
 import { Delete } from "@mui/icons-material";
 import DeleteInternalGroupModal from "./(modal)/delete-internal-group-moda";
+import CreateInternalGroupModal from "./(modal)/create-internal-group-modal";
 
 function getCreator(users: User[], creatorId: number) {
   const creator = users.find((user) => user.CODIGO === creatorId);
@@ -24,7 +25,13 @@ export default function InternalGroupsList() {
     wppGroups,
     deleteInternalGroup,
     updateInternalGroupImage,
+    createInternalGroup
   } = useInternalGroupsContext();
+
+
+  const openCreateGroupModal = () => {
+    openModal(<CreateInternalGroupModal onSubmit={createInternalGroup} wppGroups={wppGroups} />);
+  };
 
   const openUpdateGroupModal = (group: InternalGroup) => () => {
     openModal(
@@ -81,7 +88,13 @@ export default function InternalGroupsList() {
             </tr>
           ))}
         </tbody>
+
       </table>
+                  <div className="flex h-max w-full justify-end">
+        <Button variant="outlined" size="large" onClick={openCreateGroupModal}>
+          Cadastrar
+        </Button>
+      </div>
     </div>
   );
 }

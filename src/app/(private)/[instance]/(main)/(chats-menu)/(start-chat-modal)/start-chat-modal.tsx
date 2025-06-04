@@ -20,15 +20,15 @@ export default function StartChatModal() {
   }, []);
 
   return (
-    <div className="w-[35rem] rounded-md bg-slate-800 px-4 py-4">
+    <div className="w-[35rem] rounded-md bg-white text-gray-800 px-4 py-4 dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-8">
-        <h1 className="text-xl">Iniciar conversa</h1>
+        <h1 className="text-xl text-semibold">Iniciar conversa</h1>
         <IconButton onClick={closeModal}>
           <CloseIcon />
         </IconButton>
       </header>
       <div></div>
-      <ul className="flex h-[30rem] flex-col items-center gap-2 scrollbar-whatsapp">
+      <ul className="flex h-[30rem] flex-col items-center gap-2 scrollbar-whatsapp ">
         {contacts.map(({ customer, chatingWith, ...contact }) => {
           return (
             <StartChatModalItem

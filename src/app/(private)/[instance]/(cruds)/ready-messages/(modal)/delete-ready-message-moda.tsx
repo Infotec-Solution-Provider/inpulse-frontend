@@ -22,8 +22,8 @@ export default function DeleteInternalGroupModal({
 
   return (
     <div>
-      <div className="flex flex-col gap-6 bg-slate-800 px-[2rem] py-[1rem]">
-        <header>Deletar Mensagem pronta</header>
+      <div className="flex flex-col gap-6 bg-white text-gray-800 dark:bg-slate-800 dark:text-white px-[2rem] py-[1rem]">
+        <header className="text-lg text-semibold">Deletar Mensagem pronta</header>
         <div className="flex flex-col gap-4">
           <h1>Tem certeza que deseja excluir a Menssagem pronta "{readyMessageName}"?</h1>
         </div>

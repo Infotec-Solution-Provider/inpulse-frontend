@@ -29,10 +29,10 @@ export default function StartInternalChatModalItem({
   const sector = sectors.find((s) => s.id === user.SETOR);
 
   return (
-    <li className="flex w-full items-center justify-between gap-2 rounded-md bg-slate-700 p-2">
+<li className="flex w-full items-center justify-between gap-2 rounded-md bg-white text-gray-700 p-2 dark:bg-slate-700 dark:text-gray-100">
       <div className="flex flex-col">
         <span className="text-sm font-semibold">{user.NOME}</span>
-        {sector && <span className="text-xs text-blue-200">{sector.name}</span>}
+    {sector && <span className="text-xs text-blue-700 dark:text-blue-300">{sector.name}</span>}
       </div>
       <div>
         <Button size="small" onClick={handleClickStart} disabled={isStarted}>

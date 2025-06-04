@@ -129,7 +129,10 @@ export default function UpdateInternalGroupModal({
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <div className="flex flex-col gap-6 bg-slate-800 px-[2rem] py-[1rem]">
+      <div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800
+  max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg"
+      >
+
         <header>Criar novo grupo</header>
         <div className="flex gap-4">
           <div>
@@ -197,7 +200,7 @@ export default function UpdateInternalGroupModal({
           <div className="flex min-h-0 flex-1 flex-col rounded border-[1px] border-slate-600 p-2">
             <h1 className="border-b border-slate-200/25 p-2">Integrantes</h1>
             <div className="mt-2 min-h-0 flex-1 scrollbar-whatsapp px-2">
-              <List dense sx={{ maxHeight: 300, minHeight: 300, overflow: "auto" }}>
+              <List dense sx={{ flexGrow: 1, overflowY: "auto" }}>
                 {participants.map((p) => {
                   return (
                     <ListItem key={p.CODIGO} divider>

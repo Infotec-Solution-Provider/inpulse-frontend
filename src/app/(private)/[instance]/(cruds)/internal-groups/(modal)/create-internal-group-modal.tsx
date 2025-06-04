@@ -106,11 +106,13 @@ export default function CreateInternalGroupModal({
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-<div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800">
-    <div className="border-b border-black/10 pb-2 dark:border-white/20">
+      <div
+        className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800
+             max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg"
+      >    <div className="border-b border-black/10 pb-2 dark:border-white/20">
 
-        <header className="text-xl font-semibold text-slate-800 dark:text-white">Criar novo grupo</header>
-    </div>
+          <header className="text-xl font-semibold text-slate-800 dark:text-white">Criar novo grupo</header>
+        </div>
         <div className="flex gap-4">
           <div>
             <button
@@ -150,7 +152,7 @@ export default function CreateInternalGroupModal({
               options={wppGroups}
               getOptionLabel={(option) => option.name}
               getOptionKey={(option) => option.id.user}
-              className="w-full"
+              className="w-full scrollbar-whatsapp"
               renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
               value={selectedGroup} // Define o valor atual do Autocomplete
               onChange={(_, group) => handleSelectGroup(group)}
@@ -177,7 +179,7 @@ export default function CreateInternalGroupModal({
           <div className="flex min-h-0 flex-1 flex-col rounded border-[1px] border-slate-600 p-2">
             <h1 className="border-b border-slate-200/25 p-2">Integrantes</h1>
             <div className="mt-2 min-h-0 flex-1 scrollbar-whatsapp px-2">
-              <List dense sx={{ maxHeight: 300, minHeight: 300, overflow: "auto" }}>
+              <List dense sx={{ flexGrow: 1, overflowY: "auto" }}>
                 {participants.map((p) => {
                   return (
                     <ListItem key={p.CODIGO} divider>
