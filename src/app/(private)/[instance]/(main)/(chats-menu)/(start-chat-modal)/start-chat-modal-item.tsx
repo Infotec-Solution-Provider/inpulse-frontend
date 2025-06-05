@@ -27,7 +27,7 @@ export default function StartChatModalItem({
   return (
     <li
       key={contact.id}
-      className="flex w-full items-center justify-between gap-2 rounded-md bg-white text-gray-700 p-2 dark:bg-slate-700 dark:text-gray-100">
+      className="flex w-full items-center justify-between gap-2 rounded-md bg-gray-300 text-gray-700 p-2 dark:bg-slate-700 dark:text-gray-100">
       <div className="flex flex-col">
         <span className="text-sm font-semibold">{contact.name}</span>
         {customer && <span className="text-xs text-blue-700 dark:text-blue-200">{customer.RAZAO}</span>}

@@ -16,6 +16,20 @@ export function useThemeContext() {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeMode, setThemeMode] = useState<"light" | "dark">("dark");
 
+  // Recupera o tema salvo no localStorage no carregamento inicial
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("themeMode") as "light" | "dark" | null;
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setThemeMode(savedTheme);
+    }
+  }, []);
+
+  // Atualiza o <html> class e salva no localStorage sempre que o tema mudar
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", themeMode === "dark");
+    localStorage.setItem("themeMode", themeMode);
+  }, [themeMode]);
+
   const theme = useMemo(() => {
     return themeMode === "dark" ? darkTheme : lightTheme;
   }, [themeMode]);
@@ -23,14 +37,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     setThemeMode((prev) => (prev === "dark" ? "light" : "dark"));
   };
-
-  useEffect(() => {
-    if (themeMode === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [themeMode]);
 
   return (
     <ThemeContext.Provider value={{ theme: themeMode, toggleTheme }}>

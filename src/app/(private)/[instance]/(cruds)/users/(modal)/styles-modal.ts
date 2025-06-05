@@ -2,7 +2,7 @@ import { Dialog, DialogTitle, IconButton, styled, Tabs } from "@mui/material";
 
 export const StyledDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiPaper-root': {
-    borderRadius: '0px',
+    borderRadius: '10px',
     overflow: 'hidden',
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,

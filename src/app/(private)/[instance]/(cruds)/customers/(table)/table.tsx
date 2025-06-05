@@ -47,7 +47,7 @@ export default function CustomersTable() {
 
   return (
     <div>
-      <TableContainer className="mx-auto max-h-[75vh] overflow-auto rounded-md shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+<TableContainer className="mx-auto max-h-[70vh] overflow-auto rounded-md scrollbar-whatsapp shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
         <Table className="max-h-[100%] overflow-auto scrollbar-whatsapp">
           <ClientTableHeader />
           <TableBody>

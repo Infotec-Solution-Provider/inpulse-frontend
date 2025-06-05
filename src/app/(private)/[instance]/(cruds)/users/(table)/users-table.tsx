@@ -67,7 +67,7 @@ export default function UsersTable() {
   }, [sortedUsers, page, rowsPerPage, loading]);
 
   return (
-    <div className="relative flex h-[calc(100vh-100px)] flex-col">
+    <div className="relative flex h-[calc(100vh-100px)] flex-col scrollbar-whatsapp">
       <TableContainer className="mx-auto w-full flex-1 bg-indigo-700 bg-opacity-5 shadow-md">
         <Table>
           <TableHead>

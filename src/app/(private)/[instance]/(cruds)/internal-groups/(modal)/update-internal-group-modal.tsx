@@ -130,10 +130,11 @@ export default function UpdateInternalGroupModal({
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
       <div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800
-  max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg"
-      >
+             max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg">
+        <div className="border-b border-black/10 pb-2 dark:border-white/20">
+          <header className="text-xl font-semibold text-slate-800 dark:text-white">Criar novo grupo</header>
+        </div>
 
-        <header>Criar novo grupo</header>
         <div className="flex gap-4">
           <div>
             <button
@@ -151,7 +152,7 @@ export default function UpdateInternalGroupModal({
                   className="h-full w-full rounded-md border border-slate-600 object-cover"
                 />
               ) : (
-                <ImageIcon fontSize="large" />
+                <ImageIcon className="text-gray-800 dark:text-white" fontSize="large" />
               )}
             </button>
             <input
@@ -173,7 +174,7 @@ export default function UpdateInternalGroupModal({
               options={wppGroups}
               getOptionLabel={(option) => option.name}
               getOptionKey={(option) => option.id.user}
-              className="w-full"
+              className="w-full scrollbar-whatsapp"
               renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
               value={selectedGroup} // Define o valor atual do Autocomplete
               onChange={(_, group) => handleSelectGroup(group)}

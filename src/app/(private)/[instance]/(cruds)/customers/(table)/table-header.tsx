@@ -24,7 +24,7 @@ export default function ClientTableHeader() {
 
   return (
     <TableHead>
-<StyledTableRow className="sticky top-0 rounded-md bg-indigo-100 dark:bg-indigo-900">
+<StyledTableRow className="sticky top-0 z-10 rounded-md text-gray-600 bg-white dark:bg-indigo-900">
         <StyledTableCell>
           <TextField
             label="Código"

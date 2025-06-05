@@ -30,7 +30,12 @@ export default function ScheduleChatModal() {
         </IconButton>
       </header>
       <form className="flex flex-col gap-6">
-        <TextField className="dark:input-dark" type="datetime-local" required onChange={handleChangeDate} />
+        <TextField
+            className="dark:input-dark"
+            type="datetime-local"
+            required
+            onChange={handleChangeDate}
+        />
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"

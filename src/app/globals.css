@@ -43,3 +43,15 @@ body {
   @apply bg-slate-800 text-white;
 }
 
+/* Força visibilidade do ícone do input datetime-local */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+  opacity: 1;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+}

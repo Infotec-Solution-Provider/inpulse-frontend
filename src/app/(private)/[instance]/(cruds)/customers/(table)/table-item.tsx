@@ -40,12 +40,12 @@ export default function CustomersTableItem({
         </p>
       </StyledTableCell>
       <StyledTableCell className="px-2 py-3">
-        <p className="w-40 truncate">{customer.CIDADE || "N/D"}</p>
+        <p className="w-37 truncate">{customer.CIDADE || "N/D"}</p>
       </StyledTableCell>
       <StyledTableCell className="px-2 py-3">
-        <p className="w-36 truncate">{customer.COD_ERP || "N/D"}</p>
+        <p className="w-28 truncate">{customer.COD_ERP || "N/D"}</p>
       </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
+      <StyledTableCell className="px-2 py-2">
         <div className="flex w-full items-center gap-2">
           <IconButton title="Editar" onClick={() => openEditModalHandler(customer)}>
             <Edit />
