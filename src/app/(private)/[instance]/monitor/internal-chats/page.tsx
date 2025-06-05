@@ -69,10 +69,10 @@ export default function MonitorInternalAttendances() {
     setCurrentInternalChat(chat);
     openInternalChat(chat);
     openModal(
-      <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl">
+      <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
         <button
           onClick={() => closeModal?.()}
-          className="absolute right-2 top-1 z-10 text-white hover:text-red-400"
+          className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"
         >
           ✕
         </button>
@@ -85,10 +85,12 @@ export default function MonitorInternalAttendances() {
             }
             phone={chat.users[0].SETOR_NOME || ""}
           />
-          <div className="flex-1 scrollbar-whatsapp">
+          <div className="flex-1 scrollbar-whatsapp bg-white text-black dark:bg-slate-900 dark:text-white drop-shadow-md">
             <ChatMessagesListMonitor />
           </div>
+           <div className="bg-white text-black dark:bg-slate-900 p-2 border-t border-gray-200 dark:border-gray-700">
           <ChatSendMessageArea />
+          </div>
         </ChatProvider>
       </div>
     );

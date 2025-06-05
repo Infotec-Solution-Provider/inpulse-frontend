@@ -31,7 +31,7 @@ export default function StartChatModalItem({
       <div className="flex flex-col">
         <span className="text-sm font-semibold">{contact.name}</span>
         {customer && <span className="text-xs text-blue-700 dark:text-blue-200">{customer.RAZAO}</span>}
-        <span className="text-xs text-slate-400">{Formatter.phone(contact.phone)}</span>
+        <span className="text-xs text-slate-400">{contact.phone ? Formatter.phone(contact.phone) : "Telefone não encontrado"}</span>
       </div>
       <div>
         {chatingWith ? (
