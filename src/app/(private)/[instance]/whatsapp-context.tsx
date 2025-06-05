@@ -34,6 +34,7 @@ import { DetailedInternalChat } from "./internal-context";
 import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
 import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import ChatTransferHandler from "@/lib/event-handlers/chat-transfer";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -151,7 +152,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     (chatId: number, resultId: number) => {
       api.current.setAuth(token || "");
       api.current.finishChatById(chatId, resultId);
-      getChatsMonitor();
+      setMonitorChats((prev) => prev.filter((c) => c.id !== chatId));
     },
     [api, token],
   );
@@ -273,6 +274,21 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       socket.on(
         SocketEventType.WppChatFinished,
         ChatFinishedHandler(
+          socket,
+          chats,
+          currentChat,
+          setMessages,
+          setChats,
+          setCurrentChat,
+          setCurrentChatMessages,
+        ),
+      );
+
+      // Evento de conversa transferido
+      socket.on(
+        SocketEventType.WppChatTransfer,
+        ChatTransferHandler(
+          api.current,
           socket,
           chats,
           currentChat,

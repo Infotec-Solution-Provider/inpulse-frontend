@@ -20,9 +20,22 @@ export default function RenderWhatsappChatMessages() {
   const { currentChatMessages, currentChat } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage } = useContext(ChatContext);
 
+const boolArray = [...currentChatMessages].map((msg) =>
+  msg.from === "system" && msg.body?.startsWith("Atendimento transferido")
+    ? true
+    : false
+);
+
+const lastTransferIndex = boolArray.lastIndexOf(true);
+
+const messagesToRender =
+  lastTransferIndex !== -1
+    ? currentChatMessages.slice(lastTransferIndex)
+    : currentChatMessages;
+
   return (
     <>
-      {currentChatMessages.map((m) => {
+      {messagesToRender.map((m) => {
         const findQuoted =
           m.contactId && m.quotedId && (getMessageById(m.contactId, m.quotedId) as WppMessage);
 
