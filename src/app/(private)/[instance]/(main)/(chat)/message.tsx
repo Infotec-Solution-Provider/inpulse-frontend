@@ -9,6 +9,7 @@ import { ReactNode } from "react";
 import MessageFile from "./message-file";
 import { IconButton } from "@mui/material";
 import ReplyIcon from "@mui/icons-material/Reply";
+import LinkifiedText from "./linkmessage";
 
 export interface QuotedMessageProps {
   id: number;
@@ -105,7 +106,7 @@ export default function Message({
             <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
               {quotedMessage.text.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
-                  {line}
+                        <LinkifiedText text={line} />
                 </p>
               ))}
             </div>
@@ -125,7 +126,7 @@ export default function Message({
           <div className="w-full text-slate-900 dark:text-slate-200">
             {text.split("\n").map((line, index) => (
               <p key={index} className="max-w-[100%] break-words text-sm">
-                {line}
+              <LinkifiedText text={line} />
               </p>
             ))}
           </div>

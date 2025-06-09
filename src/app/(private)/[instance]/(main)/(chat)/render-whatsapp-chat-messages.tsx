@@ -12,6 +12,9 @@ function getWppMessageStyle(msg: WppMessage) {
   if (msg.from.startsWith("me:")) {
     return "sent";
   }
+  if (msg.from.startsWith("bot:")) {
+      return "sent";
+    }
 
   return "received";
 }

@@ -23,6 +23,7 @@
     "emoji-picker-react": "^4.12.2",
     "form-data": "^4.0.2",
     "latest": "^0.2.0",
+    "linkify-react": "^4.3.1",
     "next": "^15.2.4",
     "pretty-bytes": "^6.1.1",
     "qrcode.react": "^4.2.0",

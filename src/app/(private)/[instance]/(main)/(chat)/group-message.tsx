@@ -3,6 +3,7 @@ import MessageFile from "./message-file";
 import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import { IconButton } from "@mui/material";
 import ReplyIcon from "@mui/icons-material/Reply";
+import LinkifiedText from "./linkmessage";
 
 interface MessageProps {
   id: number;
@@ -35,6 +36,7 @@ export default function GroupMessage({
   quotedMessage,
   onQuote,
 }: MessageProps) {
+
   return (
     <li
       id={String(id)}
@@ -42,6 +44,7 @@ export default function GroupMessage({
     >
       <div
         className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
+
       >
         <div className="flex w-full flex-col gap-1">
           {quotedMessage && (
@@ -76,7 +79,7 @@ export default function GroupMessage({
           <div className="w-full text-slate-900 dark:text-slate-200">
             {text.split("\n").map((line, index) => (
               <p key={index} className="max-w-[100%] break-words text-sm">
-                {line}
+                <LinkifiedText text={line} />
               </p>
             ))}
           </div>

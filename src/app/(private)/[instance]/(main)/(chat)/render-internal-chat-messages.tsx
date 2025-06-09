@@ -34,7 +34,6 @@ export default function RenderInternalChatMessages() {
         const quotedMsg = findQuoted
           ? getQuotedMsgProps(findQuoted, getInternalMessageStyle(findQuoted, user!.CODIGO), users)
           : null;
-
         return (
           <Message
             id={m.id}
