@@ -65,7 +65,6 @@ export default function ChatSendMessageArea() {
     dispatch({ type: "change-text", text: "" });
     handleQuoteMessageRemove();
     document.dispatchEvent(new Event("scroll-to-bottom"));
-
   }
 
   useEffect(() => {
@@ -105,8 +104,7 @@ export default function ChatSendMessageArea() {
   }, [quotedMessage]);
 
   return (
-    <div className="flex max-h-36 bg-white/20 items-center gap-2 bg-slate-950 bg-opacity-20 px-2 py-2 text-indigo-300
-                dark:bg-slate-800 dark:bg-opacity-80 dark:text-indigo-400">
+    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400">
       <input
         type="file"
         className="hidden"
@@ -115,14 +113,26 @@ export default function ChatSendMessageArea() {
         onChange={handleFileChange}
       />
       <div className="flex items-center gap-2">
-        <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openQuickMessages}>
+        <IconButton
+          size="small"
+          className="bg-white/20 dark:text-indigo-400"
+          onClick={openQuickMessages}
+        >
           <ChatBubbleIcon />
         </IconButton>
-        <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openAttachFile}>
+        <IconButton
+          size="small"
+          className="bg-white/20 dark:text-indigo-400"
+          onClick={openAttachFile}
+        >
           <AttachFileIcon />
         </IconButton>
         <div className="relative">
-          <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={toggleEmojiPicker}>
+          <IconButton
+            size="small"
+            className="bg-white/20 dark:text-indigo-400"
+            onClick={toggleEmojiPicker}
+          >
             <EmojiEmotionsOutlinedIcon />
           </IconButton>
           <div className="absolute bottom-full">
@@ -141,8 +151,8 @@ export default function ChatSendMessageArea() {
       <div className="flex w-full flex-col gap-2">
         {quotedMessage && (
           <div
-            className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2
-                   dark:bg-indigo-600/20"            onClick={handleQuoteMessageRemove}
+            className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20"
+            onClick={handleQuoteMessageRemove}
           >
             <div className="text-sm text-black dark:text-slate-300">
               {quotedMessage.body.split("\n").map((line, index) => (
@@ -182,7 +192,6 @@ export default function ChatSendMessageArea() {
             placeholder="Mensagem"
             value={state?.text}
             onChange={handleTextChange}
-
           />
         )}
       </div>

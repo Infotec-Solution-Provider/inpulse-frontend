@@ -28,7 +28,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <CustomersProvider>
 
                 <ThemeProvider>
-                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)] bg-white dark:bg-gray-900 text-black dark:text-white">
+                  <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
                     <Header />
                     {children}
                     <Modal

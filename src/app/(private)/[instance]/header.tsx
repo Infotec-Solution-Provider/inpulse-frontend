@@ -19,7 +19,6 @@ const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
   { title: "Conversas Internas", href: "/monitor/internal-chats" },
-
 ];
 
 const crudsRoutes = (instance: string, sectorId?: number) => {
@@ -28,7 +27,7 @@ const crudsRoutes = (instance: string, sectorId?: number) => {
     // { title: "Agendamentos", href: "/schedules" },
     { title: "Usuários", href: "/users" },
     { title: "Clientes", href: "/customers" },
-    { title: "Mensagens prontas", href: "/ready-messages" }
+    { title: "Mensagens prontas", href: "/ready-messages" },
     // { title: "Templates", href: "/templates" },
     // { title: "Tags", href: "/tags" },
   ];
@@ -50,7 +49,6 @@ const reportsRoutes = [
   { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
   { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
   { title: "Mensagens por usuário", href: "/reports/messages-by-user" },
-
 ];
 
 /*
@@ -66,9 +64,9 @@ export default function Header() {
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
 
   return (
-    <header className="sticky top-0 z-20 shadow-2xl">
-      <div className="flex items-center bg-slate-900">
-        <div className="mx-auto flex w-screen items-center justify-between px-4 py-4 bg-white dark:bg-slate-900">
+    <header className="sticky top-0 z-20 shadow-md">
+      <div className="flex items-center">
+        <div className="mx-auto flex w-screen items-center justify-between bg-slate-200 px-4 py-4 dark:bg-slate-800">
           <div className="flex items-center gap-8">
             <Link href={`/${instance}/`}>
               <Image src={HorizontalLogo} alt="Logo" height={36} className="cursor-pointer" />
@@ -82,7 +80,11 @@ export default function Header() {
               <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
                 <MonitorIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
-              <HeaderNavItem title="Cadastros" routes={crudsRoutes(instance, user?.SETOR)} disabled={!isUserAdmin}>
+              <HeaderNavItem
+                title="Cadastros"
+                routes={crudsRoutes(instance, user?.SETOR)}
+                disabled={!isUserAdmin}
+              >
                 <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
               </HeaderNavItem>
               <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
@@ -94,17 +96,16 @@ export default function Header() {
             </menu>
           </nav>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center">
             <ThemeToggleButton />
-            <h1 className="truncate text-gray-900 dark:text-slate-200">{user?.NOME}</h1>
-            <IconButton title="notifications" type="button" >
+            <IconButton title="notifications" type="button">
               <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
+            <h1 className="truncate text-gray-900 dark:text-slate-200 mx-4">{user?.NOME}</h1>
             <IconButton title="logout" type="button" onClick={signOut}>
               <LogoutIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
           </div>
-
         </div>
       </div>
     </header>

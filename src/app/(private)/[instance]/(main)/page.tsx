@@ -8,13 +8,12 @@ import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 
 export default function Home() {
-
   const { currentChat } = useContext(WhatsappContext);
   const { user, instance } = useContext(AuthContext);
 
   return (
     <ChatProvider>
-<div className="box-border grid grid-cols-[24rem_1fr] grid-rows-1 gap-4 px-4 py-4 bg-white text-black dark:bg-gray-900 dark:text-white">
+      <div className="box-border grid grid-cols-[24rem_1fr] grid-rows-1 gap-4 px-4 py-4">
         <ChatsMenu />
         {currentChat?.chatType === "internal" && (
           <Chat

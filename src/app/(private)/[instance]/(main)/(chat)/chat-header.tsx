@@ -21,7 +21,13 @@ export interface ChatContactInfoProps {
   chatType?: string | null;
 }
 
-export default function ChatHeader({ name, avatarUrl, customerName, phone, chatType }: ChatContactInfoProps) {
+export default function ChatHeader({
+  name,
+  avatarUrl,
+  customerName,
+  phone,
+  chatType,
+}: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
   const { currentChat } = useWhatsappContext();
 
@@ -44,7 +50,7 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-2 bg-gray-50 border-b border-gray-300 dark:bg-transparent dark:border-none">
+    <div className="flex items-center justify-between gap-4 border-b bg-slate-200 px-4 py-2 dark:border-none dark:bg-slate-800">
       <div className="flex items-center gap-4">
         <Avatar
           variant="circular"
@@ -53,7 +59,9 @@ export default function ChatHeader({ name, avatarUrl, customerName, phone, chatT
           sx={{ width: 60, height: 60 }}
         />
         <div>
-          <h2 className="font-semibold dark:font-normal text-slate-800 dark:text-slate-100">{name}</h2>
+          <h2 className="font-semibold text-slate-800 dark:font-normal dark:text-slate-100">
+            {name}
+          </h2>
           <h2 className="text-sm text-slate-700 dark:text-slate-200">{customerName}</h2>
           <h2 className="text-sm text-slate-400 dark:text-slate-300">
             {chatType == "wpp" ? Formatter.phone(phone) : ""}

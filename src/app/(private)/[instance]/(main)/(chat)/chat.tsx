@@ -35,7 +35,7 @@ export default function Chat({ avatarUrl, name, customerName, phone }: ChatConta
   };
 
   return (
-<div className="grid grid-rows-[auto_1fr] overflow-hidden rounded-md bg-white text-black dark:bg-slate-900 dark:text-white drop-shadow-md">
+<div className="grid grid-rows-[auto_1fr] overflow-hidden rounded-md bg-white text-black dark:bg-slate-900 dark:text-white shadow-md">
       <ChatHeader avatarUrl={avatarUrl} name={name} customerName={customerName} phone={phone} />
       <div
         className="relative grid grid-rows-[1fr_auto] overflow-hidden"
