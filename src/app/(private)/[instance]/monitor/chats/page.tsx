@@ -1,18 +1,9 @@
 "use client";
 import { useContext, useEffect, useState, useMemo } from "react";
-import {
-  IconButton,
-  TextField,
-  TableHead,
-  TableContainer,
-  Table,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@mui/material";
+import { IconButton, TextField } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
-import { useWhatsappContext } from "../../whatsapp-context";
+import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
 import { AppContext } from "../../app-context";
 import ChatProvider from "../../(main)/(chat)/chat-context";
 import ChatHeader from "../../(main)/(chat)/chat-header";
@@ -21,15 +12,16 @@ import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
 import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import { InternalChatContext } from "../../internal-context";
+import { Formatter } from "@in.pulse-crm/utils";
+import { WppChat } from "@in.pulse-crm/sdk";
 
 export default function MonitorAttendances() {
   const { getChatsMonitor, monitorChats, setCurrentChat, openChat, chats, getChats } =
     useWhatsappContext();
-  const { users } = useContext(InternalChatContext);
 
+  const { users } = useContext(InternalChatContext);
   const { openModal, closeModal } = useContext(AppContext);
   const [fCode, setFCode] = useState("");
-  const [fOrigin, setFOrigin] = useState("");
   const [fPart, setFPart] = useState("");
   const [fStart, setFStart] = useState("");
   const [fEnd, setFEnd] = useState("");
@@ -48,8 +40,6 @@ export default function MonitorAttendances() {
   const monitorChatsMemo = useMemo(() => [...monitorChats], [monitorChats]);
   const filtered = useMemo(() => {
     return monitorChatsMemo.filter((chat: any) => {
-      const isInternal = !!chat.users;
-
       if (fCode && !String(chat.id).includes(fCode)) return false;
       if (fCodeERP && !String(chat.customer?.CODIGOERP || "").includes(fCodeERP)) return false;
 
@@ -98,7 +88,7 @@ export default function MonitorAttendances() {
     fResult,
   ]);
 
-  const openWhatsappChat = (chat: any) => {
+  const openWhatsappChat = (chat: DetailedChat) => {
     if (!chat) return;
     setCurrentChat(chat);
     openChat(chat);
@@ -128,14 +118,14 @@ export default function MonitorAttendances() {
     );
   };
 
-  const openTransferChatModal = (chat: any) => {
+  const openTransferChatModal = (chat: DetailedChat) => {
     if (chat) {
       setCurrentChat(chat);
       openModal(<TransferChatModal />);
     }
   };
 
-  const openFinishChatModal = (chat: any) => {
+  const openFinishChatModal = (chat: DetailedChat) => {
     if (chat) {
       setCurrentChat(chat);
       openModal(<FinishChatModal />);
@@ -144,142 +134,138 @@ export default function MonitorAttendances() {
   };
 
   return (
-    <div className="h-screen w-screen px-10 pt-5">
-      <TableContainer className="scrollbar-whatsapp mx-auto max-h-[75vh] overflow-auto rounded-md shadow-md">
-        <Table >
-          <TableHead>
-            <TableRow className="sticky top-0 z-50 rounded-md">
-              <TableCell className="px-2 py-2 text-center">Ações</TableCell>
-
-              <TableCell>
-                <TextField
-                  value={fCode}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFCode(e.target.value)}
-                  placeholder="Código"
-                  size="small"
-                  variant="standard"
-                  style={{ width: "5rem" }}
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={fCodeERP}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFCodeERP(e.target.value)}
-                  placeholder="Código ERP"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={fPart}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFPart(e.target.value)}
-                  placeholder="Cliente"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={fPhone}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFPhone(e.target.value)}
-                  placeholder="Número"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={fContactName}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFContactName(e.target.value)}
-                  placeholder="Contato"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-
-              <TableCell>
-                <TextField
-                  value={fCustomerName}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFCustomerName(e.target.value)}
-                  placeholder="Razão Social"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-
-              <TableCell>
-                <TextField
-                  value={fOperator}
-                  slotProps={{ input: { disableUnderline: true } }}
-                  onChange={(e) => setFOperator(e.target.value)}
-                  placeholder="Operador"
-                  size="small"
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-              <TableCell>
-                <TextField
-                  value={fStart}
-                  onChange={(e) => setFStart(e.target.value)}
-                  placeholder="Data Início"
-                  size="small"
-                  slotProps={{ input: { disableUnderline: true } }}
-                  variant="standard"
-                  className="w-full"
-                />
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filtered.map((chat: any, idx) => {
-              return (
-                <TableRow key={idx}>
-                  <TableCell className="px-4 py-2 text-center">
-                    <div className="flex justify-center gap-1">
-                      <IconButton size="small" onClick={() => openWhatsappChat(chat)}>
-                        <VisibilityIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton onClick={() => openTransferChatModal(chat)}>
-                        <SyncAlt color="secondary" fontSize="small" />
-                      </IconButton>
-                      <IconButton onClick={() => openFinishChatModal(chat)}>
-                        <AssignmentTurnedIn color="success" fontSize="small" />
-                      </IconButton>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-2 py-3">{chat.id}</TableCell>
-                  <TableCell className="px-2 py-3">{chat.customer?.CODIGOERP}</TableCell>
-                  <TableCell className="px-2 py-3">
-                    {chat.customer?.RAZAO || chat.contactName}
-                  </TableCell>
-                  <TableCell className="px-2 py-3">{chat.contact.phone}</TableCell>
-                  <TableCell className="px-2 py-3">{chat.contact.name}</TableCell>
-                  <TableCell className="px-2 py-3">{chat.customer?.RAZAO}</TableCell>
-                  <TableCell className="px-2 py-3">
-                    {users.find((user: any) => String(user.CODIGO) === String(chat?.userId))?.NOME}
-                  </TableCell>
-                  <TableCell className="px-2 py-3">
-                    {new Date(chat?.startAt || chat?.startedAt).toLocaleDateString()}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+    <div className="box-border h-full py-4 px-4">
+      <div className="mx-auto flex h-full max-w-[1860px] flex-col rounded-md shadow-md">
+        <header className="flex items-center rounded-t-md bg-indigo-200 py-2 dark:bg-indigo-800">
+          <div className="w-[10rem] pl-8 pr-2">
+            <h2 className="text-slate-800 dark:text-slate-200">Ações</h2>
+          </div>
+          <div className="w-[5rem] pl-2">
+            <TextField
+              value={fCode}
+              slotProps={{ input: { disableUnderline: true } }}
+              onChange={(e) => setFCode(e.target.value)}
+              placeholder="Código"
+              size="small"
+              variant="standard"
+              fullWidth
+            />
+          </div>
+          <div className="w-[8rem] pl-2">
+            <TextField
+              value={fCodeERP}
+              slotProps={{ input: { disableUnderline: true } }}
+              onChange={(e) => setFCodeERP(e.target.value)}
+              placeholder="Código ERP"
+              size="small"
+              variant="standard"
+              className="w-full"
+            />
+          </div>
+          <div className="w-[20rem] pl-2">
+            <TextField
+              value={fPart}
+              slotProps={{ input: { disableUnderline: true } }}
+              onChange={(e) => setFPart(e.target.value)}
+              placeholder="Cliente"
+              size="small"
+              variant="standard"
+              className="w-full"
+            />
+          </div>
+          <div className="w-[11rem] pl-2">
+            <TextField
+              value={fContactName}
+              slotProps={{ input: { disableUnderline: true } }}
+              onChange={(e) => setFContactName(e.target.value)}
+              placeholder="Contato"
+              size="small"
+              variant="standard"
+              className="w-full"
+            />
+          </div>
+          <div className="w-[11rem] pl-2">
+            <TextField
+              value={fPhone}
+              slotProps={{ input: { disableUnderline: true } }}
+              onChange={(e) => setFPhone(e.target.value)}
+              placeholder="Número"
+              size="small"
+              variant="standard"
+              className="w-full"
+            />
+          </div>
+          <div className="w-[11rem] pl-2">
+            <TextField
+              value={fOperator}
+              slotProps={{ input: { disableUnderline: true } }}
+              onChange={(e) => setFOperator(e.target.value)}
+              placeholder="Usuário"
+              size="small"
+              variant="standard"
+              className="w-full"
+            />
+          </div>
+          <div className="w-[11rem] pl-2">
+            <TextField
+              value={fStart}
+              onChange={(e) => setFStart(e.target.value)}
+              placeholder="Data Início"
+              size="small"
+              slotProps={{ input: { disableUnderline: true } }}
+              variant="standard"
+              className="w-full"
+            />
+          </div>
+        </header>
+        <div className="scrollbar-whatsapp grow overflow-auto rounded-b-md bg-slate-200 dark:bg-slate-800">
+          {filtered.map((chat: any, idx) => {
+            return (
+              <div key={idx} className="flex items-center py-2 text-slate-800 dark:text-slate-200 even:bg-indigo-700/10">
+                <div className="flex w-[10rem] items-center justify-center gap-2 pl-8 pr-2">
+                  <IconButton size="small" onClick={() => openWhatsappChat(chat)}>
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton onClick={() => openTransferChatModal(chat)}>
+                    <SyncAlt color="secondary" fontSize="small" />
+                  </IconButton>
+                  <IconButton onClick={() => openFinishChatModal(chat)}>
+                    <AssignmentTurnedIn color="success" fontSize="small" />
+                  </IconButton>
+                </div>
+                <div className="w-[5rem] pl-2">
+                  <p className="font-semibold">{chat.id}</p>
+                </div>
+                <div className="w-[8rem] pl-2">
+                  <p>{chat.customer?.CODIGOERP || "N/D"}</p>
+                </div>
+                <div className="w-[20rem] pl-2">
+                  <p className="truncate">{chat.customer?.RAZAO || "N/D"}</p>
+                </div>
+                <div className="w-[11rem] pl-2">
+                  <p className="truncate">{chat.contact?.name || "N/D"}</p>
+                </div>
+                <div className="w-[11rem] pl-2">
+                  <p className="truncate">
+                    {chat.contact?.phone ? Formatter.phone(chat.contact.phone) : "N/D"}
+                  </p>
+                </div>
+                <div className="w-[11rem] pl-2">
+                  <p className="truncate">
+                    {chat.botId
+                      ? "BOT"
+                      : users.find((user: any) => String(user.CODIGO) === String(chat?.userId))
+                          ?.NOME}
+                  </p>
+                </div>
+                <div className="w-[11rem] pl-2">
+                  <p>{new Date(chat?.startAt || chat?.startedAt).toLocaleString()}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
