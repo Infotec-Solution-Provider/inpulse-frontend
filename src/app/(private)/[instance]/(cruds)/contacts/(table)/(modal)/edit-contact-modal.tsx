@@ -10,7 +10,6 @@ export interface EditContactModalProps {
   contact: WppContact;
 }
 
-// Tipo simples só com nome
 type EditContactPayload = {
   name: string;
 };
@@ -21,7 +20,7 @@ const validateKey: Record<keyof EditContactPayload, (value: unknown) => boolean>
 
 export default function EditContactModal({ contact }: EditContactModalProps) {
   const { closeModal } = useAppContext();
-  const { updateContact } = useContactsContext();
+  const { updateContact,loadContacts } = useContactsContext();
 
   const formRef = useRef<EditContactPayload>({
     name: contact.name,
@@ -49,9 +48,10 @@ export default function EditContactModal({ contact }: EditContactModalProps) {
     return true;
   };
 
-  const onClickSave = () => {
+  const onClickSave = async () => {
     if (validateForm(formRef.current)) {
-      updateContact(contact.id, formRef.current.name);
+     await  updateContact(contact.id, formRef.current.name);
+     loadContacts();
       closeModal();
     }
   };
@@ -87,3 +87,5 @@ export default function EditContactModal({ contact }: EditContactModalProps) {
     </aside>
   );
 }
+
+

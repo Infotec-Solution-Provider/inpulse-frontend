@@ -8,14 +8,14 @@ import { useContactsContext } from "../../contacts-context";
 
 export default function CreateContactModal() {
   const { closeModal } = useAppContext();
-  const { createContact } = useContactsContext();
+  const { createContact,loadContacts } = useContactsContext();
 
   const formRef = useRef<{ name: string; phone: string }>({
     name: "",
     phone: "",
   });
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const { name, phone } = formRef.current;
 
     if (!name || !phone) {
@@ -23,7 +23,9 @@ export default function CreateContactModal() {
       return;
     }
 
-    await createContact(name, phone);
+    createContact(name, phone);
+    loadContacts();
+
     closeModal();
   };
 
@@ -64,3 +66,4 @@ export default function CreateContactModal() {
     </aside>
   );
 }
+

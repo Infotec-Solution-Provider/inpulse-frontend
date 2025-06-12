@@ -12,7 +12,6 @@ export default function ClientTableHeader({
   filters: Partial<Record<FilterKeys, string>>;
   setFilters: (filters: Partial<Record<FilterKeys, string>>) => void;
 }) {
-  // Não precisa manter localFilters, pode usar direto os filtros do pai
 
   const onChangeFilter = (key: keyof typeof filters, value: string) => {
     const newFilters = { ...filters };
