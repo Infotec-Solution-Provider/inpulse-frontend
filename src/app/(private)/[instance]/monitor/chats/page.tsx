@@ -14,6 +14,7 @@ import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal
 import { InternalChatContext } from "../../internal-context";
 import { Formatter } from "@in.pulse-crm/utils";
 import { WppChat } from "@in.pulse-crm/sdk";
+import toDateString from "@/lib/utils/date-string";
 
 export default function MonitorAttendances() {
   const { getChatsMonitor, monitorChats, setCurrentChat, openChat, chats, getChats } =
@@ -134,137 +135,153 @@ export default function MonitorAttendances() {
   };
 
   return (
-    <div className="box-border h-full py-4 px-4">
-      <div className="mx-auto flex h-full max-w-[1860px] flex-col rounded-md shadow-md">
-        <header className="flex items-center rounded-t-md bg-indigo-200 py-2 dark:bg-indigo-800">
-          <div className="w-[10rem] pl-8 pr-2">
-            <h2 className="text-slate-800 dark:text-slate-200">Ações</h2>
-          </div>
-          <div className="w-[5rem] pl-2">
-            <TextField
-              value={fCode}
-              slotProps={{ input: { disableUnderline: true } }}
-              onChange={(e) => setFCode(e.target.value)}
-              placeholder="Código"
-              size="small"
-              variant="standard"
-              fullWidth
-            />
-          </div>
-          <div className="w-[8rem] pl-2">
-            <TextField
-              value={fCodeERP}
-              slotProps={{ input: { disableUnderline: true } }}
-              onChange={(e) => setFCodeERP(e.target.value)}
-              placeholder="Código ERP"
-              size="small"
-              variant="standard"
-              className="w-full"
-            />
-          </div>
-          <div className="w-[20rem] pl-2">
-            <TextField
-              value={fPart}
-              slotProps={{ input: { disableUnderline: true } }}
-              onChange={(e) => setFPart(e.target.value)}
-              placeholder="Cliente"
-              size="small"
-              variant="standard"
-              className="w-full"
-            />
-          </div>
-          <div className="w-[11rem] pl-2">
-            <TextField
-              value={fContactName}
-              slotProps={{ input: { disableUnderline: true } }}
-              onChange={(e) => setFContactName(e.target.value)}
-              placeholder="Contato"
-              size="small"
-              variant="standard"
-              className="w-full"
-            />
-          </div>
-          <div className="w-[11rem] pl-2">
-            <TextField
-              value={fPhone}
-              slotProps={{ input: { disableUnderline: true } }}
-              onChange={(e) => setFPhone(e.target.value)}
-              placeholder="Número"
-              size="small"
-              variant="standard"
-              className="w-full"
-            />
-          </div>
-          <div className="w-[11rem] pl-2">
-            <TextField
-              value={fOperator}
-              slotProps={{ input: { disableUnderline: true } }}
-              onChange={(e) => setFOperator(e.target.value)}
-              placeholder="Usuário"
-              size="small"
-              variant="standard"
-              className="w-full"
-            />
-          </div>
-          <div className="w-[11rem] pl-2">
-            <TextField
-              value={fStart}
-              onChange={(e) => setFStart(e.target.value)}
-              placeholder="Data Início"
-              size="small"
-              slotProps={{ input: { disableUnderline: true } }}
-              variant="standard"
-              className="w-full"
-            />
-          </div>
-        </header>
-        <div className="scrollbar-whatsapp grow overflow-auto rounded-b-md bg-slate-200 dark:bg-slate-800">
-          {filtered.map((chat: any, idx) => {
-            return (
-              <div key={idx} className="flex items-center py-2 text-slate-800 dark:text-slate-200 even:bg-indigo-700/10">
-                <div className="flex w-[10rem] items-center justify-center gap-2 pl-8 pr-2">
-                  <IconButton size="small" onClick={() => openWhatsappChat(chat)}>
-                    <VisibilityIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton onClick={() => openTransferChatModal(chat)}>
-                    <SyncAlt color="secondary" fontSize="small" />
-                  </IconButton>
-                  <IconButton onClick={() => openFinishChatModal(chat)}>
-                    <AssignmentTurnedIn color="success" fontSize="small" />
-                  </IconButton>
-                </div>
-                <div className="w-[5rem] pl-2">
-                  <p className="font-semibold">{chat.id}</p>
-                </div>
-                <div className="w-[8rem] pl-2">
-                  <p>{chat.customer?.CODIGOERP || "N/D"}</p>
-                </div>
-                <div className="w-[20rem] pl-2">
-                  <p className="truncate">{chat.customer?.RAZAO || "N/D"}</p>
-                </div>
-                <div className="w-[11rem] pl-2">
-                  <p className="truncate">{chat.contact?.name || "N/D"}</p>
-                </div>
-                <div className="w-[11rem] pl-2">
-                  <p className="truncate">
-                    {chat.contact?.phone ? Formatter.phone(chat.contact.phone) : "N/D"}
-                  </p>
-                </div>
-                <div className="w-[11rem] pl-2">
-                  <p className="truncate">
-                    {chat.botId
-                      ? "BOT"
-                      : users.find((user: any) => String(user.CODIGO) === String(chat?.userId))
-                          ?.NOME}
-                  </p>
-                </div>
-                <div className="w-[11rem] pl-2">
-                  <p>{new Date(chat?.startAt || chat?.startedAt).toLocaleString()}</p>
-                </div>
-              </div>
-            );
-          })}
+    <div className="mx-auto box-border flex h-full w-full max-w-[1860px] flex-col overflow-auto rounded-md px-2 py-4 shadow-md">
+      <header className="flex w-max items-center rounded-t-md bg-indigo-200 py-1 dark:bg-indigo-800">
+        {/* Ações */}
+        <div className="px-2 pl-6 md:w-24 lg:w-32">
+          <h2 className="lg:text-md py-2 text-slate-800 dark:text-slate-200 md:text-sm">Ações</h2>
         </div>
+
+        {/* Código */}
+        <div className="pl-2 md:w-16 lg:w-20">
+          <input
+            value={fCode}
+            onChange={(e) => setFCode(e.target.value)}
+            placeholder="Código"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+
+        {/* Código ERP */}
+        <div className="pl-2 md:w-16 lg:w-20">
+          <input
+            value={fCodeERP}
+            onChange={(e) => setFCodeERP(e.target.value)}
+            placeholder="ERP"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+
+        {/* Cliente/Razão */}
+        <div className="pl-2 md:w-32 lg:w-44">
+          <input
+            value={fPart}
+            onChange={(e) => setFPart(e.target.value)}
+            placeholder="Cliente"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+
+        {/* Contato/Nome */}
+        <div className="pl-2 md:w-28 lg:w-36">
+          <input
+            value={fContactName}
+            onChange={(e) => setFContactName(e.target.value)}
+            placeholder="Contato"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+
+        {/* Contato/Fone */}
+        <div className="pl-2 md:w-32 lg:w-44">
+          <input
+            value={fPhone}
+            onChange={(e) => setFPhone(e.target.value)}
+            placeholder="Número"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+
+        {/* Usuário */}
+        <div className="pl-2 md:w-28 lg:w-36">
+          <input
+            value={fOperator}
+            onChange={(e) => setFOperator(e.target.value)}
+            placeholder="Usuário"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+
+        {/* Data Início */}
+        <div className="pl-2 md:w-28 lg:w-36">
+          <input
+            value={fStart}
+            onChange={(e) => setFStart(e.target.value)}
+            placeholder="Data Início"
+            className="lg:text-md w-full bg-transparent p-2 text-slate-800 outline-none dark:text-slate-200 md:text-sm"
+          />
+        </div>
+      </header>
+      <div className="scrollbar-whatsapp w-max grow rounded-b-md bg-slate-200 dark:bg-slate-800">
+        {filtered.map((chat: any, idx) => {
+          return (
+            <div
+              key={idx}
+              className="flex items-center py-2 text-slate-800 even:bg-indigo-700/10 dark:text-slate-200"
+            >
+              {/* Ações */}
+              <div className="flex gap-1 pl-6 md:w-24 lg:w-32">
+                <button onClick={() => openWhatsappChat(chat)} className="hover:brightness-125">
+                  <VisibilityIcon color="info" className="md:scale-50 lg:scale-75" />
+                </button>
+                <button
+                  onClick={() => openTransferChatModal(chat)}
+                  className="hover:brightness-125"
+                >
+                  <SyncAlt color="secondary" className="md:scale-50 lg:scale-75" />
+                </button>
+                <button onClick={() => openFinishChatModal(chat)} className="hover:brightness-125">
+                  <AssignmentTurnedIn color="success" className="md:scale-50 lg:scale-75" />
+                </button>
+              </div>
+
+              {/* Código */}
+              <div className="pl-2 md:w-16 lg:w-20">
+                <p className="lg:text-md pl-2 font-semibold md:text-sm">{chat.id}</p>
+              </div>
+
+              {/* Código ERP */}
+              <div className="pl-2 md:w-16 lg:w-20">
+                <p className="lg:text-md pl-2 md:text-sm">{chat.customer?.CODIGOERP || "N/D"}</p>
+              </div>
+
+              {/* Cliente/Razão */}
+              <div className="pl-2 md:w-32 lg:w-44">
+                <p className="lg:text-md truncate pl-2 md:text-sm">
+                  {chat.customer?.RAZAO || "N/D"}
+                </p>
+              </div>
+
+              {/* Contato/Nome */}
+              <div className="pl-2 md:w-28 lg:w-36">
+                <p className="lg:text-md truncate pl-2 md:text-sm">{chat.contact?.name || "N/D"}</p>
+              </div>
+
+              {/* Contato/Fone */}
+              <div className="pl-2 md:w-32 lg:w-44">
+                <p className="lg:text-md truncate pl-2 md:text-sm">
+                  {chat.contact?.phone ? Formatter.phone(chat.contact.phone) : "N/D"}
+                </p>
+              </div>
+
+              {/* Usuário */}
+              <div className="pl-2 md:w-28 lg:w-36">
+                <p className="lg:text-md truncate pl-2 md:text-sm">
+                  {chat.botId
+                    ? "BOT"
+                    : users.find((user: any) => String(user.CODIGO) === String(chat?.userId))?.NOME}
+                </p>
+              </div>
+
+              {/* Data Início */}
+              <div className="pl-2 md:w-28 lg:w-36">
+                <p className="truncate pl-2 md:text-xs lg:text-sm">
+                  {toDateString(chat?.startAt || chat?.startedAt)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

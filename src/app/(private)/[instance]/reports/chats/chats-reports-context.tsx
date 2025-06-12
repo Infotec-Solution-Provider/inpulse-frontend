@@ -51,31 +51,25 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
   const [reports, setReports] = useState<Array<ChatsReport & { progress: number }>>([]);
   const [users, setUsers] = useState<Array<User>>([]);
 
-  const deleteReport = useCallback(
-    async (id: number) => {
-      try {
-        await reportsService.deleteChatsReport(id);
-        setReports((prev) => prev.filter((r) => r.id !== id));
-        toast.success("Relatório excluído com sucesso!");
-      } catch (err) {
-        toast.error("Falha ao excluir relatório!\n" + sanitizeErrorMessage(err));
-      }
-    },
-    [],
-  );
+  const deleteReport = useCallback(async (id: number) => {
+    try {
+      await reportsService.deleteChatsReport(id);
+      setReports((prev) => prev.filter((r) => r.id !== id));
+      toast.success("Relatório excluído com sucesso!");
+    } catch (err) {
+      toast.error("Falha ao excluir relatório!\n" + sanitizeErrorMessage(err));
+    }
+  }, []);
 
-  const generateReport = useCallback(
-    async (params: GenerateReportParams) => {
-      try {
-        const report = await reportsService.generateChatsReport(params);
-        setReports((prev) => [{ ...report, progress: 0 }, ...prev]);
-        toast.success("Relatório em processamento, você será notificado quando estiver pronto!");
-      } catch (err) {
-        toast.error("Falha ao criar relatório!\n" + sanitizeErrorMessage(err));
-      }
-    },
-    [],
-  );
+  const generateReport = useCallback(async (params: GenerateReportParams) => {
+    try {
+      const report = await reportsService.generateChatsReport(params);
+      setReports((prev) => [{ ...report, progress: 0 }, ...prev]);
+      toast.success("Relatório em processamento, você será notificado quando estiver pronto!");
+    } catch (err) {
+      toast.error("Falha ao criar relatório!\n" + sanitizeErrorMessage(err));
+    }
+  }, []);
 
   const handleReportStatus = useCallback((data: ReportStatusEventData) => {
     setReports((prev) =>

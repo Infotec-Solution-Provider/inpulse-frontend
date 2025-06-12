@@ -8,9 +8,9 @@ export default function ChatsReportList() {
   const { reports, users } = useContext(ChatsReportContext);
 
   return (
-<div className="mx-auto w-full overflow-y-scroll scrollbar-whatsapp bg-indigo-700/5 dark:bg-indigo-900/10">
-<table className="w-max text-sm text-black dark:text-white">
-<thead className="sticky top-0 rounded-md bg-white dark:bg-indigo-900 shadow-sm dark:shadow-md">
+    <div className="scrollbar-whatsapp mx-auto w-full overflow-y-scroll bg-indigo-700/5 dark:bg-indigo-900/10">
+      <table className="w-max text-sm text-black dark:text-white">
+        <thead className="sticky top-0 rounded-md bg-white shadow-sm dark:bg-indigo-900 dark:shadow-md">
           <tr>
             <th className="w-44 px-2 py-2 pl-8 text-left">Status</th>
             <th className="w-48 px-2 py-2 text-left">Usuário</th>

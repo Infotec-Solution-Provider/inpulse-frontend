@@ -19,27 +19,23 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-  <div className="w-[22rem] rounded-md bg-white text-gray-800 px-4 py-4 dark:bg-slate-800 dark:text-white">
+    <div className="w-[22rem] rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-4">
-        <h1 className="text-lg text-semibold">Iniciar conversa</h1>
+        <h1 className="text-semibold text-lg">Iniciar conversa</h1>
         <IconButton onClick={onClose}>
           <CloseIcon />
         </IconButton>
       </header>
-         <input
+      <input
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         placeholder="Pesquisar nome ou numero..."
-        className="mb-4 w-full rounded-md border bg-white border-gray-300 px-3 py-2 text-sm dark:bg-slate-700 dark:border-gray-600 dark:text-white"
+        className="mb-4 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-slate-700 dark:text-white"
       />
-      <ul className="flex h-[25rem] flex-col items-center gap-2 scrollbar-whatsapp ">
+      <ul className="scrollbar-whatsapp flex h-[25rem] flex-col items-center gap-2">
         {contacts
-          .filter((contact) =>
-            contact?.name
-              ?.toLowerCase()
-              .includes(searchTerm.toLowerCase())
-          )
+          .filter((contact) => contact?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
           .map((contact) => (
             <StartChatModalItem
               key={contact.id}
