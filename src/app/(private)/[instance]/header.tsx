@@ -27,6 +27,7 @@ const crudsRoutes = (instance: string, sectorId?: number) => {
     // { title: "Agendamentos", href: "/schedules" },
     { title: "Usuários", href: "/users" },
     { title: "Clientes", href: "/customers" },
+    { title: "Contatos", href: "/contacts" },
     { title: "Mensagens prontas", href: "/ready-messages" },
     // { title: "Templates", href: "/templates" },
     // { title: "Tags", href: "/tags" },

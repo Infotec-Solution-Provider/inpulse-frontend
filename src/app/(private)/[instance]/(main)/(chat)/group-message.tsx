@@ -59,7 +59,7 @@ export default function GroupMessage({
               <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
                 {quotedMessage.text.split("\n").map((line, index) => (
                   <p key={index} className="max-w-[100%] break-words text-sm">
-                    {line}
+                  <LinkifiedText text={line} />
                   </p>
                 ))}
               </div>

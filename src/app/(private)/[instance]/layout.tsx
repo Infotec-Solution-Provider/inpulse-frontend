@@ -10,6 +10,7 @@ import { InternalChatProvider } from "./internal-context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
 import { ThemeProvider } from "@/app/theme-context";
 import CustomersProvider from "./(cruds)/customers/customers-context";
+import ContactsProvider from "./(cruds)/contacts/contacts-context";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -26,7 +27,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <InternalChatProvider>
               <ReadyMessagesProvider>
                 <CustomersProvider>
-
+                <ContactsProvider>
                 <ThemeProvider>
                   <div className="grid h-screen w-full auto-rows-max grid-rows-[max-content_minmax(400px,1fr)]">
                     <Header />
@@ -43,6 +44,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </Modal>
                   </div>
                 </ThemeProvider>
+                </ContactsProvider>
                 </CustomersProvider>
               </ReadyMessagesProvider>
             </InternalChatProvider>
