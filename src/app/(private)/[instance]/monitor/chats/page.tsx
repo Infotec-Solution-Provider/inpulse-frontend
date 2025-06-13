@@ -135,7 +135,7 @@ export default function MonitorAttendances() {
   };
 
   return (
-    <div className="mx-auto box-border flex h-full w-full max-w-[1860px] flex-col overflow-auto rounded-md px-2 py-4 shadow-md">
+    <div className="mx-auto box-border flex h-full w-max max-w-[1860px] flex-col overflow-auto rounded-md px-2 py-4 shadow-md">
       <header className="flex w-max items-center rounded-t-md bg-indigo-200 py-1 dark:bg-indigo-800">
         {/* Ações */}
         <div className="px-2 pl-6 md:w-24 lg:w-32">
