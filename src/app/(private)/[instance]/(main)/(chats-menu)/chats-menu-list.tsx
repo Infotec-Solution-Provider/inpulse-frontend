@@ -34,7 +34,9 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 
   if (chat.chatType === "internal") {
     const matchName = chat.users.some((u) => u.NOME.toLowerCase().includes(search.toLowerCase()));
-    return matchName;
+    const matchGroupName = chat?.groupName?.toLowerCase().includes(search.toLowerCase());
+
+    return matchName || matchGroupName;
   }
   return false;
 };
