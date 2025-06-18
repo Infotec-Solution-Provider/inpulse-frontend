@@ -43,6 +43,7 @@ const userCrudRoutes = [
   // { title: "Atendimentos", href: "/attendances" },
   // { title: "Agendamentos", href: "/schedules" },
   { title: "Clientes", href: "/customers" },
+  { title: "Contatos", href: "/contacts" },
 ];
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
