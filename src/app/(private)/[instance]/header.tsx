@@ -48,9 +48,9 @@ const userCrudRoutes = [
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
   { title: "Gerador de Relatório", href: "/reports/report-generator" },
-  { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
+/*{ title: "Conversas sem resposta", href: "/reports/chats-without-response" },
   { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-  { title: "Mensagens por usuário", href: "/reports/messages-by-user" },
+  { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, */
 ];
 
 /*
