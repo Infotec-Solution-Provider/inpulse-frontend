@@ -44,7 +44,7 @@ export default function Chat({ avatarUrl, name, customerName, phone }: ChatConta
         onPaste={handlePaste}
       >
         <ChatMessagesList />
-        { <ChatSendMessageArea />}
+        {(!state?.file||state.sendAsAudio) && <ChatSendMessageArea />}
         {state?.file && !state.sendAsAudio && <ChatAttachmentPreview file={state.file} />}
       </div>
     </div>
