@@ -19,6 +19,7 @@ const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
   { title: "Conversas Internas", href: "/monitor/internal-chats" },
+  { title: "Conversas (Novo)", href: "/monitor" },
 ];
 
 const crudsRoutes = (instance: string, sectorId?: number) => {

@@ -188,6 +188,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.getChatsMonitor().then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
+        console.log("Detailed Chats:", detailedChats);
+
         setMonitorChats(detailedChats);
         setMessages(chatsMessages);
       });
