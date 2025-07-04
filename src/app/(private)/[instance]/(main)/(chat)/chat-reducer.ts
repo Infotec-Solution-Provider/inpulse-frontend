@@ -1,6 +1,7 @@
 import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
 
 export interface SendMessageDataState {
+  mentions?: MentionableUser[];
   text: string;
   file?: File;
   fileId?: number;
@@ -8,6 +9,11 @@ export interface SendMessageDataState {
   sendAsDocument: boolean;
   isEmojiMenuOpen: boolean;
   quotedId?: number | null;
+}
+interface MentionableUser {
+  userId: number;
+  name: string;
+  phone: string;
 }
 
 type ChangeTextAction = { type: "change-text"; text: string };
@@ -24,7 +30,10 @@ type QuoteMessageAction = {
 type RemoveQuotedMessageAction = {
   type: "remove-quoted-message";
 };
-
+type SetMentionsAction = {
+  type: "set-mentions";
+  mentions: MentionableUser[];
+};
 type ResetAction = { type: "reset" };
 
 export type ChangeMessageDataAction =
@@ -37,7 +46,8 @@ export type ChangeMessageDataAction =
   | ToggleEmojiMenuAction
   | ResetAction
   | QuoteMessageAction
-  | RemoveQuotedMessageAction;
+  | RemoveQuotedMessageAction
+  | SetMentionsAction;
 
 export default function ChatReducer(
   state: SendMessageDataState,
@@ -96,6 +106,12 @@ export default function ChatReducer(
         ...state,
         quotedId: action.id,
       };
+    case "set-mentions":
+      return {
+        ...state,
+        mentions: action.mentions,
+      };
+
     case "remove-quoted-message":
       delete state.quotedId;
       return state;

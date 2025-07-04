@@ -59,7 +59,16 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     }
 
     if (currentChat && currentChat.chatType === "internal") {
-      sendInternalMessage({ ...state, chatId: currentChat.id });
+      sendInternalMessage({
+        chatId: currentChat.id,
+        text: state.text,
+        sendAsAudio: state.sendAsAudio,
+        sendAsDocument: state.sendAsDocument,
+        quotedId: state.quotedId,
+        file: state.file,
+        fileId: state.fileId,
+        mentions: state.mentions
+      });
     }
 
     dispatch({ type: "reset" });
