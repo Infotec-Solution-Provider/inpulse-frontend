@@ -125,7 +125,7 @@ export default function ChatSendMessageArea() {
         <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openAttachFile}>
           <AttachFileIcon />
         </IconButton>
-        <div className="relative">
+        <div className="relative hidden md:block">
           <IconButton
             size="small"
             className="bg-white/20 dark:text-indigo-400"
