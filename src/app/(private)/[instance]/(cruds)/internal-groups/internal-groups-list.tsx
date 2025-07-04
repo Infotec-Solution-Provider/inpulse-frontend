@@ -32,7 +32,18 @@ export default function InternalGroupsList() {
 
 
   const openCreateGroupModal = () => {
-    openModal(<CreateInternalGroupModal onSubmit={createInternalGroup} wppGroups={wppGroups} />);
+    openModal(
+      <CreateInternalGroupModal
+        onSubmit={async (data) => {
+          // Convert participants from string[] to number[]
+          await createInternalGroup({
+            ...data,
+            participants: data.participants.map((p) => Number(p)),
+          });
+        }}
+        wppGroups={wppGroups}
+      />
+    );
   };
 
   const openUpdateGroupModal = (group: InternalGroup) => () => {
