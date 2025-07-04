@@ -110,10 +110,14 @@ export default function ChatSendMessageArea() {
   }, [quotedMessage, user]);
 
   return (
-    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400">
-      <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-
-      {/* Botões */}
+    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0 mb-6">
+      <input
+        type="file"
+        className="hidden"
+        id="file-input"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+      />
       <div className="flex items-center gap-2">
         <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openQuickMessages}>
           <ChatBubbleIcon />
@@ -122,7 +126,11 @@ export default function ChatSendMessageArea() {
           <AttachFileIcon />
         </IconButton>
         <div className="relative">
-          <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={toggleEmojiPicker}>
+          <IconButton
+            size="small"
+            className="bg-white/20 dark:text-indigo-400"
+            onClick={toggleEmojiPicker}
+          >
             <EmojiEmotionsOutlinedIcon />
           </IconButton>
           <div className="absolute bottom-full">

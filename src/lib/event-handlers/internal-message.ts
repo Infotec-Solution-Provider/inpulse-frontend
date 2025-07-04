@@ -1,4 +1,5 @@
 import { InternalChatClient, InternalMessage, User, WppContact } from "@in.pulse-crm/sdk";
+import { safeNotification } from "@/lib/utils/notifications";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
@@ -76,7 +77,8 @@ export default function InternalReceiveMessageHandler(
               ? Formatter.phone(phone)
               : phone);
       }
-      new Notification(name, {
+
+      safeNotification(name, {
         body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
         icon: HorizontalLogo.src,
       });

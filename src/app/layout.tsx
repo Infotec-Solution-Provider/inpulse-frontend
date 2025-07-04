@@ -4,6 +4,8 @@ import { Fira_Sans } from "next/font/google";
 import "./globals.css";
 import { Bounce, ToastContainer } from "react-toastify";
 import AuthProvider from "@/app/auth-context";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 const firaSans = Fira_Sans({
   weight: ["400", "500", "600"],
@@ -22,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br">
-      <body className={`${firaSans.variable} relative bg-fixed text-slate-200`}>
+      <body suppressHydrationWarning className={`${firaSans.variable} relative bg-fixed text-slate-200`}>
         <AuthProvider>
           {children}
           <ToastContainer

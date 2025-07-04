@@ -49,6 +49,15 @@ const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://loca
 
 export const InternalChatContext = createContext({} as InternalChatContextType);
 
+export default function useInternalChatContext() {
+  const context = useContext(InternalChatContext);
+
+  if (!context) {
+    throw new Error("useInternalChatContext must be used within an InternalChatProvider");
+  }
+  return context;
+}
+
 export function InternalChatProvider({ children }: { children: React.ReactNode }) {
   const { socket } = useContext(SocketContext);
   const {

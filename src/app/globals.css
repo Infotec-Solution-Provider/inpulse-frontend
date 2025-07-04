@@ -4,6 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 body {
   scrollbar-width: thin;
 }
@@ -14,6 +16,7 @@ body {
 
 .dark body {
   @apply bg-slate-950 text-slate-200;
+  color-scheme: dark;
 }
 
 .scrollbar-whatsapp {
@@ -41,6 +44,122 @@ body {
 }
 .input-dark {
   @apply bg-slate-800 text-white;
+}
+
+/* Melhorias para dispositivos móveis */
+@media (max-width: 768px) {
+  /* Hide list when a chat is open */
+  .chat-open .chats-menu {
+    display: none !important;
+  }
+  .chat-open .chat-panel-container {
+    width: 100% !important;
+  }
+  /* Hide header when chat open */
+  .chat-open header {
+    display: none !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  /* Melhora o feedback visual em toques */
+  * {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
+  }
+  
+  /* Melhora a responsividade de elementos clicáveis */
+  [role="button"], button, .touchable, .cursor-pointer {
+    min-height: 44px;
+    min-width: 44px;
+    cursor: pointer;
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Melhora a experiência de rolagem */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Remove o atraso no toque em iOS */
+  a, button, [role="button"], .touchable {
+    -webkit-touch-callout: none;
+  }
+  
+  /* Melhora a usabilidade de inputs em dispositivos móveis */
+  input, select, textarea {
+    font-size: 16px; /* Evita zoom em iOS */
+  }
+  
+  /* Garante que os itens da lista de conversas sejam fáceis de tocar */
+  li[role="listitem"], .chat-list-item {
+    padding: 12px 8px;
+  }
+  
+  /* Estilo específico para o ChatsMenuItem */
+  .chat-list-item {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s;
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 10;
+  }
+  
+  .chat-list-item:active {
+    background-color: rgba(99, 102, 241, 0.2);
+  }
+  
+  /* Força que elementos do chat sejam interativos */
+  .chat-list-item [role="button"],
+  .chat-item-clickable {
+    pointer-events: auto !important;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    position: relative;
+    z-index: 20;
+    min-height: 64px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+  
+  /* Garante que avatares e conteúdo não interfiram nos cliques */
+  .chat-list-item .MuiAvatar-root,
+  .chat-list-item img,
+  .chat-list-item p,
+  .chat-list-item div:not([role="button"]):not(.chat-item-clickable) {
+    pointer-events: none;
+    user-select: none;
+  }
+  
+  /* Remove qualquer overlay que possa estar bloqueando */
+  .chat-list-item::before,
+  .chat-list-item::after {
+    content: none !important;
+  }
+  
+  /* Estilos agressivos para garantir cliques */
+  [data-clickable="true"],
+  .chat-item-clickable,
+  .chat-list-item,
+  .chat-list-item [role="button"] {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    -webkit-tap-highlight-color: rgba(99, 102, 241, 0.2) !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    touch-action: manipulation !important;
+    position: relative !important;
+    z-index: 100 !important;
+  }
 }
 
 /* Força visibilidade do ícone do input datetime-local */
