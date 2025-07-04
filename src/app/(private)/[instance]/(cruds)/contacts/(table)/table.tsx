@@ -7,35 +7,28 @@ import {
   TableBody,
   TableContainer,
 } from "@mui/material";
-import { useContext } from "react";
-import EditContactModal from "./(modal)/edit-contact-modal";
-import CreateContactModal from "./(modal)/create-contact-modal";
 import ClientTableHeader from "./table-header";
-import { AppContext } from "../../../app-context";
-import { ContactsContext } from "../contacts-context";
+import { useAppContext } from "../../../app-context";
+import { useContactsContext } from "../contacts-context";
 import { WppContact } from "@in.pulse-crm/sdk";
 import { StyledTableCell, StyledTableRow } from "../../users/(table)/styles-table";
 
 type FilterKeys = "id" | "name" | "phone" | "isBlocked" | "isOnlyAdmin";
 
 export default function ContactsTable() {
-  const { openModal } = useContext(AppContext);
-  const { contacts, isLoading, deleteContact } = useContext(ContactsContext);
+  const { contacts, isLoading,openContactModal, handleDeleteContact } = useContactsContext();
 
   const [filters, setFilters] = useState<Partial<Record<FilterKeys, string>>>({});
 
   function openEditContactModal(contact: WppContact) {
-    openModal(<EditContactModal contact={contact} />);
+    openContactModal(contact);
   }
 
   function openCreateContactModal() {
-    openModal(<CreateContactModal />);
+    openContactModal();
   }
-
-  function handleDeleteContact(contact: WppContact) {
-    if (confirm(`Deseja realmente excluir o contato "${contact.name}"?`)) {
-      deleteContact(contact.id);
-    }
+  function openDeleteContactModal(contact: WppContact) {
+    handleDeleteContact(contact);
   }
 
   function handleSetFilters(newFilters: Partial<Record<FilterKeys, string>>) {
@@ -84,10 +77,10 @@ export default function ContactsTable() {
             ) : (
               filteredContacts.map((contact) => (
                 <ContactsTableItem
-                  key={`${contact.name}_${contact.id}`}
+                  key={`${contact.id}-${contact.name}`}
                   contact={contact}
                   openEditModalHandler={openEditContactModal}
-                  deleteContactHandler={handleDeleteContact}
+                  deleteContactHandler={openDeleteContactModal}
                 />
               ))
             )}

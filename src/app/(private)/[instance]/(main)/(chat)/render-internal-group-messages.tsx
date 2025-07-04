@@ -69,7 +69,8 @@ export default function RenderInternalGroupMessages() {
               findQuoted,
               getInternalMessageStyle(findQuoted, user!.CODIGO),
               users,
-              null
+              null,
+              contactsMap
             )
           : null;
 

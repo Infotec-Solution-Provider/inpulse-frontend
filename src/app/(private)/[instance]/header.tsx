@@ -22,6 +22,7 @@ const monitorRoutes = [
   { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
   { title: "Conversas Internas", href: "/monitor/internal-chats" },
+  { title: "Conversas (Novo)", href: "/monitor" },
 ];
 
 const crudsRoutes = (instance: string, sectorId?: number) => {
@@ -46,13 +47,14 @@ const userCrudRoutes = [
   // { title: "Atendimentos", href: "/attendances" },
   // { title: "Agendamentos", href: "/schedules" },
   { title: "Clientes", href: "/customers" },
+  { title: "Contatos", href: "/contacts" },
 ];
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
   { title: "Gerador de Relatório", href: "/reports/report-generator" },
-  { title: "Conversas sem resposta", href: "/reports/chats-without-response" },
+/*{ title: "Conversas sem resposta", href: "/reports/chats-without-response" },
   { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-  { title: "Mensagens por usuário", href: "/reports/messages-by-user" },
+  { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, */
 ];
 
 /*

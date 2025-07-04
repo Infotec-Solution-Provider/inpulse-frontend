@@ -4,6 +4,8 @@
 @tailwind components;
 @tailwind utilities;
 
+
+
 body {
   scrollbar-width: thin;
 }
@@ -14,6 +16,7 @@ body {
 
 .dark body {
   @apply bg-slate-950 text-slate-200;
+  color-scheme: dark;
 }
 
 .scrollbar-whatsapp {

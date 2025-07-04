@@ -4,6 +4,8 @@ import { Fira_Sans } from "next/font/google";
 import "./globals.css";
 import { Bounce, ToastContainer } from "react-toastify";
 import AuthProvider from "@/app/auth-context";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
 const firaSans = Fira_Sans({
   weight: ["400", "500", "600"],

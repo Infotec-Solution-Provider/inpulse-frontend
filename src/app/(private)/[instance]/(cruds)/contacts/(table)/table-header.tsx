@@ -1,6 +1,4 @@
 import { MenuItem, TableHead, TextField, IconButton } from "@mui/material";
-import { Search } from "@mui/icons-material";
-import { useState, useEffect } from "react";
 import { StyledTableCell, StyledTableRow } from "../../users/(table)/styles-table";
 
 type FilterKeys = "id" | "name" | "phone" | "isBlocked" | "isOnlyAdmin";
