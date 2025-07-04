@@ -8,6 +8,8 @@ export default function getQuotedMsgProps(
   style: "received" | "sent" | "system",
   users: User[],
   chat?: DetailedChat | null,
+  contactsMap?: Map<string, string>
+
 ): QuotedMessageProps | null {
   if (!quotedMsg) return null;
 
@@ -23,7 +25,9 @@ export default function getQuotedMsgProps(
       let raw = parts.length === 3 ? parts[2] : parts[1];
       const phone = raw.split("@")[0].replace(/\D/g, "");
       const user = users.find((u) => u.WHATSAPP === phone);
-      authorName = user ? user.NOME : phone;
+      const usersPhone = contactsMap?.get(phone);
+
+      authorName = user ? user.NOME :usersPhone? usersPhone: phone;
     }
 
   if (chat && "contactId" in quotedMsg) {

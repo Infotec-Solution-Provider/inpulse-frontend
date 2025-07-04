@@ -1,8 +1,8 @@
+import { useContext, useEffect, useMemo } from "react";
+import { ChatContext } from "./chat-context";
 import { IconButton, TextField } from "@mui/material";
-import { useContext, useMemo } from "react";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
-import { ChatContext } from "./chat-context";
 import { DefaultExtensionType, FileIcon, defaultStyles } from "react-file-icon";
 import prettyBytes from "pretty-bytes";
 
@@ -11,7 +11,7 @@ interface ChatAttachmentPreviewProps {
 }
 
 export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewProps) {
-  const { dispatch, sendMessage } = useContext(ChatContext);
+  const { dispatch, sendMessage, state } = useContext(ChatContext);
 
   const handleClose = () => {
     dispatch({ type: "remove-file" });
@@ -26,6 +26,29 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     dispatch({ type: "change-text", text: e.target.value });
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;
+      if (e.key !== "Enter") return;
+
+      e.preventDefault();
+
+      if (isAuxKeyPressed) {
+        dispatch({ type: "change-text", text: state.text + "\n" });
+      } else {
+        sendMessage();
+        dispatch({ type: "remove-file" });
+        dispatch({ type: "change-text", text: "" });
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [dispatch, sendMessage, state.text]);
 
   const fileComponent = useMemo(() => {
     const src = URL.createObjectURL(file);
@@ -49,10 +72,11 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
         </audio>
       );
     }
+
     const ext = file.name.split(".").reverse()[0];
 
     return (
-      <div className="flex flex-col items-center gap-2 rounded-md bg-slate-950/10 px-8 py-4 text-slate-300">
+      <div className="flex flex-col items-center gap-2 rounded-md bg-slate-100 text-slate-800 px-8 py-4 dark:bg-slate-800 dark:text-slate-200">
         <div className="h-32 w-32 p-8">
           <FileIcon {...(defaultStyles[ext as DefaultExtensionType] || {})} radius={1.25} />
         </div>
@@ -65,47 +89,59 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
   }, [file]);
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 top-0 z-10 h-full w-full bg-slate-800 p-4 pb-8">
+    <div className="absolute inset-0 z-10 h-full w-full bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-100 p-4 pb-8">
       <div className="grid h-full grid-rows-[auto_1fr_auto]">
-        <header className="flex w-full items-center justify-between">
+        <header className="flex w-full items-center justify-between mb-2">
           <div></div>
-          <h1>{file.name}</h1>
-          <IconButton size="small" onClick={handleClose}>
+          <h1 className="text-base font-medium truncate max-w-[75%]">{file.name}</h1>
+          <IconButton onClick={handleClose} sx={{ color: 'inherit' }}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </header>
+
         <div className="flex items-center justify-center">{fileComponent}</div>
-        <div className="flex items-center justify-center gap-4">
+
+        <div className="flex items-center justify-center gap-4 mt-4">
           <IconButton
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              color: "white",
-              "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-              },
-            }}
             onClick={handleClose}
+            sx={{
+              bgcolor: 'rgba(0,0,0,0.05)',
+              color: 'inherit',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
+            }}
           >
             <CloseIcon fontSize="large" />
           </IconButton>
+
           <TextField
-            placeholder="Adicone uma legenda"
+            placeholder="Adicione uma legenda"
             variant="outlined"
-            sx={{ width: "34rem" }}
-            type="textarea"
+            sx={{
+              width: '34rem',
+              '& .MuiInputBase-root': {
+                color: 'inherit',
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                borderRadius: 1,
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(100,100,100,0.3)',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'rgba(100,100,100,0.6)',
+              },
+            }}
             multiline
             maxRows={5}
             onChange={handleTextChange}
           />
+
           <IconButton
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              color: "white",
-              "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-              },
-            }}
             onClick={handleSend}
+            sx={{
+              bgcolor: 'rgba(0,0,0,0.05)',
+              color: 'inherit',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
+            }}
           >
             <SendIcon fontSize="large" />
           </IconButton>

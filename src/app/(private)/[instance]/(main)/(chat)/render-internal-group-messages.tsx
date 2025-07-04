@@ -6,6 +6,7 @@ import { InternalChatContext } from "../../internal-context";
 import { useAuthContext } from "@/app/auth-context";
 import GroupMessage from "./group-message";
 import { Formatter } from "@in.pulse-crm/utils";
+import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 
 export function getInternalMessageStyle(msg: InternalMessage, userId: number) {
   if (msg.from === "system") {
@@ -23,6 +24,7 @@ export default function RenderInternalGroupMessages() {
   const { currentInternalChatMessages, users } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
+  const { contacts } = useContext(ContactsContext);
 
   const usersMap = useMemo(() => {
     const map = new Map<number, User>();
@@ -43,6 +45,17 @@ export default function RenderInternalGroupMessages() {
     return map;
   }, [users]);
 
+  const contactsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const contact of contacts) {
+      const phone = contact.phone?.replace(/\D/g, "");
+      if (phone) {
+        map.set(phone, contact.name);
+      }
+    }
+    return map;
+  }, [contacts]);
+
   return (
     <>
       {currentInternalChatMessages.map((m, i, arr) => {
@@ -56,7 +69,8 @@ export default function RenderInternalGroupMessages() {
               findQuoted,
               getInternalMessageStyle(findQuoted, user!.CODIGO),
               users,
-              null
+              null,
+              contactsMap
             )
           : null;
 
@@ -80,13 +94,20 @@ export default function RenderInternalGroupMessages() {
           }
           const phone = raw.split("@")[0].replace(/\D/g, "");
           const findUser = usersPhoneMap.get(phone);
-          name = findUser
-            ? findUser.NOME
-            : phone
-            ? phone.length <= 13
-              ? Formatter.phone(phone)
-              : phone
-            : "Sem número";
+            if (findUser) {
+              name = findUser.NOME;
+            } else {
+              const contactName = contactsMap.get(phone);
+              if (contactName) {
+                name = contactName;
+              } else {
+                name = phone
+                  ? phone.length <= 13
+                    ? Formatter.phone(phone)
+                    : phone
+                  : "Sem número";
+              }
+            }
         }
 
         return (
