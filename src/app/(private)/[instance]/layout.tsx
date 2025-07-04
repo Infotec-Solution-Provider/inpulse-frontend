@@ -24,10 +24,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
+           <ContactsProvider>
             <InternalChatProvider>
               <ReadyMessagesProvider>
                 <CustomersProvider>
-                <ContactsProvider>
                 <ThemeProvider>
                   <div className="grid h-auto md:h-screen w-full md:w-screen auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:grid-rows-[max-content_minmax(400px,1fr)]">
                     <Header />
@@ -44,10 +44,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     </Modal>
                   </div>
                 </ThemeProvider>
-                </ContactsProvider>
                 </CustomersProvider>
               </ReadyMessagesProvider>
             </InternalChatProvider>
+          </ContactsProvider>
           </WhatsappProvider>
         </SocketProvider>
       </AppProvider>

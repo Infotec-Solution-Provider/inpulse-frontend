@@ -1,9 +1,15 @@
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
 import MessageFile from "./message-file";
-import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
+import {
+  liStyleVariants,
+  msgStyleVariants,
+  QuotedMessageProps,
+  statusComponents,
+} from "./message";
 import { IconButton } from "@mui/material";
 import ReplyIcon from "@mui/icons-material/Reply";
 import LinkifiedText from "./linkmessage";
+
 
 interface MessageProps {
   id: number;
@@ -19,6 +25,7 @@ interface MessageProps {
   fileSize?: string | null;
   quotedMessage?: QuotedMessageProps | null;
   onQuote?: () => void;
+  mentionNameMap?: Map<string, string>;
 }
 
 export default function GroupMessage({
@@ -35,8 +42,18 @@ export default function GroupMessage({
   sentBy,
   quotedMessage,
   onQuote,
+  mentionNameMap,
 }: MessageProps) {
+  // Função para substituir @números por @nomes com base nos contatos
+  const replaceMentionsWithNames = (text: string): string => {
+    return text.replace(/@(\d{8,15})/g, (_, phone) => {
+      const clean = phone.replace(/\D/g, "");
+      const name = mentionNameMap?.get(clean);
+      return name ? `@${name}` : `@${phone}`;
+    });
+  };
 
+  const visualText = replaceMentionsWithNames(text);
   return (
     <li
       id={String(id)}
@@ -44,22 +61,31 @@ export default function GroupMessage({
     >
       <div
         className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
-
       >
         <div className="flex w-full flex-col gap-1">
           {quotedMessage && (
             <div
-              className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"}`}
+              className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${
+                quotedMessage.style === "sent"
+                  ? "border-indigo-600"
+                  : "border-orange-600"
+              }`}
             >
               <h2
-                className={`${quotedMessage.style === "sent" ? "border-indigo-600 dark:border-indigo-400" : "border-orange-600 dark:border-orange-400"}`}
+                className={`${
+                  quotedMessage.style === "sent"
+                    ? "border-indigo-600 dark:border-indigo-400"
+                    : "border-orange-600 dark:border-orange-400"
+                }`}
               >
-                {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
+                {quotedMessage.style === "sent"
+                  ? "Você"
+                  : quotedMessage.author || ""}
               </h2>
               <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
                 {quotedMessage.text.split("\n").map((line, index) => (
                   <p key={index} className="max-w-[100%] break-words text-sm">
-                  <LinkifiedText text={line} />
+                    <LinkifiedText text={line} />
                   </p>
                 ))}
               </div>
@@ -75,9 +101,11 @@ export default function GroupMessage({
             </div>
           )}
 
-          {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
+          {groupFirst && (
+            <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
+          )}
           <div className="w-full text-slate-900 dark:text-slate-200">
-            {text.split("\n").map((line, index) => (
+            {visualText.split("\n").map((line, index) => (
               <p key={index} className="max-w-[100%] break-words text-sm">
                 <LinkifiedText text={line} />
               </p>
@@ -95,7 +123,9 @@ export default function GroupMessage({
 
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
-            <p className="text-xs text-slate-900 dark:text-slate-200">{date.toLocaleString()}</p>
+            <p className="text-xs text-slate-900 dark:text-slate-200">
+              {date.toLocaleString()}
+            </p>
           </div>
         </div>
       </div>

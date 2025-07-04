@@ -77,7 +77,7 @@ export default function ContactsTable() {
             ) : (
               filteredContacts.map((contact) => (
                 <ContactsTableItem
-                  key={`${contact.id}-${contact.name}`}
+                  key={`${contact.id}-${contact.instance}-${contact.phone}`}
                   contact={contact}
                   openEditModalHandler={openEditContactModal}
                   deleteContactHandler={openDeleteContactModal}

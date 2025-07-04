@@ -18,6 +18,7 @@ import usersService from "@/lib/services/users.service";
 import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
 import { toast } from "react-toastify";
+import { ContactsContext } from "./(cruds)/contacts/contacts-context";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -71,6 +72,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
+  const { contacts } = useContext(ContactsContext);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
@@ -218,6 +220,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           setInternalChats,
           currentChatRef,
           users,
+          contacts,
           user!,
         ),
       );

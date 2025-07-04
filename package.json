@@ -33,7 +33,9 @@
     "react-dom": "^19.0.0",
     "react-file-icon": "^1.6.0",
     "react-toastify": "^11.0.5",
-    "sharp": "^0.34.1"
+        "react-virtuoso": "^4.13.0",
+    "sharp": "^0.34.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",

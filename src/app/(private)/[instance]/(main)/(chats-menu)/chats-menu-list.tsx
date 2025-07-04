@@ -8,10 +8,13 @@ import {
 } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
+import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { User } from "@in.pulse-crm/sdk";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
 const matchesFilter = (chat: CombinedChat, search: string) => {
+
   if (chat.chatType === "wpp") {
     const onlyDigits = search.replace(/\D/g, "");
     const matchCnpj = chat.customer?.CPF_CNPJ?.includes(search);
@@ -44,7 +47,31 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
-  const { internalChats, openInternalChat } = useContext(InternalChatContext);
+  const { internalChats, openInternalChat,users } = useContext(InternalChatContext);
+  const { contacts } = useContext(ContactsContext);
+
+  const mentionNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of users) {
+      const phone = user.WHATSAPP?.replace(/\D/g, "");
+      if (phone) {
+        map.set(phone, user.NOME);
+      }
+    }
+    for (const contact of contacts) {
+      const phone = contact.phone?.replace(/\D/g, "");
+      if (phone && !map.has(phone)) {
+        map.set(phone, contact.name);
+      }
+    }
+    return map;
+  }, [users, contacts]);
+  const replaceMentionsWpp = (text: string): string => {
+    return text.replace(/@(\d{6,})/g, (match, phone) => {
+      const name = mentionNameMap.get(phone);
+      return name ? `@${name}` : match;
+    });
+  };
 
   const filteredChats = useMemo(() => {
     const validChats = Array.isArray(chats) ? chats : [];
@@ -109,7 +136,7 @@ export default function ChatsMenuList() {
                 chat.lastMessage
                   ? chat.lastMessage.type !== "chat"
                     ? getTypeTextIcon(chat.lastMessage.type)
-                    : chat.lastMessage.body
+                    : replaceMentionsWpp(chat.lastMessage.body)
                   : "Nenhuma mensagem"
               }
               messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}

@@ -1,4 +1,4 @@
-import { InternalChatClient, InternalMessage, User } from "@in.pulse-crm/sdk";
+import { InternalChatClient, InternalMessage, User, WppContact } from "@in.pulse-crm/sdk";
 import { safeNotification } from "@/lib/utils/notifications";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
@@ -26,6 +26,7 @@ export default function InternalReceiveMessageHandler(
   setChats: Dispatch<SetStateAction<DetailedInternalChat[]>>,
   chatRef: RefObject<DetailedInternalChat | DetailedChat | null>,
   users: User[],
+  contacts: WppContact[],
   loggedUser: User,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
@@ -65,10 +66,13 @@ export default function InternalReceiveMessageHandler(
           } else if (parts.length === 2) {
             raw = parts[1];
           }
+
+
         const phone = raw.split("@")[0].replace(/\D/g, "");
         const user = users.find((u) => u.WHATSAPP === phone);
+        const usersPhone = contacts.find((u) => u.phone === phone)?.name;
         name = user
-          ? user.NOME || (user.WHATSAPP && user.WHATSAPP.length <= 13 ? Formatter.phone(user.WHATSAPP) : "Sem número")
+          ? user.NOME || usersPhone || (user.WHATSAPP && user.WHATSAPP.length <= 13 ? Formatter.phone(user.WHATSAPP) : "Sem número")
           : (phone.length <= 13
               ? Formatter.phone(phone)
               : phone);

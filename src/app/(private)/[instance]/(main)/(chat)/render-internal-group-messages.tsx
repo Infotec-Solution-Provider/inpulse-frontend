@@ -55,6 +55,22 @@ export default function RenderInternalGroupMessages() {
     }
     return map;
   }, [contacts]);
+  const mentionNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const user of users) {
+      const phone = user.WHATSAPP?.replace(/\D/g, "");
+      if (phone) {
+        map.set(phone, user.NOME);
+      }
+    }
+    for (const contact of contacts) {
+      const phone = contact.phone?.replace(/\D/g, "");
+      if (phone && !map.has(phone)) {
+        map.set(phone, contact.name);
+      }
+    }
+    return map;
+  }, [users, contacts]);
 
   return (
     <>
@@ -128,6 +144,7 @@ export default function RenderInternalGroupMessages() {
             onQuote={() => {
               handleQuoteMessage(m);
             }}
+            mentionNameMap={mentionNameMap}
           />
         );
       })}

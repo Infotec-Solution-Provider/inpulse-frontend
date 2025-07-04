@@ -10,13 +10,21 @@ import {
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../../app-context";
 import { PersonAdd } from "@mui/icons-material";
-import { InternalGroup, User } from "@in.pulse-crm/sdk";
+import { InternalGroup, User, WppContact } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
 import { IWppGroup } from "../internal-groups-context";
 import ImageIcon from "@mui/icons-material/Image";
 import filesService from "@/lib/services/files.service";
+import { ContactsContext } from "../../contacts/contacts-context";
+
+// Tipo comum para contatos/usuários
+type UnifiedContact = {
+  name: string;
+  phone: string;
+  userId?: number;
+};
 
 interface UpdateInternalGroupModalProps {
   group: InternalGroup;
@@ -40,30 +48,75 @@ export default function UpdateInternalGroupModal({
 }: UpdateInternalGroupModalProps) {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
+  const { contacts } = useContext(ContactsContext);
+
   const [name, setName] = useState(group.groupName);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<IWppGroup | null>(
     wppGroups.find((g) => g.id.user === group.wppGroupId) || null,
   );
-  const [participants, setParticipants] = useState<User[]>(
-    users.filter((u) => group.participants.some((p) => p.userId === u.CODIGO)),
-  );
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+const mergedContacts: UnifiedContact[] = useMemo(() => {
+  const contactMap = new Map<string, UnifiedContact>();
+
+  users.forEach((u) => {
+    const phone = u.WHATSAPP;
+    if (phone) {
+      contactMap.set(phone, {
+        name: u.NOME,
+        phone,
+        userId: u.CODIGO,
+      });
+    }
+  });
+
+  contacts.forEach((c) => {
+    if (c.phone && !contactMap.has(c.phone)) {
+      contactMap.set(c.phone, {
+        name: c.name,
+        phone: c.phone,
+        userId: +c.phone,
+      });
+    }
+  });
+
+  return Array.from(contactMap.values());
+}, [users, contacts]);
+
+  const [participants, setParticipants] = useState<UnifiedContact[]>([]);
+
+  useEffect(() => {
+    const participantesComInfo = group.participants.map((p) => {
+      console.log("mergedContacts mergedContacts:",mergedContacts);
+      const match = mergedContacts.find((c) => c.userId === p.userId);
+      console.log("Participante:", p.userId, "Match:", match);
+      if (match) return match;
+
+      return {
+        name: `ID: ${p.userId}`,
+        phone: p.userId.toString(),
+      };
+    });
+
+    setParticipants(participantesComInfo);
+  }, [group.participants, mergedContacts]);
+  const userOptions = useMemo(() => {
+    return mergedContacts.filter((c) => !participants.some((p) => p.phone === c.phone));
+  }, [mergedContacts, participants]);
+
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
-
-  const userOptions = useMemo(() => {
-    return users.filter((user) => !participants.some((p) => p.CODIGO === user.CODIGO));
-  }, [users, participants]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!name || participants.length === 0) return;
 
     await onSubmit(group.id, {
       name,
-      participants: participants.map((p) => p.CODIGO),
+      participants: participants.map((p) => p.userId ?? +p.phone), // ou Number(p.phone)
       wppGroupId: selectedGroup?.id.user || null,
     });
+
 
     if (groupImageRef.current) {
       await onSubmitImage(group.id, groupImageRef.current);
@@ -73,23 +126,15 @@ export default function UpdateInternalGroupModal({
     closeModal();
   };
 
-  const handleChangeUser = (user: User | null) => {
-    setSelectedUser(user);
-  };
-
-  const handleSelectGroup = (group: IWppGroup | null) => {
-    setSelectedGroup(group);
-  };
-
   const handleAddUser = () => {
-    if (selectedUser && !participants.some((p) => p.CODIGO === selectedUser.CODIGO)) {
+    if (selectedUser && !participants.some((p) => p.phone === selectedUser.phone)) {
       setParticipants((prev) => [selectedUser, ...prev]);
-      setSelectedUser(null); // Limpa a seleção do Autocomplete
+      setSelectedUser(null);
     }
   };
 
-  const handleRmvUser = (userId: number) => () => {
-    setParticipants((prev) => prev.filter((user) => user.CODIGO !== userId));
+  const handleRmvUser = (phone: string) => () => {
+    setParticipants((prev) => prev.filter((user) => user.phone !== phone));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,7 +155,6 @@ export default function UpdateInternalGroupModal({
     e.stopPropagation();
 
     const file = e.dataTransfer.files[0];
-
     if (file && file.type.startsWith("image/")) {
       groupImageRef.current = file;
       const reader = new FileReader();
@@ -120,7 +164,6 @@ export default function UpdateInternalGroupModal({
   };
 
   useEffect(() => {
-    console.log("group", group);
     if (group.groupImageFileId) {
       const imageUrl = filesService.getFileDownloadUrl(group.groupImageFileId);
       setImagePreview(imageUrl);
@@ -132,18 +175,16 @@ export default function UpdateInternalGroupModal({
       <div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800
              max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg">
         <div className="border-b border-black/10 pb-2 dark:border-white/20">
-          <header className="text-xl font-semibold text-slate-800 dark:text-white">Criar novo grupo</header>
+          <header className="text-xl font-semibold text-slate-800 dark:text-white">
+            Criar novo grupo
+          </header>
         </div>
 
         <div className="flex gap-4">
           <div>
             <button
-              className="borde h-32 w-32 overflow-hidden rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10"
-              onClick={() => {
-                if (groupImageInputRef.current) {
-                  groupImageInputRef.current.click();
-                }
-              }}
+              className="h-32 w-32 overflow-hidden rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10"
+              onClick={() => groupImageInputRef.current?.click()}
             >
               {imagePreview ? (
                 <img
@@ -176,23 +217,23 @@ export default function UpdateInternalGroupModal({
               getOptionKey={(option) => option.id.user}
               className="w-full scrollbar-whatsapp"
               renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
-              value={selectedGroup} // Define o valor atual do Autocomplete
-              onChange={(_, group) => handleSelectGroup(group)}
+              value={selectedGroup}
+              onChange={(_, group) => setSelectedGroup(group)}
             />
           </div>
         </div>
+
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="flex gap-2">
             <Autocomplete
               options={userOptions}
               getOptionLabel={(option) =>
-                `${option.CODIGO.toString().padStart(2, "0")} - ${option.NOME}`
+                `${option.phone.padStart(2, "0")} - ${option.name}`
               }
-              getOptionKey={(option) => option.CODIGO}
               className="w-96"
-              value={selectedUser} // Define o valor atual do Autocomplete
+              value={selectedUser}
               renderInput={(params) => <TextField {...params} label="Adicionar integrante" />}
-              onChange={(_, user) => handleChangeUser(user)}
+              onChange={(_, user) => setSelectedUser(user)}
             />
             <IconButton color="success" className="w-max" onClick={handleAddUser}>
               <PersonAdd fontSize="large" />
@@ -202,16 +243,14 @@ export default function UpdateInternalGroupModal({
             <h1 className="border-b border-slate-200/25 p-2">Integrantes</h1>
             <div className="mt-2 min-h-0 flex-1 scrollbar-whatsapp px-2">
               <List dense sx={{ flexGrow: 1, overflowY: "auto" }}>
-                {participants.map((p) => {
-                  return (
-                    <ListItem key={p.CODIGO} divider>
-                      <ListItemText primary={p.NOME} secondary={`ID: ${p.CODIGO} - ${p.NIVEL}`} />
-                      <IconButton color="error" size="small" onClick={handleRmvUser(p.CODIGO)}>
-                        <PersonRemoveIcon />
-                      </IconButton>
-                    </ListItem>
-                  );
-                })}
+                {participants.map((p) => (
+                  <ListItem key={p.phone} divider>
+                    <ListItemText primary={p.name} secondary={`ID: ${p.phone}`} />
+                    <IconButton color="error" size="small" onClick={handleRmvUser(p.phone)}>
+                      <PersonRemoveIcon />
+                    </IconButton>
+                  </ListItem>
+                ))}
               </List>
             </div>
           </div>

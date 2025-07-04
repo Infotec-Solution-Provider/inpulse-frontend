@@ -10,17 +10,18 @@ import {
 import { useContext, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../../app-context";
 import { PersonAdd } from "@mui/icons-material";
-import { User } from "@in.pulse-crm/sdk";
+import { User, WppContact } from "@in.pulse-crm/sdk";
 import { InternalChatContext } from "../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
 import { IWppGroup } from "../internal-groups-context";
 import ImageIcon from "@mui/icons-material/Image";
+import { ContactsContext } from "../../contacts/contacts-context";
 
 interface CreateInternalGroupModalProps {
   onSubmit: (data: {
     name: string;
-    participants: number[];
+    participants: string[];
     groupId: string | null;
     groupImage?: File | null;
   }) => Promise<void>;
@@ -34,23 +35,24 @@ export default function CreateInternalGroupModal({
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
   const [name, setName] = useState("");
-  const [participants, setParticipants] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [participants, setParticipants] = useState<WppContact[]>([]);
+  const [selectedUser, setSelectedUser] = useState<WppContact | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<IWppGroup | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
+  const { contacts } = useContext(ContactsContext);
 
   const userOptions = useMemo(() => {
-    return users.filter((user) => !participants.some((p) => p.CODIGO === user.CODIGO));
-  }, [users, participants]);
+    return contacts.filter((user) => !participants.some((p) => p.phone === user.phone));
+  }, [contacts, participants]);
 
   const handleSubmit = async () => {
     if (!name || participants.length === 0) return;
 
     await onSubmit({
       name,
-      participants: participants.map((p) => p.CODIGO),
+      participants: participants.map((p) => p.phone),
       groupId: selectedGroup?.id.user || null,
       groupImage: groupImageRef.current,
     });
@@ -62,19 +64,19 @@ export default function CreateInternalGroupModal({
     setSelectedGroup(group);
   };
 
-  const handleChangeUser = (user: User | null) => {
+  const handleChangeUser = (user: WppContact | null) => {
     setSelectedUser(user);
   };
 
   const handleAddUser = () => {
-    if (selectedUser && !participants.some((user) => user.CODIGO === selectedUser.CODIGO)) {
+    if (selectedUser && !participants.some((user) => user.phone === selectedUser.phone)) {
       setParticipants((prev) => [selectedUser, ...prev]);
       setSelectedUser(null); // Limpa a seleção do Autocomplete
     }
   };
 
-  const handleRmvUser = (userId: number) => () => {
-    setParticipants((prev) => prev.filter((user) => user.CODIGO !== userId));
+  const handleRmvUser = (userId: string) => () => {
+    setParticipants((prev) => prev.filter((user) => user.phone !== userId));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,9 +165,9 @@ export default function CreateInternalGroupModal({
             <Autocomplete
               options={userOptions}
               getOptionLabel={(option) =>
-                `${option.CODIGO.toString().padStart(2, "0")} - ${option.NOME}`
+                `${option.phone.toString().padStart(2, "0")} - ${option.name}`
               }
-              getOptionKey={(option) => option.CODIGO}
+              getOptionKey={(option) => option.phone}
               className="w-96"
               value={selectedUser} // Define o valor atual do Autocomplete
               renderInput={(params) => <TextField {...params} label="Adicionar integrante" />}
@@ -181,9 +183,9 @@ export default function CreateInternalGroupModal({
               <List dense sx={{ flexGrow: 1, overflowY: "auto" }}>
                 {participants.map((p) => {
                   return (
-                    <ListItem key={p.CODIGO} divider>
-                      <ListItemText primary={p.NOME} secondary={`ID: ${p.CODIGO} - ${p.NIVEL}`} />
-                      <IconButton color="error" size="small" onClick={handleRmvUser(p.CODIGO)}>
+                    <ListItem key={p.phone} divider>
+                      <ListItemText primary={p.name} secondary={`ID: ${p.phone}`} />
+                      <IconButton color="error" size="small" onClick={handleRmvUser(p.phone)}>
                         <PersonRemoveIcon />
                       </IconButton>
                     </ListItem>
