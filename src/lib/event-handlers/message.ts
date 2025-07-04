@@ -1,4 +1,5 @@
-import { WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
+import { SocketClient, WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
+import { safeNotification } from "@/lib/utils/notifications";
 import { Formatter } from "@in.pulse-crm/utils";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
@@ -41,7 +42,7 @@ export default function ReceiveMessageHandler(
           }
         const phone = raw.split("@")[0].replace(/\D/g, "");
           const contactName = matchedChat?.contact?.name;
-          new Notification(contactName || Formatter.phone(phone), {
+          safeNotification(contactName || Formatter.phone(phone), {
             body:
               message.type !== "chat"
                 ? types[message.type] || "Enviou um arquivo"

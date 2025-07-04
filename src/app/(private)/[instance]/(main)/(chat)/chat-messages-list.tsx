@@ -15,37 +15,31 @@ export default function ChatMessagesList() {
   const isInternalGroup = currentChat?.chatType === "internal" && currentChat.isGroup;
 
   const ulRef = useRef<HTMLUListElement>(null);
+  const messagesEndRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    if (ulRef.current) {
-      ulRef.current.scrollTop = ulRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [currentChatMessages, currentInternalChatMessages]);
-
-  useEffect(() => {
-    const handleScrollToBottom = () => {
-      if (ulRef.current) {
-        ulRef.current.scrollTop = ulRef.current.scrollHeight;
-      }
-    };
-
-    document.addEventListener("scroll-to-bottom", handleScrollToBottom);
-
-    return () => {
-      document.removeEventListener("scroll-to-bottom", handleScrollToBottom);
-    };
-  }, []);
+  }, [currentChat?.id]);
 
   return (
     <>
       {user && (
         <ul
-          className="flex h-full w-full flex-col gap-2 scrollbar-whatsapp bg-slate-300 dark:bg-slate-700 p-2"
+          className="flex flex-col flex-1 w-full gap-2 scrollbar-whatsapp bg-slate-300 dark:bg-slate-700 p-2 min-h-[calc(100vh-165px)] md:mt-0 mt-7 overflow-y-auto"
           ref={ulRef}
         >
           {isWhatsappChat && <RenderWhatsappChatMessages />}
           {isInternalChat && <RenderInternalChatMessages />}
           {isInternalGroup && <RenderInternalGroupMessages />}
+          
+          {/* Elemento invisível no final para rolagem */}
+          <li ref={messagesEndRef} className="h-0" />
         </ul>
       )}
     </>

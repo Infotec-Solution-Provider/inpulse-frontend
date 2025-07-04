@@ -104,7 +104,7 @@ export default function ChatSendMessageArea() {
   }, [quotedMessage]);
 
   return (
-    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400">
+    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0 mb-6">
       <input
         type="file"
         className="hidden"
@@ -127,7 +127,7 @@ export default function ChatSendMessageArea() {
         >
           <AttachFileIcon />
         </IconButton>
-        <div className="relative">
+        <div className="relative hidden md:block">
           <IconButton
             size="small"
             className="bg-white/20 dark:text-indigo-400"
@@ -204,7 +204,7 @@ export default function ChatSendMessageArea() {
       >
         <SendIcon />
       </IconButton>
-      <div className="aria-hidden:hidden" aria-hidden={state?.text.length > 0 || state.sendAsAudio}>
+      <div className="aria-hidden:hidden hidden md:block" aria-hidden={state?.text.length > 0 || state.sendAsAudio}>
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
       {quickMessageOpen && (

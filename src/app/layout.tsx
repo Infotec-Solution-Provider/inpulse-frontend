@@ -22,7 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br">
-      <body className={`${firaSans.variable} relative bg-fixed text-slate-200`}>
+      <body suppressHydrationWarning className={`${firaSans.variable} relative bg-fixed text-slate-200`}>
         <AuthProvider>
           {children}
           <ToastContainer

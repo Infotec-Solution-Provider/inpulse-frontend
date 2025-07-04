@@ -1,4 +1,5 @@
 import { SocketClient, WhatsappClient, WppChatType, WppMessage } from "@in.pulse-crm/sdk";
+import { safeNotification } from "@/lib/utils/notifications";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
@@ -26,7 +27,7 @@ export default function ChatStartedHandler(
 
     socket.joinRoom(`chat:${chat.id}`);
 
-    new Notification("Novo atendimento!", {
+    safeNotification("Novo atendimento!", {
       body: `Contato: ${chat.contact?.name || "Contato excluído"}`,
       icon: HorizontalLogo.src,
     });

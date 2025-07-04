@@ -50,7 +50,7 @@ export default function ChatHeader({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b bg-slate-200 px-4 py-2 dark:border-none dark:bg-slate-800">
+    <div className="flex items-center justify-between gap-4 border-b bg-slate-200 px-4 py-2 dark:border-none dark:bg-slate-800 md:pt-0 pt-10">
       <div className="flex items-center gap-4">
         <Avatar
           variant="circular"

@@ -33,8 +33,10 @@ export default function AppProvider({ children, modal, setModal }: AppProviderPr
   };
 
   useEffect(() => {
-    if (Notification.permission === "default") {
-      Notification.requestPermission();
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
     }
   }, []);
 
