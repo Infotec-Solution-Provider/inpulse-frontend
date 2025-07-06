@@ -52,9 +52,9 @@ const userCrudRoutes = [
 const reportsRoutes = [
   { title: "Conversas", href: "/reports/chats" },
   { title: "Gerador de Relatório", href: "/reports/report-generator" },
-/*{ title: "Conversas sem resposta", href: "/reports/chats-without-response" },
-  { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-  { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, */
+  /*{ title: "Conversas sem resposta", href: "/reports/chats-without-response" },
+    { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
+    { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, */
 ];
 
 /*
@@ -64,17 +64,17 @@ const toolsRoutes = [
 ];
 */
 
-const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: { 
-  open: boolean; 
-  onClose: () => void; 
-  user: any; 
-  instance: string; 
-  isUserAdmin: boolean; 
-  signOut: () => void; 
+const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: {
+  open: boolean;
+  onClose: () => void;
+  user: any;
+  instance: string;
+  isUserAdmin: boolean;
+  signOut: () => void;
 }) => {
   const pathname = usePathname();
   const baseHref = pathname.split("/")[1];
-  
+
   const renderMenuItems = (routes: { title: string; href: string }[]) => {
     return routes.map((route) => (
       <ListItem key={route.title} disablePadding>
@@ -108,7 +108,7 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: {
             </Link>
           </ListItem>
           <Divider />
-          
+
           {/* Área de Atendimento */}
           <ListItem>
             <Link href={`/${instance}/`} className="w-full">
@@ -120,7 +120,7 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: {
               </ListItemButton>
             </Link>
           </ListItem>
-          
+
           {/* Monitoria */}
           {isUserAdmin && (
             <>
@@ -134,24 +134,24 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: {
               ])}
             </>
           )}
-          
+
           {/* Cadastros */}
           <ListItem>
             <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
           </ListItem>
-          {renderMenuItems(isUserAdmin 
-            ? crudsRoutes(instance, user?.SETOR) 
+          {renderMenuItems(isUserAdmin
+            ? crudsRoutes(instance, user?.SETOR)
             : userCrudRoutes
           )}
-          
+
           {/* Relatórios */}
           <ListItem>
             <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
           </ListItem>
           {renderMenuItems(reportsRoutes)}
-          
+
           <Divider sx={{ my: 2 }} />
-          
+
           {/* Logout */}
           <ListItem>
             <ListItemButton onClick={signOut}>
@@ -172,22 +172,22 @@ export default function Header() {
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
-  
+
   if (isMobile && currentChat) {
     // Oculta o header quando um chat está aberto no mobile
     return null;
@@ -198,7 +198,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-20 shadow-md">
       <div className="flex items-center">
-        <div className="mx-auto flex w-screen items-center justify-between bg-slate-200 px-4 py-4 dark:bg-slate-800 md:pt-0 pt-10">
+        <div className="mx-auto flex w-screen items-center justify-between bg-slate-200 px-4 py-4 dark:bg-slate-800 md:pt-3 pt-3">
           <div className="flex items-center gap-4">
             {isMobile && (
               <IconButton
@@ -215,47 +215,49 @@ export default function Header() {
               <Image src={HorizontalLogo} alt="Logo" height={36} className="cursor-pointer" />
             </Link>
           </div>
-          
-          {/* Menu Desktop */}
-          <nav className="hidden md:block">
-            <menu className="flex items-center gap-4 text-sm font-semibold text-gray-900 dark:text-slate-200">
-              <HeaderNavItem title="Área de Atendimento" href="/">
-                <HeadsetMicIcon className="text-gray-900 dark:text-slate-200" />
-              </HeaderNavItem>
-              <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
-                <MonitorIcon className="text-gray-900 dark:text-slate-200" />
-              </HeaderNavItem>
-              <HeaderNavItem
-                title="Cadastros"
-                routes={crudsRoutes(instance, user?.SETOR)}
-                disabled={!isUserAdmin}
-              >
-                <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
-              </HeaderNavItem>
-              <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
-                <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
-              </HeaderNavItem>
-              <HeaderNavItem title="Relatórios" routes={reportsRoutes}>
-                <BarChartIcon className="text-gray-900 dark:text-slate-200" />
-              </HeaderNavItem>
 
-              <ThemeToggleButton />
+          <div className="hidden md:flex flex-1 justify-center">
+            <nav>
+              <menu className="flex items-center gap-4 text-sm font-semibold text-gray-900 dark:text-slate-200">
+                <HeaderNavItem title="Área de Atendimento" href="/">
+                  <HeadsetMicIcon className="text-gray-900 dark:text-slate-200" />
+                </HeaderNavItem>
+                <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
+                  <MonitorIcon className="text-gray-900 dark:text-slate-200" />
+                </HeaderNavItem>
+                <HeaderNavItem
+                  title="Cadastros"
+                  routes={crudsRoutes(instance, user?.SETOR)}
+                  disabled={!isUserAdmin}
+                >
+                  <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
+                </HeaderNavItem>
+                <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
+                  <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
+                </HeaderNavItem>
+                <HeaderNavItem title="Relatórios" routes={reportsRoutes}>
+                  <BarChartIcon className="text-gray-900 dark:text-slate-200" />
+                </HeaderNavItem>
+              </menu>
+            </nav>
+          </div>
 
-              <IconButton className="hidden md:block">
-                <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
-              </IconButton>
+          <div className="hidden md:flex items-center gap-2">
+            <ThemeToggleButton />
 
-              <h1 className="truncate text-gray-900 dark:text-slate-200 mx-4 hidden md:block">
-                {user?.NOME}
-              </h1>
-              
-              <IconButton onClick={signOut} className="hidden md:block">
-                <LogoutIcon className="text-gray-900 dark:text-slate-200" />
-              </IconButton>
-            </menu>
-          </nav>
-          
-          {/* Ícones de notificação e logout no mobile */}
+            <IconButton>
+              <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
+            </IconButton>
+
+            <h1 className="truncate text-gray-900 dark:text-slate-200 mx-4">
+              {user?.NOME}
+            </h1>
+
+            <IconButton onClick={signOut}>
+              <LogoutIcon className="text-gray-900 dark:text-slate-200" />
+            </IconButton>
+          </div>
+
           <div className="flex md:hidden gap-2">
             <IconButton>
               <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
@@ -265,11 +267,12 @@ export default function Header() {
             </IconButton>
           </div>
         </div>
+
       </div>
-      
+
       {/* Menu Mobile */}
-      <MobileMenu 
-        open={mobileOpen} 
+      <MobileMenu
+        open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         user={user}
         instance={instance}
