@@ -7,7 +7,7 @@ import useInternalChatContext, {
   DetailedInternalChat,
   InternalChatContext,
 } from "../internal-context";
-import { DetailedChat, useWhatsappContext } from "../whatsapp-context";
+import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
 import toDateString from "@/lib/utils/date-string";
 import { User } from "@in.pulse-crm/sdk";
 import filesService from "@/lib/services/files.service";
@@ -22,9 +22,13 @@ import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor
 import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
 
 function getChatType(
-  chat: DetailedInternalChat | DetailedChat,
-): "external-chat" | "internal-chat" | "internal-group" | "scheduled-chat" {
-  if (chat.chatType === "wpp") {
+  chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
+): "external-chat" | "internal-chat" | "internal-group" | "scheduled-chat" | "schedule" {
+
+  if (!("chatType" in chat)) {
+    return "schedule";
+  }
+  if (chat.chatType === "wpp" && !chat.isSchedule) {
     return "external-chat";
   }
   if (chat.chatType === "internal" && chat.isGroup) {
@@ -62,7 +66,13 @@ function getChatUser(chat: DetailedInternalChat | DetailedChat, users: User[]): 
   return user ? user.NOME : "BOT";
 }
 
-function getChatSector(chat: DetailedInternalChat | DetailedChat, sectors: any[], users: User[]) {
+function getChatSector(chat: DetailedInternalChat | DetailedChat | DetailedSchedule, sectors: any[], users: User[]) {
+  if (!("chatType" in chat)) {
+    const sector = sectors.find((s) => s.id === chat.sectorId);
+
+    return sector ? sector.name : null;
+  }
+
   if (chat.chatType === "wpp") {
     const sector = sectors.find((s) => s.id === chat.sectorId);
     return sector ? sector.name : null;
@@ -74,7 +84,11 @@ function getChatSector(chat: DetailedInternalChat | DetailedChat, sectors: any[]
   }
 }
 
-function getChatImage(chat: DetailedInternalChat | DetailedChat, users: User[]): string {
+function getChatImage(chat: DetailedInternalChat | DetailedChat | DetailedSchedule, users: User[]): string {
+  if (!("chatType" in chat)) {
+    return "";
+  }
+
   if (chat.chatType === "wpp") {
     return chat.avatarUrl || "";
   }
@@ -92,7 +106,10 @@ function getChatImage(chat: DetailedInternalChat | DetailedChat, users: User[]):
   return "";
 }
 
-function getChatTitle(chat: DetailedInternalChat | DetailedChat): string {
+function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedule): string {
+  if (!("chatType" in chat)) {
+    return chat.contact?.name || "Contato excluído";
+  }
   if (chat.chatType === "wpp") {
     return chat.contact?.name || "Contato excluído";
   }
@@ -105,28 +122,32 @@ function getChatTitle(chat: DetailedInternalChat | DetailedChat): string {
   return "Chat sem título";
 }
 
-function getChatCustomerName(chat: DetailedInternalChat | DetailedChat) {
-  if (chat.chatType === "wpp") {
+function getChatCustomerName(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat) || chat.chatType === "wpp") {
     return chat.customer?.RAZAO || "Sem cliente associado";
   }
   return null;
 }
 
-function getChatCustomerDocument(chat: DetailedInternalChat | DetailedChat) {
-  if (chat.chatType === "wpp") {
+function getChatCustomerDocument(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat) || chat.chatType === "wpp") {
     return chat.customer?.CPF_CNPJ || chat.customer ? "Documento não informado" : null;
   }
   return null;
 }
 
-function getChatContactNumber(chat: DetailedInternalChat | DetailedChat) {
-  if (chat.chatType === "wpp") {
+function getChatContactNumber(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat) || chat.chatType === "wpp") {
     return chat.contact?.phone ? Formatter.phone(chat.contact.phone) : "Whatsapp não encontrado";
   }
   return null;
 }
 
-function getChatParticipants(chat: DetailedInternalChat | DetailedChat, users: User[]) {
+function getChatParticipants(chat: DetailedInternalChat | DetailedChat | DetailedSchedule, users: User[]) {
+  if (!("chatType" in chat)) {
+    return []
+  }
+
   if (chat.chatType === "internal" && chat.isGroup) {
     return chat.users.map((u) => u.NOME);
   }
@@ -137,7 +158,11 @@ function getChatParticipants(chat: DetailedInternalChat | DetailedChat, users: U
   return [];
 }
 
-function getChatScheduledAt(chat: DetailedInternalChat | DetailedChat) {
+function getChatScheduledAt(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat)) {
+    return toDateString(chat.scheduledAt);
+  }
+
   if (chat.chatType === "wpp" && chat.schedule) {
     return toDateString(chat.schedule.scheduledAt);
   }
@@ -145,14 +170,22 @@ function getChatScheduledAt(chat: DetailedInternalChat | DetailedChat) {
   return null;
 }
 
-function getChatScheduledFor(chat: DetailedInternalChat | DetailedChat) {
+function getChatScheduledFor(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat)) {
+    return toDateString(chat.scheduleDate);
+  }
+
   if (chat.chatType === "wpp" && chat.schedule) {
     return toDateString(chat.schedule.scheduleDate);
   }
   return null;
 }
 
-function getChatGroupName(chat: DetailedInternalChat | DetailedChat) {
+function getChatGroupName(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat)) {
+    return "";
+  }
+
   if (chat.chatType === "internal" && chat.isGroup) {
     return chat.groupName || "Grupo sem nome";
   }
@@ -160,12 +193,26 @@ function getChatGroupName(chat: DetailedInternalChat | DetailedChat) {
   return null;
 }
 
-function getChatGroupDescription(chat: DetailedInternalChat | DetailedChat) {
+function getChatGroupDescription(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+  if (!("chatType" in chat)) {
+    return "";
+  }
+
   if (chat.chatType === "internal" && chat.isGroup) {
     return chat.groupDescription || "Sem descrição";
   }
 
   return null;
+}
+
+function getScheduledByUser(schedule: DetailedSchedule, users: User[]) {
+  const scheduledBy = users.find((u) => u.CODIGO === schedule.scheduledBy);
+  return scheduledBy ? scheduledBy.NOME : "Usuário Desconhecido";
+}
+
+function getScheduledForUser(schedule: DetailedSchedule, users: User[]) {
+  const scheduledFor = users.find((u) => u.CODIGO === schedule.scheduledFor);
+  return scheduledFor ? scheduledFor.NOME : "Usuário Desconhecido";
 }
 
 export default function MonitorPage() {
@@ -182,7 +229,11 @@ export default function MonitorPage() {
   } = useContext(InternalChatContext);
   const { openModal, closeModal } = useContext(AppContext);
 
-  function getHandleTransfer(chat: DetailedInternalChat | DetailedChat) {
+  function getHandleTransfer(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+    if (!("chatType" in chat)) {
+      return null;
+    }
+
     if (chat.chatType === "wpp") {
       return () => {
         setCurrentChat(chat);
@@ -191,7 +242,12 @@ export default function MonitorPage() {
     }
   }
 
-  function getHandleView(chat: DetailedInternalChat | DetailedChat) {
+  function getHandleView(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+    if (!("chatType" in chat)) {
+      return null;
+    }
+
+
     if (chat.chatType === "wpp") {
       return () => {
         setCurrentChat(chat);
@@ -254,7 +310,11 @@ export default function MonitorPage() {
     }
   }
 
-  function getHandleFinish(chat: DetailedInternalChat | DetailedChat) {
+  function getHandleFinish(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
+    if (!("chatType" in chat)) {
+      return null;
+    }
+
     if (chat.chatType === "wpp") {
       return () => {
         setCurrentChat(chat);
@@ -271,13 +331,40 @@ export default function MonitorPage() {
       <div className="flex w-full gap-2 overflow-hidden p-4">
         <MonitorFilters />
         <main className="scrollbar-whatsapp grow overflow-auto">
-          {chats.map((chat) => (
-            <MonitorCard
-              key={`${chat.chatType}-${chat.id}`}
-              type={getChatType(chat)}
-              startDate={toDateString(chat.startedAt)}
-              endDate={getEndDate(chat)}
-              userName={getChatUser(chat, users)}
+          {chats.map((chat) => {
+            if ("chatType" in chat) {
+              return (
+                <MonitorCard
+                  key={`${chat.chatType}-${chat.id}`}
+                  type={getChatType(chat)}
+                  startDate={toDateString(chat.startedAt)}
+                  endDate={getEndDate(chat)}
+                  userName={getChatUser(chat, users)}
+                  sectorName={getChatSector(chat, sectors, users)}
+                  imageUrl={getChatImage(chat, users)}
+                  chatTitle={getChatTitle(chat)}
+                  customerName={getChatCustomerName(chat)}
+                  contactNumber={getChatContactNumber(chat)}
+                  customerDocument={getChatCustomerDocument(chat)}
+                  scheduledAt={getChatScheduledAt(chat)}
+                  scheduledFor={getChatScheduledFor(chat)}
+                  isScheduled={"schedule" in chat && chat.schedule ? true : false}
+                  participants={getChatParticipants(chat, users)}
+                  groupName={getChatGroupName(chat)}
+                  groupDescription={getChatGroupDescription(chat)}
+                  handleTransfer={getHandleTransfer(chat)}
+                  handleView={getHandleView(chat)}
+                  handleFinish={getHandleFinish(chat)}
+                />
+              );
+            }
+            // Optionally handle DetailedSchedule or skip rendering
+            return <MonitorCard
+              key={`schedule-${chat.id}`}
+              type={"scheduled-chat"}
+              startDate={"Não Iniciado"}
+              endDate={"."}
+              userName={getScheduledForUser(chat, users)}
               sectorName={getChatSector(chat, sectors, users)}
               imageUrl={getChatImage(chat, users)}
               chatTitle={getChatTitle(chat)}
@@ -286,15 +373,15 @@ export default function MonitorPage() {
               customerDocument={getChatCustomerDocument(chat)}
               scheduledAt={getChatScheduledAt(chat)}
               scheduledFor={getChatScheduledFor(chat)}
-              isScheduled={"schedule" in chat && chat.schedule ? true : false}
+              isScheduled={!("chatType" in chat) || "schedule" in chat && chat.schedule ? true : false}
               participants={getChatParticipants(chat, users)}
               groupName={getChatGroupName(chat)}
               groupDescription={getChatGroupDescription(chat)}
               handleTransfer={getHandleTransfer(chat)}
               handleView={getHandleView(chat)}
               handleFinish={getHandleFinish(chat)}
-            />
-          ))}
+            />;
+          })}
         </main>
       </div>
     </div>

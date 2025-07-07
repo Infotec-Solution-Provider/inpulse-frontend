@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { DetailedChat, useWhatsappContext } from "../whatsapp-context";
+import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
 import useInternalChatContext, { DetailedInternalChat } from "../internal-context";
 import { AuthContext } from "@/app/auth-context";
 
+
 interface MonitorContextProps {
-  chats: (DetailedInternalChat | DetailedChat)[];
+  chats: (DetailedInternalChat | DetailedChat | DetailedSchedule)[];
   filters: MonitorFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<MonitorFiltersState>>;
   resetFilters: () => void;
@@ -81,16 +82,17 @@ const initialFilters: MonitorFiltersState = {
 export const MonitorContext = createContext<MonitorContextProps>({} as MonitorContextProps);
 
 export function MonitorProvider({ children }: MonitorProviderProps) {
-  const { monitorChats: wppChats, getChatsMonitor } = useWhatsappContext();
+  const { monitorChats: wppChats, getChatsMonitor, getMonitorSchedules, monitorSchedules } = useWhatsappContext();
   const { monitorInternalChats: intChats, getInternalChatsMonitor } = useInternalChatContext();
   const { token } = useContext(AuthContext);
 
   useEffect(() => {
-    if(token) {
+    if (token) {
+      getMonitorSchedules();
       getChatsMonitor();
       getInternalChatsMonitor();
     }
-  }, [getChatsMonitor, getInternalChatsMonitor, token]);
+  }, [getChatsMonitor, getInternalChatsMonitor, getMonitorSchedules, token]);
 
   const [filters, setFilters] = useState<MonitorFiltersState>(initialFilters);
   const resetFilters = () => {
@@ -155,13 +157,52 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         return false;
       }
 
+      if (filters.scheduledAt.from && chat.schedule?.scheduledAt && new Date(chat.schedule.scheduledAt) < new Date(filters.scheduledAt.from)) {
+        return false;
+      }
+      if (filters.scheduledAt.to && chat.schedule?.scheduledAt && new Date(chat.schedule.scheduledAt) > new Date(filters.scheduledAt.to)) {
+        return false;
+      }
+
+      if (filters.scheduledTo.from && chat.schedule?.scheduleDate && new Date(chat.schedule.scheduleDate) < new Date(filters.scheduledTo.from)) {
+        return false;
+      }
+
+      if (filters.scheduledTo.to && chat.schedule?.scheduleDate && new Date(chat.schedule.scheduleDate) > new Date(filters.scheduledTo.to)) {
+        return false;
+      }
+
       return true;
     });
 
-    const sortedAllChats = [...filteredIntChats, ...filteredWppChats].sort((a, b) => {
-      const aStartedAt = new Date(a.startedAt);
-      const bStartedAt = new Date(b.startedAt);
-      return aStartedAt.getTime() - bStartedAt.getTime();
+    const filteredSchedules = monitorSchedules.filter(schedule => {
+      if (!filters.categories.showSchedules) return false;
+      if (filters.scheduledBy !== "all" && schedule.scheduledBy !== filters.scheduledBy) return false;
+      if (filters.scheduledFor !== "all" && schedule.scheduledFor !== filters.scheduledFor) return false;
+
+      if (filters.scheduledAt.from && new Date(schedule.scheduledAt) < new Date(filters.scheduledAt.from)) {
+        return false;
+      }
+      if (filters.scheduledAt.to && new Date(schedule.scheduledAt) > new Date(filters.scheduledAt.to)) {
+        return false;
+      }
+      return true;
+    });
+
+    const sortedAllChats = [...filteredIntChats, ...filteredWppChats, ...filteredSchedules].sort((a, b) => {
+      // Use startedAt if available, otherwise fallback to scheduledAt for WppSchedule
+      const getSortDate = (item: DetailedInternalChat | DetailedChat | DetailedSchedule) => {
+        if ('startedAt' in item && item.startedAt) {
+          return new Date(item.startedAt);
+        }
+        if ('scheduledAt' in item && item.scheduledAt) {
+          return new Date(item.scheduledAt);
+        }
+        return new Date(0);
+      };
+      const aDate = getSortDate(a);
+      const bDate = getSortDate(b);
+      return aDate.getTime() - bDate.getTime();
     });
 
     return sortedAllChats;

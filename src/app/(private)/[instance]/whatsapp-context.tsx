@@ -12,12 +12,15 @@ import {
   useState,
 } from "react";
 import {
+  Customer,
   SendMessageData,
   SocketEventType,
   WhatsappClient,
   WppChat,
   WppChatWithDetails,
+  WppContact,
   WppMessage,
+  WppSchedule,
 } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "./socket-context";
@@ -42,6 +45,10 @@ export interface DetailedChat extends WppChatWithDetails {
   chatType: "wpp";
 }
 
+export interface DetailedSchedule extends WppSchedule {
+  customer: Customer | null;
+}
+
 interface IWhatsappContext {
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
@@ -49,6 +56,7 @@ interface IWhatsappContext {
   sectors: { id: number; name: string }[];
   currentChat: DetailedChat | DetailedInternalChat | null;
   currentChatMessages: WppMessage[];
+  monitorSchedules: DetailedSchedule[];
   openChat: (chat: DetailedChat) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
@@ -56,6 +64,7 @@ interface IWhatsappContext {
   transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;
   getChatsMonitor: () => void;
+  getMonitorSchedules: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number) => void;
@@ -86,6 +95,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
   const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
+  const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
 
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
@@ -208,6 +218,17 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     } else {
       setMonitorChats([]);
       setMessages({});
+    }
+  }, [token, api.current]);
+
+  const getMonitorSchedules = useCallback(() => {
+    if (typeof token === "string" && token.length > 0 && api.current) {
+      api.current.setAuth(token);
+      api.current.getSchedules().then((res) => {
+        setMonitorSchedules(res.data as DetailedSchedule[]);
+      });
+    } else {
+      setMonitorSchedules([]);
     }
   }, [token, api.current]);
 
@@ -364,6 +385,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         monitorChats,
         getChats,
         createSchedule,
+        getMonitorSchedules,
+        monitorSchedules
       }}
     >
       {children}
