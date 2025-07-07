@@ -19,7 +19,6 @@ import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { usePathname } from "next/navigation";
 
 const monitorRoutes = [
-  { title: "Agendamentos", href: "/monitor/schedules" },
   { title: "Conversas", href: "/monitor/chats" },
   { title: "Conversas Internas", href: "/monitor/internal-chats" },
   { title: "Conversas (Novo)", href: "/monitor" },
