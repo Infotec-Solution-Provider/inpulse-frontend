@@ -71,11 +71,17 @@ export default function InternalReceiveMessageHandler(
         const phone = raw.split("@")[0].replace(/\D/g, "");
         const user = users.find((u) => u.WHATSAPP === phone);
         const usersPhone = contacts.find((u) => u.phone === phone)?.name;
-        name = user
-          ? user.NOME || usersPhone || (user.WHATSAPP && user.WHATSAPP.length <= 13 ? Formatter.phone(user.WHATSAPP) : "Sem número")
-          : (phone.length <= 13
-              ? Formatter.phone(phone)
-              : phone);
+        if (user) {
+          name =
+            user.NOME ||
+            usersPhone ||
+            (user.WHATSAPP && user.WHATSAPP.length <= 13
+              ? Formatter.phone(user.WHATSAPP)
+              : "Sem número");
+        } else {
+          name = usersPhone || (phone.length <= 13 ? Formatter.phone(phone) : phone);
+        }
+
       }
 
       safeNotification(name, {
