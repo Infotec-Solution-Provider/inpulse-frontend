@@ -104,13 +104,7 @@ export default function GroupMessage({
           {groupFirst && (
             <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
           )}
-          <div className="w-full text-slate-900 dark:text-slate-200">
-            {visualText.split("\n").map((line, index) => (
-              <p key={index} className="max-w-[100%] break-words text-sm">
-                <LinkifiedText text={line} />
-              </p>
-            ))}
-          </div>
+
 
           {fileId && (
             <MessageFile
@@ -120,7 +114,13 @@ export default function GroupMessage({
               fileSize={fileSize || ""}
             />
           )}
-
+          <div className="w-full text-slate-900 dark:text-slate-200">
+            {visualText.split("\n").map((line, index) => (
+              <p key={index} className="max-w-[100%] break-words text-sm">
+                <LinkifiedText text={line} />
+              </p>
+            ))}
+          </div>
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
             <p className="text-xs text-slate-900 dark:text-slate-200">

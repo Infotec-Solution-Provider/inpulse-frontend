@@ -123,13 +123,6 @@ export default function Message({
         )}
 
         <div className="flex w-full flex-col gap-1">
-          <div className="w-full text-slate-900 dark:text-slate-200">
-            {text.split("\n").map((line, index) => (
-              <p key={index} className="max-w-[100%] break-words text-sm">
-                <LinkifiedText text={line} />
-              </p>
-            ))}
-          </div>
 
           {fileId && (
             <MessageFile
@@ -139,7 +132,13 @@ export default function Message({
               fileSize={fileSize || ""}
             />
           )}
-
+          <div className="w-full text-slate-900 dark:text-slate-200">
+            {text.split("\n").map((line, index) => (
+              <p key={index} className="max-w-[100%] break-words text-sm">
+                <LinkifiedText text={line} />
+              </p>
+            ))}
+          </div>
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
             <p className="text-xs text-slate-900 dark:text-slate-200">{date.toLocaleString()}</p>

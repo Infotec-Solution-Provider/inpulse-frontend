@@ -53,7 +53,35 @@ export default function ChatSendMessageArea() {
     dispatch,
   });
 
-  const openAttachFile = () => fileInputRef.current?.click();
+  const openAttachFile = () => {
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
+    };
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            dispatch({ type: "attach-file", file });
+          }
+        }
+      }
+    };
+
+    textarea.addEventListener("paste", handlePaste);
+    return () => {
+      textarea.removeEventListener("paste", handlePaste);
+    };
+  }, [textareaRef.current]);
+
   const openQuickMessages = () => setQuickMessageOpen(true);
   const openQuickTemplate = () => setQuickTemplateOpen(true);
 
@@ -85,8 +113,12 @@ export default function ChatSendMessageArea() {
       if (e.key !== "Enter") return;
 
       e.preventDefault();
-      if (isAuxKeyPressed) {
-        return dispatch({ type: "change-text", text: state.text + "\n" });
+      if (e.key === "Enter" && isAuxKeyPressed) {
+            return dispatch({ type: "change-text", text: state?.text + "\n" });
+          }
+      if (e.key === "Enter" && !isDisabled && !isAuxKeyPressed) {
+        dispatch({ type: "change-text", text: "" });
+        return sendMessages();
       }
       if (!isDisabled) {
         sendMessages();
