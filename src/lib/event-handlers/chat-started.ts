@@ -18,10 +18,14 @@ export default function ChatStartedHandler(
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
-    const { messages, ...chat } = await api.getChatById(chatId);
+    const res = await api.getChatById(chatId);
+    const { messages, ...chat } = res;
     const isUnread = true;
     // find most recent message
-    const lastMessage = messages.reduce((prev, current) => {
+
+    console.log("RES", res);
+
+    const lastMessage = messages?.reduce((prev, current) => {
       return +prev.timestamp > +current.timestamp ? prev : current;
     }, messages[0]);
 
