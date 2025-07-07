@@ -36,7 +36,7 @@ const crudsRoutes = (instance: string, sectorId?: number) => {
     // { title: "Tags", href: "/tags" },
   ];
 
-  if (instance !== "nunes" || sectorId == 3) {
+  if ((instance !== "nunes" && instance !== "vollo") || sectorId == 3) {
     arr.push({ title: "Grupos Internos", href: "/internal-groups" });
   }
 
