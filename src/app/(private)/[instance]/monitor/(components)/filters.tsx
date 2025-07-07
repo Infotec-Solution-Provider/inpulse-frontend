@@ -38,6 +38,13 @@ export default function MonitorFilters() {
     });
   };
 
+  const onChangeShowOnlyScheduled = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilters({
+      ...filters,
+      showOnlyScheduled: e.target.checked,
+    });
+  };
+
   return (
     <aside className="scrollbar-whatsapp w-full overflow-y-auto rounded-md bg-slate-200 px-4 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-200 md:w-96">
       <header className="flex items-center justify-between py-2">
@@ -158,7 +165,7 @@ export default function MonitorFilters() {
       <section className="py-2">
         <h2 className="text-md font-semibold">Agendamentos</h2>
         <div className="flex flex-col gap-2 py-2 pl-2">
-          <Checkbox id="monit-filter:show-past-scheduled">Exibir: Apenas agendados</Checkbox>
+          <Checkbox id="monit-filter:show-only-scheduled" value={filters.showOnlyScheduled} onChange={onChangeShowOnlyScheduled}>Exibir: Apenas agendados</Checkbox>
           <RangeDateField label="Agendado no dia" />
           <RangeDateField label="Agendado para o dia" />
           <div className="my-2">

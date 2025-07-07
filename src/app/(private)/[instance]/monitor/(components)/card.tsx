@@ -3,10 +3,9 @@ import { Avatar } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import toDateString from "@/lib/utils/date-string";
 
 interface MonitorCardProps {
-  type: "external-chat" | "internal-chat" | "internal-group" | "scheduled-chat";
+  type: "external-chat" | "internal-chat" | "internal-group" | "scheduled-chat" | "schedule";
   startDate?: string | null | false;
   endDate?: string | null | false;
   userName: string;
@@ -54,13 +53,15 @@ export default function MonitorCard({
     "internal-chat": "cyan",
     "internal-group": "green",
     "scheduled-chat": "amber",
+    "schedule": "orange",
   };
 
   const types = {
     "external-chat": "Atendimento",
-    "scheduled-chat": "Agendamento",
+    "scheduled-chat": "Atendimento Agendado",
     "internal-chat": "Conversa Interna",
     "internal-group": "Grupo Interno",
+    "schedule": "Agendamento",
   };
 
   const getBorder = (type: keyof typeof colors) => {
@@ -95,7 +96,7 @@ export default function MonitorCard({
             sx={{ width: 72, height: 72 }}
             variant="square"
           />
-          {type === "external-chat" && (
+          {(type === "external-chat" || type === "scheduled-chat" || type === "schedule") && (
             <div className="flex w-52 flex-col text-xs">
               <span className="text-md font-semibold">{chatTitle} </span>
               <span>{contactNumber || "N/A"}</span>
@@ -103,6 +104,7 @@ export default function MonitorCard({
               {customerDocument && <span>{customerDocument}</span>}
             </div>
           )}
+
           {type === "internal-chat" && (
             <div className="flex w-52 flex-col text-xs">
               <span className="text-md font-semibold">{chatTitle} </span>
@@ -125,17 +127,32 @@ export default function MonitorCard({
           )}
           <div className="ml-auto flex flex-col items-end">
             {handleView && (
-              <button className="hover:scale-125 hover:opacity-75" onClick={handleView}>
+              <button
+                className="hover:scale-125 hover:opacity-75"
+                onClick={handleView}
+                title="Visualizar"
+                aria-label="Visualizar"
+              >
                 <VisibilityIcon color="info" className="!text-sm" />
               </button>
             )}
             {handleTransfer && (
-              <button className="hover:scale-125 hover:opacity-75" onClick={handleTransfer}>
+              <button
+                className="hover:scale-125 hover:opacity-75"
+                onClick={handleTransfer}
+                title="Transferir"
+                aria-label="Transferir"
+              >
                 <SyncAltIcon color="primary" className="!text-sm" />
               </button>
             )}
             {handleFinish && (
-              <button className="hover:scale-125 hover:opacity-75" onClick={handleFinish}>
+              <button
+                className="hover:scale-125 hover:opacity-75"
+                onClick={handleFinish}
+                title="Finalizar"
+                aria-label="Finalizar"
+              >
                 <AssignmentTurnedInIcon color="success" className="!text-sm" />
               </button>
             )}
@@ -143,7 +160,7 @@ export default function MonitorCard({
         </div>
       </div>
       <div
-        className={`hidden border-amber-500 border-cyan-500 border-green-500 border-violet-500 bg-amber-700/5 bg-cyan-700/5 bg-green-700/5 bg-violet-700/5 text-amber-800 text-cyan-800 text-green-800 text-violet-800 dark:text-amber-200 dark:text-cyan-200 dark:text-green-200 dark:text-violet-200 md:block`}
+        className={`hidden border-amber-500 border-cyan-500 border-green-500 border-violet-500 border-orange-500 bg-amber-700/5 bg-cyan-700/5 bg-green-700/5 bg-violet-700/5 bg-orange-700/5 text-amber-800 text-cyan-800 text-green-800 text-violet-800 dark:text-amber-200 dark:text-cyan-200 dark:text-green-200 dark:text-violet-200 text-orange-800 dark:text-orange-200 md:block`}
       ></div>
     </div>
   );
