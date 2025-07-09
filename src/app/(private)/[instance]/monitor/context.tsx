@@ -99,7 +99,7 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
 
   const filteredChats = useMemo(() => {
     const filteredIntChats = intChats.filter((chat) => {
-      let falseCount = 0;
+      const falseCount = 0;
 
       if (chat.isGroup && !filters.categories.showInternalGroups) return false;
       if (!chat.isGroup && !filters.categories.showInternalChats) return false;

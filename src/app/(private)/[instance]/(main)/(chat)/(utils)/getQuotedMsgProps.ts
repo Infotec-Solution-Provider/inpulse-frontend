@@ -22,7 +22,7 @@ export default function getQuotedMsgProps(
 
     } else if (quotedMsg?.from?.startsWith("external:")) {
       const parts = quotedMsg.from.split(":");
-      let raw = parts.length === 3 ? parts[2] : parts[1];
+      const raw = parts.length === 3 ? parts[2] : parts[1];
       const phone = raw.split("@")[0].replace(/\D/g, "");
       const user = users.find((u) => u.WHATSAPP === phone);
       const usersPhone = contactsMap?.get(phone);

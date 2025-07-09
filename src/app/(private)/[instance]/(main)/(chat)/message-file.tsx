@@ -42,7 +42,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
       e.preventDefault();
       const delta = -e.deltaY / 500;
       setZoom((z) => {
-        let newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z + delta));
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z + delta));
         if (newZoom !== z && containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
           const offsetX = e.clientX - rect.left - rect.width / 2 - position.x;
