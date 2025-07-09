@@ -52,12 +52,14 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const handleSendMessage = () => {
     if (currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
       try {
-        sendMessage(currentChat.contact.phone, {
-          ...state,
-          contactId: currentChat.contact.id,
-          chatId: currentChat.id,
-        });
-      } catch (err) {
+        console.log("Enviando mensagem:", state.file)
+      sendMessage(currentChat.contact.phone, {
+        ...state,
+        contactId: currentChat.contact.id,
+        chatId: currentChat.id,
+        file: state.file
+      });
+    }  catch (err) {
         console.error("Erro inesperado ao chamar sendMessage", err);
       }
     }

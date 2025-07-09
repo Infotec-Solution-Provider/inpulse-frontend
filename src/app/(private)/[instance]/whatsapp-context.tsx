@@ -196,8 +196,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       if (data.contactId) payload.contactId = data.contactId;
       if (data.fileId) payload.fileId = data.fileId; // opcional
       if (data.quotedId) payload.quotedId = data.quotedId; // opcional
+      if (data.file) payload.file = data.file; // opcional
 
-      console.log("payload final para sendMessage", payload);
       api.current.sendMessage(payload.to, payload);
     },
     [user]

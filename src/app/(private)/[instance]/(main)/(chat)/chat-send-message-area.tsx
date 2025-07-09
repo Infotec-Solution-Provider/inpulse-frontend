@@ -54,10 +54,9 @@ export default function ChatSendMessageArea() {
   });
 
   const openAttachFile = () => {
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    };
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -69,18 +68,14 @@ export default function ChatSendMessageArea() {
         const item = items[i];
         if (item.kind === "file") {
           const file = item.getAsFile();
-          if (file) {
-            dispatch({ type: "attach-file", file });
-          }
+          if (file) dispatch({ type: "attach-file", file });
         }
       }
     };
 
     textarea.addEventListener("paste", handlePaste);
-    return () => {
-      textarea.removeEventListener("paste", handlePaste);
-    };
-  }, [textareaRef.current]);
+    return () => textarea.removeEventListener("paste", handlePaste);
+  }, []);
 
   const openQuickMessages = () => setQuickMessageOpen(true);
   const openQuickTemplate = () => setQuickTemplateOpen(true);
@@ -100,8 +95,14 @@ export default function ChatSendMessageArea() {
   const toggleEmojiPicker = () => dispatch({ type: "toggle-emoji-menu" });
 
   function sendMessages() {
+    const hasFile = !!state.file;
+    const hasText = !!state.text?.trim();
+
+    if (!hasText && !hasFile) return;
+    console.log("Sending message:", hasFile,hasText)
     sendMessageContext();
     dispatch({ type: "change-text", text: "" });
+    dispatch({ type: "remove-file" });
     setTextWithNames("");
     handleQuoteMessageRemove();
     document.dispatchEvent(new Event("scroll-to-bottom"));
@@ -112,22 +113,18 @@ export default function ChatSendMessageArea() {
       const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;
       if (e.key !== "Enter") return;
 
+      if (isAuxKeyPressed) {
+        dispatch({ type: "change-text", text: state?.text + "\n" });
+        return;
+      }
+
       e.preventDefault();
-      if (e.key === "Enter" && isAuxKeyPressed) {
-            return dispatch({ type: "change-text", text: state?.text + "\n" });
-          }
-      if (e.key === "Enter" && !isDisabled && !isAuxKeyPressed) {
-        dispatch({ type: "change-text", text: "" });
-        return sendMessages();
-      }
-      if (!isDisabled) {
-        sendMessages();
-      }
+      if (!isDisabled) sendMessages();
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isDisabled, state.text]);
+  }, [isDisabled, state.text, state.file]);
 
   const quotedMessageStyle = useMemo(() => {
     const isInternalMessage = (msg: typeof quotedMessage): msg is InternalMessage =>
@@ -143,13 +140,7 @@ export default function ChatSendMessageArea() {
 
   return (
     <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0 mb-6">
-      <input
-        type="file"
-        className="hidden"
-        id="file-input"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-      />
+      <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
       <div className="flex items-center gap-2">
         <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openQuickMessages}>
           <ChatBubbleIcon />
@@ -158,11 +149,7 @@ export default function ChatSendMessageArea() {
           <AttachFileIcon />
         </IconButton>
         <div className="relative hidden md:block">
-          <IconButton
-            size="small"
-            className="bg-white/20 dark:text-indigo-400"
-            onClick={toggleEmojiPicker}
-          >
+          <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={toggleEmojiPicker}>
             <EmojiEmotionsOutlinedIcon />
           </IconButton>
           <div className="absolute bottom-full">
@@ -179,7 +166,6 @@ export default function ChatSendMessageArea() {
         </div>
       </div>
 
-      {/* Campo de texto + citação */}
       <div className="flex w-full flex-col gap-2">
         {quotedMessage && (
           <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
@@ -226,7 +212,7 @@ export default function ChatSendMessageArea() {
                 {mentionCandidates.length === 0 ? (
                   <div className="p-2 text-sm text-gray-500">Nenhum contato</div>
                 ) : (
-                  mentionCandidates.map((user:any) => (
+                  mentionCandidates.map((user: any) => (
                     <div
                       key={user.userId}
                       className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 cursor-pointer"
@@ -261,7 +247,6 @@ export default function ChatSendMessageArea() {
         <SendIcon />
       </IconButton>
 
-      {/* Preview e gravação de áudio */}
       <div className="aria-hidden:hidden" aria-hidden={textWithNames.length > 0 || state.sendAsAudio}>
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
