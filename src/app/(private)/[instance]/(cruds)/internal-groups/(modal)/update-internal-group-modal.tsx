@@ -22,7 +22,7 @@ import { ContactsContext } from "../../contacts/contacts-context";
 // Tipo comum para contatos/usuários
 type UnifiedContact = {
   name: string;
-  phone: string;
+  phone: string | null;
   userId?: number;
 };
 
@@ -60,15 +60,16 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
   const contactMap = new Map<string, UnifiedContact>();
 
   users.forEach((u) => {
-    const phone = u.WHATSAPP;
-    if (phone) {
-      contactMap.set(phone, {
-        name: u.NOME,
-        phone,
-        userId: u.CODIGO,
-      });
-    }
+    const userId = u?.CODIGO;
+    const phone = u?.WHATSAPP ?? null;
+
+    contactMap.set(String(userId), {
+      name: u.NOME,
+      phone,
+      userId,
+    });
   });
+
 
   contacts.forEach((c) => {
     if (c.phone && !contactMap.has(c.phone)) {
@@ -87,9 +88,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
 
   useEffect(() => {
     const participantesComInfo = group.participants.map((p) => {
-      console.log("mergedContacts mergedContacts:",mergedContacts);
       const match = mergedContacts.find((c) => c.userId === p.userId);
-      console.log("Participante:", p.userId, "Match:", match);
       if (match) return match;
 
       return {
@@ -113,7 +112,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
 
     await onSubmit(group.id, {
       name,
-      participants: participants.map((p) => p.userId ?? +p.phone), // ou Number(p.phone)
+      participants: participants.map((p) => p.userId ?? (p.phone ? +p.phone : 0)), // ou Number(p.phone)
       wppGroupId: selectedGroup?.id.user || null,
     });
 
@@ -176,7 +175,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
              max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg">
         <div className="border-b border-black/10 pb-2 dark:border-white/20">
           <header className="text-xl font-semibold text-slate-800 dark:text-white">
-            Criar novo grupo
+            Editar Grupo
           </header>
         </div>
 
@@ -228,7 +227,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
             <Autocomplete
               options={userOptions}
               getOptionLabel={(option) =>
-                `${option.phone.padStart(2, "0")} - ${option.name}`
+                `${option.phone ? option.phone.padStart(2, "0") : ""} - ${option.name}`
               }
               className="w-96"
               value={selectedUser}
@@ -246,7 +245,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
                 {participants.map((p) => (
                   <ListItem key={p.phone} divider>
                     <ListItemText primary={p.name} secondary={`ID: ${p.phone}`} />
-                    <IconButton color="error" size="small" onClick={handleRmvUser(p.phone)}>
+                    <IconButton color="error" size="small" onClick={handleRmvUser(p.phone ?? "")}>
                       <PersonRemoveIcon />
                     </IconButton>
                   </ListItem>

@@ -5,6 +5,7 @@ import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { Formatter } from "@in.pulse-crm/utils";
+import { replaceMentions } from "../utils/message-mentions";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -83,9 +84,13 @@ export default function InternalReceiveMessageHandler(
         }
 
       }
+      const bodyFinal =
+        message.type !== "chat"
+          ? types[message.type] || "Enviou um arquivo"
+          : replaceMentions(message.body || "", users, contacts);
 
       safeNotification(name, {
-        body: message.type !== "chat" ? types[message.type] || "Enviou um arquivo" : message.body,
+        body: bodyFinal,
         icon: HorizontalLogo.src,
       });
     }
