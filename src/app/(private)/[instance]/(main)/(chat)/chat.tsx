@@ -58,17 +58,21 @@ export default function Chat({ avatarUrl, name, customerName, phone }: ChatConta
         onDragOver={handleDragOver}
         onPaste={handlePaste}
       >
-                <ChatMessagesList />
+     <ChatMessagesList />
         {state?.file && !state.sendAsAudio && (
           <ChatAttachmentPreview file={state.file} />
         )}
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-        <ChatSendMessageArea />
-      </div>
-      <div className="hidden md:block">
-        <ChatSendMessageArea />
-      </div>
+    {(!state?.file || state.sendAsAudio )&& (
+      <>
+        <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
+          <ChatSendMessageArea />
+        </div>
+        <div className="hidden md:block">
+          <ChatSendMessageArea />
+        </div>
+      </>
+    )}
     </div>
   );
 }
