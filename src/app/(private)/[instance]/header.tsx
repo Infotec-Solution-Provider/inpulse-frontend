@@ -48,13 +48,6 @@ const userCrudRoutes = [
   { title: "Clientes", href: "/customers" },
   { title: "Contatos", href: "/contacts" },
 ];
-const reportsRoutes = [
-  { title: "Conversas", href: "/reports/chats" },
-  { title: "Gerador de Relatório", href: "/reports/report-generator" },
-  /*{ title: "Conversas sem resposta", href: "/reports/chats-without-response" },
-    { title: "Mensagens por contato", href: "/reports/messages-by-contact" },
-    { title: "Mensagens por usuário", href: "/reports/messages-by-user" }, */
-];
 
 /*
 const toolsRoutes = [
@@ -63,13 +56,14 @@ const toolsRoutes = [
 ];
 */
 
-const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: {
+const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, reportsRoutes }: {
   open: boolean;
   onClose: () => void;
   user: any;
   instance: string;
   isUserAdmin: boolean;
   signOut: () => void;
+  reportsRoutes: { title: string; href: string }[];
 }) => {
   const pathname = usePathname();
   const baseHref = pathname.split("/")[1];
@@ -194,6 +188,13 @@ export default function Header() {
 
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
 
+  const reportsRoutes = [
+    { title: "Conversas", href: "/reports/chats" },
+    ...(user?.NIVEL === UserRole.ADMIN
+      ? [{ title: "Gerador de Relatório", href: "/reports/report-generator" }]
+      : []),
+  ];
+
   return (
     <header className="sticky top-0 z-20 shadow-md">
       <div className="flex items-center">
@@ -277,6 +278,7 @@ export default function Header() {
         instance={instance}
         isUserAdmin={isUserAdmin}
         signOut={signOut}
+        reportsRoutes={reportsRoutes}
       />
     </header>
   );
