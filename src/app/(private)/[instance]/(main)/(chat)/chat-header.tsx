@@ -68,7 +68,7 @@ export default function ChatHeader({
           </h2>
         </div>
       </div>
-      {currentChat?.chatType === "internal" && !currentChat.isGroup && (
+{/*       {currentChat?.chatType === "internal" && !currentChat.isGroup && (
         <div className="flex items-center">
           <Tooltip title={<h3 className="text-base dark:text-white">Deletar conversa</h3>}>
             <IconButton onClick={openDeleteChatModal}>
@@ -76,7 +76,7 @@ export default function ChatHeader({
             </IconButton>
           </Tooltip>
         </div>
-      )}
+      )} */}
       {currentChat?.chatType === "wpp" && (
         <div className="flex items-center">
           <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
