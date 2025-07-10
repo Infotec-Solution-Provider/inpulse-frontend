@@ -138,11 +138,14 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, repor
           )}
 
           {/* Relatórios */}
-          <ListItem>
-            <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
-          </ListItem>
-          {renderMenuItems(reportsRoutes)}
-
+          {isUserAdmin && (
+            <>
+              <ListItem>
+                <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
+              </ListItem>
+              {renderMenuItems(reportsRoutes)}
+            </>
+          )}
           <Divider sx={{ my: 2 }} />
 
           {/* Logout */}
@@ -235,9 +238,11 @@ export default function Header() {
                 <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
                   <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
-                <HeaderNavItem title="Relatórios" routes={reportsRoutes}>
-                  <BarChartIcon className="text-gray-900 dark:text-slate-200" />
-                </HeaderNavItem>
+                {isUserAdmin && (
+                  <HeaderNavItem title="Relatórios" routes={reportsRoutes}>
+                    <BarChartIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
               </menu>
             </nav>
           </div>
