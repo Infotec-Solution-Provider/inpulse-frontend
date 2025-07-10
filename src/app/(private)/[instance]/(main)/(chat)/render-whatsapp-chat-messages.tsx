@@ -4,6 +4,7 @@ import Message from "./message";
 import { useContext } from "react";
 import { ChatContext } from "./chat-context";
 import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
+import { AuthContext } from "@/app/auth-context";
 
 function getWppMessageStyle(msg: WppMessage) {
   if (msg.from.startsWith("system")) {
@@ -22,19 +23,23 @@ function getWppMessageStyle(msg: WppMessage) {
 export default function RenderWhatsappChatMessages() {
   const { currentChatMessages, currentChat } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage } = useContext(ChatContext);
+  const { instance } = useContext(AuthContext);
 
-const boolArray = [...currentChatMessages].map((msg) =>
-  msg.from === "system" && msg.body?.startsWith("Atendimento transferido")
-    ? true
-    : false
-);
 
-const lastTransferIndex = boolArray.lastIndexOf(true);
-
-const messagesToRender =
-  lastTransferIndex !== -1
-    ? currentChatMessages.slice(lastTransferIndex)
-    : currentChatMessages;
+  const messagesToRender =
+    instance === "nunes"
+      ? (() => {
+          const boolArray = [...currentChatMessages].map((msg) =>
+            msg.from === "system" && msg.body?.startsWith("Atendimento transferido")
+              ? true
+              : false
+          );
+          const lastTransferIndex = boolArray.lastIndexOf(true);
+          return lastTransferIndex !== -1
+            ? currentChatMessages.slice(lastTransferIndex)
+            : currentChatMessages;
+        })()
+      : currentChatMessages;
 
   return (
     <>
