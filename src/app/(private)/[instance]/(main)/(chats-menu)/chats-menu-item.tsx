@@ -1,6 +1,9 @@
 import { Avatar } from "@mui/material";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
-import { ReactNode, useMemo, useEffect, useRef } from "react";
+import { ReactNode, useMemo, useEffect, useRef, useContext } from "react";
+import { AuthContext } from "@/app/auth-context";
+import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { InternalChatContext } from "../../internal-context";
 
 interface Tag {
   name: string;
@@ -28,6 +31,10 @@ export default function ChatsMenuItem({
   isOpen,
   onClick,
 }: ChatsMenuItemProps) {
+
+const { user } = useContext(AuthContext);
+const { users } = useContext(InternalChatContext);
+const { contacts } = useContext(ContactsContext);
   const lastMessageDateText = useMemo(() => {
     if (!messageDate) {
       return "Nunca";
@@ -52,20 +59,20 @@ export default function ChatsMenuItem({
 
   // Referência para o elemento do chat
   const chatItemRef = useRef<HTMLDivElement>(null);
-  
+
   // Função para lidar com cliques de mouse
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log('Chat item click detected (mouse)');
-    
+
     // Feedback visual
     const target = e.currentTarget as HTMLElement;
     target.style.backgroundColor = 'rgba(99, 102, 241, 0.2)';
     setTimeout(() => {
       target.style.backgroundColor = '';
     }, 150);
-    
+
     if (typeof onClick === 'function') {
       console.log('Executing onClick handler from click');
       try {
@@ -81,7 +88,7 @@ export default function ChatsMenuItem({
   // Função para lidar com eventos de toque
   const handleTouchStart = (e: React.TouchEvent) => {
     console.log('Chat item touch start detected');
-    
+
     // Adiciona feedback visual imediato
     const target = e.currentTarget as HTMLElement;
     target.style.backgroundColor = 'rgba(99, 102, 241, 0.2)';
@@ -91,12 +98,12 @@ export default function ChatsMenuItem({
   // Função para lidar com o fim do toque
   const handleTouchEnd = (e: React.TouchEvent) => {
     console.log('Chat item touch end detected');
-    
+
     // Remove o feedback visual
     const target = e.currentTarget as HTMLElement;
     target.style.backgroundColor = '';
     target.style.transform = '';
-    
+
     if (typeof onClick === 'function') {
       console.log('Executing onClick handler from touch');
       try {
@@ -108,19 +115,52 @@ export default function ChatsMenuItem({
       console.warn('No valid onClick handler provided:', onClick);
     }
   };
-  
+function wasMentioned(text: string): boolean {
+  if (!text || typeof text !== "string") return false;
+
+  // Extrai todos os "@<telefone>"
+  const matches = text.match(/@(\d{6,})/g);
+  if (!matches) return false;
+
+  const mentionedPhones = matches.map(m => m.replace("@", ""));
+
+  const userPhones = new Set<string>();
+
+  // Se o user logado tiver telefone
+    if (user?.WHATSAPP) {
+      userPhones.add(user.WHATSAPP.replace(/\D/g, ""));
+    }
+
+    // Busca nos users com o mesmo CODIGO do logado
+    const matchUser = users.find(u => u.CODIGO === user?.CODIGO);
+    if (matchUser?.WHATSAPP) {
+      userPhones.add(matchUser.WHATSAPP.replace(/\D/g, ""));
+    }
+
+    // Busca nos contacts (caso o número não esteja nos users)
+    for (const contact of contacts) {
+      if (contact.id === user?.CODIGO && contact.phone) {
+        userPhones.add(contact.phone.replace(/\D/g, ""));
+      }
+    }
+
+    // Verifica se algum telefone mencionado bate com o telefone do usuário
+    return mentionedPhones.some(p => userPhones.has(p));
+  }
+
+
   // Função para lidar com o movimento do toque (evita scroll)
   const handleTouchMove = (e: React.TouchEvent) => {
     // Previne scroll durante o toque no item
     e.preventDefault();
     e.stopPropagation();
   };
-  
+
   // Adiciona listeners de eventos diretamente ao DOM para maior compatibilidade
   useEffect(() => {
     const element = chatItemRef.current;
     if (!element) return;
-    
+
     // Função para forçar o clique
     const forceClick = () => {
       console.log('Forçando execução do onClick');
@@ -132,11 +172,11 @@ export default function ChatsMenuItem({
         }
       }
     };
-    
+
     // Adiciona listeners nativos
     element.addEventListener('click', forceClick);
     element.addEventListener('touchend', forceClick);
-    
+
     // Cleanup
     return () => {
       element.removeEventListener('click', forceClick);
@@ -189,10 +229,15 @@ export default function ChatsMenuItem({
             <p className="truncate text-sm leading-none text-gray-900 dark:text-slate-100">{name}</p>
             <div className="flex items-center gap-2 text-gray-700 dark:text-slate-300 group-aria-busy:text-orange-200">
               <p className="text-xs">{lastMessageDateText}</p>
-              <div
-                className="h-3 w-3 rounded-full bg-red-600 aria-hidden:hidden"
-                aria-hidden={!Boolean(isUnread)}
-              ></div>
+{isUnread && (
+  <div className="flex items-center gap-1">
+    <div className="h-3 w-3 rounded-full bg-red-600"></div>
+    {typeof message === "string" && wasMentioned(message) && (
+      <span className="text-xs font-bold text-indigo-600 leading-none">@</span>
+    )}
+  </div>
+)}
+
             </div>
           </div>
           <div className="truncate text-sm text-gray-700 dark:text-slate-300 font-emoji">{message}</div>
