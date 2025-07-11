@@ -22,11 +22,13 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   // Filtra e pagina os contatos
-  const filteredContacts = useMemo(() => {
-    return contacts.filter((contact) =>
-      contact?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [contacts, searchTerm]);
+const filteredContacts = useMemo(() => {
+  const term = searchTerm.toLowerCase();
+  return contacts.filter((contact) =>
+    contact?.name?.toLowerCase().includes(term) ||
+    contact?.phone?.toLowerCase().includes(term)
+  );
+}, [contacts, searchTerm]);
 
   const totalPages = Math.ceil(filteredContacts.length / pageSize);
   const paginatedContacts = filteredContacts.slice(
