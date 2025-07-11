@@ -13,17 +13,19 @@ export function replaceMentions(
   function getName(idOrPhone: string): string {
     const code = Number(idOrPhone);
     if (!isNaN(code)) {
-      const user = users.find(u => u.CODIGO === code);
-      if (user) return user.NOME || "Unknown";
+      const user = users.find(u => u.CODIGO === code ||  u.WHATSAPP === idOrPhone);
+      if (user){
+        return user.NOME
+      }
+      else{
+        const contact = contacts.find(c => c.phone === idOrPhone);
+        if (contact) return contact.name;
+      }
     }
-    const contact = contacts.find(c => c.phone === idOrPhone);
-
-    if (contact) return contact.name || "Unknown";
-
     return `@${idOrPhone}`;
   }
 
-  if (isOnlyMentions) {
+  if (isOnlyMentions && mentions) {
     const names = mentions.map(m => getName(m.slice(1)));
     return names.map(name => `Mencionou ${name}`).join(", ");
   }
