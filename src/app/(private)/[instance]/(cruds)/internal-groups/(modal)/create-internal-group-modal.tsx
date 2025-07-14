@@ -57,7 +57,7 @@ export default function CreateInternalGroupModal({
       const userId = u.CODIGO;
       map.set(String(userId), {
         name: u.NOME,
-        phone,
+        phone: phone ?? (userId ? String(userId) : null),
         userId,
       });
     });

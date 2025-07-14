@@ -65,7 +65,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
 
     contactMap.set(String(userId), {
       name: u.NOME,
-      phone,
+      phone: phone ?? (userId ? String(userId) : null),
       userId,
     });
   });
