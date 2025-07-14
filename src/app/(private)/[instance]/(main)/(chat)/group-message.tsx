@@ -1,3 +1,5 @@
+// group-message.tsx
+import { useState } from "react";
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
 import MessageFile from "./message-file";
 import {
@@ -6,10 +8,9 @@ import {
   QuotedMessageProps,
   statusComponents,
 } from "./message";
-import { IconButton } from "@mui/material";
-import ReplyIcon from "@mui/icons-material/Reply";
+import { IconButton, Menu, MenuItem, Checkbox } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import LinkifiedText from "./linkmessage";
-
 
 interface MessageProps {
   id: number;
@@ -26,6 +27,13 @@ interface MessageProps {
   quotedMessage?: QuotedMessageProps | null;
   onQuote?: () => void;
   mentionNameMap?: Map<string, string>;
+  isForwardMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: number) => void;
+  onForward?: () => void;
+  onCopy?: () => void;
+  styleWrapper?: React.CSSProperties;
+
 }
 
 export default function GroupMessage({
@@ -43,22 +51,48 @@ export default function GroupMessage({
   quotedMessage,
   onQuote,
   mentionNameMap,
+  isForwardMode,
+  isSelected,
+  onSelect,
+  onForward,
+  onCopy,
+  styleWrapper
 }: MessageProps) {
-  // Função para substituir @números por @nomes com base nos contatos
-  const replaceMentionsWithNames = (text: string): string => {
-    return text.replace(/@(\d{8,15})/g, (_, phone) => {
-      const clean = phone.replace(/\D/g, "");
-      const name = mentionNameMap?.get(clean);
-      return name ? `@${name}` : `@${phone}`;
-    });
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const visualText = replaceMentionsWithNames(text);
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSelectMessage = () => {
+    if (onSelect) onSelect(id);
+  };
+
+  const visualText = text.replace(/@(\d{8,15})/g, (_, phone) => {
+    const clean = phone.replace(/\D/g, "");
+    const name = mentionNameMap?.get(clean);
+    return name ? `@${name}` : `@${phone}`;
+  });
+
   return (
-    <li
-      id={String(id)}
-      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2`}
-    >
+      <li
+        id={String(id)}
+        style={styleWrapper}
+        className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 relative`}
+      >
+      {isForwardMode && (
+        <Checkbox
+          checked={isSelected}
+          onChange={handleSelectMessage}
+          className="absolute left-[-12px]"
+        />
+      )}
+
       <div
         className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
       >
@@ -71,13 +105,7 @@ export default function GroupMessage({
                   : "border-orange-600"
               }`}
             >
-              <h2
-                className={`${
-                  quotedMessage.style === "sent"
-                    ? "border-indigo-600 dark:border-indigo-400"
-                    : "border-orange-600 dark:border-orange-400"
-                }`}
-              >
+              <h2>
                 {quotedMessage.style === "sent"
                   ? "Você"
                   : quotedMessage.author || ""}
@@ -105,7 +133,6 @@ export default function GroupMessage({
             <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
           )}
 
-
           {fileId && (
             <MessageFile
               fileId={fileId}
@@ -129,16 +156,52 @@ export default function GroupMessage({
           </div>
         </div>
       </div>
-      {style !== "system" && (
-        <IconButton
-          className="invisible group-hover:visible"
-          size="small"
-          color="primary"
-          title="Responder"
-          onClick={onQuote}
-        >
-          <ReplyIcon />
-        </IconButton>
+
+      {!isForwardMode && style !== "system" && (
+        <div className="invisible group-hover:visible">
+          <IconButton
+            size="small"
+            color="default"
+            title="Mais opções"
+            onClick={handleMenuClick}
+          >
+            <MoreVertIcon />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                onQuote?.();
+              }}
+            >
+              Responder
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                onSelect?.(id);
+              }}
+            >
+              Selecionar
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                onForward?.();
+              }}
+            >
+              Encaminhar
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                onCopy?.();
+              }}
+            >
+              Copiar
+            </MenuItem>
+          </Menu>
+        </div>
       )}
     </li>
   );

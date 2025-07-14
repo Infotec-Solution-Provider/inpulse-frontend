@@ -39,6 +39,8 @@ const initialState: SendMessageDataState = {
   sendAsAudio: false,
   sendAsDocument: false,
   isEmojiMenuOpen: false,
+  forwardMode: false,
+  selectedMessages: [],
 };
 
 export const ChatContext = createContext({} as IChatContext);

@@ -9,6 +9,8 @@ export interface SendMessageDataState {
   sendAsDocument: boolean;
   isEmojiMenuOpen: boolean;
   quotedId?: number | null;
+  forwardMode?: boolean;
+  selectedMessages?: number[];
 }
 interface MentionableUser {
   userId: number;
@@ -35,7 +37,9 @@ type SetMentionsAction = {
   mentions: MentionableUser[];
 };
 type ResetAction = { type: "reset" };
-
+type ToggleForwardMode = { type: "toggle-forward-mode" }
+type SelectMessage = { type: "select-message"; messageId: number }
+type ClearForward = { type: "clear-forward" }
 export type ChangeMessageDataAction =
   | ChangeTextAction
   | AddEmojiAction
@@ -47,7 +51,11 @@ export type ChangeMessageDataAction =
   | ResetAction
   | QuoteMessageAction
   | RemoveQuotedMessageAction
-  | SetMentionsAction;
+  | SetMentionsAction
+  | ToggleForwardMode
+  | SelectMessage
+  | ClearForward
+  ;
 
 export default function ChatReducer(
   state: SendMessageDataState,
@@ -111,7 +119,27 @@ export default function ChatReducer(
         ...state,
         mentions: action.mentions,
       };
+    case "toggle-forward-mode":
+      return {
+        ...state,
+        forwardMode: !state.forwardMode,
+        selectedMessages: [],
+      };
 
+    case "select-message":
+      return {
+        ...state,
+        selectedMessages: state.selectedMessages?.includes(action.messageId)
+          ? state.selectedMessages.filter((id) => id !== action.messageId)
+          : [...(state.selectedMessages || []), action.messageId],
+      };
+
+    case "clear-forward":
+      return {
+        ...state,
+        forwardMode: false,
+        selectedMessages: [],
+      };
     case "remove-quoted-message":
       delete state.quotedId;
       return state;
