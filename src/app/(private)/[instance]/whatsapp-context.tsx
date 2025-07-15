@@ -185,23 +185,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [api, token],
   );
 
-  // Envia mensagem (somente campos aceitos pelo backend)
-  const sendMessage = useCallback(
-    (to: string, data: SendMessageData) => {
-      const payload: any = {
-        to,
-        text: `*${user?.NOME}*: ${data.text}`,
-      };
-      if (data.chatId) payload.chatId = data.chatId;
-      if (data.contactId) payload.contactId = data.contactId;
-      if (data.fileId) payload.fileId = data.fileId; // opcional
-      if (data.quotedId) payload.quotedId = data.quotedId; // opcional
-      if (data.file) payload.file = data.file; // opcional
-
-      api.current.sendMessage(payload.to, payload);
-    },
-    [user]
-  );
+  const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
+    api.current.sendMessage(to, data);
+  }, []);
 
   // Carregamento monitoria das conversas
   const getChatsMonitor = useCallback(() => {
