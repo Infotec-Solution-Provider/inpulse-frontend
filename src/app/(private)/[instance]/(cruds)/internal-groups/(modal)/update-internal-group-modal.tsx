@@ -60,12 +60,12 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
   const map = new Map<string, UnifiedContact>();
 
   users.forEach((u) => {
-    const phone = u.WHATSAPP ?? null;
     const userId = u.CODIGO;
     const key = `user-${userId}`;
+    console.log(u.NOME+userId)
     map.set(key, {
       name: u.NOME,
-      phone: phone ?? (userId ? String(userId) : null),
+      phone: userId.toString(),
       userId,
     });
   });
