@@ -49,31 +49,34 @@ export default function CreateInternalGroupModal({
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
 
-  const mergedContacts: UnifiedContact[] = useMemo(() => {
-    const map = new Map<string, UnifiedContact>();
+const mergedContacts: UnifiedContact[] = useMemo(() => {
+  const map = new Map<string, UnifiedContact>();
 
-    users.forEach((u) => {
-      const phone = u.WHATSAPP ?? null;
-      const userId = u.CODIGO;
-      map.set(String(userId), {
-        name: u.NOME,
-        phone: phone ?? (userId ? String(userId) : null),
-        userId,
+  users.forEach((u) => {
+    const phone = u.WHATSAPP ?? null;
+    const userId = u.CODIGO;
+    const key = userId ? `user-${userId}` : phone ?? "null";
+    map.set(key, {
+      name: u.NOME,
+      phone: phone ?? (userId ? String(userId) : null),
+      userId,
+    });
+  });
+
+  contacts.forEach((c) => {
+    const key = c.phone ? `phone-${c.phone}` : "null";
+    if (!map.has(key)) {
+      map.set(key, {
+        name: c.name,
+        phone: c.phone,
+        userId: +c.phone,
       });
-    });
+    }
+  });
 
-    contacts.forEach((c) => {
-      if (c.phone && !map.has(c.phone)) {
-        map.set(c.phone, {
-          name: c.name,
-          phone: c.phone,
-          userId: +c.phone,
-        });
-      }
-    });
+  return Array.from(map.values());
+}, [users, contacts]);
 
-    return Array.from(map.values());
-  }, [users, contacts]);
 
   const userOptions = useMemo(() => {
     return mergedContacts.filter(

@@ -57,23 +57,23 @@ export default function UpdateInternalGroupModal({
   );
 
 const mergedContacts: UnifiedContact[] = useMemo(() => {
-  const contactMap = new Map<string, UnifiedContact>();
+  const map = new Map<string, UnifiedContact>();
 
   users.forEach((u) => {
-    const userId = u?.CODIGO;
-    const phone = u?.WHATSAPP ?? null;
-
-    contactMap.set(String(userId), {
+    const phone = u.WHATSAPP ?? null;
+    const userId = u.CODIGO;
+    const key = userId ? `user-${userId}` : phone ?? "null";
+    map.set(key, {
       name: u.NOME,
       phone: phone ?? (userId ? String(userId) : null),
       userId,
     });
   });
 
-
   contacts.forEach((c) => {
-    if (c.phone && !contactMap.has(c.phone)) {
-      contactMap.set(c.phone, {
+    const key = c.phone ? `phone-${c.phone}` : "null";
+    if (!map.has(key)) {
+      map.set(key, {
         name: c.name,
         phone: c.phone,
         userId: +c.phone,
@@ -81,7 +81,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
     }
   });
 
-  return Array.from(contactMap.values());
+  return Array.from(map.values());
 }, [users, contacts]);
 
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
