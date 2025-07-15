@@ -58,9 +58,12 @@ export default function MonitorAttendances() {
       if (fCustomerName && !customerName.toLowerCase().includes(fCustomerName.toLowerCase()))
         return false;
 
-      const operator = chat?.user?.NOME || "";
-      if (fOperator && !operator.toLowerCase().includes(fOperator.toLowerCase())) return false;
-
+      const operatorFromList = users.find((user: any) =>
+        String(user.CODIGO) === String(chat?.userId)
+      )?.NOME || "";
+      if (fOperator && !operatorFromList.toLowerCase().includes(fOperator.toLowerCase())) {
+        return false;
+      }
       const start = new Date(chat.startDate || chat.startedAt).toLocaleDateString();
       if (fStart && !start.includes(fStart)) return false;
 
