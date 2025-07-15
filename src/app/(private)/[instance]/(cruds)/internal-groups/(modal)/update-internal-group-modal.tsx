@@ -62,7 +62,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
   users.forEach((u) => {
     const phone = u.WHATSAPP ?? null;
     const userId = u.CODIGO;
-    const key = userId ? `user-${userId}` : phone ?? "null";
+    const key = `user-${userId}`;
     map.set(key, {
       name: u.NOME,
       phone: phone ?? (userId ? String(userId) : null),
@@ -71,7 +71,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
   });
 
   contacts.forEach((c) => {
-    const key = c.phone ? `phone-${c.phone}` : "null";
+    const key = `phone-${c.phone}`;
     if (!map.has(key)) {
       map.set(key, {
         name: c.name,
