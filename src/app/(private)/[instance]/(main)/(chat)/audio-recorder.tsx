@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { IconButton } from "@mui/material";
+import { IconButton, CircularProgress } from "@mui/material";
 import MicIcon from "@mui/icons-material/Mic";
 import StopIcon from "@mui/icons-material/Stop";
 
@@ -18,19 +18,12 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingTime, setRecordingTime] = useState(0); // Tempo de gravação em segundos
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const mimeType = "audio/webm;codecs=opus";
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.warn(`Tipo MIME '${mimeType}' não suportado no navegador.`);
-        return;
-      }
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -38,24 +31,20 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/mpeg" });
         audioChunksRef.current = [];
 
         if (onAudioRecorded) {
-          const file = new File([audioBlob], "audio.webm", { type: mimeType });
+          const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg", });
           onAudioRecorded(file);
-        }
-
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
         }
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-      setRecordingTime(0);
+      setRecordingTime(0); // Reinicia o contador
 
+      // Inicia o timer para atualizar o tempo de gravação
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
@@ -81,9 +70,7 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
         </IconButton>
       )}
 
-      {isRecording && (
-        <span className="text-sm text-slate-400">{formatTime(recordingTime)}</span>
-      )}
+      {isRecording && <span className="text-sm text-slate-400">{formatTime(recordingTime)}</span>}
     </div>
   );
 }

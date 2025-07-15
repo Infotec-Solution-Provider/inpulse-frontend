@@ -8,7 +8,18 @@ import { InternalChatContext } from "../../internal-context";
 import { useAuthContext } from "@/app/auth-context";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
-import { Button, Dialog, DialogTitle, DialogContent, List, ListItem, ListItemButton, ListItemText, Typography, IconButton } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Typography,
+  IconButton,
+} from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
 
 export default function InternalGroupChatWithSelection() {
@@ -19,6 +30,7 @@ export default function InternalGroupChatWithSelection() {
 
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(new Set());
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
+  const [manualForwardMessages, setManualForwardMessages] = useState<InternalMessage[] | null>(null);
 
   const usersMap = useMemo(() => {
     const map = new Map<number, User>();
@@ -77,7 +89,8 @@ export default function InternalGroupChatWithSelection() {
   }
 
   const handleForwardToUser = (targetUserId: number) => {
-    for (const msg of selectedMessages) {
+    const msgsToForward = manualForwardMessages || selectedMessages;
+    for (const msg of msgsToForward) {
       sendInternalMessage({
         chatId: targetUserId,
         text: msg.body,
@@ -89,12 +102,17 @@ export default function InternalGroupChatWithSelection() {
       });
     }
     setForwardModalOpen(false);
+    setManualForwardMessages(null);
     clearSelection();
+  };
+
+  const openManualForward = (msg: InternalMessage) => {
+    setManualForwardMessages([msg]);
+    setForwardModalOpen(true);
   };
 
   return (
     <div className="relative h-full overflow-y-auto p-2">
-      {/* Header seleção */}
       {selectedMessageIds.size > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 shadow p-2 flex items-center justify-between">
           <Typography variant="subtitle1" component="div">
@@ -105,7 +123,6 @@ export default function InternalGroupChatWithSelection() {
             <Button variant="contained" onClick={() => setForwardModalOpen(true)}>
               Encaminhar
             </Button>
-
           </div>
         </div>
       )}
@@ -143,7 +160,7 @@ export default function InternalGroupChatWithSelection() {
             if (parts.length === 3) raw = parts[2];
             else if (parts.length === 2) raw = parts[1];
             const phone = raw.split("@")[0].replace(/\D/g, "");
-            const findUser = usersMap.get(phone as unknown as number); // Ajuste caso precise
+            const findUser = usersMap.get(phone as unknown as number);
             if (findUser) {
               name = findUser.NOME;
             } else {
@@ -178,12 +195,13 @@ export default function InternalGroupChatWithSelection() {
               isForwardMode={selectedMessageIds.size > 0}
               isSelected={selectedMessageIds.has(m.id)}
               onSelect={toggleSelectMessage}
+              onForward={() => openManualForward(m)}
+              onCopy={() => navigator.clipboard.writeText(m.body)}
             />
           );
         })}
       </ul>
 
-      {/* Modal encaminhar */}
       <Dialog open={forwardModalOpen} onClose={() => setForwardModalOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>
           Encaminhar para...

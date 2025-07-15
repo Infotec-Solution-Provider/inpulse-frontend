@@ -1,4 +1,3 @@
-// group-message.tsx
 import { useState } from "react";
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
 import MessageFile from "./message-file";
@@ -33,7 +32,6 @@ interface MessageProps {
   onForward?: () => void;
   onCopy?: () => void;
   styleWrapper?: React.CSSProperties;
-
 }
 
 export default function GroupMessage({
@@ -73,6 +71,18 @@ export default function GroupMessage({
     if (onSelect) onSelect(id);
   };
 
+  const handleCopy = () => {
+    const contentToCopy = quotedMessage
+      ? `${quotedMessage.author || ''}: ${quotedMessage.text}\n\n${text}`
+      : text;
+
+    if (onCopy) {
+      onCopy();
+    } else {
+      navigator.clipboard.writeText(contentToCopy);
+    }
+  };
+
   const visualText = text.replace(/@(\d{8,15})/g, (_, phone) => {
     const clean = phone.replace(/\D/g, "");
     const name = mentionNameMap?.get(clean);
@@ -80,11 +90,11 @@ export default function GroupMessage({
   });
 
   return (
-      <li
-        id={String(id)}
-        style={styleWrapper}
-        className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 relative`}
-      >
+    <li
+      id={String(id)}
+      style={styleWrapper}
+      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 relative`}
+    >
       {isForwardMode && (
         <Checkbox
           checked={isSelected}
@@ -93,22 +103,16 @@ export default function GroupMessage({
         />
       )}
 
-      <div
-        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
-      >
+      <div className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}>
         <div className="flex w-full flex-col gap-1">
           {quotedMessage && (
             <div
               className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${
-                quotedMessage.style === "sent"
-                  ? "border-indigo-600"
-                  : "border-orange-600"
+                quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"
               }`}
             >
               <h2>
-                {quotedMessage.style === "sent"
-                  ? "Você"
-                  : quotedMessage.author || ""}
+                {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
               </h2>
               <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
                 {quotedMessage.text.split("\n").map((line, index) => (
@@ -141,6 +145,7 @@ export default function GroupMessage({
               fileSize={fileSize || ""}
             />
           )}
+
           <div className="w-full text-slate-900 dark:text-slate-200">
             {visualText.split("\n").map((line, index) => (
               <p key={index} className="max-w-[100%] break-words text-sm">
@@ -148,6 +153,7 @@ export default function GroupMessage({
               </p>
             ))}
           </div>
+
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
             <p className="text-xs text-slate-900 dark:text-slate-200">
@@ -168,36 +174,16 @@ export default function GroupMessage({
             <MoreVertIcon />
           </IconButton>
           <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-            <MenuItem
-              onClick={() => {
-                handleClose();
-                onQuote?.();
-              }}
-            >
+            <MenuItem onClick={() => { handleClose(); onQuote?.(); }}>
               Responder
             </MenuItem>
-            <MenuItem
-              onClick={() => {
-                handleClose();
-                onSelect?.(id);
-              }}
-            >
+            <MenuItem onClick={() => { handleClose(); onSelect?.(id); }}>
               Selecionar
             </MenuItem>
-            <MenuItem
-              onClick={() => {
-                handleClose();
-                onForward?.();
-              }}
-            >
+            <MenuItem onClick={() => { handleClose(); onForward?.(); }}>
               Encaminhar
             </MenuItem>
-            <MenuItem
-              onClick={() => {
-                handleClose();
-                onCopy?.();
-              }}
-            >
+            <MenuItem onClick={() => { handleClose(); handleCopy(); }}>
               Copiar
             </MenuItem>
           </Menu>
