@@ -56,6 +56,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
     const phone = u.WHATSAPP ?? null;
     const userId = u.CODIGO;
     const key = `user-${userId}`;
+    console.log("usuarios grupos",u)
     map.set(key, {
       name: u.NOME,
       phone: phone ?? (userId ? String(userId) : null),
