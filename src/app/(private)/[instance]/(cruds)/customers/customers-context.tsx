@@ -50,8 +50,8 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   const createCustomer = useCallback(async (data: CreateCustomerDTO) => {
     try {
       if (token) {
-      await api.current.createCustomer(data);
-      toast.success("Cliente cadastrado com sucesso!");
+        await api.current.createCustomer(data);
+        toast.success("Cliente cadastrado com sucesso!");
       }
     } catch (err) {
       Logger.error("Error creating customer", err as Error);
@@ -59,20 +59,20 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     } finally {
       loadCustomers();
     }
- }, [token]);
+  }, [token]);
 
   const updateCustomer = useCallback(async (id: number, data: UpdateCustomerDTO) => {
     try {
       if (token) {
-      await api.current.updateCustomer(id, data);
-      dispatch({ type: "update-customer", id, data });
-      toast.success("Cliente atualizado com sucesso!");
+        await api.current.updateCustomer(id, data);
+        dispatch({ type: "update-customer", id, data });
+        toast.success("Cliente atualizado com sucesso!");
       }
     } catch (err) {
       Logger.error("Error updating customer", err as Error);
       toast.error("Falha ao atualizar cliente!");
     }
- }, []);
+  }, [token]);
 
   const loadCustomers = useCallback(async () => {
     dispatch({ type: "change-loading", isLoading: true });
@@ -92,13 +92,13 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       Logger.error("Error loading customers", err as Error);
       toast.error("Falha ao carregar clientes!");
     }
- }, []);
+  }, []);
 
   useEffect(() => {
     if (!token || !api.current) return;
     api.current.setAuth(token);
     loadCustomers();
-  }, [token,api.current]);
+  }, [token, api.current]);
 
   return (
     <CustomersContext.Provider

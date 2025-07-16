@@ -59,13 +59,17 @@ export default function customersReducer(
       next.customers = action.customers;
       return next;
     case "update-customer":
-      next.customers = next.customers.map((customer) => {
-        if (customer.CODIGO === action.id) {
-          return { ...customer, ...action.data };
-        }
-        return customer;
-      });
-      return next;
+      return {
+        ...next,
+        customers: next.customers.map((customer) => {
+          if (customer.CODIGO === action.id) {
+            const updatedCustomer = { ...customer, ...action.data } as Customer;
+
+            return updatedCustomer;
+          }
+          return customer;
+        })
+      };
     case "add-customer":
       next.customers.unshift(action.data);
       return next;

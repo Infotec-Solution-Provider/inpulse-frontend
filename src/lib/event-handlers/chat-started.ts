@@ -21,9 +21,9 @@ export default function ChatStartedHandler(
     const res = await api.getChatById(chatId);
     const { messages, ...chat } = res;
     const isUnread = true;
-    // find most recent message
 
-    console.log("RES", res);
+    console.log("Chat started:", chatId);
+    console.log(res);
 
     const lastMessage = messages?.reduce((prev, current) => {
       return +prev.timestamp > +current.timestamp ? prev : current;

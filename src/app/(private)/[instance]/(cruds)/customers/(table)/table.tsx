@@ -16,7 +16,7 @@ import { Customer } from "@in.pulse-crm/sdk";
 import ClientTableHeader from "./table-header";
 import { AppContext } from "../../../app-context";
 import ContactsModal from "./(modal)/contacts-modal";
-import { CustomersContext, useCustomersContext } from "../customers-context";
+import { CustomersContext } from "../customers-context";
 
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
@@ -47,11 +47,11 @@ export default function CustomersTable() {
 
   return (
     <div>
-<TableContainer className="mx-auto max-h-[70vh] overflow-auto rounded-md scrollbar-whatsapp shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
+      <TableContainer className="mx-auto max-h-[70vh] overflow-auto rounded-md scrollbar-whatsapp shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
         <Table className="max-h-[100%] overflow-auto scrollbar-whatsapp">
           <ClientTableHeader />
           <TableBody>
-            {state.isLoading ? (
+            {state.isLoading && (
               <StyledTableRow className="h-32 w-full">
                 <StyledTableCell
                   colSpan={8}
@@ -63,8 +63,9 @@ export default function CustomersTable() {
                   </div>
                 </StyledTableCell>
               </StyledTableRow>
-            ) : (
-              state.customers.map((client) => (
+            )}
+            {
+              !state.isLoading && state.customers.map((client) => (
                 <CustomersTableItem
                   key={`${client.RAZAO}_${client.CODIGO}`}
                   customer={client}
@@ -72,7 +73,8 @@ export default function CustomersTable() {
                   openContactModalHandler={openContactModal}
                 />
               ))
-            )}
+
+            }
           </TableBody>
         </Table>
       </TableContainer>
