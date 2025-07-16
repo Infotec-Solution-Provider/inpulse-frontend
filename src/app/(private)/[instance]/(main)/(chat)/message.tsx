@@ -39,6 +39,7 @@ export const msgStyleVariants = {
   received: "bg-slate-50 text-slate-800 dark:bg-slate-800 dark:text-slate-200 rounded-bl-none",
   sent: "bg-green-200 text-slate-800 dark:bg-green-800 dark:text-slate-200 rounded-br-none",
   system: "bg-yellow-200 text-slate-800 dark:bg-yellow-800 dark:text-white",
+
 };
 
 export const liStyleVariants = {
@@ -80,11 +81,10 @@ export default function Message({
       >
         {quotedMessage && (
           <div
-            className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/20 p-2 dark:bg-slate-300/40 ${
-              quotedMessage.style === "sent"
-                ? "border-indigo-600 dark:border-indigo-400"
-                : "border-orange-600 dark:border-orange-400"
-            }`}
+            className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/20 p-2 dark:bg-slate-300/40 ${quotedMessage.style === "sent"
+              ? "border-indigo-600 dark:border-indigo-400"
+              : "border-orange-600 dark:border-orange-400"
+              }`}
             onClick={() => {
               // focus on quoted message
               const quotedElement = document.getElementById(String(quotedMessage.id));

@@ -4,8 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-
 body {
   scrollbar-width: thin;
 }
@@ -21,7 +19,7 @@ body {
 
 .scrollbar-whatsapp {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  scrollbar-color: rgb(129 140 248) transparent;
   overflow-y: auto;
 }
 
@@ -34,13 +32,13 @@ body {
 }
 
 .scrollbar-whatsapp::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgb(129 140 248);
   border-radius: 3px;
   transition: background-color 0.3s;
 }
 
 .scrollbar-whatsapp:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgb(129 140 248);
 }
 .input-dark {
   @apply bg-slate-800 text-white;
@@ -67,39 +65,48 @@ body {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
     touch-action: manipulation;
   }
-  
+
   /* Melhora a responsividade de elementos clicáveis */
-  [role="button"], button, .touchable, .cursor-pointer {
+  [role="button"],
+  button,
+  .touchable,
+  .cursor-pointer {
     min-height: 44px;
     min-width: 44px;
     cursor: pointer;
     -webkit-user-select: none;
-       -moz-user-select: none;
-        -ms-user-select: none;
-            user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
-  
+
   /* Melhora a experiência de rolagem */
   body {
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Remove o atraso no toque em iOS */
-  a, button, [role="button"], .touchable {
+  a,
+  button,
+  [role="button"],
+  .touchable {
     -webkit-touch-callout: none;
   }
-  
+
   /* Melhora a usabilidade de inputs em dispositivos móveis */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     font-size: 16px; /* Evita zoom em iOS */
   }
-  
+
   /* Garante que os itens da lista de conversas sejam fáceis de tocar */
-  li[role="listitem"], .chat-list-item {
+  li[role="listitem"],
+  .chat-list-item {
     padding: 12px 8px;
   }
-  
+
   /* Estilo específico para o ChatsMenuItem */
   .chat-list-item {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
@@ -108,11 +115,11 @@ body {
     position: relative;
     z-index: 10;
   }
-  
+
   .chat-list-item:active {
     background-color: rgba(99, 102, 241, 0.2);
   }
-  
+
   /* Força que elementos do chat sejam interativos */
   .chat-list-item [role="button"],
   .chat-item-clickable {
@@ -129,7 +136,7 @@ body {
     display: flex;
     align-items: center;
   }
-  
+
   /* Garante que avatares e conteúdo não interfiram nos cliques */
   .chat-list-item .MuiAvatar-root,
   .chat-list-item img,
@@ -138,13 +145,13 @@ body {
     pointer-events: none;
     user-select: none;
   }
-  
+
   /* Remove qualquer overlay que possa estar bloqueando */
   .chat-list-item::before,
   .chat-list-item::after {
     content: none !important;
   }
-  
+
   /* Estilos agressivos para garantir cliques */
   [data-clickable="true"],
   .chat-item-clickable,

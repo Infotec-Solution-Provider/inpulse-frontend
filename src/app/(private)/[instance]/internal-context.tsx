@@ -33,7 +33,7 @@ interface InternalChatContextType {
   internalChats: DetailedInternalChat[];
   messages: Record<number, InternalMessage[]>;
   sendInternalMessage: (data: InternalSendMessageData) => void;
-  openInternalChat: (chat: DetailedInternalChat) => void;
+  openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
   monitorInternalChats: DetailedInternalChat[];
@@ -95,38 +95,41 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   }, [internalChats, wppChats]);
 
   const openInternalChat = useCallback(
-    (chat: DetailedInternalChat) => {
+    (chat: DetailedInternalChat, markAsRead: boolean = true) => {
       setCurrentChat(chat);
       setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
       setWppCurrMsgs([]);
       currentChatRef.current = chat as unknown as DetailedChat;
 
-      api.current.markChatMessagesAsRead(chat.id);
-      setInternalChats((prev) =>
-        prev.map((c) => {
-          if (c.id === chat.id) {
-            return {
-              ...c,
-              isUnread: false,
-            };
-          }
-          return c;
-        }),
-      );
+      if (markAsRead) {
+        api.current.markChatMessagesAsRead(chat.id);
+
+        setInternalChats((prev) =>
+          prev.map((c) => {
+            if (c.id === chat.id) {
+              return {
+                ...c,
+                isUnread: false,
+              };
+            }
+            return c;
+          }),
+        );
+      }
     },
     [messages],
   );
   const deleteInternalChat = async (id: number) => {
-  if (api.current) {
-    try {
-      await api.current.deleteInternalChat(id);
-      toast.success("Chat deletado com sucesso!");
-      setInternalChats((prev) => prev.filter((chat) => chat.id !== id));
-    } catch (error) {
-      toast.error("Erro ao deletar Chat");
+    if (api.current) {
+      try {
+        await api.current.deleteInternalChat(id);
+        toast.success("Chat deletado com sucesso!");
+        setInternalChats((prev) => prev.filter((chat) => chat.id !== id));
+      } catch (error) {
+        toast.error("Erro ao deletar Chat");
+      }
     }
-  }
-};
+  };
   const sendInternalMessage = useCallback(
     (data: InternalSendMessageData) => {
       if (token) {
@@ -172,7 +175,10 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const getInternalChatsMonitor = useCallback(() => {
     if (token && user && users.length > 0) {
       api.current.setAuth(token);
+
       api.current.getInternalChatsMonitor().then(({ chats, messages }) => {
+        console.log("Monitorando conversas internas", chats, messages);
+
         const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
           user!.CODIGO,
           users,

@@ -20,6 +20,7 @@ import ChatMessagesList from "../(main)/(chat)/chat-messages-list";
 import ChatSendMessageArea from "../(main)/(chat)/chat-send-message-area";
 import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor";
 import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
+import { Pagination } from "@mui/material";
 
 function getChatType(
   chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
@@ -205,11 +206,6 @@ function getChatGroupDescription(chat: DetailedInternalChat | DetailedChat | Det
   return null;
 }
 
-function getScheduledByUser(schedule: DetailedSchedule, users: User[]) {
-  const scheduledBy = users.find((u) => u.CODIGO === schedule.scheduledBy);
-  return scheduledBy ? scheduledBy.NOME : "Usuário Desconhecido";
-}
-
 function getScheduledForUser(schedule: DetailedSchedule, users: User[]) {
   const scheduledFor = users.find((u) => u.CODIGO === schedule.scheduledFor);
   return scheduledFor ? scheduledFor.NOME : "Usuário Desconhecido";
@@ -219,14 +215,13 @@ export default function MonitorPage() {
   const { chats } = useMonitorContext();
   const { sectors } = useWhatsappContext();
   const { users } = useInternalChatContext();
-  const { getChatsMonitor, monitorChats, setCurrentChat, openChat, getChats } =
+  const { getChatsMonitor, setCurrentChat, openChat } =
     useWhatsappContext();
   const {
     openInternalChat,
-    getInternalChatsMonitor,
-    monitorInternalChats,
     setCurrentChat: setCurrentInternalChat,
   } = useContext(InternalChatContext);
+
   const { openModal, closeModal } = useContext(AppContext);
 
   function getHandleTransfer(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
@@ -246,7 +241,6 @@ export default function MonitorPage() {
     if (!("chatType" in chat)) {
       return null;
     }
-
 
     if (chat.chatType === "wpp") {
       return () => {
@@ -280,10 +274,12 @@ export default function MonitorPage() {
     }
     if (chat.chatType === "internal") {
       return () => {
+        console.log(chat);
+
         setCurrentInternalChat(chat);
-        openInternalChat(chat);
+        openInternalChat(chat, false);
         openModal(
-          <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
+          <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
             <button
               onClick={() => closeModal?.()}
               className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"
@@ -326,62 +322,81 @@ export default function MonitorPage() {
     return null;
   }
 
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const totalPages = Math.ceil(chats.length / pageSize);
+  const paginatedChats = chats.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div className="mx-auto grid h-[98%] w-full max-w-[1366px] grid-rows-[auto_1fr] gap-0">
       <div className="flex w-full gap-2 overflow-hidden p-4">
         <MonitorFilters />
-        <main className="scrollbar-whatsapp grow overflow-auto">
-          {chats.map((chat) => {
-            if ("chatType" in chat) {
-              return (
-                <MonitorCard
-                  key={`${chat.chatType}-${chat.id}`}
-                  type={getChatType(chat)}
-                  startDate={toDateString(chat.startedAt)}
-                  endDate={getEndDate(chat)}
-                  userName={getChatUser(chat, users)}
-                  sectorName={getChatSector(chat, sectors, users)}
-                  imageUrl={getChatImage(chat, users)}
-                  chatTitle={getChatTitle(chat)}
-                  customerName={getChatCustomerName(chat)}
-                  contactNumber={getChatContactNumber(chat)}
-                  customerDocument={getChatCustomerDocument(chat)}
-                  scheduledAt={getChatScheduledAt(chat)}
-                  scheduledFor={getChatScheduledFor(chat)}
-                  isScheduled={"schedule" in chat && chat.schedule ? true : false}
-                  participants={getChatParticipants(chat, users)}
-                  groupName={getChatGroupName(chat)}
-                  groupDescription={getChatGroupDescription(chat)}
-                  handleTransfer={getHandleTransfer(chat)}
-                  handleView={getHandleView(chat)}
-                  handleFinish={getHandleFinish(chat)}
-                />
-              );
-            }
-            // Optionally handle DetailedSchedule or skip rendering
-            return <MonitorCard
-              key={`schedule-${chat.id}`}
-              type={"scheduled-chat"}
-              startDate={"Não Iniciado"}
-              endDate={"."}
-              userName={getScheduledForUser(chat, users)}
-              sectorName={getChatSector(chat, sectors, users)}
-              imageUrl={getChatImage(chat, users)}
-              chatTitle={getChatTitle(chat)}
-              customerName={getChatCustomerName(chat)}
-              contactNumber={getChatContactNumber(chat)}
-              customerDocument={getChatCustomerDocument(chat)}
-              scheduledAt={getChatScheduledAt(chat)}
-              scheduledFor={getChatScheduledFor(chat)}
-              isScheduled={!("chatType" in chat) || "schedule" in chat && chat.schedule ? true : false}
-              participants={getChatParticipants(chat, users)}
-              groupName={getChatGroupName(chat)}
-              groupDescription={getChatGroupDescription(chat)}
-              handleTransfer={getHandleTransfer(chat)}
-              handleView={getHandleView(chat)}
-              handleFinish={getHandleFinish(chat)}
-            />;
-          })}
+        <main className="scrollbar-whatsapp grow  grid grid-rows-[1fr_max-content] gap-4">
+          <ul className="overflow-auto">
+            {paginatedChats.map((chat) => {
+              if ("chatType" in chat) {
+                return (
+                  <MonitorCard
+                    key={`${chat.chatType}-${chat.id}`}
+                    type={getChatType(chat)}
+                    startDate={toDateString(chat.startedAt)}
+                    endDate={getEndDate(chat)}
+                    userName={getChatUser(chat, users)}
+                    sectorName={getChatSector(chat, sectors, users)}
+                    imageUrl={getChatImage(chat, users)}
+                    chatTitle={getChatTitle(chat)}
+                    customerName={getChatCustomerName(chat)}
+                    contactNumber={getChatContactNumber(chat)}
+                    customerDocument={getChatCustomerDocument(chat)}
+                    scheduledAt={getChatScheduledAt(chat)}
+                    scheduledFor={getChatScheduledFor(chat)}
+                    isScheduled={"schedule" in chat && chat.schedule ? true : false}
+                    participants={getChatParticipants(chat, users)}
+                    groupName={getChatGroupName(chat)}
+                    groupDescription={getChatGroupDescription(chat)}
+                    handleTransfer={getHandleTransfer(chat)}
+                    handleView={getHandleView(chat)}
+                    handleFinish={getHandleFinish(chat)}
+                  />
+                );
+              }
+              // Optionally handle DetailedSchedule or skip rendering
+              return <MonitorCard
+                key={`schedule-${chat.id}`}
+                type={"scheduled-chat"}
+                startDate={"Não Iniciado"}
+                endDate={"."}
+                userName={getScheduledForUser(chat, users)}
+                sectorName={getChatSector(chat, sectors, users)}
+                imageUrl={getChatImage(chat, users)}
+                chatTitle={getChatTitle(chat)}
+                customerName={getChatCustomerName(chat)}
+                contactNumber={getChatContactNumber(chat)}
+                customerDocument={getChatCustomerDocument(chat)}
+                scheduledAt={getChatScheduledAt(chat)}
+                scheduledFor={getChatScheduledFor(chat)}
+                isScheduled={!("chatType" in chat) || "schedule" in chat && chat.schedule ? true : false}
+                participants={getChatParticipants(chat, users)}
+                groupName={getChatGroupName(chat)}
+                groupDescription={getChatGroupDescription(chat)}
+                handleTransfer={getHandleTransfer(chat)}
+                handleView={getHandleView(chat)}
+                handleFinish={getHandleFinish(chat)}
+              />;
+            })}
+          </ul>
+          {chats.length === 0 && (
+            <div className="text-center text-gray-500 mt-8">Nenhum chat encontrado.</div>
+          )}
+          <div className="flex justify-center mt-4">
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+              size="medium"
+            />
+          </div>
         </main>
       </div>
     </div>
