@@ -17,6 +17,7 @@ import Link from "next/link";
 import { WhatsappContext } from "./whatsapp-context";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { usePathname } from "next/navigation";
+import NotificationsDropdown from "@/lib/components/notifications-dropdown";
 
 const monitorRoutes = [
   { title: "Conversas", href: "/monitor/chats" },
@@ -250,9 +251,7 @@ export default function Header() {
           <div className="hidden md:flex items-center gap-2">
             <ThemeToggleButton />
 
-            <IconButton>
-              <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
-            </IconButton>
+            <NotificationsDropdown />
 
             <h1 className="truncate text-gray-900 dark:text-slate-200 mx-4">
               {user?.NOME}

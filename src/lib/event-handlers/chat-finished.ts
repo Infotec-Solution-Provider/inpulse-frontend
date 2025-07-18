@@ -17,6 +17,7 @@ export default function ChatFinishedHandler(
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
+  getNotifications: () => void
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
     console.log("chat finished", chatId)
@@ -45,5 +46,6 @@ export default function ChatFinishedHandler(
       setCurrentChat(null);
       setCurrentChatMessages([]);
     }
+     getNotifications();
   };
 }
