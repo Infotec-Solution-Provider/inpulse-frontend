@@ -60,6 +60,7 @@ export default function useInternalChatContext() {
 
 export function InternalChatProvider({ children }: { children: React.ReactNode }) {
   const { socket } = useContext(SocketContext);
+
   const {
     setCurrentChat,
     currentChatRef,
