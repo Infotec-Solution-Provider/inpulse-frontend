@@ -259,6 +259,11 @@ export default function MonitorPage() {
                 avatarUrl={chat.avatarUrl}
                 name={chat.contact?.name || "Contato excluído"}
                 customerName={chat.customer?.RAZAO || "N/D"}
+                chatType={chat.chatType}
+                codErp={chat.customer?.COD_ERP || null}
+                cpfCnpj={chat.customer?.CPF_CNPJ || null}
+                customerId={chat.customer?.CODIGO || null}
+                startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
                 phone={chat.contact?.phone || "N/D"}
               />
               <div className="scrollbar-whatsapp flex-1 bg-white text-black drop-shadow-md dark:bg-slate-900 dark:text-white">
@@ -292,6 +297,11 @@ export default function MonitorPage() {
                 name={chat.groupName || chat.users[0].NOME}
                 customerName={chat.groupDescription || chat.users[0].NOME_EXIBICAO || ""}
                 phone={chat.users[0].SETOR_NOME || ""}
+                chatType={chat.chatType}
+                codErp={null}
+                cpfCnpj={null}
+                customerId={null}
+                startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
               />
               <div className="scrollbar-whatsapp flex-1 bg-white text-black drop-shadow-md dark:bg-slate-900 dark:text-white">
                 <ChatMessagesListMonitor />

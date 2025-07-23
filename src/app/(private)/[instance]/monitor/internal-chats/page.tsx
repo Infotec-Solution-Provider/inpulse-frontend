@@ -84,12 +84,17 @@ export default function MonitorInternalAttendances() {
               chat.groupDescription || chat.users[0].NOME_EXIBICAO || ""
             }
             phone={chat.users[0].SETOR_NOME || ""}
+            chatType={chat.chatType}
+            codErp={chat.customer?.COD_ERP || null}
+            cpfCnpj={chat.customer?.CPF_CNPJ || null}
+            customerId={chat.customer?.CODIGO || null}
+            startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
           />
           <div className="flex-1 scrollbar-whatsapp bg-white text-black dark:bg-slate-900 dark:text-white drop-shadow-md">
             <ChatMessagesListMonitor />
           </div>
-           <div className="bg-white text-black dark:bg-slate-900 p-2 border-t border-gray-200 dark:border-gray-700">
-          <ChatSendMessageArea />
+          <div className="bg-white text-black dark:bg-slate-900 p-2 border-t border-gray-200 dark:border-gray-700">
+            <ChatSendMessageArea />
           </div>
         </ChatProvider>
       </div>
@@ -98,13 +103,13 @@ export default function MonitorInternalAttendances() {
 
   return (
 
-<div className="flex flex-col  px-10 pt-5 w-screen  h-screen box-border relative bg-white text-black dark:bg-gray-900 dark:text-white">
+    <div className="flex flex-col  px-10 pt-5 w-screen  h-screen box-border relative bg-white text-black dark:bg-gray-900 dark:text-white">
 
       <TableContainer className="mx-auto max-h-[75vh] overflow-auto  scrollbar-whatsapp rounded-md bg-indigo-700 bg-opacity-5 shadow-md">
         <Table className="max-h-[100%] overflow-auto">
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900 z-50 ">
-            <StyledTableCell className="px-2 py-2 text-center">Ações</StyledTableCell>
+              <StyledTableCell className="px-2 py-2 text-center">Ações</StyledTableCell>
 
               <StyledTableCell>
                 <TextField
@@ -123,7 +128,7 @@ export default function MonitorInternalAttendances() {
                   name="Tipo"
                   label="Tipo"
                   variant="standard"
-                  style={{ width: "7rem",marginTop: "-12px" }}
+                  style={{ width: "7rem", marginTop: "-12px" }}
                   select
                   slotProps={{ input: { disableUnderline: true } }}
                   onChange={(e) => setFOrigin(e.target.value)}
@@ -179,7 +184,7 @@ export default function MonitorInternalAttendances() {
                     <div className="flex justify-center gap-1">
                       <IconButton
                         size="small"
-                        onClick={() =>openInternalChatById(chat) }
+                        onClick={() => openInternalChatById(chat)}
                       >
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
