@@ -110,6 +110,11 @@ export default function MonitorAttendances() {
             name={chat.contact?.name || "Contato excluído"}
             customerName={chat.customer?.RAZAO || "N/D"}
             phone={chat.contact?.phone || "N/D"}
+            cpfCnpj={chat.customer?.CPF_CNPJ || null}
+            codErp={chat.customer?.COD_ERP || null}
+            customerId={chat.customer?.CODIGO || null}
+            startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
+
           />
           <div className="scrollbar-whatsapp flex-1 bg-white text-black drop-shadow-md dark:bg-slate-900 dark:text-white">
             <ChatMessagesList />
