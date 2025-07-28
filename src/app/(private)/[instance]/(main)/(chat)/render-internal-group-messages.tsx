@@ -31,6 +31,7 @@ export default function InternalGroupChatWithSelection() {
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<number>>(new Set());
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [manualForwardMessages, setManualForwardMessages] = useState<InternalMessage[] | null>(null);
+  const [visibleCount, setVisibleCount] = useState(30);
 
   const usersMap = useMemo(() => {
     const map = new Map<number, User>();
@@ -82,6 +83,10 @@ export default function InternalGroupChatWithSelection() {
     return currentInternalChatMessages.filter((m) => selectedMessageIds.has(m.id));
   }, [currentInternalChatMessages, selectedMessageIds]);
 
+  const visibleMessages = useMemo(() => {
+    return currentInternalChatMessages.slice(-visibleCount);
+  }, [currentInternalChatMessages, visibleCount]);
+
   function getInternalMessageStyle(msg: InternalMessage, userId: number) {
     if (msg.from === "system") return "system";
     if (msg.from === `user:${userId}`) return "sent";
@@ -113,6 +118,18 @@ export default function InternalGroupChatWithSelection() {
 
   return (
     <div className="relative h-full overflow-y-auto p-2">
+      {visibleCount < currentInternalChatMessages.length && (
+        <div className="flex justify-center mb-2">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setVisibleCount((prev) => Math.min(prev + 30, currentInternalChatMessages.length))}
+          >
+            Carregar mais
+          </Button>
+        </div>
+      )}
+
       {selectedMessageIds.size > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-slate-900 shadow p-2 flex items-center justify-between">
           <Typography variant="subtitle1" component="div">
@@ -128,7 +145,7 @@ export default function InternalGroupChatWithSelection() {
       )}
 
       <ul className="flex flex-col gap-2 pt-[48px]">
-        {currentInternalChatMessages.map((m, i, arr) => {
+        {visibleMessages.map((m, i, arr) => {
           const findQuoted =
             m.internalChatId &&
             m.quotedId &&
