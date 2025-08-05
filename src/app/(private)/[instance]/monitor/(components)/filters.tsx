@@ -2,7 +2,7 @@ import Checkbox from "@/lib/components/checkbox";
 import RangeDateField from "@/lib/components/range-date-field";
 import { InputAdornment, MenuItem, TextField } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import useMonitorContext from "../monitor-context";
+import useMonitorContext from "../context";
 import useInternalChatContext from "../../internal-context";
 
 export default function MonitorFilters() {
@@ -156,20 +156,8 @@ export default function MonitorFilters() {
       <section className="border-b border-slate-600 py-2 dark:border-slate-400">
         <h2 className="text-md font-semibold">Período da conversa</h2>
         <div className="flex flex-col gap-2 py-2 pl-2">
-          <Checkbox
-            id="monit-filter:show-ongoing"
-            value={filters.showOngoing}
-            onChange={onChangeShowOngoing}
-          >
-            Exibir: Em andamento
-          </Checkbox>
-          <Checkbox
-            id="monit-filter:show-finished"
-            value={filters.showFinished}
-            onChange={onChangeShowFinished}
-          >
-            Exibir: Finalizados
-          </Checkbox>
+          <Checkbox id="monit-filter:show-ongoing" value={filters.showOngoing} onChange={onChangeShowOngoing}>Exibir: Em andamento</Checkbox>
+          <Checkbox id="monit-filter:show-finished" value={filters.showFinished} onChange={onChangeShowFinished}>Exibir: Finalizados</Checkbox>
           <RangeDateField label="Data de Início" />
           <RangeDateField label="Data de Finalização" />
         </div>
@@ -177,13 +165,7 @@ export default function MonitorFilters() {
       <section className="py-2">
         <h2 className="text-md font-semibold">Agendamentos</h2>
         <div className="flex flex-col gap-2 py-2 pl-2">
-          <Checkbox
-            id="monit-filter:show-only-scheduled"
-            value={filters.showOnlyScheduled}
-            onChange={onChangeShowOnlyScheduled}
-          >
-            Exibir: Apenas agendados
-          </Checkbox>
+          <Checkbox id="monit-filter:show-only-scheduled" value={filters.showOnlyScheduled} onChange={onChangeShowOnlyScheduled}>Exibir: Apenas agendados</Checkbox>
           <RangeDateField label="Agendado no dia" />
           <RangeDateField label="Agendado para o dia" />
           <div className="my-2">

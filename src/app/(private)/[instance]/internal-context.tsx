@@ -36,7 +36,10 @@ interface InternalChatContextType {
   openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
+  monitorInternalChats: DetailedInternalChat[];
   currentInternalChatMessages: InternalMessage[];
+  getInternalChatsMonitor: () => void;
+  monitorMessages: Record<number, InternalMessage[]>;
   deleteInternalChat: (id: number) => Promise<void>;
 
   users: User[];
@@ -68,6 +71,8 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
+  const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
+  const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
   const { contacts } = useContext(ContactsContext);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
@@ -93,7 +98,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat, markAsRead: boolean = true) => {
       setCurrentChat(chat);
-      setCurrentChatMessages(messages[chat.id]);
+      setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
       setWppCurrMsgs([]);
       currentChatRef.current = chat as unknown as DetailedChat;
 
@@ -167,6 +172,29 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     },
     [api, token, user],
   );
+  // Carregamento monitoria das conversas
+  const getInternalChatsMonitor = useCallback(() => {
+    if (token && user && users.length > 0) {
+      api.current.setAuth(token);
+
+      api.current.getInternalChatsMonitor().then(({ chats, messages }) => {
+        console.log("Monitorando conversas internas", chats, messages);
+
+        const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
+          user!.CODIGO,
+          users,
+          chats || [],
+          messages || [],
+        );
+
+        setMonitorInternalChats(detailedChats || []);
+        setMonitorMessages(chatsMessages || []);
+      });
+    } else {
+      setInternalChats([]);
+      setMonitorMessages({});
+    }
+  }, [token, api.current, user, users]);
 
   useEffect(() => {
     if (socket && user && users.length > 0) {
@@ -238,6 +266,9 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         openInternalChat,
         currentInternalChatMessages,
         users,
+        monitorInternalChats,
+        getInternalChatsMonitor,
+        monitorMessages,
         deleteInternalChat,
       }}
     >

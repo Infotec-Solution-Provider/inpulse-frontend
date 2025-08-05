@@ -97,7 +97,7 @@ export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://l
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
-  const { token, user } = useContext(AuthContext);
+  const { token, user, instance } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
@@ -298,16 +298,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
-      api.current.ax.get("/api/whatsapp/templates").then((res) => {
-        setTemplates(res["data"]["templates"]);
-      });
+      if (instance === "exatron") {
+        api.current.ax.get("/api/whatsapp/templates").then((res) => {
+          setTemplates(res["data"]["templates"]);
+        });
+      }
       api.current.getSectors().then((res) => setSectors(res));
       getNotifications();
     } else {
       setChats([]);
       setMessages({});
     }
-  }, [token, api.current]);
+  }, [token, api.current, instance]);
 
   // Atribui listeners para eventos de socket do whatsapp
   useEffect(() => {

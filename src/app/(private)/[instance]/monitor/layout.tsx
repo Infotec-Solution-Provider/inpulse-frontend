@@ -1,6 +1,6 @@
 "use client";
 
-import { MonitorProvider } from "./monitor-context";
+import { MonitorProvider } from "./context";
 
 export default function MonitorLayout({ children }: { children: React.ReactNode }) {
   return (
