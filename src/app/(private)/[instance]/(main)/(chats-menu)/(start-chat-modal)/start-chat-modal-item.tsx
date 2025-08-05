@@ -4,6 +4,8 @@ import { Button } from "@mui/material";
 import { useContext } from "react";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { useAppContext } from "../../../app-context";
+import { useAuthContext } from "@/app/auth-context";
+import SendTemplateModal from "@/lib/components/send-template-modal";
 
 interface StartChatModalItemProps {
   contact: WppContact;
@@ -19,16 +21,28 @@ export default function StartChatModalItem({
   onSelect,
 }: StartChatModalItemProps) {
   const { startChatByContactId } = useContext(WhatsappContext);
+  const { instance } = useAuthContext();
+  const { openModal, closeModal } = useAppContext();
 
   const handleClickStart = () => {
-    startChatByContactId(contact.id);
-    onSelect();
+    if (instance === "exatron") {
+      openModal(
+        <SendTemplateModal
+          onClose={closeModal}
+          onSendTemplate={(data) => startChatByContactId(contact.id, data)}
+        />,
+      );
+      onSelect();
+    } else {
+      startChatByContactId(contact.id);
+      onSelect();
+    }
   };
 
   return (
     <li
       key={contact.id}
-      className="flex w-full items-center justify-between gap-2 rounded-md bg-gray-300 text-gray-700 p-2 dark:bg-slate-700 dark:text-gray-100"
+      className="flex w-full items-center justify-between gap-2 rounded-md bg-gray-300 p-2 text-gray-700 dark:bg-slate-700 dark:text-gray-100"
     >
       <div className="flex flex-col">
         <span className="text-xs font-semibold">{contact.name}</span>

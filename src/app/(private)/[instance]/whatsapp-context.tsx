@@ -39,6 +39,7 @@ import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import ChatTransferHandler from "@/lib/event-handlers/chat-transfer";
 import { AppNotification } from "@/lib/types/app-notification.type";
+import { SendTemplateData } from "@/lib/components/send-template-modal";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -68,7 +69,7 @@ interface IWhatsappContext {
   getMonitorSchedules: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
-  startChatByContactId: (contactId: number) => void;
+  startChatByContactId: (contactId: number, template?: SendTemplateData) => void;
   updateChatContact: (contactId: number, newName: string) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: DetailedChat[];
@@ -77,10 +78,18 @@ interface IWhatsappContext {
   notifications: AppNotification[];
   getNotifications: () => void;
   markAllAsReadNotification: () => void;
+  templates: MessageTemplate[];
 }
 
 interface WhatsappProviderProps {
   children: ReactNode;
+}
+
+export interface MessageTemplate {
+  id: string;
+  name: string;
+  category: string;
+  text: string;
 }
 
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
@@ -101,6 +110,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
 
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
@@ -184,8 +194,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const startChatByContactId = useCallback(
-    (contactId: number) => {
-      api.current.startChatByContactId(contactId);
+    (contactId: number, template?: SendTemplateData) => {
+      console.log("Iniciando chat", contactId, template);
+      api.current.startChatByContactId(contactId, template);
     },
     [api, token],
   );
@@ -222,28 +233,27 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setMonitorSchedules([]);
     }
   }, [token, api.current]);
-// Buscar notificações do usuario
+  // Buscar notificações do usuario
 
-  const getNotifications = useCallback( () => {
+  const getNotifications = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getNotifications().then((res) => {
-          setNotifications(res as AppNotification[]);
-        });
-    }else {
-        setMonitorSchedules([]);
-      }
-  }, [token, api.current]);
-
-  const markAllAsReadNotification = useCallback( () => {
-    if (typeof token === "string" && token.length > 0 && api.current) {
-      api.current.setAuth(token);
-      api.current.markAllAsReadNotification().then((res) => {
-      getNotifications();
+        setNotifications(res as AppNotification[]);
       });
+    } else {
+      setMonitorSchedules([]);
     }
   }, [token, api.current]);
 
+  const markAllAsReadNotification = useCallback(() => {
+    if (typeof token === "string" && token.length > 0 && api.current) {
+      api.current.setAuth(token);
+      api.current.markAllAsReadNotification().then((res) => {
+        getNotifications();
+      });
+    }
+  }, [token, api.current]);
 
   const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
     try {
@@ -287,10 +297,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         setChats(detailedChats);
         setMessages(chatsMessages);
-
+      });
+      api.current.ax.get("/api/whatsapp/templates").then((res) => {
+        setTemplates(res["data"]["templates"]);
       });
       api.current.getSectors().then((res) => setSectors(res));
-      getNotifications()
+      getNotifications();
     } else {
       setChats([]);
       setMessages({});
@@ -330,7 +342,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setChats,
           setCurrentChat,
           setCurrentChatMessages,
-          getNotifications
+          getNotifications,
         ),
       );
 
@@ -404,7 +416,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         monitorSchedules,
         notifications,
         getNotifications,
-        markAllAsReadNotification
+        markAllAsReadNotification,
+        templates,
       }}
     >
       {children}
