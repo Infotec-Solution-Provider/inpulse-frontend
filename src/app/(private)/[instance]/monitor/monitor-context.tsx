@@ -1,14 +1,18 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
-import useInternalChatContext, { DetailedInternalChat } from "../internal-context";
+import { DetailedInternalChat } from "../internal-context";
 import { AuthContext } from "@/app/auth-context";
-
+import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
 
 interface MonitorContextProps {
   chats: (DetailedInternalChat | DetailedChat | DetailedSchedule)[];
   filters: MonitorFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<MonitorFiltersState>>;
   resetFilters: () => void;
+  messages: {
+    internal: InternalMessage[];
+    whatsapp: WppMessage[];
+  };
 }
 
 interface MonitorProviderProps {
@@ -82,36 +86,37 @@ const initialFilters: MonitorFiltersState = {
 export const MonitorContext = createContext<MonitorContextProps>({} as MonitorContextProps);
 
 export function MonitorProvider({ children }: MonitorProviderProps) {
-  const { monitorChats: wppChats, getChatsMonitor, getMonitorSchedules, monitorSchedules } = useWhatsappContext();
-  const { monitorInternalChats: intChats, getInternalChatsMonitor } = useInternalChatContext();
+  const { wppApi } = useWhatsappContext();
   const { token } = useContext(AuthContext);
 
-  useEffect(() => {
-    if (token) {
-      getMonitorSchedules();
-      getChatsMonitor();
-      getInternalChatsMonitor();
-    }
-  }, [getChatsMonitor, getInternalChatsMonitor, getMonitorSchedules, token]);
-
   const [filters, setFilters] = useState<MonitorFiltersState>(initialFilters);
+  const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
+  const [whatsappChats, setWhatsappChats] = useState<DetailedChat[]>([]);
+  const [schedules, setSchedules] = useState<DetailedSchedule[]>([]);
+
+  const [messages, setMessages] = useState<{
+    whatsapp: WppMessage[];
+    internal: InternalMessage[];
+  }>({ whatsapp: [], internal: [] });
+
   const resetFilters = () => {
     setFilters(initialFilters);
   };
 
   const filteredChats = useMemo(() => {
-    const filteredIntChats = intChats.filter((chat) => {
-      let falseCount = 0;
-
-      if (chat.isGroup && !filters.categories.showInternalGroups) return false;
-      if (!chat.isGroup && !filters.categories.showInternalChats) return false;
+    const filteredIntChats = internalChats.filter((chat) => {
+      if (chat.isGroup && !filters.categories.showInternalGroups) {
+        return false;
+      }
+      if (!chat.isGroup && !filters.categories.showInternalChats) {
+        return false;
+      }
       if (filters.user !== "all" && !chat.participants.some((p) => p.userId === filters.user)) {
         return false;
       }
       if (filters.showOnlyScheduled) {
         return false;
       }
-
       const chatStartedAt = new Date(chat.startedAt);
       if (filters.startedAt.from && chatStartedAt < new Date(filters.startedAt.from)) {
         return false;
@@ -120,10 +125,10 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         return false;
       }
 
-      return falseCount === 0;
+      return true;
     });
 
-    const filteredWppChats = wppChats.filter((chat) => {
+    const filteredWppChats = whatsappChats.filter((chat) => {
       if (!filters.categories.showCustomerChats) return false;
       if (filters.user !== "all" && chat.userId !== filters.user) return false;
       if (!filters.showBots && chat.botId !== null) return false;
@@ -157,56 +162,93 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         return false;
       }
 
-      if (filters.scheduledAt.from && chat.schedule?.scheduledAt && new Date(chat.schedule.scheduledAt) < new Date(filters.scheduledAt.from)) {
+      if (
+        filters.scheduledAt.from &&
+        chat.schedule?.scheduledAt &&
+        new Date(chat.schedule.scheduledAt) < new Date(filters.scheduledAt.from)
+      ) {
         return false;
       }
-      if (filters.scheduledAt.to && chat.schedule?.scheduledAt && new Date(chat.schedule.scheduledAt) > new Date(filters.scheduledAt.to)) {
+      if (
+        filters.scheduledAt.to &&
+        chat.schedule?.scheduledAt &&
+        new Date(chat.schedule.scheduledAt) > new Date(filters.scheduledAt.to)
+      ) {
         return false;
       }
 
-      if (filters.scheduledTo.from && chat.schedule?.scheduleDate && new Date(chat.schedule.scheduleDate) < new Date(filters.scheduledTo.from)) {
+      if (
+        filters.scheduledTo.from &&
+        chat.schedule?.scheduleDate &&
+        new Date(chat.schedule.scheduleDate) < new Date(filters.scheduledTo.from)
+      ) {
         return false;
       }
 
-      if (filters.scheduledTo.to && chat.schedule?.scheduleDate && new Date(chat.schedule.scheduleDate) > new Date(filters.scheduledTo.to)) {
+      if (
+        filters.scheduledTo.to &&
+        chat.schedule?.scheduleDate &&
+        new Date(chat.schedule.scheduleDate) > new Date(filters.scheduledTo.to)
+      ) {
         return false;
       }
 
       return true;
     });
 
-    const filteredSchedules = monitorSchedules.filter(schedule => {
+    const filteredSchedules = schedules.filter((schedule) => {
       if (!filters.categories.showSchedules) return false;
-      if (filters.scheduledBy !== "all" && schedule.scheduledBy !== filters.scheduledBy) return false;
-      if (filters.scheduledFor !== "all" && schedule.scheduledFor !== filters.scheduledFor) return false;
+      if (filters.scheduledBy !== "all" && schedule.scheduledBy !== filters.scheduledBy)
+        return false;
+      if (filters.scheduledFor !== "all" && schedule.scheduledFor !== filters.scheduledFor)
+        return false;
 
-      if (filters.scheduledAt.from && new Date(schedule.scheduledAt) < new Date(filters.scheduledAt.from)) {
+      if (
+        filters.scheduledAt.from &&
+        new Date(schedule.scheduledAt) < new Date(filters.scheduledAt.from)
+      ) {
         return false;
       }
-      if (filters.scheduledAt.to && new Date(schedule.scheduledAt) > new Date(filters.scheduledAt.to)) {
+      if (
+        filters.scheduledAt.to &&
+        new Date(schedule.scheduledAt) > new Date(filters.scheduledAt.to)
+      ) {
         return false;
       }
       return true;
     });
 
-    const sortedAllChats = [...filteredIntChats, ...filteredWppChats, ...filteredSchedules].sort((a, b) => {
-      // Use startedAt if available, otherwise fallback to scheduledAt for WppSchedule
-      const getSortDate = (item: DetailedInternalChat | DetailedChat | DetailedSchedule) => {
-        if ('startedAt' in item && item.startedAt) {
-          return new Date(item.startedAt);
-        }
-        if ('scheduledAt' in item && item.scheduledAt) {
-          return new Date(item.scheduledAt);
-        }
-        return new Date(0);
-      };
-      const aDate = getSortDate(a);
-      const bDate = getSortDate(b);
-      return aDate.getTime() - bDate.getTime();
-    });
+    const sortedAllChats = [...filteredIntChats, ...filteredWppChats, ...filteredSchedules].sort(
+      (a, b) => {
+        // Use startedAt if available, otherwise fallback to scheduledAt for WppSchedule
+        const getSortDate = (item: DetailedInternalChat | DetailedChat | DetailedSchedule) => {
+          if ("startedAt" in item && item.startedAt) {
+            return new Date(item.startedAt);
+          }
+          if ("scheduledAt" in item && item.scheduledAt) {
+            return new Date(item.scheduledAt);
+          }
+          return new Date(0);
+        };
+        const aDate = getSortDate(a);
+        const bDate = getSortDate(b);
+        return aDate.getTime() - bDate.getTime();
+      },
+    );
 
     return sortedAllChats;
-  }, [wppChats, intChats, filters]);
+  }, [whatsappChats, internalChats, filters]);
+
+  useEffect(() => {
+    if (token && wppApi.current) {
+      wppApi.current.setAuth(token);
+      wppApi.current.ax.get("/api/whatsapp/monitor").then((res) => {
+        setWhatsappChats(res.data.data.whatsappChats);
+        setInternalChats(res.data.data.internalChats);
+        setSchedules(res.data.data.schedules);
+      });
+    }
+  }, [token]);
 
   return (
     <MonitorContext.Provider
@@ -215,6 +257,7 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         filters,
         setFilters,
         resetFilters,
+        messages,
       }}
     >
       {children}
@@ -228,5 +271,6 @@ export default function useMonitorContext() {
   if (!context) {
     throw new Error("useMonitorContext must be used within a MonitorProvider");
   }
+
   return context;
 }
