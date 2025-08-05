@@ -25,11 +25,14 @@ export default function StartChatModalItem({
   const { openModal, closeModal } = useAppContext();
 
   const handleClickStart = () => {
-    if (instance === "exatron") {
+    if (instance === "exatron" || instance === "infotec") {
       openModal(
         <SendTemplateModal
           onClose={closeModal}
-          onSendTemplate={(data) => startChatByContactId(contact.id, data)}
+          onSendTemplate={(data) => {
+            startChatByContactId(contact.id, data);
+            closeModal();
+          }}
         />,
       );
       onSelect();

@@ -298,7 +298,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
-      if (instance === "exatron") {
+      if (instance === "exatron" || instance === "infotec") {
         api.current.ax.get("/api/whatsapp/templates").then((res) => {
           setTemplates(res["data"]["templates"]);
         });
