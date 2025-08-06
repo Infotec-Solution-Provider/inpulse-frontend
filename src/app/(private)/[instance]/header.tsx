@@ -5,16 +5,26 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "@/app/auth-context";
-import { IconButton, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Box } from "@mui/material";
+import {
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Box,
+} from "@mui/material";
 import HeaderNavItem from "./header-nav-item";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import MonitorIcon from "@mui/icons-material/Monitor";
-import MenuIcon from '@mui/icons-material/Menu';
+import MenuIcon from "@mui/icons-material/Menu";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import { UserRole } from "@in.pulse-crm/sdk";
 import Link from "next/link";
-import { WhatsappContext } from "./whatsapp-context";
+import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { usePathname } from "next/navigation";
 import NotificationsDropdown from "@/lib/components/notifications-dropdown";
@@ -25,30 +35,28 @@ const monitorRoutes = [
   { title: "Conversas (Novo)", href: "/monitor" },
 ];
 
-const crudsRoutes = (instance: string, sectorId?: number) => {
-  const arr = [
+const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
+  const arr = [{ title: "Clientes", href: "/customers" }];
+
+  if (isAdmin) {
     // { title: "Atendimentos", href: "/attendances" },
     // { title: "Agendamentos", href: "/schedules" },
-    { title: "Usuários", href: "/users" },
-    { title: "Clientes", href: "/customers" },
-    { title: "Contatos", href: "/contacts" },
-    { title: "Mensagens prontas", href: "/ready-messages" },
     // { title: "Templates", href: "/templates" },
     // { title: "Tags", href: "/tags" },
-  ];
+    arr.push({ title: "Usuários", href: "/users" });
+    arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
+  }
 
-  if ((instance !== "nunes" && instance !== "vollo") || sectorId == 3) {
+  if (params["disable_internal_groups"] !== "true") {
     arr.push({ title: "Grupos Internos", href: "/internal-groups" });
+  }
+
+  if (params["disable_contacts_crud"] !== "true") {
+    arr.push({ title: "Contatos", href: "/contacts" });
   }
 
   return arr;
 };
-const userCrudRoutes = [
-  // { title: "Atendimentos", href: "/attendances" },
-  // { title: "Agendamentos", href: "/schedules" },
-  { title: "Clientes", href: "/customers" },
-  { title: "Contatos", href: "/contacts" },
-];
 
 /*
 const toolsRoutes = [
@@ -57,7 +65,15 @@ const toolsRoutes = [
 ];
 */
 
-const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, reportsRoutes }: {
+const MobileMenu = ({
+  open,
+  onClose,
+  user,
+  instance,
+  isUserAdmin,
+  signOut,
+  reportsRoutes,
+}: {
   open: boolean;
   onClose: () => void;
   user: any;
@@ -68,6 +84,7 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, repor
 }) => {
   const pathname = usePathname();
   const baseHref = pathname.split("/")[1];
+  const { parameters } = useWhatsappContext();
 
   const renderMenuItems = (routes: { title: string; href: string }[]) => {
     return routes.map((route) => (
@@ -89,8 +106,8 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, repor
       PaperProps={{
         sx: {
           width: 280,
-          bgcolor: 'background.paper',
-          color: 'text.primary',
+          bgcolor: "background.paper",
+          color: "text.primary",
         },
       }}
     >
@@ -119,30 +136,27 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, repor
           {isUserAdmin && (
             <>
               <ListItem>
-                <ListItemText primary="Monitoria" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
+                <ListItemText primary="Monitoria" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
               </ListItem>
               {renderMenuItems([
-                { title: 'Agendamentos', href: '/monitor/schedules' },
-                { title: 'Conversas', href: '/monitor/chats' },
-                { title: 'Conversas Internas', href: '/monitor/internal-chats' },
+                { title: "Agendamentos", href: "/monitor/schedules" },
+                { title: "Conversas", href: "/monitor/chats" },
+                { title: "Conversas Internas", href: "/monitor/internal-chats" },
               ])}
             </>
           )}
 
           {/* Cadastros */}
           <ListItem>
-            <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
+            <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
           </ListItem>
-          {renderMenuItems(isUserAdmin
-            ? crudsRoutes(instance, user?.SETOR)
-            : userCrudRoutes
-          )}
+          {renderMenuItems(crudsRoutes(parameters, isUserAdmin))}
 
           {/* Relatórios */}
           {isUserAdmin && (
             <>
               <ListItem>
-                <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
+                <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
               </ListItem>
               {renderMenuItems(reportsRoutes)}
             </>
@@ -165,7 +179,7 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut, repor
 };
 
 export default function Header() {
-  const { currentChat } = useContext(WhatsappContext);
+  const { currentChat, parameters } = useContext(WhatsappContext);
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -176,9 +190,9 @@ export default function Header() {
     };
 
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
 
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const handleDrawerToggle = () => {
@@ -202,7 +216,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-20 shadow-md">
       <div className="flex items-center">
-        <div className="mx-auto flex w-screen items-center justify-between bg-slate-200 px-4 py-4 dark:bg-slate-800 md:pt-3 pt-3">
+        <div className="mx-auto flex w-screen items-center justify-between bg-slate-200 px-4 py-4 pt-3 dark:bg-slate-800 md:pt-3">
           <div className="flex items-center gap-4">
             {isMobile && (
               <IconButton
@@ -220,7 +234,7 @@ export default function Header() {
             </Link>
           </div>
 
-          <div className="hidden md:flex flex-1 justify-center">
+          <div className="hidden flex-1 justify-center md:flex">
             <nav>
               <menu className="flex items-center gap-4 text-sm font-semibold text-gray-900 dark:text-slate-200">
                 <HeaderNavItem title="Área de Atendimento" href="/">
@@ -229,14 +243,7 @@ export default function Header() {
                 <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
                   <MonitorIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
-                <HeaderNavItem
-                  title="Cadastros"
-                  routes={crudsRoutes(instance, user?.SETOR)}
-                  disabled={!isUserAdmin}
-                >
-                  <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
-                </HeaderNavItem>
-                <HeaderNavItem title="Cadastros" routes={userCrudRoutes} disabled={isUserAdmin}>
+                <HeaderNavItem title="Cadastros" routes={crudsRoutes(parameters, isUserAdmin)}>
                   <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
                 {isUserAdmin && (
@@ -248,21 +255,19 @@ export default function Header() {
             </nav>
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden items-center gap-2 md:flex">
             <ThemeToggleButton />
 
             <NotificationsDropdown />
 
-            <h1 className="truncate text-gray-900 dark:text-slate-200 mx-4">
-              {user?.NOME}
-            </h1>
+            <h1 className="mx-4 truncate text-gray-900 dark:text-slate-200">{user?.NOME}</h1>
 
             <IconButton onClick={signOut}>
               <LogoutIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
           </div>
 
-          <div className="flex md:hidden gap-2">
+          <div className="flex gap-2 md:hidden">
             <IconButton>
               <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
@@ -271,7 +276,6 @@ export default function Header() {
             </IconButton>
           </div>
         </div>
-
       </div>
 
       {/* Menu Mobile */}

@@ -5,14 +5,14 @@
   "/(private)/[instance]/(main)/page": "/[instance]",
   "/(private)/[instance]/reports/chats/page": "/[instance]/reports/chats",
   "/(private)/[instance]/reports/report-generator/page": "/[instance]/reports/report-generator",
-  "/(private)/[instance]/(cruds)/wallets/page": "/[instance]/wallets",
   "/(private)/[instance]/(cruds)/customers/page": "/[instance]/customers",
-  "/(private)/[instance]/(cruds)/contacts/page": "/[instance]/contacts",
-  "/(private)/[instance]/(cruds)/ready-messages/page": "/[instance]/ready-messages",
   "/(private)/[instance]/(cruds)/internal-groups/page": "/[instance]/internal-groups",
-  "/(private)/[instance]/monitor/chats/page": "/[instance]/monitor/chats",
   "/(private)/[instance]/(cruds)/users/page": "/[instance]/users",
+  "/(private)/[instance]/(cruds)/ready-messages/page": "/[instance]/ready-messages",
+  "/(private)/[instance]/(cruds)/contacts/page": "/[instance]/contacts",
+  "/(private)/[instance]/monitor/chats/page": "/[instance]/monitor/chats",
   "/(private)/[instance]/monitor/internal-chats/page": "/[instance]/monitor/internal-chats",
   "/(private)/[instance]/monitor/page": "/[instance]/monitor",
+  "/(private)/[instance]/(cruds)/wallets/page": "/[instance]/wallets",
   "/(private)/[instance]/monitor/users/page": "/[instance]/monitor/users"
 }

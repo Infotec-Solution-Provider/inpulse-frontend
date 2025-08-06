@@ -20,12 +20,11 @@ export default function StartChatModalItem({
   chatingWith = null,
   onSelect,
 }: StartChatModalItemProps) {
-  const { startChatByContactId } = useContext(WhatsappContext);
-  const { instance } = useAuthContext();
+  const { startChatByContactId, parameters } = useContext(WhatsappContext);
   const { openModal, closeModal } = useAppContext();
 
   const handleClickStart = () => {
-    if (instance === "exatron" || instance === "infotec") {
+    if (parameters["is_official"] === "true") {
       openModal(
         <SendTemplateModal
           onClose={closeModal}

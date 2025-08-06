@@ -22,7 +22,7 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 };
 
 export default function ChatsMenuFilters() {
-  const { changeChatFilters, chatFilters } = useContext(WhatsappContext);
+  const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
 
   // Estado para abrir o menu do botão "+"
   const [startMenuAnchorEl, setStartMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -58,7 +58,7 @@ export default function ChatsMenuFilters() {
     setInternalChatAnchorEl(event.currentTarget);
     handleStartMenuClose();
   };
-    // Abrir popover da "Nova Conversa " e fechar menu "+"
+  // Abrir popover da "Nova Conversa " e fechar menu "+"
 
   const handleOpenStartChatModal = (event: React.MouseEvent<HTMLElement>) => {
     setChatAnchorEl(event.currentTarget);
@@ -72,7 +72,7 @@ export default function ChatsMenuFilters() {
   const handleCloseChat = () => {
     setChatAnchorEl(null);
   };
-/*   // Abrir modal "Nova Conversa" e fechar menu "+"
+  /*   // Abrir modal "Nova Conversa" e fechar menu "+"
   const handleOpenStartChatModal = () => {
     openModal(<StartChatModal />);
     handleStartMenuClose();
@@ -129,14 +129,16 @@ export default function ChatsMenuFilters() {
             <p>Nova Conversa</p>
           </MenuItem>
 
-          <MenuItem onClick={handleOpenInternalChat} className="flex items-center gap-2">
-            <SmsIcon />
-            <p>Nova Conversa Interna</p>
-          </MenuItem>
+          {parameters["disable_internal_chats"] !== "true" && (
+            <MenuItem onClick={handleOpenInternalChat} className="flex items-center gap-2">
+              <SmsIcon />
+              <p>Nova Conversa Interna</p>
+            </MenuItem>
+          )}
         </Menu>
 
         <Popover
-          open={isChatOpen }
+          open={isChatOpen}
           anchorEl={chatAnchorEl}
           onClose={handleCloseChat}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
@@ -147,7 +149,7 @@ export default function ChatsMenuFilters() {
         </Popover>
 
         <Popover
-          open={isInternalChatOpen }
+          open={isInternalChatOpen}
           anchorEl={internalChatAnchorEl}
           onClose={handleCloseInternalChat}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}

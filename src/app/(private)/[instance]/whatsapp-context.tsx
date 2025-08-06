@@ -18,7 +18,6 @@ import {
   WhatsappClient,
   WppChat,
   WppChatWithDetails,
-  WppContact,
   WppMessage,
   WppSchedule,
 } from "@in.pulse-crm/sdk";
@@ -79,6 +78,7 @@ interface IWhatsappContext {
   getNotifications: () => void;
   markAllAsReadNotification: () => void;
   templates: MessageTemplate[];
+  parameters: Record<string, string>;
 }
 
 interface WhatsappProviderProps {
@@ -97,7 +97,7 @@ export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://l
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
-  const { token, user, instance } = useContext(AuthContext);
+  const { token, instance } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
@@ -111,6 +111,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
+  const [parameters, setParameters] = useState<Record<string, string>>({});
 
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
@@ -292,22 +293,34 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
+      api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
+        const parameters: Record<string, string> = res.data["parameters"];
+
+        if (parameters["is_official"] === "true") {
+          const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
+          setTemplates(templatesResponse.data.templates);
+        }
+
+        setParameters(parameters);
+      });
+
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
-      if (instance === "exatron" || instance === "infotec") {
-        api.current.ax.get("/api/whatsapp/templates").then((res) => {
-          setTemplates(res["data"]["templates"]);
-        });
-      }
+
       api.current.getSectors().then((res) => setSectors(res));
       getNotifications();
-    } else {
-      setChats([]);
-      setMessages({});
+
+      return () => {
+        setChats([]);
+        setMessages([]);
+        setTemplates([]);
+        setParameters({});
+        setNotifications([]);
+      };
     }
   }, [token, api.current, instance]);
 
@@ -420,6 +433,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         getNotifications,
         markAllAsReadNotification,
         templates,
+        parameters,
       }}
     >
       {children}
