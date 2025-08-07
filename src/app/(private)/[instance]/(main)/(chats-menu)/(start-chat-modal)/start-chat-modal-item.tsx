@@ -1,11 +1,12 @@
 import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
-import { Button } from "@mui/material";
+import { IconButton } from "@mui/material";
 import { useContext } from "react";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { useAppContext } from "../../../app-context";
-import { useAuthContext } from "@/app/auth-context";
 import SendTemplateModal from "@/lib/components/send-template-modal";
+import formatCpfCnpj from "@/lib/utils/format-cnpj";
+import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
 
 interface StartChatModalItemProps {
   contact: WppContact;
@@ -44,33 +45,31 @@ export default function StartChatModalItem({
   return (
     <li
       key={contact.id}
-      className="flex w-full items-center justify-between gap-2 rounded-md bg-gray-300 p-2 text-gray-700 dark:bg-slate-700 dark:text-gray-100"
+      className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-700/10 p-2"
     >
-      <div className="flex flex-col">
-        <span className="text-xs font-semibold">{contact.name}</span>
-        {customer && (
-          <span className="text-xs text-blue-700 dark:text-blue-200">{customer.RAZAO}</span>
+      <div className="flex items-center gap-4">
+        <div className="flex w-48 flex-col">
+          <span className="w-full truncate text-sm font-semibold">{contact.name}</span>
+          <span className="w-full truncate text-sm">{Formatter.phone(contact.phone)}</span>
+        </div>
+        {customer ? (
+          <div className="flex w-48 flex-col border-l border-slate-800 pl-2 dark:border-slate-200">
+            <span className="w-full truncate text-sm font-semibold">{customer.RAZAO}</span>
+            <span className="w-full truncate text-sm">{formatCpfCnpj(customer.CPF_CNPJ)}</span>
+          </div>
+        ) : (
+          <div className="flex w-48 items-center border-l border-slate-800 pl-2">
+            <span className="text-sm opacity-50">Não Atribuído</span>
+          </div>
         )}
-        <span className="text-xs text-slate-400">
-          {contact.phone ? Formatter.phone(contact.phone) : "Telefone não encontrado"}
-        </span>
       </div>
       <div>
         {chatingWith ? (
-          <p className="text-xs text-red-400">{chatingWith}</p>
+          <p className="px-2 text-sm font-semibold text-red-400">{chatingWith}</p>
         ) : (
-          <Button
-            size="small"
-            onClick={handleClickStart}
-            sx={{
-              fontSize: "0.65rem",
-              padding: "2px 6px",
-              minWidth: "80px",
-              lineHeight: 1,
-            }}
-          >
-            Iniciar
-          </Button>
+          <IconButton onClick={handleClickStart} color="info">
+            <ChatBubbleIcon />
+          </IconButton>
         )}
       </div>
     </li>

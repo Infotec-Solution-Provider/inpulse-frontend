@@ -6,7 +6,7 @@ import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import { IconButton, Menu, MenuItem, Popover, TextField } from "@mui/material";
 import { useContext, useState } from "react";
-import { AppContext } from "../../app-context";
+import { AppContext, useAppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
 import StartChatModal from "./(start-chat-modal)/start-chat-modal";
 import CategoryIcon from "@mui/icons-material/Category";
@@ -22,6 +22,7 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 };
 
 export default function ChatsMenuFilters() {
+  const { openModal, closeModal } = useAppContext();
   const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
 
   // Estado para abrir o menu do botão "+"
@@ -33,14 +34,8 @@ export default function ChatsMenuFilters() {
   // Estado para abrir menu de filtros
   const [filterMenuAnchorEl, setFilterMenuAnchorEl] = useState<null | HTMLElement>(null);
 
-  // Estado para abrir o popover da "Nova Conversa Interna"
-  const [chatAnchorEl, setChatAnchorEl] = useState<null | HTMLElement>(null);
-
-  // Estado para abrir menu de filtros
-
   const isStartMenuOpen = Boolean(startMenuAnchorEl);
   const isInternalChatOpen = Boolean(internalChatAnchorEl);
-  const isChatOpen = Boolean(chatAnchorEl);
   const isFilterMenuOpen = Boolean(filterMenuAnchorEl);
 
   // Abrir menu "+"
@@ -61,22 +56,14 @@ export default function ChatsMenuFilters() {
   // Abrir popover da "Nova Conversa " e fechar menu "+"
 
   const handleOpenStartChatModal = (event: React.MouseEvent<HTMLElement>) => {
-    setChatAnchorEl(event.currentTarget);
+    openModal(<StartChatModal onClose={closeModal} />);
     handleStartMenuClose();
   };
+
   // Fechar popover da "Nova Conversa "
   const handleCloseInternalChat = () => {
     setInternalChatAnchorEl(null);
   };
-  // Fechar popover da "Nova Conversa Interna"
-  const handleCloseChat = () => {
-    setChatAnchorEl(null);
-  };
-  /*   // Abrir modal "Nova Conversa" e fechar menu "+"
-  const handleOpenStartChatModal = () => {
-    openModal(<StartChatModal />);
-    handleStartMenuClose();
-  }; */
 
   // Abrir menu filtros
   const handleFilterMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -136,17 +123,6 @@ export default function ChatsMenuFilters() {
             </MenuItem>
           )}
         </Menu>
-
-        <Popover
-          open={isChatOpen}
-          anchorEl={chatAnchorEl}
-          onClose={handleCloseChat}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          PaperProps={{ style: { width: 350 } }}
-        >
-          <StartChatModal onClose={handleCloseChat} />
-        </Popover>
 
         <Popover
           open={isInternalChatOpen}
