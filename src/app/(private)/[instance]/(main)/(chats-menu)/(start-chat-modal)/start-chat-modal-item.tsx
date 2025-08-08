@@ -25,6 +25,9 @@ export default function StartChatModalItem({
   const { openModal, closeModal } = useAppContext();
 
   const handleClickStart = () => {
+    console.log("parametros", parameters);
+    console.log("is_official", parameters["is_official"]);
+    console.log("is_official",parameters["is_official"] === "true");
     if (parameters["is_official"] === "true") {
       openModal(
         <SendTemplateModal
