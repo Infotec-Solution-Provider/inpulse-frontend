@@ -28,18 +28,20 @@ export default function StartChatModalItem({
     console.log("parametros", parameters);
     console.log("is_official", parameters["is_official"]);
     console.log("is_official",parameters["is_official"] === "true");
-    if (parameters["is_official"] === "true") {
-      openModal(
-        <SendTemplateModal
-          onClose={closeModal}
-          onSendTemplate={(data) => {
-            startChatByContactId(contact.id, data);
-            closeModal();
-          }}
-        />,
-      );
-      onSelect();
-    } else {
+if (parameters["is_official"] === "true") {
+  setTimeout(() => {
+    openModal(
+      <SendTemplateModal
+        onClose={closeModal}
+        onSendTemplate={(data) => {
+          startChatByContactId(contact.id, data);
+          closeModal();
+        }}
+      />
+    );
+  }, 1000); // delay de 1000 ms (1 segundo)
+}
+else {
       startChatByContactId(contact.id);
       onSelect();
     }
