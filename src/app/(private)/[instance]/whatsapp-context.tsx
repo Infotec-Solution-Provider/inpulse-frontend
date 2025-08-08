@@ -300,7 +300,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
           setTemplates(templatesResponse.data.templates);
         }
-
+        console.log("Parâmetros da sessão:", parameters);
         setParameters(parameters);
       });
 
