@@ -1,4 +1,5 @@
 import { useAuthContext } from "@/app/auth-context";
+import SendTemplateModal from "@/lib/components/send-template-modal";
 import { InternalMessage } from "@in.pulse-crm/sdk";
 import { Close } from "@mui/icons-material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
@@ -11,22 +12,21 @@ import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
+import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
 import { useWhatsappContext } from "../../whatsapp-context";
 import AudioRecorder from "./audio-recorder";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
 import { getInternalMessageStyle } from "./render-internal-chat-messages";
-import { useAppContext } from "../../app-context";
-import SendTemplateModal from "@/lib/components/send-template-modal";
 
 export default function ChatSendMessageArea() {
-  const { currentChat, wppApi } = useWhatsappContext();
+  const { currentChat, wppApi, parameters } = useWhatsappContext();
   const {
     sendMessage: sendMessageContext,
     state,
     dispatch,
-    quotedMessage,
+    quotedMessage /*  */,
     handleQuoteMessageRemove,
   } = useContext(ChatContext);
   const { user } = useAuthContext();
@@ -162,14 +162,16 @@ export default function ChatSendMessageArea() {
     <div className="mb-6 flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0">
       <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
       <div className="flex items-center gap-2">
-        <IconButton
-          size="small"
-          onClick={openQuickTemplate}
-          color="success"
-          title="Enviar template"
-        >
-          <TryIcon />
-        </IconButton>
+        {parameters["is_official"] === "true" && (
+          <IconButton
+            size="small"
+            onClick={openQuickTemplate}
+            color="success"
+            title="Enviar template"
+          >
+            <TryIcon />
+          </IconButton>
+        )}
         <IconButton
           size="small"
           onClick={openQuickMessages}
