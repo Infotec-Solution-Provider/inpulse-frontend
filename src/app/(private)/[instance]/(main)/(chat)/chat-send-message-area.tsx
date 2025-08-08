@@ -1,24 +1,27 @@
-import { useContext, useMemo, useRef, useState, useEffect, useCallback } from "react";
-import { IconButton, Modal, TextField } from "@mui/material";
-import SendIcon from "@mui/icons-material/Send";
-import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
-import { Close } from "@mui/icons-material";
-import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
-import { WhatsappContext } from "../../whatsapp-context";
-import { ChatContext } from "./chat-context";
-import { AuthContext } from "@/app/auth-context";
-import AudioRecorder from "./audio-recorder";
-import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
+import { useAuthContext } from "@/app/auth-context";
 import { InternalMessage } from "@in.pulse-crm/sdk";
-import { getInternalMessageStyle } from "./render-internal-chat-messages";
-import { InternalChatContext } from "../../internal-context";
-import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { Close } from "@mui/icons-material";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
+import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
+import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
+import SendIcon from "@mui/icons-material/Send";
+import TryIcon from "@mui/icons-material/Try";
+import { IconButton, Modal, TextField } from "@mui/material";
+import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
+import useInternalChatContext from "../../internal-context";
+import { useWhatsappContext } from "../../whatsapp-context";
+import AudioRecorder from "./audio-recorder";
+import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
+import { getInternalMessageStyle } from "./render-internal-chat-messages";
+import { useAppContext } from "../../app-context";
+import SendTemplateModal from "@/lib/components/send-template-modal";
 
 export default function ChatSendMessageArea() {
-  const { currentChat } = useContext(WhatsappContext);
+  const { currentChat, wppApi } = useWhatsappContext();
   const {
     sendMessage: sendMessageContext,
     state,
@@ -26,9 +29,10 @@ export default function ChatSendMessageArea() {
     quotedMessage,
     handleQuoteMessageRemove,
   } = useContext(ChatContext);
-  const { user } = useContext(AuthContext);
-  const { users } = useContext(InternalChatContext);
-  const { contacts } = useContext(ContactsContext);
+  const { user } = useAuthContext();
+  const { users } = useInternalChatContext();
+  const { contacts } = useContactsContext();
+  const { openModal, closeModal } = useAppContext();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -78,7 +82,24 @@ export default function ChatSendMessageArea() {
   }, []);
 
   const openQuickMessages = () => setQuickMessageOpen(true);
-  const openQuickTemplate = () => setQuickTemplateOpen(true);
+  const openQuickTemplate = () => {
+    if (currentChat && currentChat.chatType === "wpp") {
+      openModal(
+        <SendTemplateModal
+          onClose={closeModal}
+          onSendTemplate={(data) => {
+            wppApi.current.ax.post("/api/whatsapp/templates/send", {
+              to: currentChat.contact?.phone,
+              chatId: currentChat.id,
+              contactId: currentChat.contactId,
+              data,
+            });
+            closeModal();
+          }}
+        />,
+      );
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,7 +108,7 @@ export default function ChatSendMessageArea() {
 
   const handleEmojiClick = useCallback(
     (data: EmojiClickData) => dispatch({ type: "add-emoji", emoji: data.emoji }),
-    [dispatch]
+    [dispatch],
   );
 
   const handleAudioRecord = (file: File) => dispatch({ type: "set-audio", file });
@@ -99,7 +120,6 @@ export default function ChatSendMessageArea() {
     const hasText = !!state.text?.trim();
 
     if (!hasText && !hasFile) return;
-    console.log("Sending message:", hasFile,hasText)
     sendMessageContext();
     dispatch({ type: "change-text", text: "" });
     dispatch({ type: "remove-file" });
@@ -139,17 +159,34 @@ export default function ChatSendMessageArea() {
   }, [quotedMessage, user]);
 
   return (
-    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0 mb-6">
+    <div className="mb-6 flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0">
       <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
       <div className="flex items-center gap-2">
-        <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openQuickMessages}>
+        <IconButton
+          size="small"
+          onClick={openQuickTemplate}
+          color="success"
+          title="Enviar template"
+        >
+          <TryIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={openQuickMessages}
+          color="info"
+          title="Enviar mensagem rápida"
+        >
           <ChatBubbleIcon />
         </IconButton>
-        <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={openAttachFile}>
+        <IconButton size="small" onClick={openAttachFile} color="secondary" title="Anexar arquivo">
           <AttachFileIcon />
         </IconButton>
         <div className="relative hidden md:block">
-          <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={toggleEmojiPicker}>
+          <IconButton
+            size="small"
+            className="bg-white/20 dark:text-indigo-400"
+            onClick={toggleEmojiPicker}
+          >
             <EmojiEmotionsOutlinedIcon />
           </IconButton>
           <div className="absolute bottom-full">
@@ -171,7 +208,9 @@ export default function ChatSendMessageArea() {
           <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
             <div className="text-sm text-black dark:text-slate-300">
               {quotedMessage.body.split("\n").map((line, index) => (
-                <p key={index} className="break-words text-sm">{line}</p>
+                <p key={index} className="break-words text-sm">
+                  {line}
+                </p>
               ))}
               {quotedMessage.fileId && (
                 <span className="text-xs text-slate-400 dark:text-slate-500">
@@ -179,7 +218,11 @@ export default function ChatSendMessageArea() {
                 </span>
               )}
             </div>
-            <IconButton size="small" className="bg-white/20 dark:text-indigo-400" onClick={handleQuoteMessageRemove}>
+            <IconButton
+              size="small"
+              className="bg-white/20 dark:text-indigo-400"
+              onClick={handleQuoteMessageRemove}
+            >
               <Close />
             </IconButton>
           </div>
@@ -187,7 +230,11 @@ export default function ChatSendMessageArea() {
 
         {state.sendAsAudio && state.file ? (
           <div className="flex w-full items-center justify-center gap-2">
-            <audio controls src={URL.createObjectURL(state.file)} className="h-8 max-w-[35rem] flex-grow" />
+            <audio
+              controls
+              src={URL.createObjectURL(state.file)}
+              className="h-8 max-w-[35rem] flex-grow"
+            />
             <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
               <Close />
             </IconButton>
@@ -208,23 +255,30 @@ export default function ChatSendMessageArea() {
             />
 
             {showMentionList && (
-              <div className="absolute bottom-full mb-2 left-0 w-[20rem] max-h-40 overflow-auto rounded-md bg-white shadow-md z-50">
+              <div className="absolute bottom-full left-0 z-50 mb-2 max-h-40 w-[20rem] overflow-auto rounded-md bg-white shadow-md">
                 {mentionCandidates.length === 0 ? (
                   <div className="p-2 text-sm text-gray-500">Nenhum contato</div>
                 ) : (
                   mentionCandidates.map((user: any) => (
                     <div
                       key={user.userId}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 cursor-pointer"
+                      className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-blue-100"
                       onClick={() => {
-                        const result = selectMention(user, textWithNames, textareaRef.current?.selectionStart || 0);
+                        const result = selectMention(
+                          user,
+                          textWithNames,
+                          textareaRef.current?.selectionStart || 0,
+                        );
                         setTimeout(() => {
-                          textareaRef.current?.setSelectionRange(result.cursorPosition, result.cursorPosition);
+                          textareaRef.current?.setSelectionRange(
+                            result.cursorPosition,
+                            result.cursorPosition,
+                          );
                           textareaRef.current?.focus();
                         }, 0);
                       }}
                     >
-                      <div className="w-6 h-6 rounded-full bg-indigo-300 text-white text-xs flex items-center justify-center font-semibold">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-300 text-xs font-semibold text-white">
                         {user.name[0]}
                       </div>
                       <span className="text-sm text-gray-800">{user.name}</span>
@@ -247,14 +301,19 @@ export default function ChatSendMessageArea() {
         <SendIcon />
       </IconButton>
 
-      <div className="aria-hidden:hidden" aria-hidden={textWithNames.length > 0 || state.sendAsAudio}>
+      <div
+        className="aria-hidden:hidden"
+        aria-hidden={textWithNames.length > 0 || state.sendAsAudio}
+      >
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
 
       {quickMessageOpen && (
         <Modal open onClose={() => setQuickMessageOpen(false)}>
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            {currentChat && <QuickMessage chat={currentChat} onClose={() => setQuickMessageOpen(false)} />}
+            {currentChat && (
+              <QuickMessage chat={currentChat} onClose={() => setQuickMessageOpen(false)} />
+            )}
           </div>
         </Modal>
       )}

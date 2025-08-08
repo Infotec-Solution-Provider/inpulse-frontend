@@ -62,7 +62,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
   users.forEach((u) => {
     const userId = u.CODIGO;
     const key = `user-${userId}`;
-    console.log(u.NOME+userId)
+
     map.set(key, {
       name: u.NOME,
       phone: userId.toString(),

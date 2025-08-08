@@ -42,9 +42,6 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
   const onClickSave = async () => {
     const isValid = validateForm(formRef.current);
 
-    console.log("Is Valid:", isValid);
-    console.log("Form Data:", formRef.current);
-
     if (isValid) {
       updateCustomer(customer.CODIGO, formRef.current);
     }

@@ -102,7 +102,6 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
           data.groupImage,
         );
 
-        console.log("created", created);
         toast.success("Grupo criado com sucesso!");
         setInternalGroups((prev) => [created as InternalGroup, ...prev]);
       } catch (error) {
@@ -139,7 +138,6 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
           },
         })
         .then((res) => {
-          console.log(res.data.data);
           setWppGroups(res.data.data);
         });
     }

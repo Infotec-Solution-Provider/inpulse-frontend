@@ -178,8 +178,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       api.current.setAuth(token);
 
       api.current.getInternalChatsMonitor().then(({ chats, messages }) => {
-        console.log("Monitorando conversas internas", chats, messages);
-
         const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
           user!.CODIGO,
           users,

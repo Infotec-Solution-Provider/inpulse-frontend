@@ -37,7 +37,6 @@ export default function UserModal({ user }: UserModalProps) {
   };
 
   const handleAvatarChange = (file: File | null) => {
-    console.log("avatar", file);
     setAvatar(file);
   };
 

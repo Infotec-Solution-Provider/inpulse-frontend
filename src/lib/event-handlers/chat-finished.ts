@@ -17,12 +17,9 @@ export default function ChatFinishedHandler(
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
-  getNotifications: () => void
+  getNotifications: () => void,
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
-    console.log("chat finished", chatId)
-    console.log("chats", chats)
-    console.log("currentChat", currentChat)
     socket.leaveRoom(`chat:${chatId}`);
     setChats((prev) => prev.filter((c) => c.id !== chatId));
     const chat = chats.find((c) => c.id === chatId);
@@ -40,12 +37,10 @@ export default function ChatFinishedHandler(
       icon: HorizontalLogo.src,
     });
 
-    console.log(currentChat?.chatType, currentChat?.id, chatId);
-
     if (currentChat?.chatType === "wpp" && currentChat.id === chatId) {
       setCurrentChat(null);
       setCurrentChatMessages([]);
     }
-     getNotifications();
+    getNotifications();
   };
 }

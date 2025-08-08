@@ -25,24 +25,19 @@ export default function StartChatModalItem({
   const { openModal, closeModal } = useAppContext();
 
   const handleClickStart = () => {
-    console.log("parametros", parameters);
-    console.log("is_official", parameters["is_official"]);
-    console.log("is_official",parameters["is_official"] === "true");
-if (parameters["is_official"] === "true") {
-  console.log("Abrindo modal de envio de template");
-  setTimeout(() => {
-    openModal(
-      <SendTemplateModal
-        onClose={closeModal}
-        onSendTemplate={(data) => {
-          startChatByContactId(contact.id, data);
-          closeModal();
-        }}
-      />
-    );
-  }, 1000); // delay de 1000 ms (1 segundo)
-}
-else {
+    if (parameters["is_official"] === "true") {
+      setTimeout(() => {
+        openModal(
+          <SendTemplateModal
+            onClose={closeModal}
+            onSendTemplate={(data) => {
+              startChatByContactId(contact.id, data);
+              closeModal();
+            }}
+          />,
+        );
+      }, 1000); // delay de 1000 ms (1 segundo)
+    } else {
       startChatByContactId(contact.id);
       onSelect();
     }

@@ -196,7 +196,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const startChatByContactId = useCallback(
     (contactId: number, template?: SendTemplateData) => {
-      console.log("Iniciando chat", contactId, template);
       api.current.startChatByContactId(contactId, template);
     },
     [api, token],
@@ -212,8 +211,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.setAuth(token);
       api.current.getChatsMonitor().then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
-        console.log("Detailed Chats:", detailedChats);
 
         setMonitorChats(detailedChats);
         setMessages(chatsMessages);
@@ -300,7 +297,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
           setTemplates(templatesResponse.data.templates);
         }
-        console.log("Parâmetros da sessão:", parameters);
         setParameters(parameters);
       });
 

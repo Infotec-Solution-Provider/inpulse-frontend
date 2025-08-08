@@ -10,7 +10,6 @@ export default function MonitorFilters() {
   const { users } = useInternalChatContext();
 
   const onChangeUser = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("Selected user:", e.target.value);
     setFilters({
       ...filters,
       user: e.target.value === "all" ? "all" : Number(e.target.value),

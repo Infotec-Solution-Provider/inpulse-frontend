@@ -23,7 +23,7 @@ export default function SendTemplateModal({ onClose, onSendTemplate }: Props) {
     const key = match.replaceAll("{", "").replaceAll("}", "");
     return variables[+key] || match; // Se não houver valor, mostra o placeholder original
   });
-  console.log("templateText", templateText);
+
   useEffect(() => {
     if (!selectedTemplate) {
       setVariables({});

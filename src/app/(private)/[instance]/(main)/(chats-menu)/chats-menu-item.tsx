@@ -64,7 +64,6 @@ const { contacts } = useContext(ContactsContext);
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Chat item click detected (mouse)');
 
     // Feedback visual
     const target = e.currentTarget as HTMLElement;
@@ -74,7 +73,6 @@ const { contacts } = useContext(ContactsContext);
     }, 150);
 
     if (typeof onClick === 'function') {
-      console.log('Executing onClick handler from click');
       try {
         onClick();
       } catch (error) {
@@ -87,8 +85,6 @@ const { contacts } = useContext(ContactsContext);
 
   // Função para lidar com eventos de toque
   const handleTouchStart = (e: React.TouchEvent) => {
-    console.log('Chat item touch start detected');
-
     // Adiciona feedback visual imediato
     const target = e.currentTarget as HTMLElement;
     target.style.backgroundColor = 'rgba(99, 102, 241, 0.2)';
@@ -97,8 +93,6 @@ const { contacts } = useContext(ContactsContext);
 
   // Função para lidar com o fim do toque
   const handleTouchEnd = (e: React.TouchEvent) => {
-    console.log('Chat item touch end detected');
-
     // Remove o feedback visual
     const target = e.currentTarget as HTMLElement;
     target.style.backgroundColor = '';
@@ -163,7 +157,6 @@ function wasMentioned(text: string): boolean {
 
     // Função para forçar o clique
     const forceClick = () => {
-      console.log('Forçando execução do onClick');
       if (typeof onClick === 'function') {
         try {
           onClick();

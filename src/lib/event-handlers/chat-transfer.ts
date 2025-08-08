@@ -35,7 +35,6 @@ export default function ChatTransferHandler(
       icon: HorizontalLogo.src,
     });
     api.getChatsBySession()
-    console.log(currentChat?.chatType, currentChat?.id, chatId);
 
     if (currentChat?.chatType === "wpp" && currentChat.id === chatId) {
       setCurrentChat(null);

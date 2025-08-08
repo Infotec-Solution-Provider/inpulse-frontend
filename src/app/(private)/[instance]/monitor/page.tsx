@@ -279,8 +279,6 @@ export default function MonitorPage() {
     }
     if (chat.chatType === "internal") {
       return () => {
-        console.log(chat);
-
         setCurrentInternalChat(chat);
         openInternalChat(chat, false);
         openModal(

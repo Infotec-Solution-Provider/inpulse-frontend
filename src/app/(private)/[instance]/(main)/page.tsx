@@ -14,13 +14,14 @@ export default function Home() {
   // Handle browser/hardware back to close chat on mobile
   React.useEffect(() => {
     if (currentChat) {
-      console.log("currentChat", currentChat);
-
       window.history.pushState({ chatOpen: true }, "");
+
       const handlePopState = () => {
         setCurrentChat(null);
       };
+
       window.addEventListener("popstate", handlePopState);
+
       return () => window.removeEventListener("popstate", handlePopState);
     }
   }, [currentChat, setCurrentChat]);

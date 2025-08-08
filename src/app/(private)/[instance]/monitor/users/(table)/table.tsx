@@ -27,7 +27,6 @@ export default function OperatorsTable() {
       usersService
         .getUsers({ perPage: rowsPerPage, page: "1" })
         .then((response: PaginatedResponse<User>) => {
-          console.log(response);
           setUsers(response.data);
           setTotalPages(response.page.totalRows);
           setPage(response.page.current);

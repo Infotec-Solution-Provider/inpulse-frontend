@@ -22,9 +22,6 @@ export default function ChatStartedHandler(
     const { messages, ...chat } = res;
     const isUnread = true;
 
-    console.log("Chat started:", chatId);
-    console.log(res);
-
     const lastMessage = messages?.reduce((prev, current) => {
       return +prev.timestamp > +current.timestamp ? prev : current;
     }, messages[0]);
