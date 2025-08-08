@@ -29,6 +29,7 @@ export default function StartChatModalItem({
     console.log("is_official", parameters["is_official"]);
     console.log("is_official",parameters["is_official"] === "true");
 if (parameters["is_official"] === "true") {
+  console.log("Abrindo modal de envio de template");
   setTimeout(() => {
     openModal(
       <SendTemplateModal
