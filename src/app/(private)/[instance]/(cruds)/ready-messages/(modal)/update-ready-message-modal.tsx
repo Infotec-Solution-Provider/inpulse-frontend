@@ -140,10 +140,10 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   };
 
   return (
-<div className="flex flex-col gap-6 bg-white text-gray-800 dark:bg-slate-800 dark:text-white px-8 py-6 rounded-md w-full max-w-3xl" style={{ width: 500 }}>
+<div className="flex flex-col gap-4 bg-white text-gray-800 dark:dark:bg-slate-800 dark:text-white p-4 sm:p-6 rounded-md w-full max-w-full sm:max-w-[95vw] md:max-w-3xl mx-auto my-4 overflow-y-auto max-h-[90vh]">
       <Typography variant="h6">Editar mensagem rápida</Typography>
 
-      <div className="flex gap-4 items-center">
+      <div className="flex flex-col sm:flex-row gap-4 w-full">
         <div className="flex flex-col gap-2 w-full">
           <TextField
             label="Título"
@@ -151,6 +151,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
+
 
           <TextField
             select
@@ -182,30 +183,40 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
         fullWidth
       />
 
-      <div className="flex items-center gap-4 pt-2">
-        <Button
-          variant="outlined"
-          onClick={() => fileInputRef.current?.click()}
-          sx={{ minWidth: 150 }}
-        >
-          Selecionar arquivo
-        </Button>
-
-        {fileRef.current ? (
-          <Typography
-            variant="body2"
-            noWrap
-            sx={{ maxWidth: 200, userSelect: "all", color: "white" }}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2 w-full">
+        <div className="w-full sm:w-auto">
+          <Button
+            variant="outlined"
+            onClick={() => fileInputRef.current?.click()}
+            fullWidth={window.innerWidth < 640}
+            sx={{ minWidth: 150 }}
           >
-            {fileRef.current.name}
-          </Typography>
-        ) : imagePreview ? (
-          <img
-            src={imagePreview}
-            alt="Preview"
-            className="h-16 w-16 rounded-md object-cover"
-          />
-        ) : null}
+            Selecionar arquivo
+          </Button>
+        </div>
+
+        <div className="w-full sm:w-auto">
+          {fileRef.current ? (
+            <Typography
+              variant="body2"
+              noWrap
+              className="break-all sm:break-keep"
+              sx={{
+                maxWidth: { xs: '100%', sm: 200 },
+                userSelect: "all",
+                color: "white"
+              }}
+            >
+              {fileRef.current.name}
+            </Typography>
+          ) : imagePreview ? (
+            <img
+              src={imagePreview}
+              alt="Preview"
+              className="h-16 w-16 rounded-md object-cover"
+            />
+          ) : null}
+        </div>
       </div>
 
       <input
@@ -232,7 +243,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
         </Paper>
       </Popper>
 
-      <div className="flex justify-end gap-4 pt-4">
+      <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 w-full">
         <Button color="error" onClick={closeModal}>
           Cancelar
         </Button>
@@ -246,8 +257,8 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
       </div>
 
       <Modal open={varModal} onClose={() => setVarModal(false)}>
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-md shadow-lg p-4 max-w-md w-full">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-2 sm:p-4">
+          <div className="bg-white dark:dark:bg-slate-800 rounded-md shadow-lg p-4 w-full max-w-full sm:max-w-md mx-2">
             <VariablesMenu
               onSelect={handleSelectVariable}
               onClose={() => setVarModal(false)}

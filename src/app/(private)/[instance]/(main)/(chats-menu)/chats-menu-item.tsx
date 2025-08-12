@@ -1,6 +1,6 @@
 import { Avatar } from "@mui/material";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
-import { ReactNode, useMemo, useEffect, useRef } from "react";
+import { ReactNode, useMemo, useEffect, useRef, useState } from "react";
 
 interface Tag {
   name: string;
@@ -10,12 +10,13 @@ interface Tag {
 interface ChatsMenuItemProps {
   name: string;
   avatar?: string;
-  message: ReactNode;
+  message: string | ReactNode;
   messageDate: Date | null;
-  tags: Tag[];
+  tags: { color: string; name: string }[];
   isUnread?: boolean;
   isOpen?: boolean;
-  onClick?: () => void;
+  isScrolling?: boolean;
+  onClick: () => void;
 }
 
 export default function ChatsMenuItem({
@@ -50,99 +51,57 @@ export default function ChatsMenuItem({
     });
   }, [messageDate]);
 
-  // Referência para o elemento do chat
-  const chatItemRef = useRef<HTMLDivElement>(null);
-  
-  // Função para lidar com cliques de mouse
+  // Referências para controle de toque
+  const touchStartRef = useRef({
+    time: 0,
+    x: 0,
+    y: 0
+  });
+
+  // Função para lidar com o início do toque
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      time: Date.now(),
+      x: touch.clientX,
+      y: touch.clientY
+    };
+  };
+
+  // Função para lidar com clique do mouse
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Chat item click detected (mouse)');
-    
-    // Feedback visual
-    const target = e.currentTarget as HTMLElement;
-    target.style.backgroundColor = 'rgba(99, 102, 241, 0.2)';
-    setTimeout(() => {
-      target.style.backgroundColor = '';
-    }, 150);
-    
     if (typeof onClick === 'function') {
-      console.log('Executing onClick handler from click');
-      try {
-        onClick();
-      } catch (error) {
-        console.error('Error executing onClick handler:', error);
-      }
-    } else {
-      console.warn('No valid onClick handler provided:', onClick);
+      onClick();
     }
   };
 
-  // Função para lidar com eventos de toque
-  const handleTouchStart = (e: React.TouchEvent) => {
-    console.log('Chat item touch start detected');
-    
-    // Adiciona feedback visual imediato
-    const target = e.currentTarget as HTMLElement;
-    target.style.backgroundColor = 'rgba(99, 102, 241, 0.2)';
-    target.style.transform = 'scale(0.98)';
-  };
-
-  // Função para lidar com o fim do toque
+  // Função para lidar com toque na tela
   const handleTouchEnd = (e: React.TouchEvent) => {
-    console.log('Chat item touch end detected');
-    
-    // Remove o feedback visual
-    const target = e.currentTarget as HTMLElement;
-    target.style.backgroundColor = '';
-    target.style.transform = '';
-    
-    if (typeof onClick === 'function') {
-      console.log('Executing onClick handler from touch');
-      try {
-        onClick();
-      } catch (error) {
-        console.error('Error executing onClick handler:', error);
-      }
-    } else {
-      console.warn('No valid onClick handler provided:', onClick);
-    }
-  };
-  
-  // Função para lidar com o movimento do toque (evita scroll)
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Previne scroll durante o toque no item
     e.preventDefault();
     e.stopPropagation();
+    
+    const currentTime = Date.now();
+    const touchDuration = currentTime - touchStartRef.current.time;
+    
+    // Verifica se o toque foi muito longo (mais de 300ms)
+    if (touchDuration > 300) {
+      return;
+    }
+    
+    // Verifica se houve movimento significativo
+    const touch = e.changedTouches[0];
+    const startX = touchStartRef.current.x;
+    const startY = touchStartRef.current.y;
+    const moveX = Math.abs(touch.clientX - startX);
+    const moveY = Math.abs(touch.clientY - startY);
+    
+    // Se o movimento foi pequeno, considera como clique
+    if (moveX < 10 && moveY < 10 && typeof onClick === 'function') {
+      onClick();
+    }
   };
-  
-  // Adiciona listeners de eventos diretamente ao DOM para maior compatibilidade
-  useEffect(() => {
-    const element = chatItemRef.current;
-    if (!element) return;
-    
-    // Função para forçar o clique
-    const forceClick = () => {
-      console.log('Forçando execução do onClick');
-      if (typeof onClick === 'function') {
-        try {
-          onClick();
-        } catch (error) {
-          console.error('Error executing onClick handler:', error);
-        }
-      }
-    };
-    
-    // Adiciona listeners nativos
-    element.addEventListener('click', forceClick);
-    element.addEventListener('touchend', forceClick);
-    
-    // Cleanup
-    return () => {
-      element.removeEventListener('click', forceClick);
-      element.removeEventListener('touchend', forceClick);
-    };
-  }, [onClick]);
 
   return (
     <li
@@ -151,11 +110,12 @@ export default function ChatsMenuItem({
       className="group relative chat-list-item"
     >
       <div
-        ref={chatItemRef}
-        className="grid grid-cols-[74px_1fr] rounded-md p-3 hover:bg-indigo-500 hover:bg-opacity-20 aria-selected:bg-white/10 w-full h-full active:bg-indigo-500 active:bg-opacity-30 touch-manipulation cursor-pointer select-none chat-item-clickable"
+        className={`grid grid-cols-[74px_1fr] rounded-md p-3 w-full h-full touch-manipulation cursor-pointer select-none
+          ${isOpen ? 'bg-white/10' : ''}
+          hover:bg-indigo-500/20 active:bg-indigo-500/30
+          transition-colors duration-100`}
         onClick={handleClick}
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         role="button"
         tabIndex={0}
@@ -173,18 +133,15 @@ export default function ChatsMenuItem({
           WebkitUserSelect: 'none',
           userSelect: 'none',
           touchAction: 'manipulation',
-          transition: 'all 0.15s ease',
           position: 'relative',
           zIndex: 10,
-          pointerEvents: 'auto'
         }}
         data-testid="chat-menu-item"
-        data-clickable="true"
       >
-        <div className="flex items-center">
+        <div className="flex items-center mr-3">
           <Avatar alt={name} src={avatar || ""} sx={{ width: 64, height: 64 }} />
         </div>
-        <div className="flex flex-col gap-1 truncate">
+        <div className="flex flex-col gap-1 truncate w-full">
           <div className="flex items-center justify-between gap-2">
             <p className="truncate text-sm leading-none text-gray-900 dark:text-slate-100">{name}</p>
             <div className="flex items-center gap-2 text-gray-700 dark:text-slate-300 group-aria-busy:text-orange-200">

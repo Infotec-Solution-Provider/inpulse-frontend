@@ -31,8 +31,12 @@ export default function ChatMessagesList() {
     <>
       {user && (
         <ul
-          className="flex flex-col flex-1 w-full gap-2 scrollbar-whatsapp bg-slate-300 dark:bg-slate-700 p-2 min-h-[calc(100vh-165px)] md:mt-0 mt-7 overflow-y-auto"
+          className="flex flex-col w-full gap-2 scrollbar-whatsapp bg-slate-300 dark:bg-slate-700 p-2"
           ref={ulRef}
+          style={{
+            minHeight: 'calc(100vh - 114px)', // 60px header + 54px footer
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          }}
         >
           {isWhatsappChat && <RenderWhatsappChatMessages />}
           {isInternalChat && <RenderInternalChatMessages />}

@@ -6,7 +6,7 @@ import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
 import ErrorIcon from "@mui/icons-material/Error";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { ReactNode } from "react";
-import MessageFile from "./message-file";
+import { MessageFile } from "./message-file";
 import { IconButton } from "@mui/material";
 import ReplyIcon from "@mui/icons-material/Reply";
 import LinkifiedText from "./linkmessage";
@@ -36,7 +36,7 @@ export interface MessageProps {
 }
 
 export const msgStyleVariants = {
-  received: "bg-slate-50 text-slate-800 dark:bg-slate-800 dark:text-slate-200 rounded-bl-none",
+  received: "bg-slate-50 text-slate-800 dark:dark:bg-slate-800 dark:text-slate-200 rounded-bl-none",
   sent: "bg-green-200 text-slate-800 dark:bg-green-800 dark:text-slate-200 rounded-br-none",
   system: "bg-yellow-200 text-slate-800 dark:bg-yellow-800 dark:text-white",
 };
@@ -76,7 +76,7 @@ export default function Message({
       className={`w-full ${liStyleVariants[style]} group flex items-center gap-2`}
     >
       <div
-        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
+        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max md:max-w-[66%] max-w-[100%] rounded-md`}
       >
         {quotedMessage && (
           <div
@@ -86,11 +86,9 @@ export default function Message({
                 : "border-orange-600 dark:border-orange-400"
             }`}
             onClick={() => {
-              // focus on quoted message
               const quotedElement = document.getElementById(String(quotedMessage.id));
               if (quotedElement) {
                 quotedElement.scrollIntoView({ behavior: "smooth", block: "center" });
-                // highlight the quoted message temporarily
                 quotedElement.classList.add("bg-indigo-500/5");
                 setTimeout(() => {
                   quotedElement?.classList.remove("bg-indigo-500/5");
@@ -98,6 +96,14 @@ export default function Message({
               }
             }}
           >
+            {quotedMessage.fileId && (
+              <MessageFile
+                fileId={quotedMessage.fileId}
+                fileName={quotedMessage.fileName || ""}
+                fileType={quotedMessage.fileType || ""}
+                fileSize={fileSize || ""}
+              />
+            )}
             <h2
               className={`${quotedMessage.style === "sent" ? "text-indigo-400 dark:text-indigo-600" : "text-orange-400 dark:text-orange-600"}`}
             >
@@ -110,34 +116,29 @@ export default function Message({
                 </p>
               ))}
             </div>
-
-            {quotedMessage.fileId && (
-              <MessageFile
-                fileId={quotedMessage.fileId}
-                fileName={quotedMessage.fileName || ""}
-                fileType={quotedMessage.fileType || ""}
-                fileSize={fileSize || ""}
-              />
-            )}
           </div>
         )}
 
         <div className="flex w-full flex-col gap-1">
-          <div className="w-full text-slate-900 dark:text-slate-200">
-            {text.split("\n").map((line, index) => (
-              <p key={index} className="max-w-[100%] break-words text-sm">
-                <LinkifiedText text={line} />
-              </p>
-            ))}
-          </div>
-
           {fileId && (
-            <MessageFile
-              fileId={fileId}
-              fileName={fileName || ""}
-              fileType={fileType || ""}
-              fileSize={fileSize || ""}
-            />
+            <div className="mb-2">
+              <MessageFile
+                fileId={fileId}
+                fileName={fileName || ""}
+                fileType={fileType || ""}
+                fileSize={fileSize || ""}
+              />
+            </div>
+          )}
+          
+          {text.trim() !== "" && (
+            <div className="w-full text-slate-900 dark:text-slate-200">
+              {text.split("\n").map((line, index) => (
+                <p key={index} className="max-w-[100%] break-words text-sm">
+                  <LinkifiedText text={line} />
+                </p>
+              ))}
+            </div>
           )}
 
           <div className="flex items-center gap-2">

@@ -6,16 +6,14 @@ import { StyledDialog, StyledDialogTitle } from "./styles-modal";
 export default function CreateWalletModal() {
     const { createWallet, loading } = useContext(WalletsContext);
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState({ name: '' });
+    const [name, setName] = useState('');
 
     const handleSubmit = async () => {
-        if (!form.name) return;
+        if (!name) return;
         
-        const success = await createWallet(form.name);
-        console.log('form:', success)
-
+        const success = await createWallet(name);
         if (success) {
-            setForm({ name: '' });
+            setName('');
             setOpen(false);
         }
     };
@@ -25,24 +23,34 @@ export default function CreateWalletModal() {
             <Button variant="outlined" onClick={() => setOpen(true)}>
                 Cadastrar carteira
             </Button>
-            <StyledDialog open={open} onClose={() => setOpen(false)}>
-                <div className="flex flex-col gap-6 px-[2rem] py-[1rem] bg-slate-800">
+            <StyledDialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+                <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:px-6 sm:py-6 dark:bg-slate-800 max-h-[90vh] min-h-0 overflow-y-auto">
                     <StyledDialogTitle>Criar nova carteira</StyledDialogTitle>
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full items-center">
                         <TextField
-                            label="Nome"
-                            value={form.name}
-                            onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
+                            label="Nome da carteira"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            fullWidth
+                            size="small"
+                            sx={{ margin: 0 }}
                         />
-                    </div>
-                    <div className="flex w-full flex-row justify-end gap-4 pt-[1rem] border-t-[2px] border-blue-500">
-                        <Button color="error" onClick={() => setOpen(false)}>Cancelar</Button>
                         <Button
-                            onClick={handleSubmit}
                             variant="contained"
-                            disabled={!form.name || loading}
+                            onClick={handleSubmit}
+                            disabled={!name || loading}
+                            className="w-full sm:w-auto h-10 sm:h-[40px] min-w-[120px] sm:min-w-[150px]"
                         >
                             {loading ? "Criando..." : "Criar"}
+                        </Button>
+                    </div>
+                    <div className="flex w-full flex-row justify-end gap-4 pt-4 border-t-2 border-blue-500">
+                        <Button 
+                            color="error" 
+                            onClick={() => setOpen(false)}
+                            className="min-w-[100px]"
+                        >
+                            Cancelar
                         </Button>
                     </div>
                 </div>

@@ -197,7 +197,7 @@ export default function MonitorPage() {
         setCurrentChat(chat);
         openChat(chat);
         openModal(
-          <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
+          <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:dark:bg-slate-800">
             <button
               onClick={() => closeModal?.()}
               className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"
@@ -227,7 +227,7 @@ export default function MonitorPage() {
         setCurrentInternalChat(chat);
         openInternalChat(chat);
         openModal(
-          <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
+          <div className="relative flex h-[80vh] w-[500px] flex-col rounded-md bg-slate-900 shadow-xl dark:dark:bg-slate-800">
             <button
               onClick={() => closeModal?.()}
               className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"

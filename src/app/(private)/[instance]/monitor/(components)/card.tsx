@@ -76,7 +76,7 @@ export default function MonitorCard({
   };
 
   return (
-    <div className="mb-2 w-full rounded-md bg-slate-200 dark:bg-slate-800">
+    <div className="mb-2 w-full rounded-md bg-slate-200 dark:dark:bg-slate-800">
       <div className={`${getBgColor(type)} py-2 pl-2 pr-4 text-slate-700 dark:text-slate-200`}>
         <div className="flex gap-2">
           <div className={`w-48 border-l-[3px] ${getBorder(type)} px-2 text-xs`}>

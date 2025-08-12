@@ -71,7 +71,7 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
   };
 
   return (
-    <aside className="flex h-full w-full flex-col items-center gap-4 bg-white p-4 dark:bg-slate-800">
+    <aside className="flex h-full w-full flex-col items-center gap-4 bg-white p-4 dark:dark:bg-slate-800">
       <header className="flex text-lg w-full font-semibold font-medium items-center justify-between py-2 text-slate-800 dark:text-white">
         <h1>Editar cliente</h1>
         <IconButton onClick={closeModal}>

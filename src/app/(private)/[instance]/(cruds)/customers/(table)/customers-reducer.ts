@@ -44,11 +44,22 @@ export default function customersReducer(
     case "change-loading":
       return { ...next, isLoading: action.isLoading };
     case "change-page":
-      next.filters.page = action.page.toString();
-      return next;
+      return {
+        ...next,
+        filters: {
+          ...next.filters,
+          page: action.page.toString()
+        }
+      };
     case "change-per-page":
-      next.filters.perPage = action.perPage.toString();
-      return next;
+      return {
+        ...next,
+        filters: {
+          ...next.filters,
+          perPage: action.perPage.toString(),
+          page: '1' // Reset para a primeira página ao mudar itens por página
+        }
+      };
     case "change-total-rows":
       next.totalRows = action.totalRows;
       return { ...next, totalRows: action.totalRows };

@@ -22,7 +22,7 @@ export default function DeleteInternalGroupModal({
 
   return (
     <div>
-<div className="flex flex-col gap-6 px-8 py-6 rounded-2xl bg-white text-black dark:bg-slate-800 dark:text-white shadow-xl">
+<div className="flex flex-col gap-4 sm:gap-6 p-4 sm:px-6 sm:py-6 rounded-2xl bg-white text-black dark:dark:bg-slate-800 dark:text-white shadow-xl w-full max-w-md mx-4">
   <header className="text-2xl font-semibold border-b border-slate-300 dark:border-slate-600 pb-2">
     Deletar Grupo
   </header>
@@ -36,11 +36,11 @@ export default function DeleteInternalGroupModal({
     </h3>
   </div>
 
-  <div className="flex justify-end gap-3 pt-4">
-    <Button onClick={closeModal} className="border border-red-500 text-red-500 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900">
+  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 w-full">
+    <Button onClick={closeModal} className="w-full sm:w-auto border border-red-500 text-red-500 dark:text-red-400 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900">
       Cancelar
     </Button>
-    <Button onClick={handleSubmit} variant="contained" className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-500 dark:hover:bg-red-600">
+    <Button onClick={handleSubmit} variant="contained" className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white dark:bg-red-500 dark:hover:bg-red-600">
       Deletar
     </Button>
   </div>

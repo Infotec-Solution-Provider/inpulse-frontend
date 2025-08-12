@@ -41,7 +41,11 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
   return false;
 };
 
-export default function ChatsMenuList() {
+interface ChatsMenuListProps {
+  isScrolling: boolean;
+}
+
+export default function ChatsMenuList({ isScrolling }: ChatsMenuListProps) {
   const { user } = useContext(AuthContext);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
   const { internalChats, openInternalChat } = useContext(InternalChatContext);
@@ -80,7 +84,7 @@ export default function ChatsMenuList() {
   }, [filteredChats]);
 
   return (
-<menu className="flex flex-col gap-2 scrollbar-whatsapp bg-slate-300/5 dark:bg-slate-800/50 p-3">
+<menu className="flex flex-col gap-2 scrollbar-whatsapp bg-slate-300/5 dark:dark:bg-slate-800/50 p-3">
       {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
@@ -103,6 +107,7 @@ export default function ChatsMenuList() {
             <ChatsMenuItem
               isUnread={chat.isUnread}
               isOpen={currentChat?.id === chat.id && currentChat?.chatType === "internal"}
+              isScrolling={isScrolling}
               key={`internal-chat:${chat.id}`}
               name={names}
               message={
@@ -123,6 +128,7 @@ export default function ChatsMenuList() {
           <ChatsMenuItem
             isUnread={chat.isUnread}
             isOpen={currentChat?.id === chat.id && currentChat?.chatType === "wpp"}
+            isScrolling={isScrolling}
             key={`chat:${chat.id}`}
             name={chat.contact?.name || "Contato excluído"}
             avatar={chat.avatarUrl ?? undefined}

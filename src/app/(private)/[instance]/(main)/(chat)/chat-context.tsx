@@ -28,6 +28,8 @@ interface IChatContext {
   handleQuoteMessage: (message: WppMessage | InternalMessage) => void;
   handleQuoteMessageRemove: () => void;
   quotedMessage: WppMessage | InternalMessage | null;
+  isMobilePreviewOpen: boolean;
+  setIsMobilePreviewOpen: (isOpen: boolean) => void;
 }
 
 interface ChatProviderProps {
@@ -48,6 +50,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
   const [state, dispatch] = useReducer(ChatReducer, initialState);
   const [quotedMessage, setQuotedMessage] = useState<WppMessage | InternalMessage | null>(null);
+  const [isMobilePreviewOpen, setIsMobilePreviewOpen] = useState(false);
 
   const handleSendMessage = () => {
     if (currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
@@ -101,16 +104,27 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     dispatch({ type: "reset" });
   }, [currentChat]);
 
+  useEffect(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile && state.file && !state.sendAsAudio) {
+      setIsMobilePreviewOpen(true);
+    } else {
+      setIsMobilePreviewOpen(false);
+    }
+  }, [state.file, state.sendAsAudio]);
+
   return (
     <ChatContext.Provider
       value={{
         state,
-        quotedMessage,
         dispatch,
         sendMessage: handleSendMessage,
         getMessageById,
-        handleQuoteMessage,
-        handleQuoteMessageRemove,
+        handleQuoteMessage: handleQuoteMessage,
+        handleQuoteMessageRemove: handleQuoteMessageRemove,
+        quotedMessage,
+        isMobilePreviewOpen,
+        setIsMobilePreviewOpen,
       }}
     >
       {children}

@@ -1,5 +1,3 @@
-import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
-
 export interface SendMessageDataState {
   text: string;
   file?: File;
@@ -9,6 +7,13 @@ export interface SendMessageDataState {
   isEmojiMenuOpen: boolean;
   quotedId?: number | null;
 }
+
+export const initialState: SendMessageDataState = {
+  text: "",
+  sendAsAudio: false,
+  sendAsDocument: false,
+  isEmojiMenuOpen: false,
+};
 
 type ChangeTextAction = { type: "change-text"; text: string };
 type AddEmojiAction = { type: "add-emoji"; emoji: string };
@@ -51,41 +56,44 @@ export default function ChatReducer(
       return { ...state, text: action.text };
     case "add-emoji":
       return { ...state, text: state.text + action.emoji };
-    case "attach-file":
-      isDocument = !["video", "image"].some((value) => action.file.type.includes(value));
-
+    case "attach-file": {
+      // Detecta se é áudio pelo mime type ou extensão
+      const isAudioFile = action.file.type.startsWith('audio/') ||
+        [".m4a", ".ogg", ".mp3", ".wav", ".aac"].some(ext => action.file.name?.toLowerCase().endsWith(ext));
+      isAudio = isAudioFile;
+      isDocument = !["video", "image"].some((value) => action.file.type.includes(value)) && !isAudioFile;
       return {
+        ...state,
         sendAsAudio: isAudio,
         sendAsDocument: isDocument,
-        text: state.text,
         file: action.file,
-        isEmojiMenuOpen: false,
-      };
-    case "attach-file-id":
-      return {
-        sendAsAudio: isAudio,
-        sendAsDocument: isDocument,
         text: state.text,
-        fileId: action.fileId,
         isEmojiMenuOpen: false,
       };
+    }    case "attach-file-id":
+  return {
+    ...state,
+    fileId: action.fileId,
+    isEmojiMenuOpen: false,
+  };
     case "set-audio":
-      isAudio = true;
-
-      return {
-        sendAsAudio: isAudio,
-        sendAsDocument: isDocument,
-        text: state.text,
-        file: action.file,
-        isEmojiMenuOpen: false,
-      };
+  isAudio = true;
+  return {
+    ...state,
+    sendAsAudio: isAudio,
+    sendAsDocument: false,
+    file: action.file,
+    isEmojiMenuOpen: false,
+  };
     case "remove-file":
-      return {
-        sendAsAudio: isAudio,
-        sendAsDocument: isDocument,
-        text: state.text,
-        isEmojiMenuOpen: false,
-      };
+  return {
+    ...state,
+    file: undefined,
+    fileId: undefined,
+    sendAsAudio: false,
+    sendAsDocument: false,
+    isEmojiMenuOpen: false,
+  };
     case "toggle-emoji-menu":
       return {
         ...state,
@@ -97,17 +105,13 @@ export default function ChatReducer(
         quotedId: action.id,
       };
     case "remove-quoted-message":
-      delete state.quotedId;
-      return state;
-    default:
       return {
         ...state,
-        text: "",
-        file: undefined,
-        fileId: undefined,
-        sendAsAudio: false,
-        sendAsDocument: false,
-        isEmojiMenuOpen: false,
+        quotedId: undefined,
       };
+    case "reset":
+      return initialState;
+    default:
+      return state;
   }
 }

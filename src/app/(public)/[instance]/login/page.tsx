@@ -32,12 +32,18 @@ export default function Login({ params }: LoginProps) {
   };
 
   return (
-    <div className="flex h-screen w-screen items-center">
+    <div className="flex min-h-screen w-screen items-center justify-center p-4">
       <ThemeProvider theme={darkTheme}>
         <form
-          className="mx-auto box-border flex w-80 flex-col gap-4 rounded-md bg-indigo-500/5 px-8 py-8 pt-14"
+          className="mx-auto box-border flex w-full max-w-md flex-col gap-4 rounded-md bg-indigo-500/5 px-8 py-8 pt-14"
           onSubmit={handleSubmit}
           ref={formRef}
+          style={{
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollBehavior: 'smooth',
+          }}
         >
           <Image src={HorizontalLogo} alt={"Logo"} height={64} className="mb-12" />
           <TextField
@@ -57,12 +63,19 @@ export default function Login({ params }: LoginProps) {
           />
           <Button
             fullWidth
-            sx={{ paddingTop: 1.5, paddingBottom: 1.5, marginTop: 0.5 }}
+            sx={{ 
+              paddingTop: 1.5, 
+              paddingBottom: 1.5, 
+              marginTop: 0.5,
+              marginBottom: 'env(safe-area-inset-bottom, 20px)'
+            }}
             variant="contained"
             type="submit"
           >
             Entrar
           </Button>
+          {/* Add some padding at the bottom when keyboard is open */}
+          <div className="h-12 w-full sm:h-0" />
         </form>
       </ThemeProvider>
     </div>

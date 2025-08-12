@@ -12,6 +12,13 @@ import MonitorIcon from "@mui/icons-material/Monitor";
 import MenuIcon from '@mui/icons-material/Menu';
 import BarChartIcon from "@mui/icons-material/BarChart";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
+import PeopleIcon from '@mui/icons-material/People';
+import ContactsIcon from '@mui/icons-material/Contacts';
+import MessageIcon from '@mui/icons-material/Message';
+import GroupsIcon from '@mui/icons-material/Groups';
+import ChatIcon from '@mui/icons-material/Chat';
+import EventIcon from '@mui/icons-material/Event';
+import ForumIcon from '@mui/icons-material/Forum';
 import { UserRole } from "@in.pulse-crm/sdk";
 import Link from "next/link";
 import { WhatsappContext } from "./whatsapp-context";
@@ -73,95 +80,190 @@ const MobileMenu = ({ open, onClose, user, instance, isUserAdmin, signOut }: {
   signOut: () => void; 
 }) => {
   const pathname = usePathname();
-  const baseHref = pathname.split("/")[1];
+  const baseHref = pathname?.split("/")[1] || '';
+
+  // Define as rotas de cadastros para o menu mobile com base no perfil do usuário
+  const getMobileCrudRoutes = () => {
+    const baseRoutes = [
+      { title: "Clientes", href: "/customers" },
+      { title: "Contatos", href: "/contacts" },
+    ];
+
+    // Admin (Supervisor) vê rotas adicionais
+    if (user?.NIVEL === UserRole.ADMIN) {
+      return [
+        ...baseRoutes,
+        { title: "Grupos Internos", href: "/internal-groups" },
+      ];
+    }
+
+    // Outros perfis (Operador) veem apenas as rotas base
+    return baseRoutes;
+  };
+
+  const mobileCrudRoutes = getMobileCrudRoutes();
   
-  const renderMenuItems = (routes: { title: string; href: string }[]) => {
-    return routes.map((route) => (
-      <ListItem key={route.title} disablePadding>
-        <Link href={`/${baseHref}${route.href}`} className="w-full" onClick={onClose}>
-          <ListItemButton>
-            <ListItemText primary={route.title} />
-          </ListItemButton>
-        </Link>
-      </ListItem>
-    ));
+  const getIconForRoute = (title: string) => {
+    switch(title) {
+      case 'Usuários':
+        return <AppRegistrationIcon fontSize="small" />;
+      case 'Clientes':
+        return <PeopleIcon fontSize="small" />;
+      case 'Contatos':
+        return <ContactsIcon fontSize="small" />;
+      case 'Mensagens prontas':
+        return <MessageIcon fontSize="small" />;
+      case 'Grupos Internos':
+        return <GroupsIcon fontSize="small" />;
+      case 'Conversas':
+        return <ChatIcon fontSize="small" />;
+      case 'Agendamentos':
+        return <EventIcon fontSize="small" />;
+      case 'Conversas Internas':
+        return <ForumIcon fontSize="small" />;
+      case 'Gerador de Relatório':
+        return <BarChartIcon fontSize="small" />;
+      default:
+        return <HeadsetMicIcon fontSize="small" />;
+    }
   };
 
   return (
     <Drawer
-      anchor="right"
+      anchor="left"
       open={open}
       onClose={onClose}
       PaperProps={{
         sx: {
-          width: 280,
+          width: '85%',
+          maxWidth: 320,
           bgcolor: 'background.paper',
           color: 'text.primary',
         },
       }}
+      ModalProps={{
+        keepMounted: true, // Melhora performance em mobile
+      }}
     >
-      <Box role="presentation" onClick={onClose} onKeyDown={onClose}>
-        <List>
-          <ListItem>
-            <Link href={`/${instance}/`} className="w-full">
-              <Image src={HorizontalLogo} alt="Logo" height={36} className="cursor-pointer" />
+      <Box 
+        role="presentation" 
+        onClick={onClose} 
+        onKeyDown={(e) => e.key === 'Escape' && onClose()}
+        className="h-full flex flex-col"
+      >
+        {/* Cabeçalho */}
+        <div className="bg-slate-100 dark:bg-slate-800 p-3 border-b border-gray-200 dark:border-gray-600">
+          <div className="flex items-center justify-between mt-8">
+            <Link href={`/${instance}/`} className="flex-shrink-0" onClick={onClose}>
+              <div className="relative h-8 w-28">
+                <Image 
+                  src={HorizontalLogo} 
+                  alt="Logo" 
+                  fill
+                  sizes="(max-width: 768px) 7rem, 8rem"
+                  className="object-contain"
+                  priority
+                />
+              </div>
             </Link>
-          </ListItem>
+            {user?.NOME && (
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 ml-2 truncate max-w-[140px] px-2 py-1 bg-white/50 dark:bg-black/20 rounded">
+                Olá, {user.NOME.split(' ')[0]}
+              </span>
+            )}
+          </div>
+        </div>
+        
+        {/* Conteúdo rolável */}
+        <div className="flex-1 overflow-y-auto overscroll-contain dark:bg-slate-800">
+          <List disablePadding>
+            {/* Área de Atendimento */}
+            <ListItem disablePadding className="mt-1">
+              <Link href={`/${instance}/`} className="w-full no-underline" onClick={onClose}>
+                <ListItemButton className="rounded-md mx-2 group">
+                  <ListItemIcon className="min-w-[40px] text-primary-600 dark:text-primary-400">
+                    <HeadsetMicIcon />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="Atendimento" 
+                    primaryTypographyProps={{ 
+                      fontWeight: 'medium',
+                      className: 'text-gray-900 dark:text-white'
+                    }} 
+                  />
+                </ListItemButton>
+              </Link>
+            </ListItem>
+            
+            {/* Cadastros */}
+            <ListItem className="px-4 pt-4 pb-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Cadastros
+              </span>
+            </ListItem>
+
+            {(isUserAdmin 
+              ? [
+                  { title: 'Clientes', href: '/customers' },
+                  { title: 'Contatos', href: '/contacts' },
+                  ...(instance !== 'nunes' || user?.SETOR === 3 ? [{ title: 'Grupos Internos', href: '/internal-groups' }] : [])
+                ]
+              : mobileCrudRoutes.filter(route => route.title !== 'Usuários' || isUserAdmin)
+              ).map((route) => (
+                <ListItem key={route.title} disablePadding>
+                  <Link 
+                    href={`/${baseHref}${route.href}`} 
+                    className="w-full no-underline" 
+                    onClick={onClose}
+                  >
+                    <ListItemButton className="pl-6 group">
+                      <ListItemIcon className="min-w-[40px] text-gray-600 dark:text-gray-400">
+                        {getIconForRoute(route.title)}
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={route.title} 
+                        primaryTypographyProps={{
+                          className: 'text-gray-700 dark:text-gray-300',
+                          fontSize: '0.9375rem'
+                        }}
+                      />
+                    </ListItemButton>
+                  </Link>
+                </ListItem>
+              ))}
+              
+              {/* Seção de Relatórios removida do mobile */}
+          </List>
+        </div>
+        
+        {/* Rodapé fixo */}
+        <div className="sticky bottom-0 bg-white dark:dark:bg-slate-800 border-t border-gray-200 dark:border-gray-700">
           <Divider />
-          
-          {/* Área de Atendimento */}
-          <ListItem>
-            <Link href={`/${instance}/`} className="w-full">
-              <ListItemButton>
-                <ListItemIcon>
-                  <HeadsetMicIcon />
-                </ListItemIcon>
-                <ListItemText primary="Área de Atendimento" />
-              </ListItemButton>
-            </Link>
-          </ListItem>
-          
-          {/* Monitoria */}
-          {isUserAdmin && (
-            <>
-              <ListItem>
-                <ListItemText primary="Monitoria" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
-              </ListItem>
-              {renderMenuItems([
-                { title: 'Agendamentos', href: '/monitor/schedules' },
-                { title: 'Conversas', href: '/monitor/chats' },
-                { title: 'Conversas Internas', href: '/monitor/internal-chats' },
-              ])}
-            </>
-          )}
-          
-          {/* Cadastros */}
-          <ListItem>
-            <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
-          </ListItem>
-          {renderMenuItems(isUserAdmin 
-            ? crudsRoutes(instance, user?.SETOR) 
-            : userCrudRoutes
-          )}
-          
-          {/* Relatórios */}
-          <ListItem>
-            <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: 'bold' }} />
-          </ListItem>
-          {renderMenuItems(reportsRoutes)}
-          
-          <Divider sx={{ my: 2 }} />
-          
-          {/* Logout */}
-          <ListItem>
-            <ListItemButton onClick={signOut}>
-              <ListItemIcon>
+          <ListItem disablePadding>
+            <ListItemButton 
+              onClick={() => {
+                onClose();
+                // Pequeno atraso para melhorar a experiência
+                setTimeout(signOut, 300);
+              }}
+              className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+            >
+              <ListItemIcon className="text-inherit min-w-[40px]">
                 <LogoutIcon />
               </ListItemIcon>
-              <ListItemText primary="Sair" />
+              <ListItemText 
+                primary="Sair" 
+                primaryTypographyProps={{ 
+                  fontWeight: 'medium',
+                  className: 'text-inherit'
+                }} 
+              />
             </ListItemButton>
           </ListItem>
-        </List>
+          <div className="px-4 py-2 text-center text-xs text-gray-500 dark:text-gray-400">
+            v{process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'}
+          </div>
+        </div>
       </Box>
     </Drawer>
   );
@@ -171,17 +273,31 @@ export default function Header() {
   const { currentChat } = useContext(WhatsappContext);
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Inicialmente assume desktop para evitar hidratação no servidor
   const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
+    // Só executa no cliente após a hidratação
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
     
+    // Define o estado inicial baseado no tamanho da janela
     checkMobile();
-    window.addEventListener('resize', checkMobile);
     
-    return () => window.removeEventListener('resize', checkMobile);
+    // Adiciona listener para mudanças de tamanho com debounce
+    let timeoutId: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(checkMobile, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timeoutId);
+    };
   }, []);
   
   const handleDrawerToggle = () => {
@@ -196,9 +312,9 @@ export default function Header() {
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
 
   return (
-    <header className="sticky top-0 z-20 shadow-md">
+    <header className="sticky top-0 z-20 shadow-md bg-slate-200 dark:bg-slate-800 mb-2">
       <div className="flex items-center">
-        <div className="mx-auto flex w-screen items-center justify-between bg-slate-200 px-4 py-4 dark:bg-slate-800 md:pt-0 pt-10">
+        <div className="mx-auto flex w-full items-center justify-between px-4 py-3 md:py-2 md:mt-0 mt-6">
           <div className="flex items-center gap-4">
             {isMobile && (
               <IconButton
@@ -211,8 +327,17 @@ export default function Header() {
                 <MenuIcon className="text-gray-900 dark:text-slate-200" />
               </IconButton>
             )}
-            <Link href={`/${instance}/`}>
-              <Image src={HorizontalLogo} alt="Logo" height={36} className="cursor-pointer" />
+            <Link href={`/${instance}/`} className="flex items-center">
+              <div className="relative h-9 w-32 md:w-36">
+                <Image 
+                  src={HorizontalLogo} 
+                  alt="Logo" 
+                  fill
+                  sizes="(max-width: 768px) 8rem, 9rem"
+                  className="object-contain"
+                  priority
+                />
+              </div>
             </Link>
           </div>
           
@@ -255,13 +380,19 @@ export default function Header() {
             </menu>
           </nav>
           
-          {/* Ícones de notificação e logout no mobile */}
-          <div className="flex md:hidden gap-2">
-            <IconButton>
-              <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
+          {/* Ícones de notificação, tema e logout no mobile */}
+          <div className="flex md:hidden gap-1 items-center">
+            <ThemeToggleButton className="!p-2" />
+            <IconButton size="small" aria-label="Notificações" className="text-gray-900 dark:text-slate-200">
+              <NotificationsIcon fontSize="small" />
             </IconButton>
-            <IconButton onClick={signOut}>
-              <LogoutIcon className="text-gray-900 dark:text-slate-200" />
+            <IconButton 
+              size="small" 
+              aria-label="Sair" 
+              onClick={signOut}
+              className="text-gray-900 dark:text-slate-200"
+            >
+              <LogoutIcon fontSize="small" />
             </IconButton>
           </div>
         </div>

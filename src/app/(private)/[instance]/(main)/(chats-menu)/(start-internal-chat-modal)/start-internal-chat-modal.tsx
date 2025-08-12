@@ -27,7 +27,7 @@ export default function StartInternalChatModal({ onClose }: { onClose: () => voi
   }, [users, searchTerm]);
 
   return (
-  <div className="w-[22rem] rounded-md bg-white text-gray-800 px-4 py-4 dark:bg-slate-800 dark:text-white">
+  <div className="w-[22rem] rounded-md bg-white text-gray-800 px-4 py-4 dark:dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-4">
         <h1 className="text-lg font-semibold ">Iniciar conversa Interna</h1>
         <IconButton onClick={onClose}>

@@ -29,7 +29,7 @@ const MonitorTag = ({ type }: { type: TagType }) => {
 
 export default function MonitorCard() {
   return (
-    <div className="mb-2 w-full rounded-md border border-transparent bg-slate-200 py-2 pl-2 pr-4 text-slate-700 hover:cursor-pointer hover:border-orange-600 hover:opacity-75 dark:bg-slate-800 dark:text-slate-200">
+    <div className="mb-2 w-full rounded-md border border-transparent bg-slate-200 py-2 pl-2 pr-4 text-slate-700 hover:cursor-pointer hover:border-orange-600 hover:opacity-75 dark:dark:bg-slate-800 dark:text-slate-200">
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
           <Avatar alt={"Teste"} src={""} sx={{ width: 84, height: 84 }} variant="square" />

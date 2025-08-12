@@ -27,6 +27,8 @@ export default function ChatSendMessageArea() {
   const openQuickMessages = () => setQuickMessageOpen(true);
   const openQuickTemplate = () => setQuickTemplateOpen(true);
 
+  console.log('[ChatSendMessageArea] currentChat:', currentChat);
+
   const openAttachFile = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
@@ -89,12 +91,40 @@ export default function ChatSendMessageArea() {
     };
   }, [isDisabled, state?.text]);
 
+  useEffect(() => {
+    const handleNativeAudio = async (event: MessageEvent) => {
+      if (event.data && event.data.type === 'audioRecorded' && event.data.payload) {
+        const { uri, mimeType, fileName } = event.data.payload;
+        
+        try {
+          // A URI é uma string base64, então precisamos decodificá-la
+          const fetchRes = await fetch(uri);
+          const blob = await fetchRes.blob();
+          
+          // Criar um objeto File a partir do Blob
+          const audioFile = new File([blob], fileName || 'audio.m4a', { type: mimeType });
+
+          // Despachar a ação para o reducer
+          dispatch({ type: "set-audio", file: audioFile });
+        } catch (error) {
+          console.error("Erro ao processar o áudio nativo:", error);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleNativeAudio);
+
+    return () => {
+      window.removeEventListener('message', handleNativeAudio);
+    };
+  }, [dispatch]);
+
   const quotedMessageStyle = useMemo(() => {
     if (quotedMessage?.from.includes("user:") && user) {
       return getInternalMessageStyle(quotedMessage as InternalMessage, user.CODIGO);
     }
     if (quotedMessage?.from.includes("external:")) {
-      return "received"; // Assuming external messages are received
+      return "received";
     }
     if (quotedMessage?.from.startsWith("me:")) {
       return "sent";
@@ -104,7 +134,7 @@ export default function ChatSendMessageArea() {
   }, [quotedMessage]);
 
   return (
-    <div className="flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0 mb-6">
+    <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-1 bg-white dark:dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 w-full overflow-hidden">
       <input
         type="file"
         className="hidden"
@@ -148,7 +178,7 @@ export default function ChatSendMessageArea() {
           </div>
         </div>
       </div>
-      <div className="flex w-full flex-col gap-2">
+      <div className="flex w-full flex-col gap-2 overflow-hidden">
         {quotedMessage && (
           <div
             className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20"
@@ -173,14 +203,22 @@ export default function ChatSendMessageArea() {
         )}
 
         {state.sendAsAudio && state.file ? (
-          <div className="flex w-full items-center justify-center gap-2">
-            <audio
-              controls
-              src={URL.createObjectURL(state.file!)}
-              className="h-8 max-w-[35rem] flex-grow"
-            />
-            <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
-              <Close />
+          <div className="flex w-full items-center gap-2 overflow-hidden">
+            <div className="flex-1 min-w-0">
+              <audio
+                controls
+                src={URL.createObjectURL(state.file!)}
+                className="h-8 w-full max-w-full"
+                style={{ maxWidth: 'calc(100vw - 120px)' }}
+              />
+            </div>
+            <IconButton 
+              color="inherit" 
+              onClick={() => dispatch({ type: "remove-file" })}
+              size="small"
+              className="flex-shrink-0"
+            >
+              <Close fontSize="small" />
             </IconButton>
           </div>
         ) : (
@@ -198,13 +236,13 @@ export default function ChatSendMessageArea() {
       <IconButton
         size="small"
         aria-hidden={state?.text.length === 0 && !state.sendAsAudio}
-        className="bg-white/20 dark:text-indigo-400"
+        className="bg-white/20 dark:text-indigo-400 flex-shrink-0"
         disabled={isDisabled}
         onClick={sendMessages}
       >
-        <SendIcon />
+        <SendIcon fontSize="small" />
       </IconButton>
-      <div className="aria-hidden:hidden hidden md:block" aria-hidden={state?.text.length > 0 || state.sendAsAudio}>
+      <div className="aria-hidden:hidden flex-shrink-0" aria-hidden={state?.text.length > 0 || state.sendAsAudio}>
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
       {quickMessageOpen && (

@@ -29,7 +29,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <CustomersProvider>
                 <ContactsProvider>
                 <ThemeProvider>
-                  <div className="grid h-auto md:h-screen w-full md:w-screen auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:grid-rows-[max-content_minmax(400px,1fr)]">
+                  <div className="h-auto md:h-screen w-full md:w-screen auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:grid-rows-[max-content_minmax(400px,1fr)] bg-[rgb(148, 163, 184)] dark:bg-gray-900">
                     <Header />
                     {children}
                     <Modal

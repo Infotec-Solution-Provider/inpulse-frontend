@@ -59,18 +59,32 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
   };
 
   return (
-    <div className="pr-2 flex items-center gap-2">
+    <div className="flex items-center gap-1 sm:gap-2 pr-1 sm:pr-2">
       {!isRecording ? (
-        <IconButton color="primary" onClick={startRecording} size="small">
-          <MicIcon />
+        <IconButton 
+          color="primary" 
+          onClick={startRecording} 
+          size="small"
+          className="!p-1 sm:!p-2"
+        >
+          <MicIcon fontSize="small" />
         </IconButton>
       ) : (
-        <IconButton color="error" onClick={stopRecording} size="small">
-          <StopIcon />
+        <IconButton 
+          color="error" 
+          onClick={stopRecording} 
+          size="small"
+          className="!p-1 sm:!p-2"
+        >
+          <StopIcon fontSize="small" />
         </IconButton>
       )}
 
-      {isRecording && <span className="text-sm text-slate-400">{formatTime(recordingTime)}</span>}
+      {isRecording && (
+        <span className="text-xs sm:text-sm text-slate-400 whitespace-nowrap">
+          {formatTime(recordingTime)}
+        </span>
+      )}
     </div>
   );
 }

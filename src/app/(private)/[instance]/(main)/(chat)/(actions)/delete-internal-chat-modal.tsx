@@ -19,7 +19,7 @@ export default function DeleteChatModal() {
   };
 
   return (
-<div className="w-[26rem] rounded-md bg-white dark:bg-slate-700 px-6 py-6 text-gray-900 dark:text-white">
+<div className="w-[26rem] md:max-w-[100%] max-w-[90%] m-auto rounded-md bg-white dark:bg-slate-700 px-6 py-6 text-gray-900 dark:text-white">
   <header className="flex items-center justify-between pb-6 text-gray-900 dark:text-white">
     <h1 className="text-xl font-semibold">Finalizar conversa</h1>
     <IconButton onClick={closeModal} className="text-gray-900 dark:text-white">

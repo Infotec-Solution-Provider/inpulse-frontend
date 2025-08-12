@@ -78,7 +78,7 @@ export default function UserModal({ user }: UserModalProps) {
     >
       <div className="max-h-[85vh] ">
         <FormControl className="h-full w-full">
-          <div className="flex h-full w-full flex-col gap-3 bg-white dark:bg-slate-800 p-4">
+          <div className="flex h-full w-full flex-col gap-3 bg-white dark:dark:bg-slate-800 p-4">
             <div className="sticky top-0 z-30">
               <div className="flex w-full items-center justify-between ">
                 <DialogTitle sx={{ paddingX: "8px", paddingY: "4px" }}>

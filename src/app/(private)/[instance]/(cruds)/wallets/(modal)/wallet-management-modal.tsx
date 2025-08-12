@@ -67,7 +67,7 @@ export default function WalletManagementModal() {
             fullWidth
             maxWidth="sm"
         >
-            <div className="flex flex-col gap-4 px-[2rem] py-[2rem] bg-slate-800 h-[85vh] min-h-0">
+            <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:px-6 sm:py-6 dark:bg-slate-800 max-h-[90vh] min-h-0 overflow-y-auto">
                 <div className="flex justify-between">
                     <DialogTitle
                         sx={{
@@ -82,7 +82,7 @@ export default function WalletManagementModal() {
                         <CloseIcon />
                     </StyledIconButton>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
                     <TextField
                         label="Novo nome"
                         value={name}
@@ -96,13 +96,13 @@ export default function WalletManagementModal() {
                         variant="contained"
                         onClick={handleNameSubmit}
                         disabled={!name}
-                        sx={{ height: '40px', width: '150px', alignSelf: 'center' }}
+                        className="w-full sm:w-auto h-10 sm:h-[40px] min-w-[120px] sm:min-w-[150px] self-center"
                     >
                         Salvar
                     </Button>
                 </div>
                 <div className="flex flex-col gap-4 flex-1 min-h-0">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <FormControl fullWidth size="small">
                             <InputLabel id="user-select-label">Adicionar integrante</InputLabel>
                             <Select
@@ -110,6 +110,7 @@ export default function WalletManagementModal() {
                                 value={userId}
                                 onChange={(e) => setUserId(e.target.value as string)}
                                 label="Adicionar integrante"
+                                className="w-full"
                             >
                                 <MenuItem value="" disabled>
                                     <em>Selecione um usuário</em>
@@ -125,7 +126,7 @@ export default function WalletManagementModal() {
                             variant="contained"
                             onClick={handleAddUser}
                             disabled={!userId}
-                            sx={{ minWidth: 120 }}
+                            className="w-full sm:w-auto h-10 sm:h-[40px] min-w-[120px] self-center"
                         >
                             Adicionar
                         </Button>
@@ -148,11 +149,11 @@ export default function WalletManagementModal() {
                             Adicionar
                         </Button> */}
                     </div>
-                    <div className="flex flex-col p-2 border-[1px] rounded border-slate-600 min-h-0 flex-1">
-                        <h1 className="p-2 border-b-[1px] border-blue-500">
+                    <div className="flex flex-col border rounded border-slate-600 min-h-0 flex-1">
+                        <h1 className="p-2 text-sm sm:text-base border-b border-blue-500 font-medium">
                             Integrantes
                         </h1>
-                        <div className="px-2 mt-2 flex-1 min-h-0 scrollbar-whatsapp">
+                        <div className="p-2 flex-1 min-h-0 overflow-y-auto scrollbar-whatsapp">
                             {loadingUsers ? (
                                 <div className="flex justify-center py-4">
                                     <HourglassBottomIcon className="animate-spin" />

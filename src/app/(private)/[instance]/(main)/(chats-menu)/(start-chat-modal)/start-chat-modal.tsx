@@ -19,7 +19,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   }, []);
 
   return (
-    <div className="w-[22rem] rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white">
+    <div className="w-[22rem] rounded-md bg-white px-4 py-4 text-gray-800 dark:dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-4">
         <h1 className="text-semibold text-lg">Iniciar conversa</h1>
         <IconButton onClick={onClose}>

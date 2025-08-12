@@ -5,15 +5,22 @@ import { Customer } from "@in.pulse-crm/sdk";
 import { useRef } from "react";
 import { useCustomersContext } from "../customers-context";
 
+type FilterKeys = keyof Customer;
+type RequestFilters<T> = {
+  [K in keyof T]?: string | number | boolean | undefined;
+};
+
 export default function ClientTableHeader() {
   const { dispatch, loadCustomers, state } = useCustomersContext();
-  const filtersRef = useRef(state.filters);
+  const filtersRef = useRef<Record<string, any>>(state.filters || {});
 
-  const onChangeFilter = (key: keyof Customer, value: string) => {
+  const onChangeFilter = (key: string, value: string) => {
     if (value === "" || value === "none") {
-      delete filtersRef.current[key]; // Remove a chave se o valor for vazio
+      const newFilters = { ...filtersRef.current };
+      delete newFilters[key];
+      filtersRef.current = newFilters;
     } else {
-      filtersRef.current[key] = value; // Atualiza o valor do filtro
+      filtersRef.current = { ...filtersRef.current, [key]: value };
     }
   };
 
@@ -22,102 +29,185 @@ export default function ClientTableHeader() {
     loadCustomers();
   };
 
+  const textFieldSx = {
+    '& .MuiInputBase-input': { 
+      fontSize: '0.75rem',
+      padding: '4px 8px',
+      height: '1.5rem',
+      width: '100%',
+    },
+    '& .MuiInputLabel-root': {
+      fontSize: '0.75rem',
+      transform: 'translate(8px, 8px) scale(1)' as const,
+    },
+    '& .MuiInputLabel-shrink': {
+      transform: 'translate(8px, -6px) scale(0.8)' as const,
+    },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': {
+        borderColor: 'rgba(0, 0, 0, 0.12)',
+      },
+      '&:hover fieldset': {
+        borderColor: 'rgba(0, 0, 0, 0.23)',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#3b82f6',
+        borderWidth: '1px',
+      },
+    },
+    width: '100%',
+    minWidth: '100px',
+    maxWidth: '140px',
+  };
+
+  const selectSx = {
+    '& .MuiInputBase-input': { 
+      fontSize: '0.75rem',
+      padding: '4px 8px',
+      height: '1.5rem',
+      textTransform: 'capitalize',
+      width: '100%',
+    },
+    '& .MuiOutlinedInput-root': {
+      '& fieldset': {
+        borderColor: 'rgba(0, 0, 0, 0.12)',
+      },
+      '&:hover fieldset': {
+        borderColor: 'rgba(0, 0, 0, 0.23)',
+      },
+      '&.Mui-focused fieldset': {
+        borderColor: '#3b82f6',
+        borderWidth: '1px',
+      },
+    },
+    width: '100%',
+    minWidth: '100px',
+    maxWidth: '120px',
+  };
+
   return (
     <TableHead>
-<StyledTableRow className="sticky top-0 z-10 rounded-md text-gray-600 bg-white dark:bg-indigo-900">
-        <StyledTableCell>
+      <StyledTableRow 
+        className="text-gray-600"
+        sx={{
+          '& .MuiTableCell-root': {
+            whiteSpace: 'nowrap',
+            padding: '12px 10px',
+            backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e293b' : '#f1f5f9',
+            '&:first-of-type': { 
+              paddingLeft: '16px',
+            },
+            '&:last-child': { 
+              paddingRight: '16px',
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: '50%',
+              right: 0,
+              height: '40%',
+              transform: 'translateY(-50%)',
+              width: '1px',
+              backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)',
+            },
+            '&:last-child::after': {
+              display: 'none'
+            }
+          }
+        }}
+      >
+        <StyledTableCell width={120} className="whitespace-nowrap">
           <TextField
             label="Código"
             variant="standard"
-            slotProps={{ input: { disableUnderline: true } }}
+            size="small"
+            fullWidth
+            sx={textFieldSx}
+            InputProps={{
+              disableUnderline: true,
+              className: 'h-8'
+            }}
             onChange={(e) => onChangeFilter("CODIGO", e.target.value)}
             defaultValue={state.filters?.CODIGO || ""}
           />
         </StyledTableCell>
-        <StyledTableCell>
+        <StyledTableCell width={120} className="whitespace-nowrap">
           <TextField
-            name="ATIVO"
-            label="Ativo"
+            label="Razão Social"
             variant="standard"
-            style={{ width: "6rem" }}
-            select
-            slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) => onChangeFilter("ATIVO", e.target.value)}
-            defaultValue={state.filters?.ATIVO || ""}
-          >
-            <MenuItem value="none" key="none">
-              Ambos
-            </MenuItem>
-            <MenuItem value="SIM" key="SIM">
-              Sim
-            </MenuItem>
-            <MenuItem value="NAO" key="NAO">
-              Não
-            </MenuItem>
-          </TextField>
-        </StyledTableCell>
-        <StyledTableCell>
-          <TextField
-            name="PESSOA"
-            label="Pessoa"
-            variant="standard"
-            style={{ width: "7rem" }}
-            select
-            slotProps={{ input: { disableUnderline: true } }}
+            size="small"
+            fullWidth
+            sx={textFieldSx}
+            InputProps={{
+              disableUnderline: true,
+              className: 'h-8'
+            }}
             onChange={(e) => onChangeFilter("PESSOA", e.target.value)}
             defaultValue={state.filters?.PESSOA || ""}
-          >
-            <MenuItem value="" key="none">
-              Ambos
-            </MenuItem>
-            <MenuItem value="JUR" key="JUR">
-              JUR
-            </MenuItem>
-            <MenuItem value="FIS" key="FIS">
-              FIS
-            </MenuItem>
-          </TextField>
-        </StyledTableCell>
-        <StyledTableCell>
-          <TextField
-            label="Razão social"
-            variant="standard"
-            slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) => onChangeFilter("RAZAO", e.target.value)}
-            defaultValue={state.filters?.RAZAO || ""}
           />
         </StyledTableCell>
-        <StyledTableCell>
-          <TextField
-            label="CPF/CNPJ"
-            variant="standard"
-            slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) => onChangeFilter("CPF_CNPJ", e.target.value)}
-            defaultValue={state.filters?.CPF_CNPJ || ""}
-          />
-        </StyledTableCell>
-        <StyledTableCell>
+        <StyledTableCell className="w-48">
           <TextField
             label="Cidade"
             variant="standard"
-            slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) => onChangeFilter("CIDADE", e.target.value)}
-            defaultValue={state.filters?.CIDADE || ""}
+            size="small"
+            fullWidth
+            sx={textFieldSx}
+            value={state.filters?.CIDADE || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChangeFilter("CIDADE", e.target.value)}
+            InputProps={{
+              disableUnderline: true,
+              className: 'h-8'
+            }}
           />
         </StyledTableCell>
-        <StyledTableCell>
+        <StyledTableCell className="w-48">
           <TextField
-            label="Código ERP"
+            label="CPF/CNPJ"
             variant="standard"
-            slotProps={{ input: { disableUnderline: true } }}
-            onChange={(e) => onChangeFilter("COD_ERP", e.target.value)}
-            defaultValue={state.filters?.COD_ERP || ""}
+            size="small"
+            fullWidth
+            sx={textFieldSx}
+            value={state.filters?.CPF_CNPJ || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChangeFilter("CPF_CNPJ", e.target.value)}
+            InputProps={{
+              disableUnderline: true,
+              className: 'h-8'
+            }}
           />
         </StyledTableCell>
-        <StyledTableCell>
-          <button onClick={onClickSearch}>
-            <Search />
-          </button>
+        <StyledTableCell width={120} className="whitespace-nowrap">
+          <TextField
+            label="Cód. ERP"
+            variant="standard"
+            size="small"
+            fullWidth
+            sx={{
+              ...textFieldSx,
+              '& .MuiInputBase-input': {
+                ...textFieldSx['& .MuiInputBase-input'],
+                fontFamily: 'monospace'
+              }
+            }}
+            InputProps={{
+              disableUnderline: true,
+              className: 'h-8'
+            }}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChangeFilter("COD_ERP", e.target.value)}
+            value={state.filters?.COD_ERP || ""}
+          />
+        </StyledTableCell>
+        <StyledTableCell width={80} className="whitespace-nowrap">
+          <div className="flex items-center justify-center w-full">
+            <button 
+              type="button"
+              onClick={onClickSearch}
+              className="p-1 text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-slate-700"
+              title="Aplicar filtros"
+            >
+              <Search fontSize="small" />
+            </button>
+          </div>
         </StyledTableCell>
       </StyledTableRow>
     </TableHead>

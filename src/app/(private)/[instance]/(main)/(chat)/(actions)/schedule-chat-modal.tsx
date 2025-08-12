@@ -22,7 +22,7 @@ export default function ScheduleChatModal() {
   };
 
   return (
-    <div className="w-[26rem] rounded-md bg-white text-gray-800 px-4 py-4 dark:bg-slate-800 dark:text-white">
+    <div className="w-[26rem] md:max-w-[100%] max-w-[90%] m-auto rounded-md bg-white text-gray-800 px-4 py-4 dark:dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-8">
         <h1 className="text-xl">Agendar retorno</h1>
         <IconButton onClick={closeModal}>

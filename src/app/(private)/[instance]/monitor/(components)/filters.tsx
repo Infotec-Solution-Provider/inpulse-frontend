@@ -39,7 +39,7 @@ export default function MonitorFilters() {
   };
 
   return (
-    <aside className="scrollbar-whatsapp w-full overflow-y-auto rounded-md bg-slate-200 px-4 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-200 md:w-96">
+    <aside className="scrollbar-whatsapp w-full overflow-y-auto rounded-md bg-slate-200 px-4 text-sm text-slate-800 dark:dark:bg-slate-800 dark:text-slate-200 md:w-96">
       <header className="flex items-center justify-between py-2">
         <h1 className="text-lg font-semibold">Filtros</h1>
         <button className="text-sm text-blue-500 hover:underline" onClick={resetFilters}>

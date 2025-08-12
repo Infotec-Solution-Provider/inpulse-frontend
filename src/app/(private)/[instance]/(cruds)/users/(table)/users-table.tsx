@@ -67,8 +67,8 @@ export default function UsersTable() {
   }, [sortedUsers, page, rowsPerPage, loading]);
 
   return (
-    <div className="relative flex h-[calc(100vh-100px)] flex-col scrollbar-whatsapp">
-      <TableContainer className="mx-auto w-full flex-1 bg-indigo-700 bg-opacity-5 shadow-md">
+    <div className="relative flex flex-col h-full w-full overflow-hidden">
+      <TableContainer className="w-full flex-1 bg-indigo-700 bg-opacity-5 shadow-md rounded-lg overflow-auto">
         <Table>
           <TableHead>
             <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
@@ -150,23 +150,43 @@ export default function UsersTable() {
           {rows}
         </Table>
       </TableContainer>
-      <div className="sticky bottom-0 flex self-center pb-2 pt-4">
-        <Button onClick={() => openUserModal()} variant="outlined">
-          Cadastrar usuário
-        </Button>
-        <TablePagination
-          component="div"
-          count={users.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[10, 25, 50]}
-          labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
-          }
-          labelRowsPerPage="Usuários por página:"
-        />
+      <div className="sticky bottom-0 bg-white dark:bg-gray-900 bg-opacity-90 dark:bg-opacity-90 backdrop-blur-sm w-full border-t border-gray-200 dark:border-gray-700">
+        <div className="container mx-auto px-2 sm:px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <Button 
+            onClick={() => openUserModal()} 
+            variant="outlined"
+            size="small"
+            className="w-full sm:w-auto"
+          >
+            Cadastrar usuário
+          </Button>
+          <TablePagination
+            component="div"
+            count={users.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[10, 25, 50]}
+            labelDisplayedRows={({ from, to, count }) => (
+              <span className="text-sm whitespace-nowrap">
+                {`${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`}
+              </span>
+            )}
+            labelRowsPerPage={<span className="text-sm whitespace-nowrap">Linhas:</span>}
+            className="[& .MuiTablePagination-selectLabel]:m-0 [& .MuiTablePagination-displayedRows]:m-0 [& .MuiTablePagination-toolbar]:flex-wrap [& .MuiTablePagination-toolbar]:gap-2 [& .MuiTablePagination-actions]:ml-2"
+            sx={{
+              '& .MuiTablePagination-select': {
+                padding: '6px 24px 6px 8px',
+                marginRight: '8px',
+                marginLeft: '4px',
+              },
+              '& .MuiTablePagination-selectIcon': {
+                right: '4px',
+              },
+            }}
+          />
+        </div>
       </div>
     </div>
   );

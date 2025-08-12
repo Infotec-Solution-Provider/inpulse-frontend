@@ -177,21 +177,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Envia mensagem (somente campos aceitos pelo backend)
   const sendMessage = useCallback(
-    (to: string, data: SendMessageData) => {
-      const payload: any = {
-        to,
-        text: `*${user?.NOME}*: ${data.text}`,
-      };
-      if (data.chatId) payload.chatId = data.chatId;
-      if (data.contactId) payload.contactId = data.contactId;
-      if (data.fileId) payload.fileId = data.fileId; // opcional
-      if (data.quotedId) payload.quotedId = data.quotedId; // opcional
-
-      console.log("payload final para sendMessage", payload);
-      api.current.sendMessage(payload.to, payload);
-    },
-    [user]
-  );
+  async (to: string, data: SendMessageData) => {
+    try {
+      await api.current.sendMessage(to, {
+        ...data,
+        text: `*${user?.NOME}*: ${data.text || ''}`,
+      });
+    } catch (err) {
+      // Suprimir erros de mensagens de áudio
+      if (!data.sendAsAudio) {
+        toast.error("Erro ao enviar mensagem: " + sanitizeErrorMessage(err));
+        console.error("Erro ao enviar mensagem", err);
+      }
+    }
+  },
+  [user]
+);
 
   // Carregamento monitoria das conversas
   const getChatsMonitor = useCallback(() => {

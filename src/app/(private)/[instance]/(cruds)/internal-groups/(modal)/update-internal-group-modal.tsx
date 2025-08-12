@@ -129,16 +129,16 @@ export default function UpdateInternalGroupModal({
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800
+      <div className="flex flex-col gap-4 sm:gap-6 bg-white p-4 sm:px-6 sm:py-6 dark:dark:bg-slate-800
              max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg">
         <div className="border-b border-black/10 pb-2 dark:border-white/20">
           <header className="text-xl font-semibold text-slate-800 dark:text-white">Criar novo grupo</header>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div>
             <button
-              className="borde h-32 w-32 overflow-hidden rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10"
+              className="borde h-24 w-24 sm:h-32 sm:w-32 overflow-hidden rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10 mx-auto sm:mx-0"
               onClick={() => {
                 if (groupImageInputRef.current) {
                   groupImageInputRef.current.click();
@@ -163,7 +163,7 @@ export default function UpdateInternalGroupModal({
               ref={groupImageInputRef}
             />
           </div>
-          <div className="flex w-full flex-col items-center gap-4">
+          <div className="flex w-full flex-col gap-3 sm:gap-4">
             <TextField
               label="Nome"
               value={name}
@@ -182,14 +182,14 @@ export default function UpdateInternalGroupModal({
           </div>
         </div>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
             <Autocomplete
               options={userOptions}
               getOptionLabel={(option) =>
                 `${option.CODIGO.toString().padStart(2, "0")} - ${option.NOME}`
               }
               getOptionKey={(option) => option.CODIGO}
-              className="w-96"
+              className="w-full"
               value={selectedUser} // Define o valor atual do Autocomplete
               renderInput={(params) => <TextField {...params} label="Adicionar integrante" />}
               onChange={(_, user) => handleChangeUser(user)}
@@ -215,7 +215,7 @@ export default function UpdateInternalGroupModal({
               </List>
             </div>
           </div>
-          <div className="flex w-full flex-row justify-end gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row w-full justify-end gap-3 sm:gap-4 pt-4">
             <Button color="error" onClick={closeModal}>
               Cancelar
             </Button>

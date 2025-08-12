@@ -1,5 +1,5 @@
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
-import MessageFile from "./message-file";
+import { MessageFile } from "./message-file";
 import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import { IconButton } from "@mui/material";
 import ReplyIcon from "@mui/icons-material/Reply";
@@ -56,14 +56,6 @@ export default function GroupMessage({
               >
                 {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
               </h2>
-              <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
-                {quotedMessage.text.split("\n").map((line, index) => (
-                  <p key={index} className="max-w-[100%] break-words text-sm">
-                  <LinkifiedText text={line} />
-                  </p>
-                ))}
-              </div>
-
               {quotedMessage.fileId && (
                 <MessageFile
                   fileId={quotedMessage.fileId}
@@ -72,18 +64,18 @@ export default function GroupMessage({
                   fileSize={fileSize || ""}
                 />
               )}
+              <div className="w-full h-full text-black dark:text-slate-200 px-2 rounded-md">
+                {quotedMessage.text.split("\n").map((line, index) => (
+                  <p key={index} className="max-w-[100%] break-words text-sm">
+                    <LinkifiedText text={line} />
+                  </p>
+                ))}
+              </div>
             </div>
           )}
 
           {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
-          <div className="w-full text-slate-900 dark:text-slate-200">
-            {text.split("\n").map((line, index) => (
-              <p key={index} className="max-w-[100%] break-words text-sm">
-                <LinkifiedText text={line} />
-              </p>
-            ))}
-          </div>
-
+          
           {fileId && (
             <MessageFile
               fileId={fileId}
@@ -92,6 +84,14 @@ export default function GroupMessage({
               fileSize={fileSize || ""}
             />
           )}
+          
+          <div className="w-full text-slate-900 dark:text-slate-200">
+            {text.split("\n").map((line, index) => (
+              <p key={index} className="max-w-[100%] break-words text-sm">
+                <LinkifiedText text={line} />
+              </p>
+            ))}
+          </div>
 
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}

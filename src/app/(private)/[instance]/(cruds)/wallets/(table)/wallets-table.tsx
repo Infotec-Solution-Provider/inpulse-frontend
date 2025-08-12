@@ -70,27 +70,27 @@ export default function WalletsTable() {
     }, [sortedWallets, page, rowsPerPage, loading]);
 
     return (
-        <div className="relative flex flex-col h-[calc(100vh-100px)]">
-            <TableContainer className="mx-auto w-full bg-indigo-700 bg-opacity-5 shadow-md flex-1">
-                <Table>
-                    <TableHead>
-                        <StyledTableRow className="sticky top-0 rounded-md bg-indigo-900">
-                            <StyledTableCell sx={{ width: '70px' }} sortDirection={orderBy === 'id' ? order : false}>
+        <div className="relative flex flex-col h-full min-h-0">
+            <TableContainer className="w-full bg-indigo-700 bg-opacity-5 shadow-md flex-1 overflow-auto">
+                <Table className="min-w-[600px]">
+                    <TableHead className="hidden sm:table-header-group">
+                        <StyledTableRow className="rounded-md bg-indigo-900">
+                            <StyledTableCell sx={{ minWidth: '70px' }} sortDirection={orderBy === 'id' ? order : false}>
                                 <TableSortLabel
                                     active={orderBy === 'id'}
                                     direction={orderBy === 'id' ? order : 'asc'}
                                     onClick={() => handleSort('id')}
-                                    sx={{ display: 'flex', justifyContent: 'center', paddingLeft: '25px' }}
+                                    className="whitespace-nowrap"
                                 >
                                     ID
                                 </TableSortLabel>
                             </StyledTableCell>
-                            <StyledTableCell sx={{ width: '250px' }} sortDirection={orderBy === 'name' ? order : false}>
+                            <StyledTableCell sortDirection={orderBy === 'name' ? order : false}>
                                 <TableSortLabel
                                     active={orderBy === 'name'}
                                     direction={orderBy === 'name' ? order : 'asc'}
                                     onClick={() => handleSort('name')}
-                                    sx={{ display: 'flex', justifyContent: 'center', paddingLeft: '25px' }}
+                                    className="whitespace-nowrap"
                                 >
                                     Nome
                                 </TableSortLabel>
@@ -100,12 +100,12 @@ export default function WalletsTable() {
                                     active={orderBy === 'userIds'}
                                     direction={orderBy === 'userIds' ? order : 'asc'}
                                     onClick={() => handleSort('userIds')}
-                                    sx={{ display: 'flex', justifyContent: 'center', paddingLeft: '25px' }}
+                                    className="whitespace-nowrap"
                                 >
-                                    Número de integrantes
+                                    Integrantes
                                 </TableSortLabel>
                             </StyledTableCell>
-                            <StyledTableCell sx={{ textAlign: 'center' }} >
+                            <StyledTableCell sx={{ textAlign: 'center' }}>
                                 Ações
                             </StyledTableCell>
                         </StyledTableRow>
@@ -113,21 +113,35 @@ export default function WalletsTable() {
                     {rows}
                 </Table>
             </TableContainer>
-            <div className="flex gap-4 sticky bottom-0 self-center pt-4 pb-2">
-                <CreateWalletModal />
-                <TablePagination
-                    component="div"
-                    count={wallets.length}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[10, 25, 50]}
-                    labelDisplayedRows={({ from, to, count }) =>
-                        `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
-                    }
-                    labelRowsPerPage="Carteiras por página:"
-                />
+            <div className="sticky bottom-0 left-0 right-0 bg-white dark:dark:bg-slate-800 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div className="w-full sm:w-auto">
+                        <CreateWalletModal />
+                    </div>
+                    <div className="w-full overflow-x-auto">
+                        <TablePagination
+                            component="div"
+                            count={wallets.length}
+                            page={page}
+                            onPageChange={handleChangePage}
+                            rowsPerPage={rowsPerPage}
+                            onRowsPerPageChange={handleChangeRowsPerPage}
+                            rowsPerPageOptions={[10, 25, 50]}
+                            labelDisplayedRows={({ from, to, count }) =>
+                                `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
+                            }
+                            labelRowsPerPage="Por página:"
+                            className="w-full"
+                            classes={{
+                                root: 'w-full',
+                                toolbar: 'p-0 flex-wrap justify-center sm:justify-end',
+                                selectLabel: 'm-0',
+                                displayedRows: 'whitespace-nowrap m-0',
+                                actions: 'ml-2'
+                            }}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     );

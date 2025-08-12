@@ -43,7 +43,7 @@ body {
   background-color: rgba(0, 0, 0, 0.5);
 }
 .input-dark {
-  @apply bg-slate-800 text-white;
+  @apply dark:bg-slate-800 text-white;
 }
 
 /* Melhorias para dispositivos móveis */
@@ -83,6 +83,45 @@ body {
   /* Melhora a experiência de rolagem */
   body {
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Estilos para a tabela com rolagem horizontal */
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  
+  /* Melhora a aparência da barra de rolagem */
+  .table-container::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  
+  .table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+  }
+  
+  .table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+  
+  .dark .table-container::-webkit-scrollbar-track {
+    background: #1e293b;
+  }
+  
+  .dark .table-container::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
+  
+  .dark .table-container::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
   }
   
   /* Remove o atraso no toque em iOS */

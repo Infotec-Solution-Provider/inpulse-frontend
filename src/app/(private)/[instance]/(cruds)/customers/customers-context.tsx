@@ -74,17 +74,27 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     }
  }, []);
 
-  const loadCustomers = useCallback(async () => {
+  const loadCustomers = useCallback(async (filters = state.filters) => {
+    if (!api.current) return;
+    
     dispatch({ type: "change-loading", isLoading: true });
+    console.log('Carregando clientes com filtros:', filters);
 
     try {
-      const res = await api.current.getCustomers(state.filters);
+      const res = await api.current.getCustomers({
+        ...filters,
+        page: filters?.page || '1',
+        perPage: filters?.perPage || '10'
+      });
+      
+      console.log('Resposta da API:', res);
+      
       dispatch({
         type: "multiple",
         actions: [
-          { type: "change-total-rows", totalRows: res.page.totalRows },
+          { type: "change-total-rows", totalRows: res.page?.totalRows || 0 },
           { type: "change-loading", isLoading: false },
-          { type: "load-customers", customers: res.data },
+          { type: "load-customers", customers: res.data || [] },
         ],
       });
     } catch (err) {
@@ -92,13 +102,29 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       Logger.error("Error loading customers", err as Error);
       toast.error("Falha ao carregar clientes!");
     }
- }, []);
+  }, []); // Removido state.filters das dependências
 
+  // Efeito para configurar o token e carregar clientes iniciais
   useEffect(() => {
     if (!token || !api.current) return;
+    
+    // Configura o token de autenticação
     api.current.setAuth(token);
-    loadCustomers();
-  }, [token,api.current]);
+    
+    // Carrega os clientes iniciais apenas se não houver clientes carregados
+    if (state.customers.length === 0) {
+      loadCustomers();
+    }
+    
+    console.log('Token configurado');
+  }, [token]); // Apenas token como dependência
+  
+  // Efeito separado para lidar com mudanças nos filtros
+  useEffect(() => {
+    if (token && api.current) {
+      loadCustomers(state.filters);
+    }
+  }, [state.filters, token]); // Executa quando os filtros mudam
 
   return (
     <CustomersContext.Provider

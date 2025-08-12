@@ -25,9 +25,9 @@ export default function Home() {
 
   return (
     <ChatProvider>
-      <div className={`box-border h-auto md:h-full w-full overflow-auto md:overflow-hidden grid grid-rows-1 md:gap-4 gap-0 md:pb-3 pb-0 ${currentChat ? 'chat-open' : ''} grid-cols-1 md:grid-cols-[24rem_1fr] pt-3`}>
+      <div className={`box-border h-auto md:h-[calc(100vh-4rem)] w-full overflow-auto md:overflow-hidden grid grid-rows-1 md:gap-4 gap-0 ${currentChat ? 'chat-open' : ''} grid-cols-1 md:grid-cols-[24rem_1fr]`}>
         <div className={`chats-menu ${currentChat ? 'hidden' : 'block'} md:block`}> <ChatsMenu /> </div>
-        <div className="chat-panel-container w-full h-full flex flex-col overflow-hidden flex-1">
+        <div className="chat-panel-container w-full h-full flex flex-col overflow-hidden flex-1 bg-[rgb(148, 163, 184)] dark:bg-gray-900">
         {/* mobile back handled by hardware/browser history */}
         {false && (
           <button
@@ -68,7 +68,7 @@ export default function Home() {
         )}
         {currentChat?.chatType === "wpp" && (
           <Chat
-            name={currentChat.contact?.name || "Contao excluído"}
+            name={currentChat.contact?.name || "Contato excluído"}
             phone={currentChat?.contact?.phone || "N/D"}
             avatarUrl={currentChat.avatarUrl}
             customerName={currentChat?.customer?.RAZAO || "N/D"}
