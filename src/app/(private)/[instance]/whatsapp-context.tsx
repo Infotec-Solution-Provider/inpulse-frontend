@@ -69,7 +69,7 @@ interface IWhatsappContext {
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number) => void;
   startChatByContactId: (contactId: number, template?: SendTemplateData) => void;
-  updateChatContact: (contactId: number, newName: string) => void;
+  updateChatContact: (contactId: number, newName: string, newCustomer: Customer | null) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: DetailedChat[];
   getChats: () => void;
@@ -147,7 +147,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   // Atualiza o nome do contato
   const updateChatContact = useCallback(
-    (contactId: number, newName: string) => {
+    (contactId: number, newName: string, newCustomer: Customer | null) => {
       setChats((prev) =>
         prev.map((chat) => {
           if (chat.contact && chat.contactId === contactId) {
@@ -157,6 +157,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
                 ...chat.contact,
                 name: newName,
               },
+              customer: newCustomer,
             };
           }
           return chat;
@@ -166,6 +167,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       if (currentChat && currentChat.chatType === "wpp" && currentChat.contactId === contactId) {
         setCurrentChat((prev) => {
           (prev as DetailedChat)!.contact!.name = newName;
+          (prev as DetailedChat)!.customer = newCustomer;
           return prev;
         });
       }

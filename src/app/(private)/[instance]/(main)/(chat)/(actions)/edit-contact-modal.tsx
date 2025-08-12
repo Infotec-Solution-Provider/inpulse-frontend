@@ -21,7 +21,7 @@ export default function EditContactModal() {
     await wppApi.current.updateContact(contact.id, name, customer?.CODIGO || null);
 
     toast.success("Contato atualizado com sucesso!");
-    updateChatContact(contact.id, name);
+    updateChatContact(contact.id, name, customer);
     closeModal();
   };
 
