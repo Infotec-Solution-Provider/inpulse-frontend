@@ -67,7 +67,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
         setContacts((prevContacts) =>
           prevContacts.map((c) => (c.id === updatedContact.id ? updatedContact : c)),
         );
-        updateChatContact(updatedContact.id, updatedContact.name);
+        updateChatContact(updatedContact.id, updatedContact.name, customer);
       } catch (err) {
         toast.error("Falha ao atualizar contato:\n" + sanitizeErrorMessage(err));
       }
@@ -111,7 +111,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
   };
 
   return (
-    <div className="rounded-md bg-white dark:bg-slate-800 text-semibold p-4 dark:text-white text-gray-800 w-full max-w-3xl">
+    <div className="text-semibold w-full max-w-3xl rounded-md bg-white p-4 text-gray-800 dark:bg-slate-800 dark:text-white">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="max-w-80 truncate">Contatos de &quot;{customer.RAZAO}&quot;</h1>
         <IconButton onClick={closeModal}>
@@ -137,7 +137,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
         />
         <p className="w-32"></p>
       </div>
-      <ul className="max-h-[20rem] scrollbar-whatsapp">
+      <ul className="scrollbar-whatsapp max-h-[20rem]">
         {filteredContacts.map((c) => (
           <ContactItem key={c.id} contact={c} handleEdit={handleEdit} handleDelete={handleDelete} />
         ))}
