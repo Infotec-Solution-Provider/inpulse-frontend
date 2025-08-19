@@ -189,7 +189,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         setMonitorMessages(chatsMessages || []);
       });
     } else {
-      setInternalChats([]);
+      setMonitorInternalChats([]);
       setMonitorMessages({});
     }
   }, [token, api.current, user, users]);

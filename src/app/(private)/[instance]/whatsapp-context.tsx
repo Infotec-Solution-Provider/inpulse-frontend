@@ -79,6 +79,7 @@ interface IWhatsappContext {
   markAllAsReadNotification: () => void;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
+  loadChatMessages: (chat: DetailedChat) => void;
 }
 
 interface WhatsappProviderProps {
@@ -113,6 +114,32 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
 
+  //setCurrentChatMessagesWrapper
+  function setUniqueCurrentChatMessages(update: SetStateAction<WppMessage[]>) {
+    setCurrentChatMessages((prev) => {
+      const next =
+        typeof update === "function" ? (update as (p: WppMessage[]) => WppMessage[])(prev) : update;
+
+      const seen = new Set<string | number>();
+      const deduped: WppMessage[] = [];
+
+      for (const msg of next || []) {
+        const id = (msg as any)?.id;
+        if (id == null) {
+          // Se não houver id, mantemos a mensagem
+          deduped.push(msg);
+          continue;
+        }
+        if (!seen.has(id)) {
+          seen.add(id);
+          deduped.push(msg);
+        }
+      }
+
+      return deduped;
+    });
+  }
+
   // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
     search: "",
@@ -123,7 +150,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const openChat = useCallback(
     (chat: DetailedChat) => {
       setCurrentChat(chat);
-      setCurrentChatMessages(messages[chat.contactId || 0] || []);
+      setUniqueCurrentChatMessages(messages[chat.contactId || 0] || []);
       currentChatRef.current = chat;
 
       if (chat.contactId) {
@@ -271,6 +298,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, []);
 
+  const loadChatMessages = useCallback(
+    async (chat: DetailedChat) => {
+      if (!chat.id) return;
+
+      if (chat.contactId && !messages[chat.contactId]) {
+        const res = await api.current.getChatById(chat.id);
+
+        setMessages((prev) => ({ ...prev, [chat.contactId || 0]: res.messages || [] }));
+      }
+    },
+    [messages],
+  );
+
   // Função para obter e processar as conversas e mensagens
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -328,7 +368,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       // Evento de conversa lida
       socket.on(
         SocketEventType.WppContactMessagesRead,
-        ReadChatHandler(currentChatRef, setChats, setMessages, setCurrentChatMessages),
+        ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages),
       );
 
       // Evento de nova conversa
@@ -340,7 +380,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setMessages,
           setChats,
           setCurrentChat,
-          setCurrentChatMessages,
+          setUniqueCurrentChatMessages,
         ),
       );
 
@@ -354,7 +394,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setMessages,
           setChats,
           setCurrentChat,
-          setCurrentChatMessages,
+          setUniqueCurrentChatMessages,
           getNotifications,
         ),
       );
@@ -370,7 +410,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setMessages,
           setChats,
           setCurrentChat,
-          setCurrentChatMessages,
+          setUniqueCurrentChatMessages,
         ),
       );
 
@@ -380,7 +420,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         ReceiveMessageHandler(
           api.current,
           setMessages,
-          setCurrentChatMessages,
+          setUniqueCurrentChatMessages,
           setChats,
           currentChatRef,
           chats,
@@ -390,7 +430,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       // Evento de status de mensagem
       socket.on(
         SocketEventType.WppMessageStatus,
-        MessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
+        MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
       );
 
       return () => {
@@ -413,7 +453,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         finishChat,
         startChatByContactId,
         sendMessage,
-        setCurrentChatMessages,
+        setCurrentChatMessages: setUniqueCurrentChatMessages,
         wppApi: api,
         chatFilters,
         changeChatFilters,
@@ -432,6 +472,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         markAllAsReadNotification,
         templates,
         parameters,
+        loadChatMessages,
       }}
     >
       {children}

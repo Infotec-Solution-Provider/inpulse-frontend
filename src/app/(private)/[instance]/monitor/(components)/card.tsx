@@ -5,7 +5,7 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 
 interface MonitorCardProps {
-  type: "external-chat" | "internal-chat" | "internal-group" | "scheduled-chat" | "schedule";
+  type: "external-chat" | "internal-chat" | "internal-group" | "schedule" | "finished-chat";
   startDate?: string | null | false;
   endDate?: string | null | false;
   userName: string;
@@ -50,18 +50,18 @@ export default function MonitorCard({
 }: MonitorCardProps) {
   const colors = {
     "external-chat": "violet",
+    "finished-chat": "pink",
     "internal-chat": "cyan",
     "internal-group": "green",
-    "scheduled-chat": "amber",
-    "schedule": "orange",
+    schedule: "orange",
   };
 
   const types = {
     "external-chat": "Atendimento",
-    "scheduled-chat": "Atendimento Agendado",
+    "finished-chat": "Atendimento Finalizado",
     "internal-chat": "Conversa Interna",
     "internal-group": "Grupo Interno",
-    "schedule": "Agendamento",
+    schedule: "Agendamento",
   };
 
   const getBorder = (type: keyof typeof colors) => {
@@ -96,7 +96,7 @@ export default function MonitorCard({
             sx={{ width: 72, height: 72 }}
             variant="square"
           />
-          {(type === "external-chat" || type === "scheduled-chat" || type === "schedule") && (
+          {(type === "external-chat" || type === "schedule" || type === "finished-chat") && (
             <div className="flex w-52 flex-col text-xs">
               <span className="text-md font-semibold">{chatTitle} </span>
               <span>{contactNumber || "N/A"}</span>
@@ -118,7 +118,7 @@ export default function MonitorCard({
             </div>
           )}
           {isScheduled && (
-            <div className="flex w-52 flex-col border-l border-slate-400 text-xs pl-2">
+            <div className="flex w-52 flex-col border-l border-slate-400 pl-2 text-xs">
               <span className="font-semibold">Agendado em</span>
               <span>{scheduledAt}</span>
               <span className="font-semibold">Agendado para</span>
@@ -160,7 +160,7 @@ export default function MonitorCard({
         </div>
       </div>
       <div
-        className={`hidden border-amber-500 border-cyan-500 border-green-500 border-violet-500 border-orange-500 bg-amber-700/5 bg-cyan-700/5 bg-green-700/5 bg-violet-700/5 bg-orange-700/5 text-amber-800 text-cyan-800 text-green-800 text-violet-800 dark:text-amber-200 dark:text-cyan-200 dark:text-green-200 dark:text-violet-200 text-orange-800 dark:text-orange-200 md:block`}
+        className={`hidden border-amber-500 border-cyan-500 border-green-500 border-orange-500 border-pink-500 border-violet-500 bg-amber-700/5 bg-cyan-700/5 bg-green-700/5 bg-orange-700/5 bg-pink-700/5 bg-violet-700/5 text-amber-800 text-cyan-800 text-green-800 text-orange-800 text-pink-800 text-violet-800 dark:text-amber-200 dark:text-cyan-200 dark:text-green-200 dark:text-orange-200 dark:text-pink-200 dark:text-violet-200 md:block`}
       ></div>
     </div>
   );

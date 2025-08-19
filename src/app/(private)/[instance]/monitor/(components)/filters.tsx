@@ -1,13 +1,16 @@
 import Checkbox from "@/lib/components/checkbox";
 import RangeDateField from "@/lib/components/range-date-field";
-import { InputAdornment, MenuItem, TextField } from "@mui/material";
+import { IconButton, InputAdornment, MenuItem, TextField } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import useMonitorContext from "../context";
 import useInternalChatContext from "../../internal-context";
+import { useState } from "react";
 
 export default function MonitorFilters() {
   const { filters, setFilters, resetFilters } = useMonitorContext();
   const { users } = useInternalChatContext();
+
+  const [text, setText] = useState<string>("");
 
   const onChangeUser = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFilters({
@@ -44,6 +47,20 @@ export default function MonitorFilters() {
     });
   };
 
+  const onChangeScheduledFor = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilters({
+      ...filters,
+      scheduledFor: e.target.value === "all" ? "all" : Number(e.target.value),
+    });
+  };
+
+  const onClickSearch = () => {
+    setFilters({
+      ...filters,
+      searchText: text,
+    });
+  };
+
   return (
     <aside className="scrollbar-whatsapp w-full overflow-y-auto rounded-md bg-slate-200 px-4 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-200 md:w-96">
       <header className="flex items-center justify-between py-2">
@@ -59,16 +76,12 @@ export default function MonitorFilters() {
             placeholder="Digite o texto da pesquisa"
             fullWidth
             size="small"
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon className="text-slate-500" />
-                  </InputAdornment>
-                ),
-              },
-            }}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
           />
+          <IconButton onClick={onClickSearch}>
+            <SearchIcon />
+          </IconButton>
         </div>
       </section>
       <section className="border-b border-slate-600 py-2 dark:border-slate-400">
@@ -155,8 +168,20 @@ export default function MonitorFilters() {
       <section className="border-b border-slate-600 py-2 dark:border-slate-400">
         <h2 className="text-md font-semibold">Período da conversa</h2>
         <div className="flex flex-col gap-2 py-2 pl-2">
-          <Checkbox id="monit-filter:show-ongoing" value={filters.showOngoing} onChange={onChangeShowOngoing}>Exibir: Em andamento</Checkbox>
-          <Checkbox id="monit-filter:show-finished" value={filters.showFinished} onChange={onChangeShowFinished}>Exibir: Finalizados</Checkbox>
+          <Checkbox
+            id="monit-filter:show-ongoing"
+            value={filters.showOngoing}
+            onChange={onChangeShowOngoing}
+          >
+            Exibir: Em andamento
+          </Checkbox>
+          <Checkbox
+            id="monit-filter:show-finished"
+            value={filters.showFinished}
+            onChange={onChangeShowFinished}
+          >
+            Exibir: Finalizados
+          </Checkbox>
           <RangeDateField label="Data de Início" />
           <RangeDateField label="Data de Finalização" />
         </div>
@@ -164,23 +189,55 @@ export default function MonitorFilters() {
       <section className="py-2">
         <h2 className="text-md font-semibold">Agendamentos</h2>
         <div className="flex flex-col gap-2 py-2 pl-2">
-          <Checkbox id="monit-filter:show-only-scheduled" value={filters.showOnlyScheduled} onChange={onChangeShowOnlyScheduled}>Exibir: Apenas agendados</Checkbox>
-          <RangeDateField label="Agendado no dia" />
-          <RangeDateField label="Agendado para o dia" />
-          <div className="my-2">
-            <TextField select size="small" label="Agendado por" fullWidth defaultValue="all">
+          <Checkbox
+            id="monit-filter:show-only-scheduled"
+            value={filters.showOnlyScheduled}
+            onChange={onChangeShowOnlyScheduled}
+          >
+            Exibir: Apenas agendados
+          </Checkbox>
+          <RangeDateField
+            label="Agendado no dia"
+            onChange={(v) => setFilters({ ...filters, scheduledAt: v })}
+          />
+          <RangeDateField
+            label="Agendado para o dia"
+            onChange={(v) => setFilters({ ...filters, scheduledTo: v })}
+          />
+          {/*           <div className="my-2">
+            <TextField
+              select
+              size="small"
+              label="Agendado por"
+              fullWidth
+              defaultValue="all"
+              onChange={onChangeScheduledBy}
+            >
               <MenuItem value="all">Qualquer</MenuItem>
-              <MenuItem value="user1">Usuário 1</MenuItem>
-              <MenuItem value="user2">Usuário 2</MenuItem>
-              <MenuItem value="user3">Usuário 3</MenuItem>
+              {users.map((u) => (
+                <MenuItem key={u.CODIGO} value={u.CODIGO}>
+                  {u.NOME}
+                </MenuItem>
+              ))}
+            </TextField>
+          </div> */}
+          <div className="my-2">
+            <TextField
+              select
+              size="small"
+              label="Agendado para"
+              fullWidth
+              defaultValue="all"
+              onChange={onChangeScheduledFor}
+            >
+              <MenuItem value="all">Qualquer</MenuItem>
+              {users.map((u) => (
+                <MenuItem key={u.CODIGO} value={u.CODIGO}>
+                  {u.NOME}
+                </MenuItem>
+              ))}
             </TextField>
           </div>
-          <TextField select size="small" label="Agendado para" fullWidth defaultValue="all">
-            <MenuItem value="all">Qualquer</MenuItem>
-            <MenuItem value="user1">Usuário 1</MenuItem>
-            <MenuItem value="user2">Usuário 2</MenuItem>
-            <MenuItem value="user3">Usuário 3</MenuItem>
-          </TextField>
         </div>
       </section>
     </aside>
