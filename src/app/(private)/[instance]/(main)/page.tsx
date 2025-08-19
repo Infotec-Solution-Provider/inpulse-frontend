@@ -28,14 +28,19 @@ export default function Home() {
 
   return (
     <ChatProvider>
-      <div className={`md:p-2 box-border h-auto md:h-full w-full overflow-auto md:overflow-hidden grid grid-rows-1 md:gap-2 ${currentChat ? 'chat-open' : ''} grid-cols-1 md:grid-cols-[24rem_1fr]`}>
-        <div className={`chats-menu ${currentChat ? 'hidden' : 'block'} md:block`}> <ChatsMenu /> </div>
-        <div className="chat-panel-container w-full h-full flex flex-col overflow-hidden flex-1">
+      <div
+        className={`box-border grid h-auto w-full grid-rows-1 overflow-auto md:h-full md:gap-2 md:overflow-hidden md:p-2 ${currentChat ? "chat-open" : ""} grid-cols-1 md:grid-cols-[24rem_1fr]`}
+      >
+        <div className={`chats-menu ${currentChat ? "hidden" : "block"} md:block`}>
+          {" "}
+          <ChatsMenu />{" "}
+        </div>
+        <div className="chat-panel-container flex h-full w-full flex-1 flex-col overflow-hidden">
           {/* mobile back handled by hardware/browser history */}
           {false && (
             <button
               onClick={() => setCurrentChat(null)}
-              className="md:hidden flex items-center gap-1 text-blue-600 mb-2"
+              className="mb-2 flex items-center gap-1 text-blue-600 md:hidden"
             >
               ← Voltar
             </button>
@@ -70,7 +75,9 @@ export default function Home() {
               codErp={null}
               cpfCnpj={null}
               customerId={null}
-              startDate={currentChat.startedAt ? new Date(currentChat.startedAt).toDateString() : null}
+              startDate={
+                currentChat.startedAt ? new Date(currentChat.startedAt).toDateString() : null
+              }
             />
           )}
           {currentChat?.chatType === "wpp" && (
