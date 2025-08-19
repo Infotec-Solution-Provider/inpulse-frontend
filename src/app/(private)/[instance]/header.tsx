@@ -29,11 +29,7 @@ import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { usePathname } from "next/navigation";
 import NotificationsDropdown from "@/lib/components/notifications-dropdown";
 
-const monitorRoutes = [
-  { title: "Conversas", href: "/monitor/chats" },
-  { title: "Conversas Internas", href: "/monitor/internal-chats" },
-  { title: "Conversas (Novo)", href: "/monitor" },
-];
+const monitorRoutes = [{ title: "Conversas (Novo)", href: "/monitor" }];
 
 const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
   const arr = [{ title: "Clientes", href: "/customers" }];
@@ -240,7 +236,7 @@ export default function Header() {
                 <HeaderNavItem title="Área de Atendimento" href="/">
                   <HeadsetMicIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
-                <HeaderNavItem title="Monitoria" routes={monitorRoutes} disabled={!isUserAdmin}>
+                <HeaderNavItem title="Monitoria" href="/monitor" disabled={!isUserAdmin}>
                   <MonitorIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
                 <HeaderNavItem title="Cadastros" routes={crudsRoutes(parameters, isUserAdmin)}>
