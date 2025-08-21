@@ -135,7 +135,10 @@ export default function ChatMessagesList() {
         )}
         {isInternalGroup && (
           <RenderInternalGroupMessages
-
+          selectedMessageIds={selectedMessageIds}
+            isSelectionMode={isSelectionMode}
+            toggleSelectMessage={toggleSelectMessage}
+            openManualForward={openManualForward}
           />
         )}
       </div>
