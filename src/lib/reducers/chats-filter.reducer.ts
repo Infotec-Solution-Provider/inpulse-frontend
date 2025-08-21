@@ -1,4 +1,4 @@
-export type ShowingMessagesType = "all" | "unread" | "scheduled" | "internal";
+export type ShowingMessagesType = "all" | "unread" | "scheduled" | "internal" | "external";
 
 export interface ChatsFiltersState {
   showingType: ShowingMessagesType;

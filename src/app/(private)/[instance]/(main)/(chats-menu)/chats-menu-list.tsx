@@ -1,20 +1,15 @@
-import { useContext, useMemo } from "react";
-import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
-import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
-import ChatsMenuItem from "./chats-menu-item";
-import {
-  DetailedInternalChat as DetailedInternalChat,
-  InternalChatContext,
-} from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
+import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
+import { useContext, useMemo } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
-import { User } from "@in.pulse-crm/sdk";
+import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
+import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
+import ChatsMenuItem from "./chats-menu-item";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
 const matchesFilter = (chat: CombinedChat, search: string) => {
-
   if (chat.chatType === "wpp") {
     const onlyDigits = search.replace(/\D/g, "");
     const matchCnpj = chat.customer?.CPF_CNPJ?.includes(search);
@@ -47,7 +42,7 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
-  const { internalChats, openInternalChat,users } = useContext(InternalChatContext);
+  const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
   const { contacts } = useContext(ContactsContext);
 
   const mentionNameMap = useMemo(() => {
@@ -66,6 +61,7 @@ export default function ChatsMenuList() {
     }
     return map;
   }, [users, contacts]);
+
   const replaceMentionsWpp = (text: string): string => {
     return text.replace(/@(\d{6,})/g, (match, phone) => {
       const name = mentionNameMap.get(phone);
@@ -83,7 +79,8 @@ export default function ChatsMenuList() {
     ];
 
     return combinedChats.filter((chat) => {
-      if (chatFilters.showingType === "scheduled") {
+      console.log(chat);
+      if (chatFilters.showingType === "scheduled" && !("schedule" in chat)) {
         return false;
       }
       if (chatFilters.showingType === "internal" && chat.chatType !== "internal") {
@@ -107,7 +104,7 @@ export default function ChatsMenuList() {
   }, [filteredChats]);
 
   return (
-<menu className="flex flex-col gap-2 scrollbar-whatsapp bg-slate-300/5 dark:bg-slate-800/50 p-3">
+    <menu className="scrollbar-whatsapp flex flex-col gap-2 bg-slate-300/5 p-3 dark:bg-slate-800/50">
       {sortedChats.map((chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
