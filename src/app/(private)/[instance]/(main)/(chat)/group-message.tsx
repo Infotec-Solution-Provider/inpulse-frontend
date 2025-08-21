@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
 import MessageFile from "./message-file";
 import {
@@ -7,9 +6,14 @@ import {
   QuotedMessageProps,
   statusComponents,
 } from "./message";
-import { IconButton, Menu, MenuItem, Checkbox } from "@mui/material";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import LinkifiedText from "./linkmessage";
+import ReplyIcon from "@mui/icons-material/Reply";
+import ForwardIcon from '@mui/icons-material/Forward';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import React, { ReactNode, useState } from "react";
+import { IconButton, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 
 interface MessageProps {
   id: number;
@@ -59,10 +63,21 @@ export default function GroupMessage({
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+    const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+        setAnchorEl(event.currentTarget);
+    };
 
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleQuote = () => { onQuote?.(); handleMenuClose(); };
+    const handleForward = () => { onForward?.(); handleMenuClose(); };
+
+    const handleSelect = () => {
+        onSelect?.(id);
+        handleMenuClose();
+    };
   const handleClose = () => {
     setAnchorEl(null);
   };
@@ -90,18 +105,22 @@ export default function GroupMessage({
   });
 
   return (
-    <li
-      id={String(id)}
-      style={styleWrapper}
-      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 relative`}
-    >
-      {isForwardMode && (
-        <Checkbox
-          checked={isSelected}
-          onChange={handleSelectMessage}
-          className="absolute left-[-12px]"
-        />
-      )}
+        <li
+            id={String(id)}
+            className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? 'bg-blue-500/10' : ''}`}
+            onClick={isForwardMode ? () => onSelect?.(id) : undefined}
+            onContextMenu={(e) => {
+                e.preventDefault();
+                if (!isForwardMode) handleMenuClick(e);
+            }}
+        >
+            {isForwardMode && style !== 'system' && (
+                <Checkbox
+                    checked={isSelected}
+                    onChange={() => onSelect?.(id)}
+                    onClick={(e) => e.stopPropagation()}
+                />
+            )}
 
       <div className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}>
         <div className="flex w-full flex-col gap-1">
@@ -163,32 +182,44 @@ export default function GroupMessage({
         </div>
       </div>
 
-      {!isForwardMode && style !== "system" && (
-        <div className="invisible group-hover:visible">
-          <IconButton
-            size="small"
-            color="default"
-            title="Mais opções"
-            onClick={handleMenuClick}
-          >
-            <MoreVertIcon />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-            <MenuItem onClick={() => { handleClose(); onQuote?.(); }}>
-              Responder
-            </MenuItem>
-            <MenuItem onClick={() => { handleClose(); onSelect?.(id); }}>
-              Selecionar
-            </MenuItem>
-            <MenuItem onClick={() => { handleClose(); onForward?.(); }}>
-              Encaminhar
-            </MenuItem>
-            <MenuItem onClick={() => { handleClose(); handleCopy(); }}>
-              Copiar
-            </MenuItem>
-          </Menu>
-        </div>
-      )}
+            {style !== "system" && !isForwardMode && (
+                <>
+                    <IconButton
+                        className="invisible group-hover:visible"
+                        size="small"
+                        title="Mais opções"
+                        onClick={handleMenuClick}
+                    >
+                        <MoreVertIcon />
+                    </IconButton>
+                    <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+                        {onSelect && (
+                            <MenuItem onClick={handleSelect}>
+                                <ListItemIcon><CheckBoxOutlineBlankIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText>Selecionar</ListItemText>
+                            </MenuItem>
+                        )}
+                        {onQuote && (
+                            <MenuItem onClick={handleQuote}>
+                                <ListItemIcon><ReplyIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText>Responder</ListItemText>
+                            </MenuItem>
+                        )}
+                        {onForward && (
+                            <MenuItem onClick={handleForward}>
+                                <ListItemIcon><ForwardIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText>Encaminhar</ListItemText>
+                            </MenuItem>
+                        )}
+                        {onCopy && (
+                            <MenuItem onClick={handleCopy}>
+                                <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText>Copiar</ListItemText>
+                            </MenuItem>
+                        )}
+                    </Menu>
+                </>
+            )}
     </li>
   );
 }
