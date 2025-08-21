@@ -1,5 +1,6 @@
 "use client";
 
+// --- 1. IMPORTAÇÕES ---
 import React, { useState, useMemo, useContext, useCallback, useRef, useEffect } from "react";
 import { InternalMessage, User } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
@@ -7,8 +8,8 @@ import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import GroupMessage from "./group-message";
 import { ChatContext } from "./chat-context";
 import { InternalChatContext } from "../../internal-context";
-import { useAuthContext } from "@/app/auth-context";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { useAuthContext } from "@/app/auth-context";
 
 function getInternalMessageStyle(msg: InternalMessage, userId: number) {
     if (msg.from === "system") return "system";
@@ -65,7 +66,20 @@ export default function RenderInternalGroupMessages({
         if (message.from.startsWith("user:")) {
             const userId = Number(message.from.split(":")[1]);
             const findUser = usersMap.get(userId);
-            return findUser ? findUser.NOME : "Desconhecido";
+            return findUser ? findUser.NOME : "Usuário Desconhecido";
+        }
+
+        if (message.from.startsWith("external:")) {
+            const parts = message.from.split(":");
+            let raw = parts.length > 1 ? parts[parts.length - 1] : "";
+            const phone = raw.split("@")[0].replace(/\D/g, "");
+            const findUser = users.find(u => u.WHATSAPP?.replace(/\D/g, "") === phone);
+            if (findUser) return findUser.NOME;
+
+            const contactName = contactsMap.get(phone);
+            if (contactName) return contactName;
+
+            return phone || "Contato Externo";
         }
         return "Sistema";
     };
