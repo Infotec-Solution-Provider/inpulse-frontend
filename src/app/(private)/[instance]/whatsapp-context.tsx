@@ -14,6 +14,7 @@ import {
 import {
   Customer,
   SendMessageData,
+  ForwardMessagesData,
   SocketEventType,
   WhatsappClient,
   WppChat,
@@ -62,6 +63,8 @@ interface IWhatsappContext {
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageData) => void;
+  forwardMessages: (data: ForwardMessagesData) => Promise<void>; // --- 2. ADICIONAR A ASSINATURA DA FUNÇÃO ---
+
   transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;
   getChatsMonitor: () => void;
@@ -310,7 +313,17 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     },
     [messages],
   );
-
+  const forwardMessages = useCallback(async (data: ForwardMessagesData) => {
+    try {
+      api.current.setAuth(token || "");
+      await api.current.forwardMessages(data);
+      toast.success("Mensagens encaminhadas com sucesso!");
+    } catch (err) {
+      const errorMessage = sanitizeErrorMessage(err);
+      toast.error(`Falha ao encaminhar mensagens: ${errorMessage}`);
+      console.error("Falha ao encaminhar mensagens", err);
+    }
+  }, [token]);
   // Função para obter e processar as conversas e mensagens
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -453,6 +466,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         finishChat,
         startChatByContactId,
         sendMessage,
+        forwardMessages,
         setCurrentChatMessages: setUniqueCurrentChatMessages,
         wppApi: api,
         chatFilters,

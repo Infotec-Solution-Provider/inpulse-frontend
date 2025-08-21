@@ -177,12 +177,12 @@ export default function GroupMessage({
             <MenuItem onClick={() => { handleClose(); onQuote?.(); }}>
               Responder
             </MenuItem>
-{/*             <MenuItem onClick={() => { handleClose(); onSelect?.(id); }}>
+            <MenuItem onClick={() => { handleClose(); onSelect?.(id); }}>
               Selecionar
             </MenuItem>
             <MenuItem onClick={() => { handleClose(); onForward?.(); }}>
               Encaminhar
-            </MenuItem> */}
+            </MenuItem>
             <MenuItem onClick={() => { handleClose(); handleCopy(); }}>
               Copiar
             </MenuItem>
