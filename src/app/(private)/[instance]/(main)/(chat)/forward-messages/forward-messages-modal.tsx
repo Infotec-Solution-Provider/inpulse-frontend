@@ -1,19 +1,21 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useContext } from "react";
-import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
     Button, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, Checkbox,
-    ListItemButton, ListItemText, Typography, IconButton, TextField, Box
+    ListItemButton, ListItemText, Typography, IconButton, TextField, Box, Avatar, ListItemAvatar
 } from "@mui/material";
 import CloseIcon from '@mui/icons-material/Close';
-import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
+import PersonIcon from '@mui/icons-material/Person';
+import GroupIcon from '@mui/icons-material/Group';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
 
 interface ForwardMessagesModalProps {
     open: boolean;
     onClose: () => void;
-    chats: DetailedChat[];
-  messagesToForward: ForwardableMessage[];
+    targets: ForwardingTarget[];
+    onConfirm: (selectedTargetIds: Set<string>) => void;
 }
 export interface ForwardingTarget {
     id: string;
@@ -22,72 +24,58 @@ export interface ForwardingTarget {
     secondaryText?: string;
 }
 export type ForwardableMessage = WppMessage | InternalMessage;
-
 export default function ForwardMessagesModal({
     open,
     onClose,
-    chats,
-    messagesToForward
+    targets,
+    onConfirm
 }: ForwardMessagesModalProps) {
 
-    const { forwardMessages } = useContext(WhatsappContext);
-
-    const [selectedChatsToForward, setSelectedChatsToForward] = useState<Set<number>>(new Set());
+    const [selectedTargets, setSelectedTargets] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState("");
     const FORWARD_LIMIT = 5;
 
-    const filteredChatsForModal = useMemo(() => {
-        if (!searchQuery) return chats;
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        return chats.filter(chat =>
-            chat.contact?.name?.toLowerCase().includes(lowerCaseQuery) ||
-            chat.contact?.phone?.includes(lowerCaseQuery)
-        );
-    }, [chats, searchQuery]);
+    useEffect(() => {
+        if (!open) {
+            setSelectedTargets(new Set());
+            setSearchQuery("");
+        }
+    }, [open]);
 
-    const handleToggleChatSelection = useCallback((chatId: number) => {
-        setSelectedChatsToForward(prev => {
+    const filteredTargets = useMemo(() => {
+        if (!searchQuery) return targets;
+        const lowerCaseQuery = searchQuery.toLowerCase();
+        return targets.filter(target =>
+            target.name.toLowerCase().includes(lowerCaseQuery) ||
+            target.secondaryText?.toLowerCase().includes(lowerCaseQuery)
+        );
+    }, [targets, searchQuery]);
+
+    const handleToggleTargetSelection = useCallback((targetId: string) => {
+        setSelectedTargets(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(chatId)) {
-                newSet.delete(chatId);
+            if (newSet.has(targetId)) {
+                newSet.delete(targetId);
             } else if (newSet.size < FORWARD_LIMIT) {
-                newSet.add(chatId);
-            } else {
-                console.warn(`Limite de ${FORWARD_LIMIT} contatos atingido.`);
+                newSet.add(targetId);
             }
             return newSet;
         });
     }, []);
 
-    const handleConfirmForward = async () => {
-        if (messagesToForward.length === 0 || selectedChatsToForward.size === 0) return;
-
-        const messageIds = messagesToForward.map(msg => Number(msg.id));
-
-        const whatsappTargets = Array.from(selectedChatsToForward).map(selectedChatId => {
-            const chat = chats.find(c => c.id === selectedChatId);
-            return {
-                id: chat?.contact?.phone,
-                isGroup: false
-            };
-        }).filter((target): target is { id: string; isGroup: boolean } => !!target.id);
-
-        if (whatsappTargets.length === 0) return;
-
-        await forwardMessages({
-            messageIds,
-            whatsappTargets,
-        });
-
-        onClose();
-        setSelectedChatsToForward(new Set());
-        setSearchQuery("");
-    };
+    const getIconForType = (type: ForwardingTarget['type']) => {
+        switch (type) {
+            case 'wpp': return <WhatsAppIcon color="success" />;
+            case 'user': return <PersonIcon color="primary" />;
+            case 'group': return <GroupIcon color="secondary" />;
+            default: return <Avatar />;
+        }
+    }
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
             <DialogTitle>
-                Encaminhar para... ({selectedChatsToForward.size}/{FORWARD_LIMIT})
+                Encaminhar para... ({selectedTargets.size}/{FORWARD_LIMIT})
                 <IconButton aria-label="fechar" onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}>
                     <CloseIcon />
                 </IconButton>
@@ -98,28 +86,22 @@ export default function ForwardMessagesModal({
                     autoFocus
                     variant="outlined"
                     size="small"
-                    placeholder="Pesquisar por nome ou número..."
+                    placeholder="Pesquisar..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
             </Box>
             <DialogContent dividers sx={{ p: 0 }}>
                 <List sx={{ pt: 0 }}>
-                    {filteredChatsForModal?.map((chat) => {
-                        const isSelected = selectedChatsToForward.has(chat.id);
-                        const isDisabled = !isSelected && selectedChatsToForward.size >= FORWARD_LIMIT;
+                    {filteredTargets?.map((target) => {
+                        const isSelected = selectedTargets.has(target.id);
+                        const isDisabled = !isSelected && selectedTargets.size >= FORWARD_LIMIT;
                         return (
-                            <ListItem key={chat.id} disablePadding>
-                                <ListItemButton onClick={() => handleToggleChatSelection(chat.id)} disabled={isDisabled}>
-                                    <ListItemText
-                                        primary={chat.contact?.name}
-                                        secondary={chat.contact?.phone}
-                                    />
-                                    <Checkbox
-                                        edge="end"
-                                        checked={isSelected}
-                                        disabled={isDisabled}
-                                    />
+                            <ListItem key={target.id} disablePadding>
+                                <ListItemButton onClick={() => handleToggleTargetSelection(target.id)} disabled={isDisabled}>
+                                    <ListItemAvatar>{getIconForType(target.type)}</ListItemAvatar>
+                                    <ListItemText primary={target.name} secondary={target.secondaryText} />
+                                    <Checkbox edge="end" checked={isSelected} disabled={isDisabled} />
                                 </ListItemButton>
                             </ListItem>
                         );
@@ -128,7 +110,7 @@ export default function ForwardMessagesModal({
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Cancelar</Button>
-                <Button onClick={handleConfirmForward} variant="contained" disabled={selectedChatsToForward.size === 0}>
+                <Button onClick={() => onConfirm(selectedTargets)} variant="contained" disabled={selectedTargets.size === 0}>
                     Encaminhar
                 </Button>
             </DialogActions>
