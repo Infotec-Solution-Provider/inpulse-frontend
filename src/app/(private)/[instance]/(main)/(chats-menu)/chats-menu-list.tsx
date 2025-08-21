@@ -86,6 +86,9 @@ export default function ChatsMenuList() {
       if (chatFilters.showingType === "internal" && chat.chatType !== "internal") {
         return false;
       }
+      if (chatFilters.showingType === "external" && chat.chatType !== "wpp") {
+        return false; /*  */
+      }
       if (chatFilters.showingType === "unread" && !chat.isUnread) {
         return false;
       }
