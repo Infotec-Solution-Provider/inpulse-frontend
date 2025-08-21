@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useContext } from "react";
-import { WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
 import { WhatsappContext } from "../../whatsapp-context";
 import { InternalChatContext } from "../../internal-context";
 import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
@@ -41,7 +41,10 @@ export default function ChatMessagesList() {
         setManualForwardMessages([msg]);
         setForwardModalOpen(true);
     };
-
+    const openManualForwardInternal = (msg: InternalMessage) => {
+        setManualForwardMessages([msg as unknown as WppMessage]);
+        setForwardModalOpen(true);
+    };
     const handleCloseForwardModal = () => {
         setForwardModalOpen(false);
         setManualForwardMessages(null);
@@ -75,7 +78,13 @@ export default function ChatMessagesList() {
                         openManualForward={openManualForward}
                     />
                 )}
-                {isInternalChat && <RenderInternalChatMessages />}
+                {isInternalChat && (<RenderInternalChatMessages
+                 selectedMessageIds={selectedMessageIds}
+                        isSelectionMode={isSelectionMode}
+                        toggleSelectMessage={toggleSelectMessage}
+                        openManualForward={openManualForwardInternal}
+                />
+               )}
                 {isInternalGroup && <RenderInternalGroupMessages />}
             </div>
 
