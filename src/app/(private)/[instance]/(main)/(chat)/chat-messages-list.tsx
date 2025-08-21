@@ -8,11 +8,11 @@ import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
 import RenderInternalChatMessages from "./render-internal-chat-messages";
 import RenderInternalGroupMessages from "./render-internal-group-messages";
 import { Button, Typography } from "@mui/material";
-import ForwardMessagesModal from "./forward-messages/forward-messages-modal";
+import ForwardMessagesModal, { ForwardableMessage, ForwardingTarget } from "./forward-messages/forward-messages-modal";
 
 export default function ChatMessagesList() {
     const { currentChat, currentChatMessages, chats } = useContext(WhatsappContext);
-    const { currentInternalChatMessages } = useContext(InternalChatContext);
+    const { users, currentInternalChatMessages,internalChats ,} = useContext(InternalChatContext);
 
     const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string | number>>(new Set());
     const [manualForwardMessages, setManualForwardMessages] = useState<WppMessage[] | null>(null);
@@ -20,40 +20,60 @@ export default function ChatMessagesList() {
     const [forwardModalOpen, setForwardModalOpen] = useState(false);
 
     const isSelectionMode = selectedMessageIds.size > 0;
+    const isWhatsappChat = currentChat?.chatType === "wpp";
+    const isInternalChat = currentChat?.chatType === "internal" && !currentChat.isGroup;
+    const isInternalGroup = currentChat?.chatType === "internal" && currentChat.isGroup;
 
-    const selectedMessages = useMemo(() => {
-        return currentChatMessages.filter((m) => selectedMessageIds.has(m.id));
-    }, [currentChatMessages, selectedMessageIds]);
+    const selectedMessages = useMemo((): ForwardableMessage[] => {
+      const activeMessages = isWhatsappChat ? currentChatMessages : currentInternalChatMessages;
+      return activeMessages.filter((m) => selectedMessageIds.has(m.id));
+    }, [isWhatsappChat, currentChatMessages, currentInternalChatMessages, selectedMessageIds]);
 
     const messagesToForward = useMemo(() => manualForwardMessages || selectedMessages, [manualForwardMessages, selectedMessages]);
+    const forwardingTargets = useMemo((): ForwardingTarget[] => {
+        if (isWhatsappChat) {
+            return chats.map(chat => ({
+                id: `wpp-${chat.id}`, type: 'wpp', name: chat.contact?.name || 'Desconhecido', secondaryText: chat.contact?.phone
+            }));
+        }
+        if (isInternalChat) {
+            return users.map(user => ({
+                id: `user-${user.CODIGO}`, type: 'user', name: user.NOME, secondaryText: 'Usuário Interno'
+            }));
+        }
+        if (isInternalGroup) {
+            return internalChats.map(chat => ({
+                id: `internal-${chat.id}`, type: chat.isGroup ? 'group' : 'user', name: chat.groupName ||'Grupo Interno' , secondaryText: chat.isGroup ? 'Grupo Interno' : 'Usuário Interno'
+            }));
+        }
+        return [];
+    }, [isWhatsappChat, isInternalChat, isInternalGroup, chats, users, internalChats]);
 
     const toggleSelectMessage = useCallback((id: string | number) => {
-        setSelectedMessageIds(prev => {
-            const newSet = new Set(prev);
-            newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-            return newSet;
-        });
+      setSelectedMessageIds(prev => {
+        const newSet = new Set(prev);
+        newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+        return newSet;
+      });
     }, []);
 
     const clearSelection = () => setSelectedMessageIds(new Set());
 
     const openManualForward = (msg: WppMessage) => {
-        setManualForwardMessages([msg]);
-        setForwardModalOpen(true);
+      setManualForwardMessages([msg]);
+      setForwardModalOpen(true);
     };
     const openManualForwardInternal = (msg: InternalMessage) => {
-        setManualForwardMessages([msg as unknown as WppMessage]);
-        setForwardModalOpen(true);
+      setManualForwardMessages([msg as unknown as WppMessage]);
+      setForwardModalOpen(true);
     };
     const handleCloseForwardModal = () => {
-        setForwardModalOpen(false);
-        setManualForwardMessages(null);
-        clearSelection();
+      setForwardModalOpen(false);
+      setManualForwardMessages(null);
+      clearSelection();
     }
 
-    const isWhatsappChat = currentChat?.chatType === "wpp";
-    const isInternalChat = currentChat?.chatType === "internal" && !currentChat.isGroup;
-    const isInternalGroup = currentChat?.chatType === "internal" && currentChat.isGroup;
+
 
     return (
         <div className="h-full w-full flex flex-col">

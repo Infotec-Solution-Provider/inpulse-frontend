@@ -68,7 +68,7 @@ export default function RenderWhatsappChatMessages({
     const visibleMessages = useMemo(() => messagesToRender.slice(-visibleCount), [messagesToRender, visibleCount]);
 
     return (
-        <div className="h-full w-full overflow-y-auto p-2 bg-slate-300 dark:bg-slate-700 scrollbar-whatsapp">
+        <div className="h-full w-full overflow-y-auto p-2 bg-slate-300 dark:bg-slate-900 scrollbar-whatsapp">
 
             {visibleCount < messagesToRender.length && (
                 <div className="flex justify-center mb-2">

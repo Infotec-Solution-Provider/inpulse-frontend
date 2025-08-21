@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useContext } from "react";
-import { WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
 import {
     Button, Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, Checkbox,
     ListItemButton, ListItemText, Typography, IconButton, TextField, Box
@@ -13,8 +13,15 @@ interface ForwardMessagesModalProps {
     open: boolean;
     onClose: () => void;
     chats: DetailedChat[];
-    messagesToForward: WppMessage[];
+  messagesToForward: ForwardableMessage[];
 }
+export interface ForwardingTarget {
+    id: string;
+    type: 'wpp' | 'user' | 'group' | 'internalChat';
+    name: string;
+    secondaryText?: string;
+}
+export type ForwardableMessage = WppMessage | InternalMessage;
 
 export default function ForwardMessagesModal({
     open,

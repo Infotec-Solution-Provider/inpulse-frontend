@@ -52,7 +52,7 @@ export default function RenderInternalChatMessages({
     const visibleMessages = useMemo(() => currentInternalChatMessages.slice(-visibleCount), [currentInternalChatMessages, visibleCount]);
 
     return (
-        <div className="h-full w-full overflow-y-auto p-2 bg-slate-300 dark:bg-slate-700 scrollbar-whatsapp">
+        <div className="h-full w-full overflow-y-auto p-2 bg-slate-300 dark:bg-slate-900 scrollbar-whatsapp">
 
             {visibleCount < currentInternalChatMessages.length && (
                 <div className="flex justify-center mb-2">
