@@ -13,64 +13,56 @@ import CategoryIcon from "@mui/icons-material/Category";
 import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import SmsIcon from "@mui/icons-material/Sms";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import SchedulesModal from "./(schedules-modal)/schedules-modal";
+import HailIcon from "@mui/icons-material/Hail";
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
   all: "",
   unread: "(Lidas)",
   scheduled: "(Agendadas)",
   internal: "(Internas)",
+  external: "(Clientes)",
 };
 
 export default function ChatsMenuFilters() {
   const { openModal, closeModal } = useAppContext();
   const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
 
-  // Estado para abrir o menu do botão "+"
-  const [startMenuAnchorEl, setStartMenuAnchorEl] = useState<null | HTMLElement>(null);
-
-  // Estado para abrir o popover da "Nova Conversa Interna"
-  const [internalChatAnchorEl, setInternalChatAnchorEl] = useState<null | HTMLElement>(null);
-
-  // Estado para abrir menu de filtros
+  const [newChatMenuAnchorEl, setNewChatMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [newInternalChatAnchorEl, setNewInternalChatAnchorEl] = useState<null | HTMLElement>(null);
   const [filterMenuAnchorEl, setFilterMenuAnchorEl] = useState<null | HTMLElement>(null);
 
-  const isStartMenuOpen = Boolean(startMenuAnchorEl);
-  const isInternalChatOpen = Boolean(internalChatAnchorEl);
+  const isStartMenuOpen = Boolean(newChatMenuAnchorEl);
+  const isInternalChatOpen = Boolean(newInternalChatAnchorEl);
   const isFilterMenuOpen = Boolean(filterMenuAnchorEl);
 
-  // Abrir menu "+"
   const handleStartMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setStartMenuAnchorEl(event.currentTarget);
+    setNewChatMenuAnchorEl(event.currentTarget);
   };
 
-  // Fechar menu "+"
   const handleStartMenuClose = () => {
-    setStartMenuAnchorEl(null);
+    setNewChatMenuAnchorEl(null);
   };
 
-  // Abrir popover da "Nova Conversa Interna" e fechar menu "+"
   const handleOpenInternalChat = (event: React.MouseEvent<HTMLElement>) => {
-    setInternalChatAnchorEl(event.currentTarget);
+    setNewInternalChatAnchorEl(event.currentTarget);
     handleStartMenuClose();
   };
-  // Abrir popover da "Nova Conversa " e fechar menu "+"
 
   const handleOpenStartChatModal = (event: React.MouseEvent<HTMLElement>) => {
     openModal(<StartChatModal onClose={closeModal} />);
     handleStartMenuClose();
   };
 
-  // Fechar popover da "Nova Conversa "
   const handleCloseInternalChat = () => {
-    setInternalChatAnchorEl(null);
+    setNewInternalChatAnchorEl(null);
   };
 
-  // Abrir menu filtros
   const handleFilterMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setFilterMenuAnchorEl(event.currentTarget);
   };
 
-  // Fechar menu filtros
   const handleFilterMenuClose = () => {
     setFilterMenuAnchorEl(null);
   };
@@ -84,11 +76,19 @@ export default function ChatsMenuFilters() {
     changeChatFilters({ type: "change-search", search: event.target.value });
   };
 
+  const handleSchedulesMenuOpen = () => {
+    openModal(<SchedulesModal onClose={closeModal} />);
+  };
+
   return (
     <div className="flex flex-col gap-1 rounded-t-md p-3">
       <header className="mb-1 flex w-full items-center justify-between font-semibold dark:font-normal">
         <h1>Conversas {SHOWING_TYPE_TEXT[chatFilters.showingType]}</h1>
         <div className="flex items-center gap-2">
+          <IconButton id="schedules-button" onClick={handleSchedulesMenuOpen}>
+            <CalendarMonthIcon />
+          </IconButton>
+
           <IconButton id="filter-chats-button" onClick={handleFilterMenuOpen}>
             <FilterList />
           </IconButton>
@@ -101,7 +101,7 @@ export default function ChatsMenuFilters() {
         {/* Menu do botão "+" */}
         <Menu
           id="start-menu"
-          anchorEl={startMenuAnchorEl}
+          anchorEl={newChatMenuAnchorEl}
           open={isStartMenuOpen}
           onClose={handleStartMenuClose}
           PaperProps={{
@@ -126,7 +126,7 @@ export default function ChatsMenuFilters() {
 
         <Popover
           open={isInternalChatOpen}
-          anchorEl={internalChatAnchorEl}
+          anchorEl={newInternalChatAnchorEl}
           onClose={handleCloseInternalChat}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
           transformOrigin={{ vertical: "top", horizontal: "right" }}
@@ -172,6 +172,14 @@ export default function ChatsMenuFilters() {
           >
             <GroupsIcon />
             <p>Internos</p>
+          </MenuItem>
+          <MenuItem
+            onClick={() => handleChangeShowingType("external")}
+            aria-hidden={chatFilters.showingType === "external"}
+            className="flex items-center gap-2"
+          >
+            <HailIcon />
+            <p>Clientes</p>
           </MenuItem>
         </Menu>
       </header>
