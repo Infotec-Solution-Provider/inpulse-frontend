@@ -63,7 +63,7 @@ interface IWhatsappContext {
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageData) => void;
-  forwardMessages: (data: ForwardMessagesData) => Promise<void>; // --- 2. ADICIONAR A ASSINATURA DA FUNÇÃO ---
+  forwardMessages: (data: ForwardMessagesData) => Promise<void>;
 
   transferAttendance: (chatId: number, userId: number) => void;
   chatFilters: ChatsFiltersState;

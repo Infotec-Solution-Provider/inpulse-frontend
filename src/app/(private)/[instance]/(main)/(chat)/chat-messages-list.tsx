@@ -68,42 +68,39 @@ export default function ChatMessagesList() {
     clearSelection();
   }
 
-  const handleConfirmForward = async (selectedTargetIds: Set<string>) => {
-    const msgs = messagesToForward;
-    if (msgs.length === 0 || selectedTargetIds.size === 0) return;
+    const handleConfirmForward = async (selectedTargetIds: Set<string>) => {
+        const msgs = messagesToForward;
+        if (msgs.length === 0 || selectedTargetIds.size === 0) return;
 
-    const whatsappTargets: { id: string, isGroup: boolean }[] = [];
-    const internalTargetChatIds: number[] = [];
+        const whatsappTargets: { id: string, isGroup: boolean }[] = [];
+        const internalTargets: { id: number }[] = [];
+        const messageIds = msgs.map(m => Number(m.id));
+        const sourceType = isWhatsappChat ? 'whatsapp' : 'internal';
 
-    for (const targetId of selectedTargetIds) {
-      const [type, idStr] = targetId.split(/-(.+)/);
-      const id = Number(idStr);
+        for (const targetId of selectedTargetIds) {
+            const [type, idStr] = targetId.split(/-(.+)/);
+            const id = Number(idStr);
 
-      if (type === 'wpp') {
-        const chat = chats.find(c => c.id === id);
-        if (chat?.contact?.phone) whatsappTargets.push({ id: chat.contact.phone, isGroup: false });
-      }
-      else if (type === 'group' || type === 'internal') {
-        internalTargetChatIds.push(id);
-      }
-      else if (type === 'user') {
-        const directChat = internalChats.find(c => !c.isGroup && c.participants.some(p => p.userId === id));
-        if (directChat) {
-          internalTargetChatIds.push(directChat.id);
-        } else { console.warn(`Chat direto com o usuário de ID ${id} não foi encontrado.`); }
-      }
-    }
-
-    if (whatsappTargets.length > 0) { await forwardMessages({ messageIds: msgs.map(m => Number(m.id)), whatsappTargets, }); }
-    if (internalTargetChatIds.length > 0) {
-      for (const internalChatId of internalTargetChatIds) {
-        for (const msg of msgs) {
-          sendInternalMessage({ chatId: internalChatId, text: msg.body || '', fileId: msg.fileId || undefined });
+            if (type === 'wpp') {
+                const chat = chats.find(c => c.id === id);
+                if (chat?.contact?.phone) whatsappTargets.push({ id: chat.contact.phone, isGroup: false });
+            } else if (type === 'group' || type === 'internal') {
+                internalTargets.push({ id });
+            } else if (type === 'user') {
+                const directChat = internalChats.find(c => !c.isGroup && c.participants.some(p => p.userId === id));
+                if (directChat) internalTargets.push({ id: directChat.id });
+            }
         }
-      }
-    }
-    handleCloseForwardModal();
-  };
+
+        await forwardMessages({
+            sourceType,
+            messageIds,
+            whatsappTargets,
+            internalTargets,
+        });
+
+        handleCloseForwardModal();
+    };
 
   return (
     <div className="h-full w-full flex flex-col">
