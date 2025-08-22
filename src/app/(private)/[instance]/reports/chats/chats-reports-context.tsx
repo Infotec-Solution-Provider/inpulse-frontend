@@ -71,33 +71,41 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
     }
   }, []);
 
-  const handleReportStatus = useCallback((data: ReportStatusEventData) => {
-    setReports((prev) =>
-      prev.map((r) => {
-        if (r.id !== data.id || data.type !== "chats") return r;
+  const handleReportStatus = useCallback(
+    (data: ReportStatusEventData) => {
+      setReports(
+        reports.map((r) => {
+          if (r.id !== data.id || data.type !== "chats") return r;
 
-        if (data.isCompleted) {
-          toast.success("Relatório gerado com sucesso!");
+          if (data.isCompleted) {
+            return {
+              ...r,
+              status: "completed",
+              fileId: data.fileId,
+              progress: 100,
+              chats: data.chats,
+              messages: data.messages,
+            };
+          }
 
-          return {
-            ...r,
-            status: "completed",
-            fileId: data.fileId,
-            progress: 100,
-            chats: data.chats,
-            messages: data.messages,
-          };
-        }
+          if (data.isFailed) {
+            return { ...r, status: "failed" };
+          }
 
-        if (data.isFailed) {
-          toast.error("Falha ao gerar relatório!\n" + data.error);
-          return { ...r, status: "failed" };
-        }
+          return { ...r, progress: +data.progress.toFixed(0) };
+        }),
+      );
 
-        return { ...r, progress: +data.progress.toFixed(0) };
-      }),
-    );
-  }, []);
+      if (data.isCompleted) {
+        toast.success("Relatório gerado com sucesso!");
+      }
+
+      if (data.isFailed) {
+        toast.error("Falha ao gerar relatório!\n" + data.error);
+      }
+    },
+    [reports],
+  );
 
   useEffect(() => {
     if (token) {
@@ -120,6 +128,7 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
 
   useEffect(() => {
     const CHATS_REPORT_ROOM = "reports:chats";
+
     if (socket) {
       socket.joinRoom(CHATS_REPORT_ROOM);
       socket.on(SocketEventType.ReportStatus, handleReportStatus);

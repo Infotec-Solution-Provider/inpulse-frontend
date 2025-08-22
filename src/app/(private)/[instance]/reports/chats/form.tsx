@@ -49,6 +49,7 @@ export default function ChatReportForm() {
           ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
           { label: "Todos", value: "*" },
         ]}
+        getOptionKey={(option) => option.value}
         value={
           [
             ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
