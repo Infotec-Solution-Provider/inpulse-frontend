@@ -122,6 +122,7 @@ export default function RenderInternalGroupMessages({
                             fileType={m.fileType}
                             fileSize={m.fileSize}
                             quotedMessage={quotedMsg}
+                            isForwarded={m.isForwarded}
                             onQuote={() => handleQuoteMessage(m)}
                             onCopy={() => navigator.clipboard.writeText(m.body)}
                             isForwardMode={isSelectionMode}

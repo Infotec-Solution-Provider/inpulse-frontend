@@ -30,6 +30,7 @@ interface MessageProps {
   quotedMessage?: QuotedMessageProps | null;
   onQuote?: () => void;
   mentionNameMap?: Map<string, string>;
+  isForwarded?: boolean;
   isForwardMode?: boolean;
   isSelected?: boolean;
   onSelect?: (id: number) => void;
@@ -52,6 +53,7 @@ export default function GroupMessage({
   sentBy,
   quotedMessage,
   onQuote,
+  isForwarded = false,
   mentionNameMap,
   isForwardMode,
   isSelected,
@@ -78,13 +80,6 @@ export default function GroupMessage({
         onSelect?.(id);
         handleMenuClose();
     };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleSelectMessage = () => {
-    if (onSelect) onSelect(id);
-  };
 
   const handleCopy = () => {
     const contentToCopy = quotedMessage
@@ -155,7 +150,12 @@ export default function GroupMessage({
           {groupFirst && (
             <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
           )}
-
+                    {isForwarded && (
+                        <div className="flex items-center gap-1.5 opacity-75">
+                            <ForwardIcon sx={{ fontSize: '1rem' }} />
+                            <span className="text-xs font-semibold">Encaminhada</span>
+                        </div>
+                    )}
           {fileId && (
             <MessageFile
               fileId={fileId}
