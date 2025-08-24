@@ -79,6 +79,7 @@ export default function ChatMessagesListMonitor() {
           <Message
             id={m.id}
             key={`message_${m.id}`}
+            type={m.type}
             style={getWppMessageStyle(m)}
             text={m.body}
             date={new Date(+m.timestamp)}
