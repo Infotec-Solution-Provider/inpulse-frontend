@@ -48,7 +48,8 @@ export default function ContactModal({
   };
 
   const companyName = chat?.customer?.FANTASIA || chat?.customer?.RAZAO;
-
+  const avatarUrl = chat?.avatarUrl
+  console.log(avatarUrl)
   const avatarStyles = {
     width: 64,
     height: 64,
@@ -106,10 +107,10 @@ export default function ContactModal({
                 {contact.name}
               </Typography>
 
-              {chat?.avatarUrl ? (
-                <Avatar src={chat.avatarUrl} alt={contact.name || ""} sx={{ width: 64, height: 64 }} />
+              {avatarUrl ? (
+                <Avatar src={avatarUrl} alt={contact.name || ""} sx={avatarStyles} />
               ) : (
-                <Avatar sx={{ width: 64, height: 64 }}>
+                <Avatar sx={avatarStyles}>
                   {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
                 </Avatar>
               )}
