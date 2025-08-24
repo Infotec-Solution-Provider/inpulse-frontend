@@ -14,6 +14,7 @@ import React, { ReactNode, useState } from "react";
 import MessageFile from "./message-file";
 import { IconButton, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import LinkifiedText from "./linkmessage";
+import VCardMessage from "./vcard-message";
 
 export interface QuotedMessageProps {
     id: number | string;
@@ -29,6 +30,7 @@ export interface MessageProps {
     id: number | string;
     style: "received" | "sent" | "system";
     text: string;
+    type: string;
     date: Date;
     status?: WppMessageStatus | null;
     fileId?: number | null;
@@ -70,6 +72,7 @@ export const statusComponents: Record<WppMessageStatus, ReactNode> = {
 export default function Message({
     id,
     style,
+    type,
     text,
     date,
     status,
@@ -185,13 +188,16 @@ export default function Message({
                         />
                     )}
                     <div className="w-full text-slate-900 dark:text-slate-200">
-                        {text?.split("\n").map((line, index) => (
-                            <p key={index} className="max-w-[100%] break-words text-sm">
-                                <LinkifiedText text={line} />
-                            </p>
-                        ))}
+                        {type === "vcard" ? (
+                            <VCardMessage vCardString={text} />
+                        ) : (
+                            text?.split("\n").map((line, index) => (
+                                <p key={index} className="max-w-[100%] break-words text-sm">
+                                    <LinkifiedText text={line} />
+                                </p>
+                            ))
+                        )}
                     </div>
-
                     <div className="flex items-center gap-2">
                         {style !== "system" && status && statusComponents[status]}
                         <p className="text-xs text-slate-900 dark:text-slate-200">{date.toLocaleString()}</p>

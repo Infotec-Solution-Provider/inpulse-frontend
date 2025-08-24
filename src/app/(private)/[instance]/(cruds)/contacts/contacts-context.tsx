@@ -24,7 +24,8 @@ interface IContactsContext {
   deleteContact: (id: number) => void;
   updateContact: (id: number, name: string) => Promise<void>;
   loadContacts: () => void;
-  contacts: WppContact[]
+  contacts: WppContact[];
+  contact: WppContact | null;
   createContact:(name:string, phone:string )=> void;
   isLoading: boolean;
   openContactModal: (contact?: WppContact) => void;
@@ -43,6 +44,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const { token } = useAuthContext();
   const [contacts, setContacts] = useState<WppContact[]>([]);
+  const [contact, setContact] = useState<WppContact | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [modal, setModal] = useState<ReactNode>(null);
 
@@ -51,7 +53,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     try {
       if (token) {
         const updatedContact = await api.current.updateContact(id, name);
-
+        setContact(updatedContact)
         setContacts((prevContacts) =>
           prevContacts.map((c) =>
             c.id === id ? updatedContact : c
@@ -146,7 +148,8 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         openContactModal,
         closeModal,
         modal,
-        handleDeleteContact
+        handleDeleteContact,
+        contact
       }}
     >
       {children}

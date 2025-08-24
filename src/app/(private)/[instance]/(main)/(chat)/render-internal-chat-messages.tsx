@@ -83,6 +83,7 @@ export default function RenderInternalChatMessages({
                             key={`message_${m.id}`}
                             style={getInternalMessageStyle(m, user!.CODIGO)}
                             text={m.body}
+                            type={m.type}
                             date={new Date(+m.timestamp)}
                             status={m.status}
                             fileId={m.fileId}
