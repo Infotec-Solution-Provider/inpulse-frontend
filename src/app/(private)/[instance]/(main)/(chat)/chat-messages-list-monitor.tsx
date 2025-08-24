@@ -108,6 +108,7 @@ export default function ChatMessagesListMonitor() {
               groupFirst={groupFirst}
               sentBy={findUser ? findUser.NOME : "Desconhecido"}
               text={m.body}
+              type={m.type}
               date={new Date(+m.timestamp)}
               status={m.status}
               fileId={m.fileId}
