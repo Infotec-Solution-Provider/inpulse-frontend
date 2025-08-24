@@ -109,8 +109,6 @@ export default function RenderWhatsappChatMessages({
                             onForward={() => openManualForward(m)}
                             onCopy={() => navigator.clipboard.writeText(m.body ?? '')}
                             isForwarded={m.isForwarded}
-                            // ## ADIÇÃO ESSENCIAL AQUI ##
-                            // Passando a informação de que o modo de seleção está ativo.
                             isForwardMode={isSelectionMode}
                         />
                     );

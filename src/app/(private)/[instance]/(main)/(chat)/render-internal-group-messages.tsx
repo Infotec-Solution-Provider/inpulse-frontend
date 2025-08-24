@@ -115,6 +115,7 @@ export default function RenderInternalGroupMessages({
                             groupFirst={groupFirst}
                             sentBy={senderName}
                             text={m.body}
+                            type={m.type}
                             date={new Date(+m.timestamp)}
                             status={m.status}
                             fileId={m.fileId}

@@ -12,8 +12,9 @@ import ForwardIcon from '@mui/icons-material/Forward';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import React, { ReactNode, useState } from "react";
+import React, { useState } from "react";
 import { IconButton, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+import VCardMessage from "./vcard-message";
 
 interface MessageProps {
   id: number;
@@ -21,6 +22,7 @@ interface MessageProps {
   sentBy: string;
   groupFirst: boolean;
   text: string;
+  type: string;
   date: Date;
   status?: WppMessageStatus | null;
   fileId?: number | null;
@@ -43,6 +45,7 @@ export default function GroupMessage({
   id,
   style,
   text,
+  type,
   date,
   status,
   fileId,
@@ -164,15 +167,17 @@ export default function GroupMessage({
               fileSize={fileSize || ""}
             />
           )}
-
-          <div className="w-full text-slate-900 dark:text-slate-200">
-            {visualText.split("\n").map((line, index) => (
-              <p key={index} className="max-w-[100%] break-words text-sm">
-                <LinkifiedText text={line} />
-              </p>
-            ))}
-          </div>
-
+            <div className="w-full text-slate-900 dark:text-slate-200">
+                {type === "vcard" ? (
+                    <VCardMessage vCardString={text} />
+                ) : (
+                    text?.split("\n").map((line, index) => (
+                        <p key={index} className="max-w-[100%] break-words text-sm">
+                            <LinkifiedText text={line} />
+                        </p>
+                    ))
+                )}
+            </div>
           <div className="flex items-center gap-2">
             {style !== "system" && status && statusComponents[status]}
             <p className="text-xs text-slate-900 dark:text-slate-200">
