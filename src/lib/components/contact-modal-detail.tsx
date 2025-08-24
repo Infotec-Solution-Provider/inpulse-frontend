@@ -9,7 +9,6 @@ import {
   IconButton,
   CircularProgress,
   Avatar,
-  Divider,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
@@ -50,27 +49,39 @@ export default function ContactModal({
 
   const companyName = chat?.customer?.FANTASIA || chat?.customer?.RAZAO;
 
-  return (
+  const avatarStyles = {
+    width: 64,
+    height: 64,
+    ml: 2,
+    bgcolor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+  };
 
+  return (
     <Dialog
       open={open}
       onClose={onClose}
       aria-labelledby="contact-modal-title"
       maxWidth="xs"
     >
-      <DialogTitle id="contact-modal-title" sx={{ m: 0, p: 2, pb: 1 }}>
+      <DialogTitle
+        id="contact-modal-title"
+        sx={{
+          m: 0,
+          p: 2,
+          pb: 1,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Typography variant="h6" sx={{ fontWeight: "bold" }}>
           Detalhes do Contato
         </Typography>
         <IconButton
           aria-label="fechar"
           onClick={onClose}
-          sx={{
-            position: "absolute",
-            right: 8,
-            top: 8,
-            color: (theme) => theme.palette.grey[500],
-          }}
+          sx={{ color: (theme) => theme.palette.grey[500] }}
         >
           <CloseIcon />
         </IconButton>
@@ -83,7 +94,6 @@ export default function ContactModal({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              height: "100%",
               minHeight: 100,
             }}
           >
@@ -95,21 +105,15 @@ export default function ContactModal({
               <Typography variant="h5" sx={{ fontWeight: "bold", flexGrow: 1 }}>
                 {contact.name}
               </Typography>
-              <Avatar
-                src={chat?.avatarUrl || undefined}
-                alt={contact.name || ""}
-                sx={{
-                  width: 56,
-                  height: 56,
-                  ml: 2,
-                  bgcolor: theme.palette.primary.main,
-                  color: theme.palette.primary.contrastText,
-                }}
-              >
-                {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
-              </Avatar>
-            </Box>
 
+              {chat?.avatarUrl ? (
+                <Avatar src={chat.avatarUrl} alt={contact.name || ""} sx={avatarStyles} />
+              ) : (
+                <Avatar alt={contact.name || ""} sx={avatarStyles}>
+                  {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
+                </Avatar>
+              )}
+            </Box>
 
             <Box>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -150,12 +154,12 @@ export default function ContactModal({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: "8px 16px", display: 'block' }}>
+      <DialogActions sx={{ p: "8px 16px", display: "block" }}>
         <Button
           onClick={handleStartConversation}
           variant="contained"
           startIcon={<WhatsAppIcon />}
-          sx={{ textTransform: "none", width: '100%' }}
+          sx={{ textTransform: "none", width: "100%" }}
           disabled={isLoading || !contact}
         >
           Conversar
