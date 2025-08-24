@@ -141,7 +141,7 @@ const useNotificationHandler = () => {
     if (contextNotifications.length > 0 && localNotifications.length === 0) {
       setLocalNotifications(contextNotifications);
     }
-  }, []);
+  }, [contextNotifications]);
 
   return {
     isLoading,
@@ -177,7 +177,7 @@ export default function NotificationsDropdown() {
   const [selectedContact, setSelectedContact] = useState<WppContact | null>(null);
   const [selectedChat, setSelectedChat] = useState<WppChatWithDetailsAndMessages | null>(null);
   const [isContactLoading, setIsContactLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all'); // NOVO: Estado para o filtro
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const handleOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {

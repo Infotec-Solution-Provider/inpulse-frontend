@@ -394,7 +394,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
-      console.log("parameters");
       api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
         const parameters: Record<string, string> = res.data["parameters"];
         if (parameters["is_official"] === "true") {
@@ -413,7 +412,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.getSectors().then((res) => setSectors(res));
 
       getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
-
       return () => {
         setChats([]);
         setMessages([]);
