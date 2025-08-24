@@ -49,7 +49,6 @@ export default function ContactModal({
 
   const companyName = chat?.customer?.FANTASIA || chat?.customer?.RAZAO;
   const avatarUrl = chat?.avatarUrl
-  console.log(chat)
   const avatarStyles = {
     width: 64,
     height: 64,

@@ -196,6 +196,7 @@ export default function NotificationsDropdown() {
       setIsModalOpen(true);
       setIsContactLoading(true);
       setSelectedContact(null);
+      setSelectedChat(null);
 
       if (!notif.read) {
         markSingleAsReadNotification(notif.id as number);
@@ -206,15 +207,16 @@ export default function NotificationsDropdown() {
           throw new Error("Notificação sem ID de chat.");
         }
 
-      const chatResult = (await getChatById(notif.chatId as any)) as WppChatWithDetailsAndMessages | null | undefined;
-
-      const contactData = chatResult?.contact ?? chat?.contact ?? null;
+      await getChatById(notif.chatId);
+      const contactData = chat?.contact ?? chat?.contact ?? null;
 
       setSelectedContact(contactData);
-      setSelectedChat(chatResult ?? null);
+      setSelectedChat(chat ?? null);
       } catch (err) {
         console.error("Erro ao buscar contato:", err);
         setSelectedContact(null);
+        setSelectedChat( null);
+
       } finally {
         setIsContactLoading(false);
       }
