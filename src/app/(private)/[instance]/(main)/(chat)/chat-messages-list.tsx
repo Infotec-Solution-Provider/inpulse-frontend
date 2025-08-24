@@ -85,6 +85,7 @@ export default function ChatMessagesList() {
                 const chat = chats.find(c => c.id === id);
                 if (chat?.contact?.phone) whatsappTargets.push({ id: chat.contact.phone, isGroup: false });
             } else if (type === 'group' || type === 'internal') {
+
                 internalTargets.push({ id });
             } else if (type === 'user') {
                 const directChat = internalChats.find(c => !c.isGroup && c.participants.some(p => p.userId === id));

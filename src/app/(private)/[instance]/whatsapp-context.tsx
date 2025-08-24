@@ -21,6 +21,9 @@ import {
   WppChatWithDetails,
   WppMessage,
   WppSchedule,
+  AppNotification,
+  PaginatedNotificationsResponse,
+  WppChatWithDetailsAndMessages,
 } from "@in.pulse-crm/sdk";
 import { AuthContext } from "@/app/auth-context";
 import { SocketContext } from "./socket-context";
@@ -38,7 +41,6 @@ import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
 import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import ChatTransferHandler from "@/lib/event-handlers/chat-transfer";
-import { AppNotification } from "@/lib/types/app-notification.type";
 import { SendTemplateData } from "@/lib/components/send-template-modal";
 
 export interface DetailedChat extends WppChatWithDetails {
@@ -50,10 +52,19 @@ export interface DetailedChat extends WppChatWithDetails {
 export interface DetailedSchedule extends WppSchedule {
   customer: Customer | null;
 }
+interface GetNotificationsParams {
+  page: number;
+  pageSize: number;
+}
 
+interface GetNotificationsResponse {
+  notifications: AppNotification[];
+  totalCount: number;
+}
 interface IWhatsappContext {
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
+  chat: WppChatWithDetailsAndMessages | undefined;
   messages: Record<number, WppMessage[]>;
   sectors: { id: number; name: string }[];
   currentChat: DetailedChat | DetailedInternalChat | null;
@@ -76,10 +87,12 @@ interface IWhatsappContext {
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: DetailedChat[];
   getChats: () => void;
+  getChatById: (chatId:number) => void;
   createSchedule: (chat: WppChat, date: Date) => void;
   notifications: AppNotification[];
-  getNotifications: () => void;
+  getNotifications: (params: GetNotificationsParams) => Promise<GetNotificationsResponse>;
   markAllAsReadNotification: () => void;
+  markAsReadNotificationById: (notificationId: number) => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
   loadChatMessages: (chat: DetailedChat) => void;
@@ -97,6 +110,7 @@ export interface MessageTemplate {
 }
 
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
+export const NOTIFICATIONS_PER_PAGE = 15;
 
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
@@ -104,20 +118,20 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token, instance } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
-  const [chats, setChats] = useState<DetailedChat[]>([]); // Todas as conversas com detalhes (cliente e contato)
-  const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null); // Conversa que está aberta
-  const currentChatRef = useRef<DetailedChat | null>(null); // Referência para a conversa atual
-  const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]); // Mensagens da conversa aberta
-  const [messages, setMessages] = useState<Record<number, WppMessage[]>>({}); // Mensagens de todas as conversas
-  const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]); // Setores do whatsapp
-  const api = useRef(new WhatsappClient(WPP_BASE_URL)); // Instância do cliente do whatsapp
+  const [chats, setChats] = useState<DetailedChat[]>([]);
+  const [chat, setChat] = useState<WppChatWithDetailsAndMessages| undefined>();
+  const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
+  const currentChatRef = useRef<DetailedChat | null>(null);
+  const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
+  const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
+  const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]);
+  const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
 
-  //setCurrentChatMessagesWrapper
   function setUniqueCurrentChatMessages(update: SetStateAction<WppMessage[]>) {
     setCurrentChatMessages((prev) => {
       const next =
@@ -129,7 +143,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       for (const msg of next || []) {
         const id = (msg as any)?.id;
         if (id == null) {
-          // Se não houver id, mantemos a mensagem
           deduped.push(msg);
           continue;
         }
@@ -143,13 +156,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     });
   }
 
-  // Reducer que controla os filtros de conversas
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
     search: "",
     showingType: "all",
   });
 
-  // Abre conversa
   const openChat = useCallback(
     (chat: DetailedChat) => {
       setCurrentChat(chat);
@@ -175,7 +186,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [messages],
   );
 
-  // Atualiza o nome do contato
   const updateChatContact = useCallback(
     (contactId: number, newName: string, newCustomer: Customer | null) => {
       setChats((prev) =>
@@ -205,7 +215,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [currentChat],
   );
 
-  // Finaliza uma conversa
   const finishChat = useCallback(
     (chatId: number, resultId: number) => {
       api.current.setAuth(token || "");
@@ -214,7 +223,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     },
     [api, token],
   );
-  // Atualizar operador atendimento
+
   const transferAttendance = useCallback(
     (chatId: number, selectedUser: number) => {
       api.current.setAuth(token || "");
@@ -237,13 +246,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api.current.sendMessage(to, data);
   }, []);
 
-  // Carregamento monitoria das conversas
   const getChatsMonitor = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsMonitor().then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
         setMonitorChats(detailedChats);
         setMessages(chatsMessages);
       });
@@ -263,25 +270,62 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setMonitorSchedules([]);
     }
   }, [token, api.current]);
-  // Buscar notificações do usuario
 
-  const getNotifications = useCallback(() => {
-    if (typeof token === "string" && token.length > 0 && api.current) {
-      api.current.setAuth(token);
-      api.current.getNotifications().then((res) => {
-        setNotifications(res as AppNotification[]);
-      });
-    } else {
-      setMonitorSchedules([]);
+  const markAsReadNotificationById = useCallback(async (notificationId: number) => {
+      try {
+        if (!token) return;
+        await api.current.markOneAsReadNotification(notificationId);
+        setNotifications((prev) =>
+          prev.map((notif) =>
+            notif.id === notificationId ? { ...notif, read: true } : notif
+          )
+        );
+      } catch (err) {
+        toast.error("Falha ao marcar notificação como lida!");
+      }
+    }, [token]);
+
+  const getNotifications = useCallback(async (
+    { page, pageSize }: { page: number; pageSize: number }
+  ): Promise<{ notifications: AppNotification[], totalCount: number }> => {
+    if (!(typeof token === "string" && token.length > 0 && api.current)) {
+      setNotifications([]);
+      return { notifications: [], totalCount: 0 };
     }
+
+    api.current.setAuth(token);
+
+    const response = await api.current.getNotifications({ page, pageSize });
+
+    const { notifications: newNotifications, totalCount } = response.data;
+
+    if (page === 1) {
+      setNotifications(newNotifications);
+    } else {
+      setNotifications((prevNotifications) => [...prevNotifications, ...newNotifications]);
+    }
+
+    return { notifications: newNotifications, totalCount };
+
   }, [token, api.current]);
 
-  const markAllAsReadNotification = useCallback(() => {
-    if (typeof token === "string" && token.length > 0 && api.current) {
+  const markAllAsReadNotification = useCallback(async () => {
+    if (!(typeof token === "string" && token.length > 0 && api.current)) return;
+
+    try {
       api.current.setAuth(token);
-      api.current.markAllAsReadNotification().then((res) => {
-        getNotifications();
-      });
+      await api.current.markAllAsReadNotification();
+
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notif) => ({
+          ...notif,
+          read: true,
+        }))
+      );
+      toast.success("Todas as notificações foram marcadas como lidas.");
+    } catch (error) {
+      toast.error("Falha ao marcar as notificações como lidas.");
+      console.error("Erro ao marcar notificações como lidas:", error);
     }
   }, [token, api.current]);
 
@@ -307,11 +351,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
       if (chat.contactId && !messages[chat.contactId]) {
         const res = await api.current.getChatById(chat.id);
-
         setMessages((prev) => ({ ...prev, [chat.contactId || 0]: res.messages || [] }));
       }
     },
-    [messages],
+    [],
+  );
+  const getChatById = useCallback(
+    async (chatId: number) => {
+      if (!chatId) return;
+      const res = await api.current.getChatById(chatId);
+      setChat(res)
+    },
+    [],
   );
   const forwardMessages = useCallback(async (data: ForwardMessagesData) => {
     try {
@@ -324,13 +375,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       console.error("Falha ao encaminhar mensagens", err);
     }
   }, [token]);
-  // Função para obter e processar as conversas e mensagens
+
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
@@ -341,13 +391,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [token, api.current]);
 
-  // Carregamento inicial das conversas e mensagens
   useEffect(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
+      console.log("parameters");
       api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
         const parameters: Record<string, string> = res.data["parameters"];
-
         if (parameters["is_official"] === "true") {
           const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
           setTemplates(templatesResponse.data.templates);
@@ -357,13 +406,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
 
       api.current.getSectors().then((res) => setSectors(res));
-      getNotifications();
+
+      getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
 
       return () => {
         setChats([]);
@@ -375,16 +424,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [token, api.current, instance]);
 
-  // Atribui listeners para eventos de socket do whatsapp
   useEffect(() => {
     if (socket) {
-      // Evento de conversa lida
       socket.on(
         SocketEventType.WppContactMessagesRead,
         ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages),
       );
-
-      // Evento de nova conversa
       socket.on(
         SocketEventType.WppChatStarted,
         ChatStartedHandler(
@@ -396,8 +441,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setUniqueCurrentChatMessages,
         ),
       );
-
-      // Evento de conversa finalizada
       socket.on(
         SocketEventType.WppChatFinished,
         ChatFinishedHandler(
@@ -408,11 +451,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setChats,
           setCurrentChat,
           setUniqueCurrentChatMessages,
-          getNotifications,
+          () => getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }),
         ),
       );
-
-      // Evento de conversa transferido
       socket.on(
         SocketEventType.WppChatTransfer,
         ChatTransferHandler(
@@ -426,8 +467,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setUniqueCurrentChatMessages,
         ),
       );
-
-      // Evento de nova mensagem
       socket.on(
         SocketEventType.WppMessage,
         ReceiveMessageHandler(
@@ -439,13 +478,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           chats,
         ),
       );
-
-      // Evento de status de mensagem
       socket.on(
         SocketEventType.WppMessageStatus,
         MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
       );
-
       return () => {
         socket.off(SocketEventType.WppMessage);
         socket.off(SocketEventType.WppChatStarted);
@@ -487,6 +523,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         templates,
         parameters,
         loadChatMessages,
+        markAsReadNotificationById,
+        getChatById,
+        chat,
       }}
     >
       {children}
