@@ -106,13 +106,14 @@ export default function ContactModal({
                 {contact.name}
               </Typography>
 
-              {chat?.avatarUrl ? (
-                <Avatar src={chat.avatarUrl} alt={contact.name || ""} sx={avatarStyles} />
-              ) : (
-                <Avatar alt={contact.name || ""} sx={avatarStyles}>
-                  {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
-                </Avatar>
-              )}
+              <Avatar
+                src={chat?.avatarUrl || undefined}
+                alt={contact.name || ""}
+                sx={avatarStyles}
+                imgProps={{ referrerPolicy: "no-referrer" }}
+              >
+                {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
+              </Avatar>
             </Box>
 
             <Box>
