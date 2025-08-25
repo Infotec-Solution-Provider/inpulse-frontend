@@ -106,8 +106,8 @@ export default function ContactModal({
       maxWidth="xs"
       PaperProps={{
         sx: {
-          bgcolor: "#1e1f25",
-          color: "#fff",
+          bgcolor: (theme) => theme.palette.background.paper,
+          color: (theme) => theme.palette.text.primary,
           borderRadius: 3,
           p: 2,
           textAlign: "center",
@@ -117,20 +117,26 @@ export default function ContactModal({
       <DialogTitle
         id="contact-modal-title"
         sx={{
-          fontWeight: "bold",
-          textAlign: "center",
-          pb: 1,
+          pt: 1,
+          pb: 0.5,
+          px: 2,
+          display: "flex",
+          alignItems: "center",
         }}
       >
-        Detalhes do Contato
+        <Typography
+          variant="h6"
+          sx={{ fontWeight: "bold", flexGrow: 1 }}
+        >
+          Detalhes do Contato
+        </Typography>
+
         <IconButton
           aria-label="fechar"
           onClick={onClose}
           sx={{
-            position: "absolute",
-            right: 12,
-            top: 12,
-            color: "#aaa",
+            color: (theme) => theme.palette.grey[500],
+            ml: 2,
           }}
         >
           <CloseIcon />
@@ -157,7 +163,8 @@ export default function ContactModal({
                 sx={{
                   width: 72,
                   height: 72,
-                  bgcolor: theme.palette.primary.main,
+                  bgcolor: (theme) => theme.palette.primary.main,
+                  color: (theme) => theme.palette.primary.contrastText,
                   mb: 2,
                 }}
                 imgProps={{ referrerPolicy: "no-referrer" }}
@@ -167,7 +174,8 @@ export default function ContactModal({
                 sx={{
                   width: 72,
                   height: 72,
-                  bgcolor: theme.palette.primary.main,
+                  bgcolor: (theme) => theme.palette.primary.main,
+                  color: (theme) => theme.palette.primary.contrastText,
                   mb: 2,
                 }}
               >
@@ -179,15 +187,17 @@ export default function ContactModal({
               </Avatar>
             )}
 
-            {/* Nome */}
             <Typography
               variant="h6"
-              sx={{ fontWeight: "bold", mb: 1, color: "#fff" }}
+              sx={{
+                fontWeight: "bold",
+                mb: 1,
+                color: (theme) => theme.palette.text.primary,
+              }}
             >
               {contact.name}
             </Typography>
 
-            {/* Telefone */}
             <Box
               sx={{
                 display: "flex",
@@ -196,30 +206,48 @@ export default function ContactModal({
                 mb: 1,
               }}
             >
-              <PhoneIphoneIcon sx={{ mr: 1, color: "#aaa" }} />
-              <Typography variant="body2" sx={{ color: "#ccc" }}>
+              <PhoneIphoneIcon
+                sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ color: (theme) => theme.palette.text.secondary }}
+              >
                 {contact.phone
                   ? Formatter.phone(contact.phone)
                   : "Número indisponível"}
               </Typography>
             </Box>
 
-            {/* Infos extras */}
             {chat?.customer && (
-              <Box mt={1} sx={{ color: "#bbb" }}>
+              <Box mt={1} sx={{ color: (theme) => theme.palette.text.secondary }}>
                 {companyName && (
                   <Box
-                    sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: "center" }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      mb: 1,
+                      justifyContent: "center",
+                    }}
                   >
-                    <BusinessIcon sx={{ mr: 1, color: "#aaa" }} />
+                    <BusinessIcon
+                      sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
+                    />
                     <Typography variant="body2">{companyName}</Typography>
                   </Box>
                 )}
                 {chat.customer.CPF_CNPJ && (
                   <Box
-                    sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: "center" }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      mb: 1,
+                      justifyContent: "center",
+                    }}
                   >
-                    <BadgeIcon sx={{ mr: 1, color: "#aaa" }} />
+                    <BadgeIcon
+                      sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
+                    />
                     <Typography variant="body2">
                       {chat.customer.CPF_CNPJ}
                     </Typography>
@@ -227,9 +255,16 @@ export default function ContactModal({
                 )}
                 {chat.customer.COD_ERP && (
                   <Box
-                    sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: "center" }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      mb: 1,
+                      justifyContent: "center",
+                    }}
                   >
-                    <ArticleIcon sx={{ mr: 1, color: "#aaa" }} />
+                    <ArticleIcon
+                      sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
+                    />
                     <Typography variant="body2">
                       Cód. ERP: {chat.customer.COD_ERP}
                     </Typography>
@@ -239,13 +274,18 @@ export default function ContactModal({
             )}
           </>
         ) : (
-          <Typography sx={{ textAlign: "center", mt: 2, color: "#aaa" }}>
+          <Typography
+            sx={{
+              textAlign: "center",
+              mt: 2,
+              color: (theme) => theme.palette.text.secondary,
+            }}
+          >
             Contato não encontrado.
           </Typography>
         )}
       </DialogContent>
 
-      {/* Ações */}
       <DialogActions
         sx={{
           flexDirection: "column",
@@ -259,13 +299,19 @@ export default function ContactModal({
             sx={{
               p: 1,
               borderRadius: 2,
-              bgcolor: "rgba(255,255,255,0.05)",
+              bgcolor: (theme) => theme.palette.action.hover,
               width: "100%",
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: "medium", color: "#ccc" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: "medium",
+                color: (theme) => theme.palette.text.secondary,
+              }}
+            >
               Em atendimento com:{" "}
-              <strong style={{ color: "#fff" }}>
+              <strong style={{ color: theme.palette.text.primary }}>
                 {user?.NOME || "Outro Operador"}
               </strong>
             </Typography>
@@ -278,8 +324,6 @@ export default function ContactModal({
             sx={{
               textTransform: "none",
               width: "100%",
-              bgcolor: theme.palette.primary.main,
-              color: theme.palette.primary.contrastText,
               fontWeight: "bold",
               borderRadius: 2,
             }}
@@ -295,8 +339,6 @@ export default function ContactModal({
               sx={{
                 textTransform: "none",
                 flexGrow: 1,
-                borderColor: "#555",
-                color: "#fff",
                 borderRadius: 2,
               }}
               disabled={isCreating}
@@ -316,8 +358,6 @@ export default function ContactModal({
               sx={{
                 textTransform: "none",
                 flexGrow: 1,
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
                 fontWeight: "bold",
                 borderRadius: 2,
               }}
