@@ -42,19 +42,29 @@ export default function ContactModal({
 }: ContactModalProps) {
   const { startChatByContactId, chats, monitorChats } = useWhatsappContext();
   const { createContact, contact: newCreatedContact } = useContactsContext();
-  const {users} = useInternalChatContext()
+  const { users } = useInternalChatContext();
   const theme = useTheme();
   const [isCreating, setIsCreating] = useState(false);
   const [shouldStartChat, setShouldStartChat] = useState(false);
 
   useEffect(() => {
-    if (shouldStartChat && newCreatedContact && newCreatedContact.id && newCreatedContact.phone === contact?.phone) {
+    if (
+      shouldStartChat &&
+      newCreatedContact &&
+      newCreatedContact.id &&
+      newCreatedContact.phone === contact?.phone
+    ) {
       startChatByContactId(newCreatedContact.id);
       setShouldStartChat(false);
       onClose();
     }
-  }, [newCreatedContact, shouldStartChat, startChatByContactId, onClose, contact?.phone]);
-
+  }, [
+    newCreatedContact,
+    shouldStartChat,
+    startChatByContactId,
+    onClose,
+    contact?.phone,
+  ]);
 
   const handleStartConversation = () => {
     if (!contact || !contact.id) return;
@@ -76,26 +86,17 @@ export default function ContactModal({
     await createContact(contact.name, contact.phone);
     setIsCreating(false);
     onClose();
-  }
+  };
 
   const companyName = chat?.customer?.FANTASIA || chat?.customer?.RAZAO;
   const avatarUrl = chat?.avatarUrl;
   const activeChat = useMemo(() => {
     if (!contact || !contact.id) return null;
     const allActiveChats = [...chats, ...monitorChats];
-    return allActiveChats.find(
-      (c) => c.contactId === contact.id
-    );
+    return allActiveChats.find((c) => c.contactId === contact.id);
   }, [contact, chats, monitorChats]);
 
-  const user = users.find(c=>c.CODIGO === activeChat?.userId)
-  const avatarStyles = {
-    width: 64,
-    height: 64,
-    ml: 2,
-    bgcolor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-  };
+  const user = users.find((c) => c.CODIGO === activeChat?.userId);
 
   return (
     <Dialog
@@ -103,78 +104,170 @@ export default function ContactModal({
       onClose={onClose}
       aria-labelledby="contact-modal-title"
       maxWidth="xs"
+      PaperProps={{
+        sx: {
+          bgcolor: "#1e1f25",
+          color: "#fff",
+          borderRadius: 3,
+          p: 2,
+          textAlign: "center",
+        },
+      }}
     >
       <DialogTitle
         id="contact-modal-title"
         sx={{
-          m: 0,
-          p: 2,
+          fontWeight: "bold",
+          textAlign: "center",
           pb: 1,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
         }}
-        variant="h6"
       >
         Detalhes do Contato
         <IconButton
           aria-label="fechar"
           onClick={onClose}
-          sx={{ color: (theme) => theme.palette.grey[500] }}
+          sx={{
+            position: "absolute",
+            right: 12,
+            top: 12,
+            color: "#aaa",
+          }}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent
+        dividers={false}
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          pt: 1,
+        }}
+      >
         {isLoading ? (
-          <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 100 }}>
-            <CircularProgress />
-          </Box>
+          <CircularProgress sx={{ mt: 3, mb: 3 }} />
         ) : contact ? (
           <>
-            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-              <Typography variant="h5" sx={{ fontWeight: "bold", flexGrow: 1 }}>
-                {contact.name}
+            {avatarUrl ? (
+              <Avatar
+                src={avatarUrl}
+                alt={contact.name || ""}
+                sx={{
+                  width: 72,
+                  height: 72,
+                  bgcolor: theme.palette.primary.main,
+                  mb: 2,
+                }}
+                imgProps={{ referrerPolicy: "no-referrer" }}
+              />
+            ) : (
+              <Avatar
+                sx={{
+                  width: 72,
+                  height: 72,
+                  bgcolor: theme.palette.primary.main,
+                  mb: 2,
+                }}
+              >
+                {contact.name ? (
+                  contact.name.charAt(0).toUpperCase()
+                ) : (
+                  <PersonIcon />
+                )}
+              </Avatar>
+            )}
+
+            {/* Nome */}
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: "bold", mb: 1, color: "#fff" }}
+            >
+              {contact.name}
+            </Typography>
+
+            {/* Telefone */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mb: 1,
+              }}
+            >
+              <PhoneIphoneIcon sx={{ mr: 1, color: "#aaa" }} />
+              <Typography variant="body2" sx={{ color: "#ccc" }}>
+                {contact.phone
+                  ? Formatter.phone(contact.phone)
+                  : "Número indisponível"}
               </Typography>
-              {avatarUrl ? (
-                <Avatar src={avatarUrl} alt={contact.name || ""} sx={avatarStyles} imgProps={{ referrerPolicy: "no-referrer" }} />
-              ) : (
-                <Avatar sx={avatarStyles}>
-                  {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
-                </Avatar>
-              )}
             </Box>
 
-            <Box>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <PhoneIphoneIcon color="action" sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  {contact.phone ? Formatter.phone(contact.phone) : "Número indisponível"}
-                </Typography>
+            {/* Infos extras */}
+            {chat?.customer && (
+              <Box mt={1} sx={{ color: "#bbb" }}>
+                {companyName && (
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: "center" }}
+                  >
+                    <BusinessIcon sx={{ mr: 1, color: "#aaa" }} />
+                    <Typography variant="body2">{companyName}</Typography>
+                  </Box>
+                )}
+                {chat.customer.CPF_CNPJ && (
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: "center" }}
+                  >
+                    <BadgeIcon sx={{ mr: 1, color: "#aaa" }} />
+                    <Typography variant="body2">
+                      {chat.customer.CPF_CNPJ}
+                    </Typography>
+                  </Box>
+                )}
+                {chat.customer.COD_ERP && (
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", mb: 1, justifyContent: "center" }}
+                  >
+                    <ArticleIcon sx={{ mr: 1, color: "#aaa" }} />
+                    <Typography variant="body2">
+                      Cód. ERP: {chat.customer.COD_ERP}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
-
-              {chat?.customer && (
-                <Box mt={1}>
-                  {companyName && (<Box sx={{ display: "flex", alignItems: "center", mb: 1 }}> <BusinessIcon color="action" sx={{ mr: 1 }} /> <Typography variant="body2">{companyName}</Typography> </Box>)}
-                  {chat.customer.CPF_CNPJ && (<Box sx={{ display: "flex", alignItems: "center", mb: 1 }}> <BadgeIcon color="action" sx={{ mr: 1 }} /> <Typography variant="body2">{chat.customer.CPF_CNPJ}</Typography> </Box>)}
-                  {chat.customer.COD_ERP && (<Box sx={{ display: "flex", alignItems: "center", mb: 1 }}> <ArticleIcon color="action" sx={{ mr: 1 }} /> <Typography variant="body2">Cód. ERP: {chat.customer.COD_ERP}</Typography> </Box>)}
-                </Box>
-              )}
-            </Box>
+            )}
           </>
         ) : (
-          <Typography sx={{ textAlign: "center", mt: 2 }}>
+          <Typography sx={{ textAlign: "center", mt: 2, color: "#aaa" }}>
             Contato não encontrado.
           </Typography>
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: "8px 16px" }}>
+      {/* Ações */}
+      <DialogActions
+        sx={{
+          flexDirection: "column",
+          gap: 1,
+          px: 2,
+          pb: 2,
+        }}
+      >
         {activeChat ? (
-          <Box sx={{ p: 1, textAlign: 'center', borderRadius: 1, bgcolor: 'action.hover', width: '100%' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-              Em atendimento com: <strong>{user?.NOME || "Outro Operador"}</strong>
+          <Box
+            sx={{
+              p: 1,
+              borderRadius: 2,
+              bgcolor: "rgba(255,255,255,0.05)",
+              width: "100%",
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: "medium", color: "#ccc" }}>
+              Em atendimento com:{" "}
+              <strong style={{ color: "#fff" }}>
+                {user?.NOME || "Outro Operador"}
+              </strong>
             </Typography>
           </Box>
         ) : contact?.id ? (
@@ -182,17 +275,30 @@ export default function ContactModal({
             onClick={handleStartConversation}
             variant="contained"
             startIcon={<WhatsAppIcon />}
-            sx={{ textTransform: "none", width: "100%" }}
+            sx={{
+              textTransform: "none",
+              width: "100%",
+              bgcolor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText,
+              fontWeight: "bold",
+              borderRadius: 2,
+            }}
             disabled={isLoading || !contact}
           >
             Iniciar Conversa
           </Button>
         ) : (
-          <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+          <Box sx={{ display: "flex", gap: 1, width: "100%" }}>
             <Button
               onClick={handleJustAdd}
               variant="outlined"
-              sx={{ textTransform: "none", flexGrow: 1 }}
+              sx={{
+                textTransform: "none",
+                flexGrow: 1,
+                borderColor: "#555",
+                color: "#fff",
+                borderRadius: 2,
+              }}
               disabled={isCreating}
             >
               Adicionar
@@ -200,8 +306,21 @@ export default function ContactModal({
             <Button
               onClick={handleAddAndChat}
               variant="contained"
-              startIcon={isCreating ? <CircularProgress size={16} color="inherit"/> : <WhatsAppIcon />}
-              sx={{ textTransform: "none", flexGrow: 1 }}
+              startIcon={
+                isCreating ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  <WhatsAppIcon />
+                )
+              }
+              sx={{
+                textTransform: "none",
+                flexGrow: 1,
+                bgcolor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                fontWeight: "bold",
+                borderRadius: 2,
+              }}
               disabled={isCreating}
             >
               Conversar
