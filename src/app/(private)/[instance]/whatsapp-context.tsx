@@ -87,7 +87,7 @@ interface IWhatsappContext {
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: DetailedChat[];
   getChats: () => void;
-  getChatById: (chatId:number) => void;
+  getChatById: (chatId: number) => void;
   createSchedule: (chat: WppChat, date: Date) => void;
   notifications: AppNotification[];
   getNotifications: (params: GetNotificationsParams) => Promise<GetNotificationsResponse>;
@@ -95,7 +95,7 @@ interface IWhatsappContext {
   markAsReadNotificationById: (notificationId: number) => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
-  loadChatMessages: (chat: DetailedChat) => void;
+  loadChatMessages: (chat: DetailedChat) => Promise<void>;
 }
 
 interface WhatsappProviderProps {
@@ -119,7 +119,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { socket } = useContext(SocketContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]);
-  const [chat, setChat] = useState<WppChatWithDetailsAndMessages| undefined>();
+  const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
   const currentChatRef = useRef<DetailedChat | null>(null);
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
@@ -271,43 +271,50 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [token, api.current]);
 
-  const markAsReadNotificationById = useCallback(async (notificationId: number) => {
+  const markAsReadNotificationById = useCallback(
+    async (notificationId: number) => {
       try {
         if (!token) return;
         await api.current.markOneAsReadNotification(notificationId);
         setNotifications((prev) =>
-          prev.map((notif) =>
-            notif.id === notificationId ? { ...notif, read: true } : notif
-          )
+          prev.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif)),
         );
       } catch (err) {
         toast.error("Falha ao marcar notificação como lida!");
       }
-    }, [token]);
+    },
+    [token],
+  );
 
-  const getNotifications = useCallback(async (
-    { page, pageSize }: { page: number; pageSize: number }
-  ): Promise<{ notifications: AppNotification[], totalCount: number }> => {
-    if (!(typeof token === "string" && token.length > 0 && api.current)) {
-      setNotifications([]);
-      return { notifications: [], totalCount: 0 };
-    }
+  const getNotifications = useCallback(
+    async ({
+      page,
+      pageSize,
+    }: {
+      page: number;
+      pageSize: number;
+    }): Promise<{ notifications: AppNotification[]; totalCount: number }> => {
+      if (!(typeof token === "string" && token.length > 0 && api.current)) {
+        setNotifications([]);
+        return { notifications: [], totalCount: 0 };
+      }
 
-    api.current.setAuth(token);
+      api.current.setAuth(token);
 
-    const response = await api.current.getNotifications({ page, pageSize });
+      const response = await api.current.getNotifications({ page, pageSize });
 
-    const { notifications: newNotifications, totalCount } = response.data;
+      const { notifications: newNotifications, totalCount } = response.data;
 
-    if (page === 1) {
-      setNotifications(newNotifications);
-    } else {
-      setNotifications((prevNotifications) => [...prevNotifications, ...newNotifications]);
-    }
+      if (page === 1) {
+        setNotifications(newNotifications);
+      } else {
+        setNotifications((prevNotifications) => [...prevNotifications, ...newNotifications]);
+      }
 
-    return { notifications: newNotifications, totalCount };
-
-  }, [token, api.current]);
+      return { notifications: newNotifications, totalCount };
+    },
+    [token, api.current],
+  );
 
   const markAllAsReadNotification = useCallback(async () => {
     if (!(typeof token === "string" && token.length > 0 && api.current)) return;
@@ -320,7 +327,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         prevNotifications.map((notif) => ({
           ...notif,
           read: true,
-        }))
+        })),
       );
       toast.success("Todas as notificações foram marcadas como lidas.");
     } catch (error) {
@@ -345,36 +352,33 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, []);
 
-  const loadChatMessages = useCallback(
-    async (chat: DetailedChat) => {
-      if (!chat.id) return;
+  const loadChatMessages = useCallback(async (chat: DetailedChat) => {
+    if (!chat.id) return;
 
-      if (chat.contactId && !messages[chat.contactId]) {
-        const res = await api.current.getChatById(chat.id);
-        setMessages((prev) => ({ ...prev, [chat.contactId || 0]: res.messages || [] }));
+    if (chat.contactId && !messages[chat.contactId]) {
+      const res = await api.current.getChatById(chat.id);
+      setMessages((prev) => ({ ...prev, [chat.contactId || 0]: res.messages || [] }));
+    }
+  }, []);
+  const getChatById = useCallback(async (chatId: number) => {
+    if (!chatId) return;
+    const res = await api.current.getChatById(chatId);
+    setChat(res);
+  }, []);
+  const forwardMessages = useCallback(
+    async (data: ForwardMessagesData) => {
+      try {
+        api.current.setAuth(token || "");
+        await api.current.forwardMessages(data);
+        toast.success("Mensagens encaminhadas com sucesso!");
+      } catch (err) {
+        const errorMessage = sanitizeErrorMessage(err);
+        toast.error(`Falha ao encaminhar mensagens: ${errorMessage}`);
+        console.error("Falha ao encaminhar mensagens", err);
       }
     },
-    [],
+    [token],
   );
-  const getChatById = useCallback(
-    async (chatId: number) => {
-      if (!chatId) return;
-      const res = await api.current.getChatById(chatId);
-      setChat(res)
-    },
-    [],
-  );
-  const forwardMessages = useCallback(async (data: ForwardMessagesData) => {
-    try {
-      api.current.setAuth(token || "");
-      await api.current.forwardMessages(data);
-      toast.success("Mensagens encaminhadas com sucesso!");
-    } catch (err) {
-      const errorMessage = sanitizeErrorMessage(err);
-      toast.error(`Falha ao encaminhar mensagens: ${errorMessage}`);
-      console.error("Falha ao encaminhar mensagens", err);
-    }
-  }, [token]);
 
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {

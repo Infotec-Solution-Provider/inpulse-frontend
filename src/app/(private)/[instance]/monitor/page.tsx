@@ -249,9 +249,9 @@ export default function MonitorPage() {
     }
 
     if (chat.chatType === "wpp") {
-      return () => {
+      return async () => {
         if (chat.isFinished === true) {
-          loadChatMessages(chat);
+          await loadChatMessages(chat);
         }
         openChat(chat);
         openModal(
