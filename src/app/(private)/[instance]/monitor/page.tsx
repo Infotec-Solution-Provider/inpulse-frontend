@@ -249,11 +249,10 @@ export default function MonitorPage() {
     }
 
     if (chat.chatType === "wpp") {
-      if (chat.isFinished === true) {
-        loadChatMessages(chat);
-      }
-
       return () => {
+        if (chat.isFinished === true) {
+          loadChatMessages(chat);
+        }
         openChat(chat);
         openModal(
           <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
