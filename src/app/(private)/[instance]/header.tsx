@@ -41,6 +41,8 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
     // { title: "Tags", href: "/tags" },
     arr.push({ title: "Usuários", href: "/users" });
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
+    arr.push({ title: "Resposta automática", href: "/auto-response" });
+
   }
 
   if (params["disable_internal_groups"] !== "true") {

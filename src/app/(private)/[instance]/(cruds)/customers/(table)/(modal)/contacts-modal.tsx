@@ -53,7 +53,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
 
   useEffect(() => {
     if (wppApi.current) {
-      wppApi.current.getCustomerContacts(customer.CODIGO).then((data) => {
+      wppApi.current.getCustomerContacts(customer?.CODIGO).then((data) => {
         setContacts(data);
       });
     }
@@ -98,7 +98,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
   const handleClickRegister = () => {
     if (wppApi.current) {
       wppApi.current
-        .createContact(form.name, form.phone, customer.CODIGO)
+        .createContact(form.name, form.phone, customer?.CODIGO)
         .then((newContact) => {
           setContacts((prevContacts) => [...prevContacts, newContact]);
           setForm({ name: "", phone: "" });

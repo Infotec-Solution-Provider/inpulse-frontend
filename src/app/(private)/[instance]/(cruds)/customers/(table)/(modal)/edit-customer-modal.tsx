@@ -43,7 +43,7 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
     const isValid = validateForm(formRef.current);
 
     if (isValid) {
-      updateCustomer(customer.CODIGO, formRef.current);
+      updateCustomer(customer?.CODIGO, formRef.current);
     }
     closeModal();
   };
