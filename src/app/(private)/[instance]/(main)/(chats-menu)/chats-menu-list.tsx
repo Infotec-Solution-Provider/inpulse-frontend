@@ -155,9 +155,9 @@ export default function ChatsMenuList() {
             avatar={chat.avatarUrl ?? undefined}
             message={
               chat.lastMessage
-                ? chat.lastMessage.type !== "chat"
-                  ? getTypeTextIcon(chat.lastMessage.type)
-                  : chat.lastMessage.body
+                ? ["text", "system", "text", "chat"].includes(chat.lastMessage.type)
+                  ? chat.lastMessage.body
+                  : getTypeTextIcon(chat.lastMessage.type)
                 : "Nenhuma mensagem"
             }
             messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}
