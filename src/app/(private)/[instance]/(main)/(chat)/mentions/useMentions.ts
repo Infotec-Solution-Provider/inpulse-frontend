@@ -69,20 +69,28 @@ export function useMentions({
   const handleTextChange = (valueWithNames: string) => {
     setTextWithNames(valueWithNames);
 
+    const remainingMentions = mentions.filter(m => {
+        const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`@${escapedName}\\b`);
+        return regex.test(valueWithNames);
+    });
+
     let convertedText = valueWithNames;
-    mentions.forEach((m) => {
-      const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`@${escapedName}`, "g");
-      convertedText = convertedText.replace(regex, `@${m.phone}`);
+    remainingMentions.forEach((m) => {
+        const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`@${escapedName}`, "g");
+        convertedText = convertedText.replace(regex, `@${m.phone}`);
     });
 
     dispatch({ type: "change-text", text: convertedText });
+    if (remainingMentions.length !== mentions.length) {
+        dispatch({ type: "set-mentions", mentions: remainingMentions });
+    }
 
     const match = valueWithNames.match(/@(\w*)$/);
     if (match && participants.length > 0) {
-      const query = match[1];
-      setMentionQuery(query);
-
+      const query = match[1].toLowerCase();
+      setMentionQuery(match[1]);
       const filtered = participants
         .map((p: any): MentionableUser | null => {
           const rawId = String(p.userId);
@@ -91,11 +99,12 @@ export function useMentions({
             const phone = rawId.replace(/\D/g, "");
             const user = usersPhoneMap.get(phone);
             if (user) {
-              return { userId: Number(rawId), name: user.NOME, phone };
+              return { userId: user.CODIGO, name: user.NOME, phone };
             }
             const contactName = contactsMap.get(phone);
+            const id = p.id ? Number(p.id) : Number(phone);
             return {
-              userId: Number(rawId),
+              userId: id,
               name: contactName || Formatter.phone(phone),
               phone,
             };
@@ -108,10 +117,12 @@ export function useMentions({
             return null;
           }
         })
-        .filter((u): u is MentionableUser => !!u);
+        .filter((u): u is MentionableUser =>
+            !!u && u.name.toLowerCase().includes(query)
+        );
 
       setMentionCandidates(filtered);
-      setShowMentionList(true);
+      setShowMentionList(filtered.length > 0);
     } else {
       setMentionCandidates([]);
       setShowMentionList(false);
