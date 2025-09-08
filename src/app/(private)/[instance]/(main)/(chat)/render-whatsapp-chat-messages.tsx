@@ -10,6 +10,8 @@ import { ChatContext } from "./chat-context";
 import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
 import { AuthContext } from "@/app/auth-context";
 
+const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
+
 interface RenderWhatsappChatMessagesProps {
   selectedMessageIds: Set<string | number>;
   isSelectionMode: boolean;
@@ -37,7 +39,7 @@ export default function RenderWhatsappChatMessages({
   openManualForward,
 }: RenderWhatsappChatMessagesProps) {
   const { currentChatMessages } = useWhatsappContext();
-  const { getMessageById, handleQuoteMessage } = useContext(ChatContext);
+  const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { instance } = useContext(AuthContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
@@ -121,6 +123,11 @@ export default function RenderWhatsappChatMessages({
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
               isForwarded={m.isForwarded}
               isForwardMode={isSelectionMode}
+              onEdit={
+                m.from.startsWith("me:") && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
+                  ? () => handleEditMessage(m)
+                  : undefined
+              }
             />
           );
         })}
