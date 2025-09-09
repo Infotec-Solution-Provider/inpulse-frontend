@@ -1,3 +1,31 @@
+import { AuthContext } from "@/app/auth-context";
+import { SendTemplateData } from "@/lib/components/send-template-modal";
+import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
+import ChatStartedHandler from "@/lib/event-handlers/chat-started";
+import ChatTransferHandler from "@/lib/event-handlers/chat-transfer";
+import ReceiveMessageHandler from "@/lib/event-handlers/message";
+import EditedMessageHandler from "@/lib/event-handlers/message-edit";
+import MessageStatusHandler from "@/lib/event-handlers/message-status";
+import ReadChatHandler from "@/lib/event-handlers/read-chat";
+import processChatsAndMessages from "@/lib/process-chats-and-messages";
+import chatsFilterReducer, {
+  ChangeFiltersAction,
+  ChatsFiltersState,
+} from "@/lib/reducers/chats-filter.reducer";
+import {
+  AppNotification,
+  Customer,
+  ForwardMessagesData,
+  SendMessageData,
+  SocketEventType,
+  WhatsappClient,
+  WppChat,
+  WppChatWithDetails,
+  WppChatWithDetailsAndMessages,
+  WppMessage,
+  WppSchedule,
+} from "@in.pulse-crm/sdk";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
   ActionDispatch,
   createContext,
@@ -11,37 +39,9 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  Customer,
-  SendMessageData,
-  ForwardMessagesData,
-  SocketEventType,
-  WhatsappClient,
-  WppChat,
-  WppChatWithDetails,
-  WppMessage,
-  WppSchedule,
-  AppNotification,
-  PaginatedNotificationsResponse,
-  WppChatWithDetailsAndMessages,
-} from "@in.pulse-crm/sdk";
-import { AuthContext } from "@/app/auth-context";
-import { SocketContext } from "./socket-context";
-import processChatsAndMessages from "@/lib/process-chats-and-messages";
-import MessageStatusHandler from "@/lib/event-handlers/message-status";
-import ReceiveMessageHandler from "@/lib/event-handlers/message";
-import ChatStartedHandler from "@/lib/event-handlers/chat-started";
-import ReadChatHandler from "@/lib/event-handlers/read-chat";
-import chatsFilterReducer, {
-  ChangeFiltersAction,
-  ChatsFiltersState,
-} from "@/lib/reducers/chats-filter.reducer";
-import { DetailedInternalChat } from "./internal-context";
-import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
 import { toast } from "react-toastify";
-import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import ChatTransferHandler from "@/lib/event-handlers/chat-transfer";
-import { SendTemplateData } from "@/lib/components/send-template-modal";
+import { DetailedInternalChat } from "./internal-context";
+import { SocketContext } from "./socket-context";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -74,6 +74,7 @@ interface IWhatsappContext {
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageData) => void;
+  editMessage: (messageId: string, newText: string) => void;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
 
   transferAttendance: (chatId: number, userId: number) => void;
@@ -244,6 +245,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
     api.current.sendMessage(to, data);
+  }, []);
+
+  const editMessage = useCallback(async (messageId: string, newText: string) => {
+    api.current.editMessage(messageId, newText);
   }, []);
 
   const getChatsMonitor = useCallback(() => {
@@ -480,6 +485,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           chats,
         ),
       );
+
+      socket.on(
+        SocketEventType.WppMessageEdit,
+        EditedMessageHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
+      );
+
       socket.on(
         SocketEventType.WppMessageStatus,
         MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
@@ -504,6 +515,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         finishChat,
         startChatByContactId,
         sendMessage,
+        editMessage,
         forwardMessages,
         setCurrentChatMessages: setUniqueCurrentChatMessages,
         wppApi: api,

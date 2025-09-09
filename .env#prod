@@ -1,0 +1,6 @@
+NEXT_PUBLIC_USERS_URL="https://inpulse.infotecrs.inf.br"
+NEXT_PUBLIC_CUSTOMERS_URL="https://inpulse.infotecrs.inf.br"
+NEXT_PUBLIC_REPORTS_URL="https://inpulse.infotecrs.inf.br"
+NEXT_PUBLIC_FILES_URL="https://inpulse.infotecrs.inf.br"
+NEXT_PUBLIC_WHATSAPP_URL="https://inpulse.infotecrs.inf.br"
+NEXT_PUBLIC_SOCKET_URL="https://socket.infotecrs.inf.br"

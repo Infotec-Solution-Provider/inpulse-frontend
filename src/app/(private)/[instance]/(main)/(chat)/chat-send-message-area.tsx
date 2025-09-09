@@ -1,6 +1,4 @@
-import { useAuthContext } from "@/app/auth-context";
 import SendTemplateModal from "@/lib/components/send-template-modal";
-import { InternalMessage } from "@in.pulse-crm/sdk";
 import { Close } from "@mui/icons-material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
@@ -9,7 +7,7 @@ import SendIcon from "@mui/icons-material/Send";
 import TryIcon from "@mui/icons-material/Try";
 import { IconButton, Modal, TextField } from "@mui/material";
 import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useAppContext } from "../../app-context";
@@ -18,7 +16,6 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import AudioRecorder from "./audio-recorder";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
-import { getInternalMessageStyle } from "./render-internal-chat-messages";
 
 export default function ChatSendMessageArea() {
   const { currentChat, wppApi, parameters } = useWhatsappContext();
@@ -26,10 +23,12 @@ export default function ChatSendMessageArea() {
     sendMessage: sendMessageContext,
     state,
     dispatch,
-    quotedMessage /*  */,
+    quotedMessage,
     handleQuoteMessageRemove,
+    handleStopEditMessage,
+    editingMessage,
   } = useContext(ChatContext);
-  const { user } = useAuthContext();
+
   const { users } = useInternalChatContext();
   const { contacts } = useContactsContext();
   const { openModal, closeModal } = useAppContext();
@@ -120,11 +119,13 @@ export default function ChatSendMessageArea() {
     const hasText = !!state.text?.trim();
 
     if (!hasText && !hasFile) return;
+
     sendMessageContext();
     dispatch({ type: "change-text", text: "" });
     dispatch({ type: "remove-file" });
     setTextWithNames("");
     handleQuoteMessageRemove();
+
     document.dispatchEvent(new Event("scroll-to-bottom"));
   }
 
@@ -146,17 +147,21 @@ export default function ChatSendMessageArea() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isDisabled, state.text, state.file]);
 
-  const quotedMessageStyle = useMemo(() => {
-    const isInternalMessage = (msg: typeof quotedMessage): msg is InternalMessage =>
-      !!msg && "internalChatId" in msg;
+  const refMessage = quotedMessage || editingMessage || null;
 
-    if (quotedMessage?.from.includes("user:") && user && isInternalMessage(quotedMessage)) {
-      return getInternalMessageStyle(quotedMessage, user.CODIGO);
+  const handleRemoveRefMessage = () => {
+    if (editingMessage) handleStopEditMessage();
+    if (quotedMessage) handleQuoteMessageRemove();
+  };
+
+  useEffect(() => {
+    if (editingMessage) {
+      dispatch({ type: "change-text", text: editingMessage.body || "" });
+      setTextWithNames(editingMessage.body || "");
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(state.text.length, state.text.length);
     }
-    if (quotedMessage?.from.includes("external:")) return "received";
-    if (quotedMessage?.from.startsWith("me:")) return "sent";
-    return "received";
-  }, [quotedMessage, user]);
+  }, [editingMessage]);
 
   return (
     <div className="mb-6 flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0">
@@ -206,24 +211,24 @@ export default function ChatSendMessageArea() {
       </div>
 
       <div className="flex w-full flex-col gap-2">
-        {quotedMessage && (
+        {refMessage && (
           <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
             <div className="text-sm text-black dark:text-slate-300">
-              {quotedMessage.body.split("\n").map((line, index) => (
+              {refMessage.body.split("\n").map((line, index) => (
                 <p key={index} className="break-words text-sm">
                   {line}
                 </p>
               ))}
-              {quotedMessage.fileId && (
+              {refMessage.fileId && (
                 <span className="text-xs text-slate-400 dark:text-slate-500">
-                  {quotedMessage.fileName || "Arquivo anexado"}
+                  {refMessage.fileName || "Arquivo anexado"}
                 </span>
               )}
             </div>
             <IconButton
               size="small"
               className="bg-white/20 dark:text-indigo-400"
-              onClick={handleQuoteMessageRemove}
+              onClick={handleRemoveRefMessage}
             >
               <Close />
             </IconButton>
@@ -305,7 +310,7 @@ export default function ChatSendMessageArea() {
 
       <div
         className="aria-hidden:hidden"
-        aria-hidden={textWithNames.length > 0 || state.sendAsAudio}
+        aria-hidden={textWithNames.length > 0 || state.sendAsAudio || !!editingMessage}
       >
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>

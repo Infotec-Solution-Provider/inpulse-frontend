@@ -4,7 +4,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useReducer,
   useState,
 } from "react";
@@ -15,6 +14,7 @@ import ChatReducer, {
 } from "@/app/(private)/[instance]/(main)/(chat)/chat-reducer";
 import { InternalChatContext } from "../../internal-context";
 import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
+import { toast } from "react-toastify";
 
 interface IChatContext {
   state: SendMessageDataState;
@@ -28,6 +28,9 @@ interface IChatContext {
   handleQuoteMessage: (message: WppMessage | InternalMessage) => void;
   handleQuoteMessageRemove: () => void;
   quotedMessage: WppMessage | InternalMessage | null;
+  handleEditMessage: (message: WppMessage) => void;
+  handleStopEditMessage: () => void;
+  editingMessage: WppMessage | null;
 }
 
 interface ChatProviderProps {
@@ -46,13 +49,19 @@ const initialState: SendMessageDataState = {
 export const ChatContext = createContext({} as IChatContext);
 
 export default function ChatProvider({ children }: ChatProviderProps) {
-  const { sendMessage, currentChat, messages: whatsappMsgs } = useContext(WhatsappContext);
+  const {
+    sendMessage,
+    currentChat,
+    messages: whatsappMsgs,
+    editMessage,
+  } = useContext(WhatsappContext);
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
   const [state, dispatch] = useReducer(ChatReducer, initialState);
   const [quotedMessage, setQuotedMessage] = useState<WppMessage | InternalMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<WppMessage | null>(null);
 
   const handleSendMessage = () => {
-    if (currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
+    if (currentChat && currentChat.chatType === "wpp" && currentChat.contact && !editingMessage) {
       try {
         sendMessage(currentChat.contact.phone, {
           ...state,
@@ -61,7 +70,17 @@ export default function ChatProvider({ children }: ChatProviderProps) {
           file: state.file,
         });
       } catch (err) {
+        toast.error("Falha inesperada ao enviar mensagem.\nRecarregue a página e tente novamente.");
         console.error("Erro inesperado ao chamar sendMessage", err);
+      }
+    }
+
+    if (editingMessage && currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
+      try {
+        editMessage(String(editingMessage.id), state.text);
+      } catch (err) {
+        toast.error("Falha inesperada ao editar mensagem.\nRecarregue a página e tente novamente.");
+        console.error("Erro inesperado ao chamar sendMessage para editar", err);
       }
     }
 
@@ -109,9 +128,25 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     dispatch({ type: "remove-quoted-message" });
   }, [dispatch]);
 
+  const handleEditMessage = useCallback(
+    (message: WppMessage) => {
+      setQuotedMessage(null);
+      setEditingMessage(message);
+    },
+    [editingMessage],
+  );
+
+  const handleStopEditMessage = useCallback(() => {
+    setEditingMessage(null);
+  }, [setEditingMessage]);
+
   useEffect(() => {
-    dispatch({ type: "reset" });
-  }, [currentChat]);
+    return () => {
+      dispatch({ type: "reset" });
+      setEditingMessage(null);
+      setQuotedMessage(null);
+    };
+  }, [currentChat, setQuotedMessage, setEditingMessage, dispatch]);
 
   return (
     <ChatContext.Provider
@@ -123,6 +158,9 @@ export default function ChatProvider({ children }: ChatProviderProps) {
         getMessageById,
         handleQuoteMessage,
         handleQuoteMessageRemove,
+        editingMessage,
+        handleEditMessage,
+        handleStopEditMessage,
       }}
     >
       {children}

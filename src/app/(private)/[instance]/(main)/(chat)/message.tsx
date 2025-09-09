@@ -7,10 +7,11 @@ import ErrorIcon from "@mui/icons-material/Error";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ReplyIcon from "@mui/icons-material/Reply";
 import ForwardIcon from "@mui/icons-material/Forward";
+import EditIcon from "@mui/icons-material/Edit";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useMemo, useState } from "react";
 import MessageFile from "./message-file";
 import { IconButton, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import LinkifiedText from "./linkmessage";
@@ -42,9 +43,11 @@ export interface MessageProps {
   isForwarded?: boolean;
   isForwardMode?: boolean;
   isSelected?: boolean;
+  isEdited?: boolean;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
+  onEdit?: () => void;
 }
 
 export const msgStyleVariants = {
@@ -84,12 +87,14 @@ export default function Message({
   fileSize,
   quotedMessage,
   onQuote,
+  isEdited = false,
   isForwarded = false,
   isForwardMode = false,
   isSelected = false,
   onSelect,
   onForward,
   onCopy,
+  onEdit,
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -119,6 +124,24 @@ export default function Message({
     onSelect?.(id);
     handleMenuClose();
   };
+
+  const dateText = useMemo(() => {
+    // Se for hoje, mostra só a hora
+    const now = new Date();
+    if (
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+    ) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    return (
+      date.toLocaleDateString() +
+      " " +
+      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
+  }, [date]);
 
   return (
     <li
@@ -211,8 +234,11 @@ export default function Message({
             )}
           </div>
           <div className="flex items-center gap-2">
+            {isEdited && (
+              <span className="text-xs italic text-slate-600 dark:text-slate-400">(editado)</span>
+            )}
+            <p className="text-xs text-slate-900 dark:text-slate-200">{dateText}</p>
             {style !== "system" && status && statusComponents[status]}
-            <p className="text-xs text-slate-900 dark:text-slate-200">{date.toLocaleString()}</p>
           </div>
         </div>
       </div>
@@ -250,6 +276,14 @@ export default function Message({
                   <ForwardIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText>Encaminhar</ListItemText>
+              </MenuItem>
+            )}
+            {onEdit && (
+              <MenuItem onClick={onEdit}>
+                <ListItemIcon>
+                  <EditIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Editar</ListItemText>
               </MenuItem>
             )}
             {onCopy && (
