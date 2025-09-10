@@ -181,10 +181,10 @@ export default function GroupMessage({
             )}
           </div>
           <div className="flex items-center gap-2 self-end">
-            {style !== "system" && status && statusComponents[status]}
             <p className="text-xs text-slate-900 dark:text-slate-200">
               {date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
             </p>
+            {style !== "system" && status && statusComponents[status]}
           </div>
         </div>
       </div>
