@@ -69,163 +69,162 @@ export default function GroupMessage({
   const open = Boolean(anchorEl);
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-      setAnchorEl(event.currentTarget);
+    setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
-      setAnchorEl(null);
+    setAnchorEl(null);
   };
 
   const handleQuote = () => { onQuote?.(); handleMenuClose(); };
   const handleForward = () => { onForward?.(); handleMenuClose(); };
 
   const handleSelect = () => {
-      onSelect?.(id);
-      handleMenuClose();
+    onSelect?.(id);
+    handleMenuClose();
   };
 
   const handleCopy = () => {
-      if (onCopy) {
-          onCopy();
-      } else {
-          navigator.clipboard.writeText(text);
-      }
-      handleMenuClose();
+    if (onCopy) {
+      onCopy();
+    } else {
+      navigator.clipboard.writeText(text);
+    }
+    handleMenuClose();
   };
 
   const visualText = useMemo(() => {
     if (!mentionNameMap || !text) return text;
     return text.replace(/@(\d{8,15})\b/g, (match, phone) => {
-        const cleanPhone = phone.replace(/\D/g, "");
-        const name = mentionNameMap.get(cleanPhone);
-        return name ? `@${name}` : match;
+      const cleanPhone = phone.replace(/\D/g, "");
+      const name = mentionNameMap.get(cleanPhone);
+      return name ? `@${name}` : match;
     });
   }, [text, mentionNameMap]);
 
 
   return (
-      <li
-          id={String(id)}
-          className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? 'bg-blue-500/10' : ''}`}
-          onClick={isForwardMode ? () => onSelect?.(id) : undefined}
-          onContextMenu={(e) => {
-              e.preventDefault();
-              if (!isForwardMode) handleMenuClick(e);
-          }}
-          style={styleWrapper}
-      >
-          {isForwardMode && style !== 'system' && (
-              <Checkbox
-                  checked={isSelected}
-                  onChange={() => onSelect?.(id)}
-                  onClick={(e) => e.stopPropagation()}
-              />
+    <li
+      id={String(id)}
+      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? 'bg-blue-500/10' : ''}`}
+      onClick={isForwardMode ? () => onSelect?.(id) : undefined}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (!isForwardMode) handleMenuClick(e);
+      }}
+      style={styleWrapper}
+    >
+      {isForwardMode && style !== 'system' && (
+        <Checkbox
+          checked={isSelected}
+          onChange={() => onSelect?.(id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
+
+      <div className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}>
+        <div className="flex w-full flex-col gap-1">
+          {quotedMessage && (
+            <div
+              className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"
+                }`}
+            >
+              <h2>
+                {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
+              </h2>
+              <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
+                {quotedMessage.text.split("\n").map((line, index) => (
+                  <p key={index} className="max-w-[100%] break-words text-sm">
+                    <LinkifiedText text={line} />
+                  </p>
+                ))}
+              </div>
+
+              {quotedMessage.fileId && (
+                <MessageFile
+                  fileId={quotedMessage.fileId}
+                  fileName={quotedMessage.fileName || ""}
+                  fileType={quotedMessage.fileType || ""}
+                  fileSize={0 || ""}
+                />
+              )}
+            </div>
           )}
 
-    <div className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}>
-      <div className="flex w-full flex-col gap-1">
-        {quotedMessage && (
-          <div
-            className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${
-              quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"
-            }`}
-          >
-            <h2>
-              {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
-            </h2>
-            <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
-              {quotedMessage.text.split("\n").map((line, index) => (
+          {groupFirst && (
+            <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
+          )}
+          {isForwarded && (
+            <div className="flex items-center gap-1.5 opacity-75">
+              <ForwardIcon sx={{ fontSize: '1rem' }} />
+              <span className="text-xs font-semibold">Encaminhada</span>
+            </div>
+          )}
+          {fileId && (
+            <MessageFile
+              fileId={fileId}
+              fileName={fileName || ""}
+              fileType={fileType || ""}
+              fileSize={fileSize || ""}
+            />
+          )}
+          {/* --- CORREÇÃO: Utiliza visualText para renderizar a mensagem --- */}
+          <div className="w-full text-slate-900 dark:text-slate-200">
+            {type === "vcard" ? (
+              <VCardMessage vCardString={text} /> // vCard mantém o texto original
+            ) : (
+              visualText?.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
                   <LinkifiedText text={line} />
                 </p>
-              ))}
-            </div>
-
-            {quotedMessage.fileId && (
-              <MessageFile
-                fileId={quotedMessage.fileId}
-                fileName={quotedMessage.fileName || ""}
-                fileType={quotedMessage.fileType || ""}
-                fileSize={0 || ""}
-              />
+              ))
             )}
           </div>
-        )}
-
-        {groupFirst && (
-          <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
-        )}
-        {isForwarded && (
-            <div className="flex items-center gap-1.5 opacity-75">
-                <ForwardIcon sx={{ fontSize: '1rem' }} />
-                <span className="text-xs font-semibold">Encaminhada</span>
-            </div>
-        )}
-        {fileId && (
-          <MessageFile
-            fileId={fileId}
-            fileName={fileName || ""}
-            fileType={fileType || ""}
-            fileSize={fileSize || ""}
-          />
-        )}
-        {/* --- CORREÇÃO: Utiliza visualText para renderizar a mensagem --- */}
-        <div className="w-full text-slate-900 dark:text-slate-200">
-            {type === "vcard" ? (
-                <VCardMessage vCardString={text} /> // vCard mantém o texto original
-            ) : (
-                visualText?.split("\n").map((line, index) => (
-                    <p key={index} className="max-w-[100%] break-words text-sm">
-                        <LinkifiedText text={line} />
-                    </p>
-                ))
-            )}
-        </div>
-        <div className="flex items-center gap-2 self-end">
+          <div className="flex items-center gap-2 self-end">
             {style !== "system" && status && statusComponents[status]}
             <p className="text-xs text-slate-900 dark:text-slate-200">
-                {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
             </p>
+          </div>
         </div>
       </div>
-    </div>
 
-    {style !== "system" && !isForwardMode && (
+      {style !== "system" && !isForwardMode && (
         <>
-            <IconButton
-                className="invisible group-hover:visible"
-                size="small"
-                title="Mais opções"
-                onClick={handleMenuClick}
-            >
-                <MoreVertIcon />
-            </IconButton>
-            <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-                {onSelect && (
-                    <MenuItem onClick={handleSelect}>
-                        <ListItemIcon><CheckBoxOutlineBlankIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Selecionar</ListItemText>
-                    </MenuItem>
-                )}
-                {onQuote && (
-                    <MenuItem onClick={handleQuote}>
-                        <ListItemIcon><ReplyIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Responder</ListItemText>
-                    </MenuItem>
-                )}
-                {onForward && (
-                    <MenuItem onClick={handleForward}>
-                        <ListItemIcon><ForwardIcon fontSize="small" /></ListItemIcon>
-                        <ListItemText>Encaminhar</ListItemText>
-                    </MenuItem>
-                )}
-                <MenuItem onClick={handleCopy}>
-                    <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
-                    <ListItemText>Copiar</ListItemText>
-                </MenuItem>
-            </Menu>
+          <IconButton
+            className="invisible group-hover:visible"
+            size="small"
+            title="Mais opções"
+            onClick={handleMenuClick}
+          >
+            <MoreVertIcon />
+          </IconButton>
+          <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+            {onSelect && (
+              <MenuItem onClick={handleSelect}>
+                <ListItemIcon><CheckBoxOutlineBlankIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Selecionar</ListItemText>
+              </MenuItem>
+            )}
+            {onQuote && (
+              <MenuItem onClick={handleQuote}>
+                <ListItemIcon><ReplyIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Responder</ListItemText>
+              </MenuItem>
+            )}
+            {onForward && (
+              <MenuItem onClick={handleForward}>
+                <ListItemIcon><ForwardIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>Encaminhar</ListItemText>
+              </MenuItem>
+            )}
+            <MenuItem onClick={handleCopy}>
+              <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>Copiar</ListItemText>
+            </MenuItem>
+          </Menu>
         </>
-    )}
-  </li>
+      )}
+    </li>
   );
 }
