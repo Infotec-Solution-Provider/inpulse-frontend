@@ -126,8 +126,8 @@ export default function Message({
   };
 
   const dateText = useMemo(() => {
-    // Se for hoje, mostra só a hora
-    const now = new Date();
+
+    /* const now = new Date();
     if (
       date.getDate() === now.getDate() &&
       date.getMonth() === now.getMonth() &&
@@ -140,7 +140,9 @@ export default function Message({
       date.toLocaleDateString() +
       " " +
       date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    );
+    ); */
+
+    return date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
   }, [date]);
 
   return (
@@ -166,11 +168,10 @@ export default function Message({
       >
         {quotedMessage && (
           <div
-            className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/50 p-2 dark:bg-slate-300/40 ${
-              quotedMessage.style === "sent"
-                ? "border-indigo-600 dark:border-indigo-400"
-                : "border-orange-600 dark:border-orange-400"
-            }`}
+            className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/50 p-2 dark:bg-slate-300/40 ${quotedMessage.style === "sent"
+              ? "border-indigo-600 dark:border-indigo-400"
+              : "border-orange-600 dark:border-orange-400"
+              }`}
             onClick={(e) => {
               e.stopPropagation();
               const quotedElement = document.getElementById(String(quotedMessage.id));
