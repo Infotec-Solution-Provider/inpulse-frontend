@@ -79,7 +79,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
       try {
         editMessage(String(editingMessage.id), state.text);
       } catch (err) {
-        toast.error("Falha inesperada ao editar mensagem.\nRecarregue a página e tente novamente.");
+        toast.error("Não foi possível editar esta mensagem.");
         console.error("Erro inesperado ao chamar sendMessage para editar", err);
       }
     }
