@@ -28,9 +28,9 @@ interface IChatContext {
   handleQuoteMessage: (message: WppMessage | InternalMessage) => void;
   handleQuoteMessageRemove: () => void;
   quotedMessage: WppMessage | InternalMessage | null;
-  handleEditMessage: (message: WppMessage) => void;
+  handleEditMessage: (message: WppMessage | InternalMessage) => void;
   handleStopEditMessage: () => void;
-  editingMessage: WppMessage | null;
+  editingMessage: WppMessage | InternalMessage | null;
 }
 
 interface ChatProviderProps {
@@ -58,7 +58,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
   const [state, dispatch] = useReducer(ChatReducer, initialState);
   const [quotedMessage, setQuotedMessage] = useState<WppMessage | InternalMessage | null>(null);
-  const [editingMessage, setEditingMessage] = useState<WppMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<WppMessage | InternalMessage | null>(null);
 
   const handleSendMessage = () => {
     if (currentChat && currentChat.chatType === "wpp" && currentChat.contact && !editingMessage) {
@@ -84,7 +84,8 @@ export default function ChatProvider({ children }: ChatProviderProps) {
       }
     }
 
-    if (currentChat && currentChat.chatType === "internal") {
+
+    if (currentChat && currentChat.chatType === "internal" && !editingMessage) {
       sendInternalMessage({
         chatId: currentChat.id,
         text: state.text,
@@ -97,7 +98,12 @@ export default function ChatProvider({ children }: ChatProviderProps) {
       });
     }
 
+    if (editingMessage && currentChat && currentChat.chatType === "internal") {
+      editMessage(String(editingMessage.id), state.text, true);
+    }
+
     dispatch({ type: "reset" });
+    setEditingMessage(null);
   };
 
   const getMessageById = useCallback(
@@ -129,7 +135,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   }, [dispatch]);
 
   const handleEditMessage = useCallback(
-    (message: WppMessage) => {
+    (message: WppMessage | InternalMessage) => {
       setQuotedMessage(null);
       setEditingMessage(message);
     },

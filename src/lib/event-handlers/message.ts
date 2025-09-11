@@ -1,4 +1,4 @@
-import { SocketClient, WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
+import { WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
 import { safeNotification } from "@/lib/utils/notifications";
 import { Formatter } from "@in.pulse-crm/utils";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
@@ -24,32 +24,32 @@ export default function ReceiveMessageHandler(
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
-  chatRef: RefObject<DetailedChat | null>,
-  chats: (DetailedChat )[],
+  chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
+  chats: (DetailedChat)[],
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
-          const matchedChat = chats.find((chat) => {
-              return chat.contactId === message.contactId;
-          });
-       const parts = message.from.split(":");
-          let raw = "";
-          if (parts.length === 3) {
-            raw = parts[2];
-          } else if (parts.length === 2) {
-            raw = parts[1];
+      const matchedChat = chats.find((chat) => {
+        return chat.contactId === message.contactId;
+      });
+      const parts = message.from.split(":");
+      let raw = "";
+      if (parts.length === 3) {
+        raw = parts[2];
+      } else if (parts.length === 2) {
+        raw = parts[1];
 
-          }
-        const phone = raw.split("@")[0].replace(/\D/g, "");
-          const contactName = matchedChat?.contact?.name;
-          safeNotification(contactName || Formatter.phone(phone), {
-            body:
-              message.type !== "chat"
-                ? types[message.type] || "Enviou um arquivo"
-                : message.body,
-            icon: HorizontalLogo.src,
-          });
-        }
+      }
+      const phone = raw.split("@")[0].replace(/\D/g, "");
+      const contactName = matchedChat?.contact?.name;
+      safeNotification(contactName || Formatter.phone(phone), {
+        body:
+          message.type !== "chat"
+            ? types[message.type] || "Enviou um arquivo"
+            : message.body,
+        icon: HorizontalLogo.src,
+      });
+    }
 
     setMessages((prev) => {
       const newMessages = { ...prev };
@@ -76,7 +76,7 @@ export default function ReceiveMessageHandler(
           if (chat.contactId === message.contactId && x) {
             return {
               ...chat,
-              isUnread: x.contactId !== message.contactId,
+              isUnread: x.chatType === "wpp" && x.contactId !== message.contactId,
               lastMessage: message,
             };
           }
@@ -89,7 +89,7 @@ export default function ReceiveMessageHandler(
     );
 
 
-    if (x && x.contactId === message.contactId) {
+    if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
         const newMessages = [...prev];
         const i = newMessages.findIndex((m) => m.id === message.id);

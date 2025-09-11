@@ -19,6 +19,7 @@ import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
 import { toast } from "react-toastify";
 import { ContactsContext } from "./(cruds)/contacts/contacts-context";
+import InternalMessageEditHandler from "@/lib/event-handlers/internal-message-edit";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -236,6 +237,17 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           user!,
         ),
       );
+
+      // Evento de edição de mensagem
+      socket.on(
+        SocketEventType.InternalMessageEdit,
+        InternalMessageEditHandler(
+          setMessages,
+          setCurrentChatMessages,
+          currentChatRef
+        )
+      );
+
 
       // Evento de status de mensagem
       socket.on(

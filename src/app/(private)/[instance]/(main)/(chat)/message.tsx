@@ -125,6 +125,11 @@ export default function Message({
     handleMenuClose();
   };
 
+  const handleEdit = () => {
+    onEdit?.();
+    handleMenuClose();
+  }
+
   const dateText = useMemo(() => {
 
     /* const now = new Date();
@@ -280,7 +285,7 @@ export default function Message({
               </MenuItem>
             )}
             {onEdit && (
-              <MenuItem onClick={onEdit}>
+              <MenuItem onClick={handleEdit}>
                 <ListItemIcon>
                   <EditIcon fontSize="small" />
                 </ListItemIcon>

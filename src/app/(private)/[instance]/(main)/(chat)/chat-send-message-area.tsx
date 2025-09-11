@@ -225,13 +225,15 @@ export default function ChatSendMessageArea() {
                 </span>
               )}
             </div>
-            <IconButton
-              size="small"
-              className="bg-white/20 dark:text-indigo-400"
-              onClick={handleRemoveRefMessage}
-            >
-              <Close />
-            </IconButton>
+            {
+              quotedMessage && <IconButton
+                size="small"
+                className="bg-white/20 dark:text-indigo-400"
+                onClick={handleQuoteMessageRemove}
+              >
+                <Close />
+              </IconButton>
+            }
           </div>
         )}
 
@@ -297,6 +299,18 @@ export default function ChatSendMessageArea() {
           </div>
         )}
       </div>
+      {
+        editingMessage && (
+          <IconButton
+            size="small"
+            className="bg-white/20 dark:text-indigo-400"
+            onClick={handleStopEditMessage}
+            title="Cancelar edição"
+          >
+            <Close />
+          </IconButton>
+        )
+      }
 
       <IconButton
         size="small"

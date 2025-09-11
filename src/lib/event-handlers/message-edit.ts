@@ -2,6 +2,7 @@ import { WhatsappClient, WppMessage, WppMessageEditEventData } from "@in.pulse-c
 
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
 const types: Record<string, string> = {
   image: "Enviou uma imagem.",
@@ -15,7 +16,7 @@ const types: Record<string, string> = {
 export default function EditedMessageHandler(
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
-  chatRef: RefObject<DetailedChat | null>,
+  chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
 ) {
   return ({ messageId, newText, contactId }: WppMessageEditEventData) => {
     setMessages((prev) => {
@@ -37,7 +38,7 @@ export default function EditedMessageHandler(
 
     const x = chatRef.current;
 
-    if (x && x.contactId === contactId) {
+    if (x && x.chatType === "wpp" && x.contactId === contactId) {
       setCurrentChatMessages((prev) => {
         const newMessages = [...prev];
         const i = newMessages.findIndex((m) => m.id === messageId);

@@ -74,7 +74,7 @@ interface IWhatsappContext {
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageData) => void;
-  editMessage: (messageId: string, newText: string) => void;
+  editMessage: (messageId: string, newText: string, isInternal?: boolean) => void;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
 
   transferAttendance: (chatId: number, userId: number) => void;
@@ -247,8 +247,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api.current.sendMessage(to, data);
   }, []);
 
-  const editMessage = useCallback(async (messageId: string, newText: string) => {
-    api.current.editMessage(messageId, newText);
+  const editMessage = useCallback(async (messageId: string, newText: string, isInternal: boolean = false) => {
+    api.current.editMessage(messageId, newText, isInternal);
   }, []);
 
   const getChatsMonitor = useCallback(() => {

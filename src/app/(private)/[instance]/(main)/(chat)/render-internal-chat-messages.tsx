@@ -9,6 +9,8 @@ import { ChatContext } from "./chat-context";
 import { InternalChatContext } from "../../internal-context";
 import { useAuthContext } from "@/app/auth-context";
 
+const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
+
 interface RenderInternalChatMessagesProps {
     selectedMessageIds: Set<string | number>;
     isSelectionMode: boolean;
@@ -34,7 +36,7 @@ export default function RenderInternalChatMessages({
 }: RenderInternalChatMessagesProps) {
 
     const { currentInternalChatMessages, users } = useContext(InternalChatContext);
-    const { getMessageById, handleQuoteMessage } = useContext(ChatContext);
+    const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
     const { user } = useAuthContext();
 
     const [visibleCount, setVisibleCount] = useState(30);
@@ -98,6 +100,12 @@ export default function RenderInternalChatMessages({
                             onCopy={() => navigator.clipboard.writeText(m.body ?? '')}
                             isForwardMode={isSelectionMode}
                             isForwarded={m.isForwarded}
+                            isEdited={m.isEdited}
+                            onEdit={
+                                m.from === `user:${user?.CODIGO}` && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
+                                    ? () => handleEditMessage(m)
+                                    : undefined
+                            }
                         />
                     );
                 })}

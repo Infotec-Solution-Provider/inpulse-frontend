@@ -1,19 +1,20 @@
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
-import MessageFile from "./message-file";
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditIcon from "@mui/icons-material/Edit";
+import ForwardIcon from '@mui/icons-material/Forward';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ReplyIcon from "@mui/icons-material/Reply";
+import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import React, { useMemo, useState } from "react";
+import LinkifiedText from "./linkmessage";
 import {
   liStyleVariants,
   msgStyleVariants,
   QuotedMessageProps,
   statusComponents,
 } from "./message";
-import LinkifiedText from "./linkmessage";
-import ReplyIcon from "@mui/icons-material/Reply";
-import ForwardIcon from '@mui/icons-material/Forward';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import React, { useState, useMemo } from "react";
-import { IconButton, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
+import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
 
 interface MessageProps {
@@ -35,9 +36,11 @@ interface MessageProps {
   isForwarded?: boolean;
   isForwardMode?: boolean;
   isSelected?: boolean;
+  isEdited?: boolean;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
+  onEdit?: () => void;
   styleWrapper?: React.CSSProperties;
 }
 
@@ -60,9 +63,11 @@ export default function GroupMessage({
   mentionNameMap,
   isForwardMode,
   isSelected,
+  isEdited,
   onSelect,
   onForward,
   onCopy,
+  onEdit,
   styleWrapper
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -93,6 +98,11 @@ export default function GroupMessage({
     handleMenuClose();
   };
 
+  const handleEdit = () => {
+    onEdit?.();
+    handleMenuClose();
+  }
+
   const visualText = useMemo(() => {
     if (!mentionNameMap || !text) return text;
     return text.replace(/@(\d{8,15})\b/g, (match, phone) => {
@@ -101,6 +111,26 @@ export default function GroupMessage({
       return name ? `@${name}` : match;
     });
   }, [text, mentionNameMap]);
+
+  const dateText = useMemo(() => {
+
+    /* const now = new Date();
+    if (
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear()
+    ) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+ 
+    return (
+      date.toLocaleDateString() +
+      " " +
+      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    ); */
+
+    return date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+  }, [date]);
 
 
   return (
@@ -180,10 +210,11 @@ export default function GroupMessage({
               ))
             )}
           </div>
-          <div className="flex items-center gap-2 self-end">
-            <p className="text-xs text-slate-900 dark:text-slate-200">
-              {date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-            </p>
+          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-[0.65rem]">
+            {isEdited && (
+              <span>Editada</span>
+            )}
+            <p>{dateText}</p>
             {style !== "system" && status && statusComponents[status]}
           </div>
         </div>
@@ -216,6 +247,14 @@ export default function GroupMessage({
               <MenuItem onClick={handleForward}>
                 <ListItemIcon><ForwardIcon fontSize="small" /></ListItemIcon>
                 <ListItemText>Encaminhar</ListItemText>
+              </MenuItem>
+            )}
+            {onEdit && (
+              <MenuItem onClick={handleEdit}>
+                <ListItemIcon>
+                  <EditIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Editar</ListItemText>
               </MenuItem>
             )}
             <MenuItem onClick={handleCopy}>
