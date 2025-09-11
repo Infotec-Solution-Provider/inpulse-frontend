@@ -58,14 +58,14 @@ export default function RenderWhatsappChatMessages({
     () =>
       instance === "nunes"
         ? (() => {
-            const boolArray = [...currentChatMessages].map(
-              (msg) => msg.from === "system" && msg.body?.startsWith("Atendimento transferido"),
-            );
-            const lastTransferIndex = boolArray.lastIndexOf(true);
-            return lastTransferIndex !== -1
-              ? currentChatMessages.slice(lastTransferIndex)
-              : currentChatMessages;
-          })()
+          const boolArray = [...currentChatMessages].map(
+            (msg) => msg.from === "system" && msg.body?.startsWith("Atendimento transferido"),
+          );
+          const lastTransferIndex = boolArray.lastIndexOf(true);
+          return lastTransferIndex !== -1
+            ? currentChatMessages.slice(lastTransferIndex)
+            : currentChatMessages;
+        })()
         : currentChatMessages,
     [currentChatMessages, instance],
   );
@@ -95,11 +95,11 @@ export default function RenderWhatsappChatMessages({
           const quotedMsgProps =
             findQuoted && "to" in findQuoted
               ? getQuotedMsgProps(
-                  findQuoted,
-                  getWppMessageStyle(findQuoted),
-                  [],
-                  {} as DetailedChat,
-                )
+                findQuoted,
+                getWppMessageStyle(findQuoted),
+                [],
+                {} as DetailedChat,
+              )
               : null;
 
           return (
@@ -123,6 +123,7 @@ export default function RenderWhatsappChatMessages({
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
               isForwarded={m.isForwarded}
               isForwardMode={isSelectionMode}
+              isEdited={!!m.isEdited}
               onEdit={
                 m.from.startsWith("me:") && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
                   ? () => handleEditMessage(m)

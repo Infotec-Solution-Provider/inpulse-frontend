@@ -207,7 +207,7 @@ export default function Message({
           </div>
         )}
 
-        <div className="flex w-full flex-col gap-1">
+        <div className="flex w-full flex-col gap-0.5">
           {isForwarded && (
             <div className="flex items-center gap-1.5 opacity-75">
               <ForwardIcon sx={{ fontSize: "1rem" }} />
@@ -234,11 +234,11 @@ export default function Message({
               ))
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-[0.65rem]">
             {isEdited && (
-              <span className="text-xs italic text-slate-600 dark:text-slate-400">(editado)</span>
+              <span>Editada</span>
             )}
-            <p className="text-xs text-slate-900 dark:text-slate-200">{dateText}</p>
+            <p>{dateText}</p>
             {style !== "system" && status && statusComponents[status]}
           </div>
         </div>
