@@ -7,13 +7,14 @@ import { WhatsappContext } from "../../../whatsapp-context";
 
 export default function FinishChatModal() {
   const { closeModal } = useContext(AppContext);
-  const { finishChat, currentChat, wppApi } = useContext(WhatsappContext);
+  const { finishChat, currentChat, wppApi, parameters } = useContext(WhatsappContext);
   const [resultId, setResultId] = useState<number | null>(null);
   const [results, setResults] = useState<{ id: number; name: string }[]>([]);
+  const [triggerSatisfactionSurvey, setTriggerSatisfactionSurvey] = useState(false);
 
   const handleFinishChat = () => {
     if (currentChat && resultId) {
-      finishChat(currentChat.id, resultId); // TODO: Passar o resultado correto
+      finishChat(currentChat.id, resultId, triggerSatisfactionSurvey && parameters["satisfaction_survey_enabled"] === "true");
       closeModal();
     }
   };
@@ -65,6 +66,20 @@ export default function FinishChatModal() {
             </MenuItem>
           ))}
         </TextField>
+        {parameters["satisfaction_survey_enabled"] && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="triggerSatisfactionSurvey"
+              checked={triggerSatisfactionSurvey}
+              onChange={() => setTriggerSatisfactionSurvey(!triggerSatisfactionSurvey)}
+              className="w-4 h-4"
+            />
+            <label htmlFor="triggerSatisfactionSurvey" className="select-none">
+              Enviar pesquisa de satisfação
+            </label>
+          </div>
+        )}
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"
