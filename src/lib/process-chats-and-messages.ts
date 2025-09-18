@@ -28,7 +28,7 @@ export default function processChatsAndMessages(
   }
 
   const isFromUs = (message: WppMessage) => {
-    return message.from.startsWith("me:") || message.from === "system";
+    return message.from.startsWith("me:") || message.from === "system" || message.from.startsWith("bot") || message.from.startsWith("thirdparty");
   };
 
   const detailedChats: DetailedChat[] = [];
