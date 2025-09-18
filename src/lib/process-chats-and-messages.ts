@@ -28,7 +28,11 @@ export default function processChatsAndMessages(
   }
 
   const isFromUs = (message: WppMessage) => {
-    return message.from.startsWith("me:") || message.from === "system" || message.from.startsWith("bot") || message.from.startsWith("thirdparty");
+    const bool = message.from.startsWith("me:") || message.from.startsWith("system:") || message.from.startsWith("bot") || message.from.startsWith("thirdparty");
+
+    if(!bool) console.log("Message not from us:", message.from);
+
+    return bool;
   };
 
   const detailedChats: DetailedChat[] = [];
@@ -42,6 +46,8 @@ export default function processChatsAndMessages(
       ),
       lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
     };
+
+    // Se tem uma mensagem do contato, que status seja diferente de "READ" e que não seja nossa
 
     detailedChats.push(detailedChat);
   }
