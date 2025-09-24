@@ -48,7 +48,7 @@ export default function RenderWhatsappChatMessages({
   useEffect(() => {
     if (!isSelectionMode && messagesEndRef.current) {
       const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView();
       }, 100);
       return () => clearTimeout(timer);
     }

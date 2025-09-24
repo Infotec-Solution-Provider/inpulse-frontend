@@ -66,7 +66,7 @@ export default function RenderInternalGroupMessages({
 
     useEffect(() => {
         if (!isSelectionMode && messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+            messagesEndRef.current.scrollIntoView();
         }
     }, [currentInternalChatMessages, isSelectionMode]);
 

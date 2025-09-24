@@ -45,7 +45,7 @@ export default function RenderInternalChatMessages({
     useEffect(() => {
         if (!isSelectionMode && messagesEndRef.current) {
             const timer = setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                messagesEndRef.current?.scrollIntoView();
             }, 100);
             return () => clearTimeout(timer);
         }
