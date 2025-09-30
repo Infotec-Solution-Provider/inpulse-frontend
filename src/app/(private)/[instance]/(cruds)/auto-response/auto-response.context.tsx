@@ -36,7 +36,6 @@ interface IAutoResponseContext {
 }
 
 const AutoResponseContext = createContext<IAutoResponseContext>({} as IAutoResponseContext);
-
 export const useAutoResponseContext = () => useContext(AutoResponseContext);
 
 export default function AutoResponseProvider({ children }: { children: ReactNode }) {
@@ -44,7 +43,7 @@ export default function AutoResponseProvider({ children }: { children: ReactNode
   const { token } = useAuthContext();
 
   const [rules, setRules] = useState<AutomaticResponseRule[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [modal, setModal] = useState<ReactNode>(null);
 
@@ -62,15 +61,11 @@ export default function AutoResponseProvider({ children }: { children: ReactNode
     }
   }, [token]);
 
-
-
-  const closeModal = useCallback(() => {
-    setModal(null);
-  }, []);
+  const closeModal = useCallback(() => setModal(null), []);
 
   const createRule = useCallback(async (data: AutomaticResponseRuleDTO) => {
     try {
-      await api.current.createAutoResponseRule(data);
+      await api.current.createAutoResponseRule(data as any);
       toast.success("Regra criada com sucesso!");
       closeModal();
       await loadRules();
@@ -82,7 +77,7 @@ export default function AutoResponseProvider({ children }: { children: ReactNode
 
   const updateRule = useCallback(async (id: number, data: Omit<AutomaticResponseRuleDTO, 'instance'>) => {
     try {
-      await api.current.updateAutoResponseRule(id, data);
+      await api.current.updateAutoResponseRule(id, data as any);
       toast.success("Regra atualizada com sucesso!");
       closeModal();
       await loadRules();
@@ -97,7 +92,7 @@ export default function AutoResponseProvider({ children }: { children: ReactNode
       await api.current.deleteAutoResponseRule(id);
       toast.success("Regra excluída com sucesso!");
       closeModal();
-      setRules((prev) => prev.filter((rule) => rule.id !== id));
+      setRules(prev => prev.filter(rule => rule.id !== id));
     } catch (err) {
       Logger.error("Error deleting rule", err as Error);
       toast.error("Falha ao excluir a regra.");
