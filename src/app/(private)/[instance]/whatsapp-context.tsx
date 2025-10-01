@@ -160,6 +160,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
     search: "",
     showingType: "all",
+    sortBy: "lastMessage",
+    sortOrder: "desc",
   });
 
   const openChat = useCallback(

@@ -1,6 +1,6 @@
 import Checkbox from "@/lib/components/checkbox";
 import RangeDateField from "@/lib/components/range-date-field";
-import { IconButton, InputAdornment, MenuItem, TextField } from "@mui/material";
+import { IconButton, InputAdornment, MenuItem, TextField, FormControl, InputLabel, Select, SelectChangeEvent } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import useMonitorContext from "../context";
 import useInternalChatContext from "../../internal-context";
@@ -61,6 +61,20 @@ export default function MonitorFilters() {
     });
   };
 
+  const onChangeSortBy = (e: SelectChangeEvent) => {
+    setFilters({
+      ...filters,
+      sortBy: e.target.value as any,
+    });
+  };
+
+  const onChangeSortOrder = (e: SelectChangeEvent) => {
+    setFilters({
+      ...filters,
+      sortOrder: e.target.value as any,
+    });
+  };
+
   return (
     <aside className="scrollbar-whatsapp w-full overflow-y-auto rounded-md bg-slate-200 px-4 text-sm text-slate-800 dark:bg-slate-800 dark:text-slate-200 md:w-96">
       <header className="flex items-center justify-between py-2">
@@ -82,6 +96,35 @@ export default function MonitorFilters() {
           <IconButton onClick={onClickSearch}>
             <SearchIcon />
           </IconButton>
+        </div>
+        <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-2">
+          <FormControl fullWidth size="small">
+            <InputLabel id="monitor-sort-by-label">Ordenar por</InputLabel>
+            <Select
+              labelId="monitor-sort-by-label"
+              value={filters.sortBy}
+              label="Ordenar por"
+              onChange={onChangeSortBy}
+            >
+              <MenuItem value="startedAt">Data de início</MenuItem>
+              <MenuItem value="finishedAt">Data de finalização</MenuItem>
+              <MenuItem value="lastMessage">Data da última mensagem</MenuItem>
+              <MenuItem value="name">Nome</MenuItem>
+              <MenuItem value="scheduledAt">Agendado em</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel id="monitor-sort-order-label">Ordem</InputLabel>
+            <Select
+              labelId="monitor-sort-order-label"
+              value={filters.sortOrder}
+              label="Ordem"
+              onChange={onChangeSortOrder}
+            >
+              <MenuItem value="asc">Crescente</MenuItem>
+              <MenuItem value="desc">Decrescente</MenuItem>
+            </Select>
+          </FormControl>
         </div>
       </section>
       <section className="border-b border-slate-600 py-2 dark:border-slate-400">

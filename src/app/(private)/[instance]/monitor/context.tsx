@@ -27,6 +27,8 @@ interface MonitorFiltersState {
   showOngoing: boolean;
   showFinished: boolean;
   showOnlyScheduled: boolean;
+  sortBy: "startedAt" | "finishedAt" | "lastMessage" | "name" | "scheduledAt";
+  sortOrder: "asc" | "desc";
   startedAt: {
     from: string | null;
     to: string | null;
@@ -60,6 +62,8 @@ const initialFilters: MonitorFiltersState = {
   showOngoing: true,
   showFinished: true,
   showOnlyScheduled: false,
+  sortBy: "startedAt",
+  sortOrder: "desc",
   startedAt: {
     from: null,
     to: null,
@@ -113,12 +117,23 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
 
+    const onlyDigits = (s?: string | null) => (s ?? "").toString().replace(/\D/g, "");
+
     const search = normalize(filters.searchText);
 
     const matchesSearch = (values: Array<string | null | undefined>) => {
       if (!search) return true;
-      const haystack = normalize(values.filter(Boolean).join(" "));
-      return haystack.includes(search);
+      const joined = values.filter(Boolean).map(String);
+      const haystack = normalize(joined.join(" "));
+      if (haystack.includes(search)) return true;
+
+      // Phone number support: match digits-only
+      const searchDigits = onlyDigits(filters.searchText);
+      if (searchDigits.length >= 3) {
+        const hayDigits = onlyDigits(joined.join(""));
+        if (hayDigits.includes(searchDigits)) return true;
+      }
+      return false;
     };
 
     const filteredIntChats = intChats.filter((chat) => {
@@ -246,6 +261,7 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         anyChat?.contact?.phone,
         anyChat?.customer?.RAZAO,
         anyChat?.customer?.FANTASIA,
+        anyChat?.customer?.COD_ERP,
       ];
       const lastMessageCandidates: Array<string | null | undefined> = [
         anyChat?.lastMessageBody,
@@ -279,24 +295,95 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
       ) {
         return false;
       }
+      // Busca por cliente (COD_ERP e nomes) quando disponível
+      const anySched = schedule as any;
+      const scheduleCandidates: Array<string | null | undefined> = [
+        anySched?.customer?.RAZAO,
+        anySched?.customer?.FANTASIA,
+        anySched?.customer?.COD_ERP,
+      ];
+      if (!matchesSearch(scheduleCandidates)) return false;
       return true;
     });
 
     const sortedAllChats = [...filteredIntChats, ...filteredWppChats, ...filteredSchedules].sort(
       (a, b) => {
-        // Use startedAt if available, otherwise fallback to scheduledAt for WppSchedule
-        const getSortDate = (item: DetailedInternalChat | DetailedChat | DetailedSchedule) => {
-          if ("startedAt" in item && item.startedAt) {
-            return new Date(item.startedAt);
-          }
-          if ("scheduledAt" in item && item.scheduledAt) {
-            return new Date(item.scheduledAt);
-          }
-          return new Date(0);
+        const getLastMessageTs = (item: DetailedInternalChat | DetailedChat): number => {
+          const anyItem = item as any;
+          const ts = anyItem?.lastMessage?.timestamp ?? anyItem?.lastMsg?.timestamp;
+          return ts ? Number(ts) : 0;
         };
-        const aDate = getSortDate(a);
-        const bDate = getSortDate(b);
-        return bDate.getTime() - aDate.getTime();
+        const getDateValue = (
+          item: DetailedInternalChat | DetailedChat | DetailedSchedule,
+          key: "startedAt" | "finishedAt" | "scheduledAt" | "lastMessage",
+        ): number => {
+          if (key === "lastMessage") {
+            if ("chatType" in item) return getLastMessageTs(item as any);
+            return 0;
+          }
+          const v: any = (item as any)[key];
+          if (!v) return 0;
+          const n = Number(v);
+          if (Number.isFinite(n)) return n;
+          const d = new Date(v);
+          return Number.isFinite(d.getTime()) ? d.getTime() : 0;
+        };
+        const getNameValue = (item: DetailedInternalChat | DetailedChat | DetailedSchedule): string => {
+          const anyItem = item as any;
+          if ("chatType" in item) {
+            if (item.chatType === "wpp") {
+              return (
+                anyItem?.contact?.name ||
+                anyItem?.customer?.RAZAO ||
+                anyItem?.customer?.FANTASIA ||
+                ""
+              )
+                .toString()
+                .toLowerCase();
+            }
+            // internal chat
+            return (
+              anyItem?.groupName ||
+              anyItem?.title ||
+              anyItem?.users?.[0]?.NOME ||
+              ""
+            )
+              .toString()
+              .toLowerCase();
+          }
+          // schedule: try contact/customer names if present (depends on data shape)
+          return (anyItem?.contactName || anyItem?.customerName || "").toString().toLowerCase();
+        };
+
+        const order = filters.sortOrder === "asc" ? 1 : -1;
+        const key = filters.sortBy;
+        if (key === "name") {
+          const an = getNameValue(a);
+          const bn = getNameValue(b);
+          if (an < bn) return -1 * order;
+          if (an > bn) return 1 * order;
+          // tie-breaker: last message desc then startedAt desc
+          const alt = getDateValue(a as any, "lastMessage");
+          const blt = getDateValue(b as any, "lastMessage");
+          if (alt !== blt) return blt - alt;
+          const asd = getDateValue(a as any, "startedAt");
+          const bsd = getDateValue(b as any, "startedAt");
+          return bsd - asd;
+        }
+
+        const av = getDateValue(a as any, key as any);
+        const bv = getDateValue(b as any, key as any);
+        if (av < bv) return -1 * order;
+        if (av > bv) return 1 * order;
+        // tie-breaker: last message desc then name asc
+        const alt = getDateValue(a as any, "lastMessage");
+        const blt = getDateValue(b as any, "lastMessage");
+        if (alt !== blt) return blt - alt;
+        const an = getNameValue(a);
+        const bn = getNameValue(b);
+        if (an < bn) return -1;
+        if (an > bn) return 1;
+        return 0;
       },
     );
 
