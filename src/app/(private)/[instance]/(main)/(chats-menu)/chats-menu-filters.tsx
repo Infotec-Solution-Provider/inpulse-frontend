@@ -4,7 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import GroupsIcon from "@mui/icons-material/Groups";
 import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import { IconButton, Menu, MenuItem, Popover, TextField } from "@mui/material";
+import { IconButton, Menu, MenuItem, Popover, TextField, FormControl, InputLabel, Select, SelectChangeEvent } from "@mui/material";
 import { useContext, useState } from "react";
 import { AppContext, useAppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
@@ -78,6 +78,16 @@ export default function ChatsMenuFilters() {
 
   const handleSchedulesMenuOpen = () => {
     openModal(<SchedulesModal onClose={closeModal} />);
+  };
+
+  const handleChangeSortBy = (event: SelectChangeEvent) => {
+    const value = event.target.value as any;
+    changeChatFilters({ type: "change-sort-by", sortBy: value });
+  };
+
+  const handleChangeSortOrder = (event: SelectChangeEvent) => {
+    const value = event.target.value as any;
+    changeChatFilters({ type: "change-sort-order", sortOrder: value });
   };
 
   return (
@@ -184,7 +194,39 @@ export default function ChatsMenuFilters() {
         </Menu>
       </header>
 
-      <TextField label="Pesquisar conversa" className="grow" onChange={handleChangeText} />
+      <div className="flex gap-2">
+        <TextField label="Pesquisar conversa" className="grow" onChange={handleChangeText} />
+      </div>
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <FormControl fullWidth size="small">
+          <InputLabel id="sort-by-label">Ordenar por</InputLabel>
+          <Select
+            labelId="sort-by-label"
+            id="sort-by-select"
+            value={chatFilters.sortBy}
+            label="Ordenar por"
+            onChange={handleChangeSortBy}
+          >
+            <MenuItem value="startedAt">Data de início</MenuItem>
+            <MenuItem value="finishedAt">Data de finalização</MenuItem>
+            <MenuItem value="lastMessage">Data da última mensagem</MenuItem>
+            <MenuItem value="userCreator">Nome</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl fullWidth size="small">
+          <InputLabel id="sort-order-label">Ordem</InputLabel>
+          <Select
+            labelId="sort-order-label"
+            id="sort-order-select"
+            value={chatFilters.sortOrder}
+            label="Ordem"
+            onChange={handleChangeSortOrder}
+          >
+            <MenuItem value="asc">Crescente</MenuItem>
+            <MenuItem value="desc">Decrescente</MenuItem>
+          </Select>
+        </FormControl>
+      </div>
     </div>
   );
 }

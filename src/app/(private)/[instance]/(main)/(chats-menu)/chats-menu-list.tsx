@@ -97,14 +97,60 @@ export default function ChatsMenuList() {
   }, [chats, internalChats, chatFilters]);
 
   const sortedChats = useMemo(() => {
-    return filteredChats.sort((a, b) => {
-      // Ordenar por timestamp da última mensagem, se existir
-      const aTimestamp = a.lastMessage ? Number(a.lastMessage.timestamp) : 0;
-      const bTimestamp = b.lastMessage ? Number(b.lastMessage.timestamp) : 0;
+    const getUserCreatorName = (chat: CombinedChat): string => {
+      if (chat.chatType === "wpp") {
+        // For WhatsApp chats, prefer assigned user name via userId
+        const uid = (chat as any).userId as number | undefined;
+        const assigned = uid ? users.find(u => u.CODIGO === uid)?.NOME : undefined;
+        return String(assigned || "").toLowerCase();
+      }
+      // Internal chats: use creatorId if available, else first participant's name
+      const internal = chat as DetailedInternalChat;
+      const creatorId = (internal as any).creatorId as number | undefined;
+      const creator = creatorId ? users.find(u => u.CODIGO === creatorId)?.NOME : undefined;
+      return String(creator || internal.users?.[0]?.NOME || "").toLowerCase();
+    };
 
-      return bTimestamp - aTimestamp;
+    const getDate = (chat: CombinedChat, key: "startedAt" | "finishedAt" | "lastMessage"): number => {
+      if (key === "lastMessage") {
+        return chat.lastMessage ? Number((chat as any).lastMessage.timestamp) : 0;
+      }
+      const value = (chat as any)[key];
+      if (!value) return 0;
+      try {
+        return new Date(value).getTime();
+      } catch {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : 0;
+      }
+    };
+
+    const multiplier = chatFilters.sortOrder === "asc" ? 1 : -1;
+    const sortBy = chatFilters.sortBy;
+
+    return [...filteredChats].sort((a, b) => {
+      if (sortBy === "userCreator") {
+        const an = getUserCreatorName(a);
+        const bn = getUserCreatorName(b);
+        if (an < bn) return -1 * multiplier;
+        if (an > bn) return 1 * multiplier;
+        // tie-breaker by last message desc
+        const at = getDate(a, "lastMessage");
+        const bt = getDate(b, "lastMessage");
+        return (bt - at) * (multiplier === 1 ? 1 : 1); // keep consistent tiebreaker
+      }
+
+      // date-based
+      const at = getDate(a, sortBy as any);
+      const bt = getDate(b, sortBy as any);
+      if (at < bt) return -1 * multiplier;
+      if (at > bt) return 1 * multiplier;
+      // tie-breaker: last message desc
+      const alt = getDate(a, "lastMessage");
+      const blt = getDate(b, "lastMessage");
+      return blt - alt;
     });
-  }, [filteredChats]);
+  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder]);
 
   return (
     <menu className="scrollbar-whatsapp flex flex-col gap-2 bg-slate-300/5 p-3 dark:bg-slate-800/50">
