@@ -95,7 +95,7 @@ export default function ChatHeader({
           </div>)
         }
       </div>
-      {currentChat?.chatType === "wpp" && (
+      {currentChat?.chatType === "wpp" && currentChat?.isFinished === false && (
         <div className="flex items-center">
           <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
             <IconButton onClick={openEditContactModal}>
