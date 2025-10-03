@@ -278,7 +278,9 @@ export default function MonitorPage() {
                 <ChatMessagesList />
               </div>
               <div className="border-t border-gray-200 bg-white p-2 text-black dark:border-gray-700 dark:bg-slate-900">
-                <ChatSendMessageArea />
+                {chat.isFinished === false && (
+                  <ChatSendMessageArea />
+                )}
               </div>
             </ChatProvider>
           </div>,
