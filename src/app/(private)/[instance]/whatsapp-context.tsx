@@ -106,8 +106,12 @@ interface WhatsappProviderProps {
 export interface MessageTemplate {
   id: string;
   name: string;
+  language: string;
   category: string;
+  status: string;
   text: string;
+  source: string;
+  raw: any;
 }
 
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
@@ -249,9 +253,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api.current.sendMessage(to, data);
   }, []);
 
-  const editMessage = useCallback(async (messageId: string, newText: string, isInternal: boolean = false) => {
-    api.current.editMessage(messageId, newText, isInternal);
-  }, []);
+  const editMessage = useCallback(
+    async (messageId: string, newText: string, isInternal: boolean = false) => {
+      api.current.editMessage(messageId, newText, isInternal);
+    },
+    [],
+  );
 
   const getChatsMonitor = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
@@ -409,6 +416,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         const parameters: Record<string, string> = res.data["parameters"];
         if (parameters["is_official"] === "true") {
           const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
+
+          console.log(templatesResponse)
           setTemplates(templatesResponse.data.templates);
         }
         setParameters(parameters);

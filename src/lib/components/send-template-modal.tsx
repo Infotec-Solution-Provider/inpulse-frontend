@@ -1,12 +1,19 @@
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { MessageTemplate, useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import {
+  DetailedChat,
+  MessageTemplate,
+  useWhatsappContext,
+} from "@/app/(private)/[instance]/whatsapp-context";
 import { useEffect, useState } from "react";
+import { TemplateVariables } from "../types/chats.types";
+import { useAuthContext } from "@/app/auth-context";
+import { getFirstName, getFullName } from "../utils/name";
 
 export interface SendTemplateData {
-  templateId: string;
-  templateParams: Array<string>;
-  templateText: string;
+  template: MessageTemplate;
+  templateVariables: TemplateVariables;
+  components: string[];
 }
 
 interface Props {
@@ -15,14 +22,20 @@ interface Props {
 }
 
 export default function SendTemplateModal({ onClose, onSendTemplate }: Props) {
-  const { templates } = useWhatsappContext();
+  const { templates, currentChat } = useWhatsappContext();
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [variables, setVariables] = useState<Record<number, string>>({});
+  const { user } = useAuthContext();
 
-  const templateText = selectedTemplate?.text.replace(/{{\d+}}/g, (match) => {
+  const gupshupTemplateText = selectedTemplate?.text.replace(/{{\d+}}/g, (match) => {
     const key = match.replaceAll("{", "").replaceAll("}", "");
     return variables[+key] || match; // Se não houver valor, mostra o placeholder original
   });
+
+  const wabaTemplateText = selectedTemplate?.text;
+
+  const templateText =
+    selectedTemplate?.source === "gupshup" ? gupshupTemplateText : wabaTemplateText;
 
   useEffect(() => {
     if (!selectedTemplate) {
@@ -40,25 +53,25 @@ export default function SendTemplateModal({ onClose, onSendTemplate }: Props) {
     }
   }, [selectedTemplate]);
 
-  // Mapeia os templates para o formato usado no Autocomplete
-  const templateOptions = templates.map((t) => ({
-    label: t.name,
-    template: t,
-  }));
-
-  // Encontra a opção selecionada (usado para o value do Autocomplete)
-  const selectedOption = selectedTemplate
-    ? (templateOptions.find((opt) => opt.template.id === selectedTemplate.id) ?? null)
-    : null;
-
-  const disabled = !selectedTemplate || Object.values(variables).some((v) => !v);
+  const disabled =
+    !selectedTemplate ||
+    (selectedTemplate.source !== "waba" && Object.values(variables).some((v) => !v));
 
   const handleSend = () => {
+    const chat = currentChat! as DetailedChat;
     if (onSendTemplate && selectedTemplate && templateText) {
       onSendTemplate({
-        templateId: selectedTemplate.id,
-        templateParams: Object.values(variables),
-        templateText,
+        template: selectedTemplate,
+        components: Object.values(variables),
+        templateVariables: {
+          atendente_nome: user!.NOME,
+          atendente_nome_exibição: user!.NOME_EXIBICAO || "vendedor",
+          cliente_cnpj: chat.customer?.CPF_CNPJ || "000.000.000-00",
+          cliente_razao: chat.customer?.RAZAO || "RAZÃO SOCIAL",
+          contato_nome_completo: getFullName(chat.contact?.name) || "Contato Nome Completo",
+          contato_primeiro_nome: getFirstName(chat.contact?.name) || "Contato",
+          saudação_tempo: "Saudação Tempo",
+        },
       });
     }
   };
@@ -73,29 +86,50 @@ export default function SendTemplateModal({ onClose, onSendTemplate }: Props) {
       </header>
       <div className="p-2">
         <Autocomplete
-          options={templateOptions}
-          onChange={(_, value) => setSelectedTemplate(value?.template || null)}
-          value={selectedOption}
-          renderInput={(p) => <TextField label="template" {...p} />}
+          options={templates}
+          onChange={(_, value) => setSelectedTemplate(value || null)}
+          renderInput={(p) => <TextField label="Template" {...p} />}
+          // Garantir label textual; fallback para id se name ausente
+          getOptionLabel={(option) => (option?.name || option?.id || "").toString()}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          // Evita tentar renderizar objeto direto caso API retorne algo inesperado
+          filterOptions={(options, state) =>
+            options.filter((opt) =>
+              (opt.name || opt.id || "")
+                .toString()
+                .toLowerCase()
+                .includes(state.inputValue.toLowerCase()),
+            )
+          }
         />
       </div>
       <div className="p-2">
         {selectedTemplate && (
           <>
             <div className="mb-2 bg-slate-300 p-2 dark:bg-slate-700">
-              {templateText && templateText.split("\n").map((line, idx) => <p key={idx}>{line}</p>)}
+              {selectedTemplate.source === "gupshup" &&
+                typeof templateText === "string" &&
+                templateText
+                  .split("\n")
+                  .map((line, idx) => (
+                    <p key={idx}>{typeof line === "string" ? line : JSON.stringify(line)}</p>
+                  ))}
+              {selectedTemplate.source === "waba" &&
+                templateText?.split("\n").map((line, idx) => <p key={idx}>{line}</p>)}
             </div>
-            <div className="flex flex-col gap-2">
-              {Object.entries(variables).map(([key, value]) => (
-                <TextField
-                  size="small"
-                  key={key}
-                  value={value}
-                  onChange={(e) => setVariables((prev) => ({ ...prev, [key]: e.target.value }))}
-                  label={`Variável ${key}`}
-                />
-              ))}
-            </div>
+            {selectedTemplate.source !== "waba" && (
+              <div className="flex flex-col gap-2">
+                {Object.entries(variables).map(([key, value]) => (
+                  <TextField
+                    size="small"
+                    key={key}
+                    value={value}
+                    onChange={(e) => setVariables((prev) => ({ ...prev, [key]: e.target.value }))}
+                    label={`Variável ${key}`}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
