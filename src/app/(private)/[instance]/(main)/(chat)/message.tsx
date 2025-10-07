@@ -229,7 +229,7 @@ export default function Message({
             />
           )}
           <div className="w-full text-slate-900 dark:text-slate-200">
-            {/*             {type === "vcard" ? (
+            {type === "vcard" ? (
               <VCardMessage vCardString={text} />
             ) : (
               text?.split("\n").map((line, index) => (
@@ -237,13 +237,7 @@ export default function Message({
                   <LinkifiedText text={line} />
                 </p>
               ))
-            )} */}
-            {id} - {type} - {status}\n
-            {text?.split("\n").map((line, index) => (
-              <p key={index} className="max-w-[100%] break-words text-sm">
-                <LinkifiedText text={line} />
-              </p>
-            ))}
+            )}
           </div>
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {isEdited && <span>Editada</span>}
