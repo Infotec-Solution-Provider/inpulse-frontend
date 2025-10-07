@@ -79,7 +79,6 @@ export default function ChatsMenuList() {
     ];
 
     return combinedChats.filter((chat) => {
-      console.log(chat);
       if (chatFilters.showingType === "scheduled" && !("schedule" in chat)) {
         return false;
       }
@@ -101,17 +100,20 @@ export default function ChatsMenuList() {
       if (chat.chatType === "wpp") {
         // For WhatsApp chats, prefer assigned user name via userId
         const uid = (chat as any).userId as number | undefined;
-        const assigned = uid ? users.find(u => u.CODIGO === uid)?.NOME : undefined;
+        const assigned = uid ? users.find((u) => u.CODIGO === uid)?.NOME : undefined;
         return String(assigned || "").toLowerCase();
       }
       // Internal chats: use creatorId if available, else first participant's name
       const internal = chat as DetailedInternalChat;
       const creatorId = (internal as any).creatorId as number | undefined;
-      const creator = creatorId ? users.find(u => u.CODIGO === creatorId)?.NOME : undefined;
+      const creator = creatorId ? users.find((u) => u.CODIGO === creatorId)?.NOME : undefined;
       return String(creator || internal.users?.[0]?.NOME || "").toLowerCase();
     };
 
-    const getDate = (chat: CombinedChat, key: "startedAt" | "finishedAt" | "lastMessage"): number => {
+    const getDate = (
+      chat: CombinedChat,
+      key: "startedAt" | "finishedAt" | "lastMessage",
+    ): number => {
       if (key === "lastMessage") {
         return chat.lastMessage ? Number((chat as any).lastMessage.timestamp) : 0;
       }

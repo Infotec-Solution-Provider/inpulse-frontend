@@ -28,9 +28,11 @@ export default function processChatsAndMessages(
   }
 
   const isFromUs = (message: WppMessage) => {
-    const bool = message.from.startsWith("me:") || message.from.startsWith("system:") || message.from.startsWith("bot") || message.from.startsWith("thirdparty");
-
-    if(!bool) console.log("Message not from us:", message.from);
+    const bool =
+      message.from.startsWith("me:") ||
+      message.from.startsWith("system:") ||
+      message.from.startsWith("bot") ||
+      message.from.startsWith("thirdparty");
 
     return bool;
   };

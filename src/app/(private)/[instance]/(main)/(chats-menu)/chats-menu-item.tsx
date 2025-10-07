@@ -98,7 +98,6 @@ export default function ChatsMenuItem({
     target.style.transform = "";
 
     if (typeof onClick === "function") {
-      console.log("Executing onClick handler from touch");
       try {
         onClick();
       } catch (error) {

@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { TemplateVariables } from "../types/chats.types";
 import { useAuthContext } from "@/app/auth-context";
 import { getFirstName, getFullName } from "../utils/name";
+import { Customer, WppContact } from "@in.pulse-crm/sdk";
 
 export interface SendTemplateData {
   template: MessageTemplate;
@@ -19,9 +20,11 @@ export interface SendTemplateData {
 interface Props {
   onClose?: () => void;
   onSendTemplate?: (data: SendTemplateData) => void;
+  contact?: WppContact | null;
+  customer?: Customer | null;
 }
 
-export default function SendTemplateModal({ onClose, onSendTemplate }: Props) {
+export default function SendTemplateModal({ onClose, onSendTemplate, customer, contact }: Props) {
   const { templates, currentChat } = useWhatsappContext();
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [variables, setVariables] = useState<Record<number, string>>({});
@@ -66,10 +69,10 @@ export default function SendTemplateModal({ onClose, onSendTemplate }: Props) {
         templateVariables: {
           atendente_nome: user!.NOME,
           atendente_nome_exibição: user!.NOME_EXIBICAO || "vendedor",
-          cliente_cnpj: chat.customer?.CPF_CNPJ || "000.000.000-00",
-          cliente_razao: chat.customer?.RAZAO || "RAZÃO SOCIAL",
-          contato_nome_completo: getFullName(chat.contact?.name) || "Contato Nome Completo",
-          contato_primeiro_nome: getFirstName(chat.contact?.name) || "Contato",
+          cliente_cnpj: customer?.CPF_CNPJ || "000.000.000-00",
+          cliente_razao: customer?.RAZAO || "CLIENTE NÃO CADASTRADO",
+          contato_nome_completo: getFullName(contact?.name) || "Contato Nome Completo",
+          contato_primeiro_nome: getFirstName(contact?.name) || "Contato",
           saudação_tempo: "Saudação Tempo",
         },
       });
