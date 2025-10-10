@@ -58,13 +58,7 @@ export default function ContactModal({
       setShouldStartChat(false);
       onClose();
     }
-  }, [
-    newCreatedContact,
-    shouldStartChat,
-    startChatByContactId,
-    onClose,
-    contact?.phone,
-  ]);
+  }, [newCreatedContact, shouldStartChat, startChatByContactId, onClose, contact?.phone]);
 
   const handleStartConversation = () => {
     if (!contact || !contact.id) return;
@@ -124,12 +118,7 @@ export default function ContactModal({
           alignItems: "center",
         }}
       >
-        <Typography
-          variant="h6"
-          sx={{ fontWeight: "bold", flexGrow: 1 }}
-        >
-          Detalhes do Contato
-        </Typography>
+        <Typography sx={{ fontWeight: "bold", flexGrow: 1 }}>Detalhes do Contato</Typography>
 
         <IconButton
           aria-label="fechar"
@@ -179,11 +168,7 @@ export default function ContactModal({
                   mb: 2,
                 }}
               >
-                {contact.name ? (
-                  contact.name.charAt(0).toUpperCase()
-                ) : (
-                  <PersonIcon />
-                )}
+                {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
               </Avatar>
             )}
 
@@ -206,16 +191,9 @@ export default function ContactModal({
                 mb: 1,
               }}
             >
-              <PhoneIphoneIcon
-                sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
-              />
-              <Typography
-                variant="body2"
-                sx={{ color: (theme) => theme.palette.text.secondary }}
-              >
-                {contact.phone
-                  ? Formatter.phone(contact.phone)
-                  : "Número indisponível"}
+              <PhoneIphoneIcon sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary }}>
+                {contact.phone ? Formatter.phone(contact.phone) : "Número indisponível"}
               </Typography>
             </Box>
 
@@ -230,9 +208,7 @@ export default function ContactModal({
                       justifyContent: "center",
                     }}
                   >
-                    <BusinessIcon
-                      sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
-                    />
+                    <BusinessIcon sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }} />
                     <Typography variant="body2">{companyName}</Typography>
                   </Box>
                 )}
@@ -245,12 +221,8 @@ export default function ContactModal({
                       justifyContent: "center",
                     }}
                   >
-                    <BadgeIcon
-                      sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
-                    />
-                    <Typography variant="body2">
-                      {chat.customer.CPF_CNPJ}
-                    </Typography>
+                    <BadgeIcon sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }} />
+                    <Typography variant="body2">{chat.customer.CPF_CNPJ}</Typography>
                   </Box>
                 )}
                 {chat.customer.COD_ERP && (
@@ -262,12 +234,8 @@ export default function ContactModal({
                       justifyContent: "center",
                     }}
                   >
-                    <ArticleIcon
-                      sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }}
-                    />
-                    <Typography variant="body2">
-                      Cód. ERP: {chat.customer.COD_ERP}
-                    </Typography>
+                    <ArticleIcon sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }} />
+                    <Typography variant="body2">Cód. ERP: {chat.customer.COD_ERP}</Typography>
                   </Box>
                 )}
               </Box>
@@ -349,11 +317,7 @@ export default function ContactModal({
               onClick={handleAddAndChat}
               variant="contained"
               startIcon={
-                isCreating ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <WhatsAppIcon />
-                )
+                isCreating ? <CircularProgress size={16} color="inherit" /> : <WhatsAppIcon />
               }
               sx={{
                 textTransform: "none",

@@ -250,7 +250,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
-    api.current.sendMessage(to, data);
+    try {
+      await api.current.sendMessage(to, data);
+    } catch (err) {
+      toast.error(sanitizeErrorMessage(err));
+    }
   }, []);
 
   const editMessage = useCallback(
@@ -417,7 +421,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         if (parameters["is_official"] === "true") {
           const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
 
-          console.log(templatesResponse)
+          console.log(templatesResponse);
           setTemplates(templatesResponse.data.templates);
         }
         setParameters(parameters);
