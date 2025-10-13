@@ -40,29 +40,38 @@ export default function UserModal({ user }: UserModalProps) {
     setAvatar(file);
   };
 
-  async function handleSubmit() {
-    let AVATAR_ID: number | null = null;
+
+async function handleSubmit() {
+  try {
+    let AVATAR_ID: number | null = user?.AVATAR_ID ?? null;
+
     if (avatar) {
       const arrayBuffer = await avatar.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer =
+        typeof Buffer !== "undefined"
+          ? Buffer.from(arrayBuffer)
+          : new Uint8Array(arrayBuffer);
 
-      const fileResult = await filesService.uploadFile({
-        buffer: buffer,
+      const uploaded = await filesService.uploadFile({
+        buffer: buffer as any,
         fileName: avatar.name,
         dirType: FileDirType.PUBLIC,
         instance: instance,
         mimeType: avatar.type,
       });
 
-      AVATAR_ID = fileResult.id;
+      AVATAR_ID = uploaded.id;
     }
-
+    console.log("isEdit", isEdit);
     if (isEdit) {
-      updateUser(user.CODIGO, { ...formData, AVATAR_ID });
+      await updateUser(user!.CODIGO, { ...formData, AVATAR_ID });
     } else {
-      createUser({ ...formData, AVATAR_ID });
+      await createUser({ ...formData, AVATAR_ID });
     }
+  } catch (err) {
+    console.error("Erro no handleSubmit:", err);
   }
+}
 
   return (
     <StyledDialog
