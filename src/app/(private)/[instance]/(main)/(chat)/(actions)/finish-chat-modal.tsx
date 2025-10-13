@@ -14,7 +14,11 @@ export default function FinishChatModal() {
 
   const handleFinishChat = () => {
     if (currentChat && resultId) {
-      finishChat(currentChat.id, resultId, triggerSatisfactionSurvey && parameters["satisfaction_survey_enabled"] === "true");
+      finishChat(
+        currentChat.id,
+        resultId,
+        triggerSatisfactionSurvey && parameters["satisfaction_survey_enabled"] === "true",
+      );
       closeModal();
     }
   };
@@ -31,7 +35,7 @@ export default function FinishChatModal() {
   }, []);
 
   return (
-    <div className="w-[26rem] rounded-md bg-white text-gray-800 px-4 py-4 dark:bg-slate-800 dark:text-white">
+    <div className="w-[26rem] rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-8">
         <h1 className="text-xl">Finalizar conversa</h1>
         <IconButton onClick={closeModal}>
@@ -66,20 +70,6 @@ export default function FinishChatModal() {
             </MenuItem>
           ))}
         </TextField>
-        {parameters["satisfaction_survey_enabled"] && (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="triggerSatisfactionSurvey"
-              checked={triggerSatisfactionSurvey}
-              onChange={() => setTriggerSatisfactionSurvey(!triggerSatisfactionSurvey)}
-              className="w-4 h-4"
-            />
-            <label htmlFor="triggerSatisfactionSurvey" className="select-none">
-              Enviar pesquisa de satisfação
-            </label>
-          </div>
-        )}
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"
