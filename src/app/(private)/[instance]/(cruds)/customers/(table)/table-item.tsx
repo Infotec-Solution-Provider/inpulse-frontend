@@ -1,7 +1,6 @@
 import { Edit, ViewAgenda } from "@mui/icons-material";
-import { StyledTableCell, StyledTableRow } from "./mui-style";
 import { Customer } from "@in.pulse-crm/sdk";
-import { IconButton } from "@mui/material";
+import { IconButton, TableCell, TableRow } from "@mui/material";
 
 interface ClientListItemProps {
   customer: Customer;
@@ -15,46 +14,81 @@ export default function CustomersTableItem({
   openContactModalHandler,
 }: ClientListItemProps) {
   return (
-    <StyledTableRow>
-      <StyledTableCell className="px-2 py-3">
-        <p className="w-14">{customer.CODIGO}</p>
-      </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">{customer.ATIVO || "N/D"}</StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        {customer.PESSOA === "FIS"
-          ? "Física"
-          : customer.PESSOA === "JUR"
-            ? "Júridica"
-            : "Não cadastrado"}
-      </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <p className="w-64 truncate"> {customer.RAZAO || "N/D"}</p>
-      </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <p className="w-40 truncate">
+    <TableRow
+      className="transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      sx={{
+        "&:nth-of-type(even)": {
+          backgroundColor: (theme) =>
+            theme.palette.mode === "dark" ? "rgba(99, 102, 241, 0.05)" : "rgba(99, 102, 241, 0.03)",
+        },
+        "& .MuiTableCell-root": {
+          borderBottom: "1px solid",
+          borderColor: (theme) =>
+            theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(226 232 240)",
+        },
+      }}
+    >
+      <TableCell className="px-3 py-3">
+        <span className="font-mono text-sm font-medium">{customer.CODIGO}</span>
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <span
+          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+            customer.ATIVO === "SIM"
+              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+              : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+          }`}
+        >
+          {customer.ATIVO || "N/D"}
+        </span>
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <span className="text-sm">
+          {customer.PESSOA === "FIS"
+            ? "Física"
+            : customer.PESSOA === "JUR"
+              ? "Jurídica"
+              : "Não cadastrado"}
+        </span>
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <p className="max-w-xs truncate text-sm font-medium">{customer.RAZAO || "N/D"}</p>
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <p className="font-mono text-sm">
           {customer.CPF_CNPJ
             ? customer.CPF_CNPJ.length === 11
               ? customer.CPF_CNPJ.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
               : customer.CPF_CNPJ.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")
             : "N/D"}
         </p>
-      </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <p className="w-37 truncate">{customer.CIDADE || "N/D"}</p>
-      </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <p className="w-28 truncate">{customer.COD_ERP || "N/D"}</p>
-      </StyledTableCell>
-      <StyledTableCell className="px-2 py-2">
-        <div className="flex w-full items-center gap-2">
-          <IconButton title="Editar" onClick={() => openEditModalHandler(customer)}>
-            <Edit />
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <p className="max-w-[10rem] truncate text-sm">{customer.CIDADE || "N/D"}</p>
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <p className="font-mono text-sm">{customer.COD_ERP || "N/D"}</p>
+      </TableCell>
+      <TableCell className="px-3 py-3">
+        <div className="flex items-center gap-1">
+          <IconButton
+            title="Editar Cliente"
+            onClick={() => openEditModalHandler(customer)}
+            size="small"
+            className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+          >
+            <Edit fontSize="small" />
           </IconButton>
-          <IconButton title="Editar" onClick={() => openContactModalHandler(customer)}>
-            <ViewAgenda />
+          <IconButton
+            title="Ver Contatos"
+            onClick={() => openContactModalHandler(customer)}
+            size="small"
+            className="text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+          >
+            <ViewAgenda fontSize="small" />
           </IconButton>
         </div>
-      </StyledTableCell>
-    </StyledTableRow>
+      </TableCell>
+    </TableRow>
   );
 }

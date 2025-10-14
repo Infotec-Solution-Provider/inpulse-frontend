@@ -10,8 +10,14 @@ import {
   useState,
 } from "react";
 
-import { CreateCustomerDTO, Customer, CustomersClient, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
 import { useAuthContext } from "@/app/auth-context";
+import {
+  CreateCustomerDTO,
+  Customer,
+  CustomersClient,
+  RequestFilters,
+  UpdateCustomerDTO,
+} from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import customersReducer, {
@@ -29,7 +35,7 @@ interface ICustomersContext {
   dispatch: ActionDispatch<[ChangeCustomersStateAction]>;
   updateCustomer: (id: number, data: UpdateCustomerDTO) => void;
   createCustomer: (data: CreateCustomerDTO) => void;
-  loadCustomers: () => void;
+  loadCustomers: (filters: RequestFilters<Customer>) => void;
 }
 
 export const CustomersContext = createContext<ICustomersContext>({} as ICustomersContext);
@@ -48,7 +54,10 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   const [state, dispatch] = useReducer(customersReducer, {
     customers: [],
     totalRows: 0,
-    filters: {},
+    filters: {
+      page: "1",
+      perPage: "10",
+    },
     isLoading: false,
   });
 
@@ -65,7 +74,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         Logger.error("Error creating customer", err as Error);
         toast.error("Falha ao cadastrar cliente!");
       } finally {
-        loadCustomers();
+        loadCustomers({});
       }
     },
     [token],
@@ -87,11 +96,12 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     [token],
   );
 
-  const loadCustomers = useCallback(async () => {
+  const loadCustomers = useCallback(async (filters: RequestFilters<Customer>) => {
     dispatch({ type: "change-loading", isLoading: true });
+    console.log("🔍 [loadCustomers] Filters being sent:", filters);
 
     try {
-      const res = await api.current.getCustomers(state.filters);
+      const res = await api.current.getCustomers(filters);
       dispatch({
         type: "multiple",
         actions: [
@@ -119,7 +129,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   useEffect(() => {
     if (!token || !api.current) return;
     api.current.setAuth(token);
-    loadCustomers();
+    loadCustomers({});
     loadAllCustomers();
   }, [token, api.current]);
 
