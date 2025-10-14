@@ -26,14 +26,9 @@ const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 export default function UsersTableHeader() {
   const { dispatch, loadUsers, state, sectors } = useUsersContext();
   const [filters, setFilters] = useState<Record<string, string>>(state.filters || {});
-  const [hasActiveFilters, setHasActiveFilters] = useState(false);
-
-  useEffect(() => {
-    const activeCount = Object.keys(filters).filter(
-      (key) => key !== "page" && key !== "perPage" && filters[key] && filters[key] !== "none",
-    ).length;
-    setHasActiveFilters(activeCount > 0);
-  }, [filters]);
+  const activeFiltersCount = Object.keys(filters).filter(
+    (key) => key !== "page" && key !== "perPage" && filters[key] && filters[key] !== "none",
+  ).length;
 
   const onChangeFilter = (key: string, value: string) => {
     setFilters((prev) => {
@@ -241,7 +236,7 @@ export default function UsersTableHeader() {
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
               {USERS_TABLE_COLUMNS.ACTIONS.label}
             </label>
-            <div className="flex min-h-[40px] items-center gap-1">
+            <div className="flex min-h-[40px] w-32 items-center gap-1">
               <Tooltip title="Pesquisar" arrow>
                 <IconButton
                   onClick={onClickSearch}
@@ -252,7 +247,7 @@ export default function UsersTableHeader() {
                   <Search fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {hasActiveFilters ? (
+              {activeFiltersCount > 0 ? (
                 <>
                   <Tooltip title="Limpar filtros" arrow>
                     <IconButton
@@ -266,9 +261,7 @@ export default function UsersTableHeader() {
                   </Tooltip>
                   <Chip
                     icon={<FilterAlt fontSize="small" />}
-                    label={
-                      Object.keys(filters).filter((k) => filters[k] && filters[k] !== "none").length
-                    }
+                    label={activeFiltersCount}
                     size="small"
                     color="primary"
                   />
