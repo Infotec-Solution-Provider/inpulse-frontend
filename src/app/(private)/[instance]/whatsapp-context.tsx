@@ -120,7 +120,7 @@ export const NOTIFICATIONS_PER_PAGE = 15;
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
-  const { token, instance } = useContext(AuthContext);
+  const { token, instance, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
   const [chats, setChats] = useState<DetailedChat[]>([]);
@@ -356,9 +356,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
     try {
+      console.log("Criando agendamento...", {
+        contactId: chat.contactId!,
+        scheduledFor: user!.CODIGO,
+        sectorId: chat.sectorId!,
+        date,
+      });
       await api.current.createSchedule({
         contactId: chat.contactId!,
-        scheduledFor: chat.userId!,
+        scheduledFor: user!.CODIGO,
         sectorId: chat.sectorId!,
         date,
       });

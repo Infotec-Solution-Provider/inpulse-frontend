@@ -1,21 +1,31 @@
 import { ShowingMessagesType } from "@/lib/reducers/chats-filter.reducer";
 import { FilterList } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import CategoryIcon from "@mui/icons-material/Category";
 import GroupsIcon from "@mui/icons-material/Groups";
+import HailIcon from "@mui/icons-material/Hail";
 import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import { IconButton, Menu, MenuItem, Popover, TextField, FormControl, InputLabel, Select, SelectChangeEvent } from "@mui/material";
-import { useContext, useState } from "react";
-import { AppContext, useAppContext } from "../../app-context";
-import { WhatsappContext } from "../../whatsapp-context";
-import StartChatModal from "./(start-chat-modal)/start-chat-modal";
-import CategoryIcon from "@mui/icons-material/Category";
-import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import SmsIcon from "@mui/icons-material/Sms";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import {
+  FormControl,
+  IconButton,
+  InputLabel,
+  Menu,
+  MenuItem,
+  Popover,
+  Select,
+  SelectChangeEvent,
+  TextField,
+} from "@mui/material";
+import { useContext, useState } from "react";
+import { useAppContext } from "../../app-context";
+import { WhatsappContext } from "../../whatsapp-context";
 import SchedulesModal from "./(schedules-modal)/schedules-modal";
-import HailIcon from "@mui/icons-material/Hail";
+import StartChatModal from "./(start-chat-modal)/start-chat-modal";
+import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
   all: "",

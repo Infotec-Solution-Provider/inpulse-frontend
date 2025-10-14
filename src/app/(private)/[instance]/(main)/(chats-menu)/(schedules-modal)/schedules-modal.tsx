@@ -1,6 +1,6 @@
 import { useAuthContext } from "@/app/auth-context";
 import CloseIcon from "@mui/icons-material/Close";
-import { Button, CircularProgress, IconButton } from "@mui/material";
+import { CircularProgress, IconButton } from "@mui/material";
 import { useEffect, useState } from "react";
 import { DetailedSchedule, useWhatsappContext } from "../../../whatsapp-context";
 
@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default function SchedulesModal({ onClose }: Props) {
-  const { wppApi, startChatByContactId } = useWhatsappContext();
+  const { wppApi } = useWhatsappContext();
   const { user } = useAuthContext();
   const [schedules, setSchedules] = useState<DetailedSchedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +31,7 @@ export default function SchedulesModal({ onClose }: Props) {
         const res = await wppApi.current.getSchedules(String(user.CODIGO), String(user.SETOR), {
           perPage: "999",
         });
+        console.log(res.data);
         if (!mounted) return;
 
         const list = (res.data as DetailedSchedule[]).slice().sort((a, b) => {
