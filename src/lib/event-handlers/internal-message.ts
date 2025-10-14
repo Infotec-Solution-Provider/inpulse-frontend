@@ -6,6 +6,7 @@ import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-contex
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { Formatter } from "@in.pulse-crm/utils";
 import { replaceMentions } from "../utils/message-mentions";
+import getInternalMessageAuthor from "../utils/get-internal-message-author";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -29,10 +30,11 @@ export default function InternalReceiveMessageHandler(
   users: User[],
   contacts: WppContact[],
   loggedUser: User,
+  phoneNameMap: Map<string, string>,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
-     if (notifiedMessages.has(message.id)) return;
-     notifiedMessages.add(message.id);
+    if (notifiedMessages.has(message.id)) return;
+    notifiedMessages.add(message.id);
     const isCurrentChat =
       chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
     const isCurrentUser = message.from === `user:${loggedUser.CODIGO}`;
@@ -51,45 +53,13 @@ export default function InternalReceiveMessageHandler(
     }
 
     if (message.from !== `user:${loggedUser.CODIGO}`) {
-      let name = "Desconhecido";
-      if (message.from === "system") {
-        name = "InPulse";
-      }
-      if (message.from.startsWith("user:")) {
-        name = users.find((u) => u.CODIGO === +message.from.split(":")[1])?.NOME || "Desconhecido";
-      }
-      if (message.from.startsWith("external:")) {
-
-       const parts = message.from.split(":");
-          let raw = "";
-          if (parts.length === 3) {
-            raw = parts[2];
-          } else if (parts.length === 2) {
-            raw = parts[1];
-          }
-
-
-        const phone = raw.split("@")[0].replace(/\D/g, "");
-        const user = users.find((u) => u.WHATSAPP === phone);
-        const usersPhone = contacts.find((u) => u.phone === phone)?.name;
-        if (user) {
-          name =
-            user.NOME ||
-            usersPhone ||
-            (user.WHATSAPP && user.WHATSAPP.length <= 13
-              ? Formatter.phone(user.WHATSAPP)
-              : "Sem número");
-        } else {
-          name = usersPhone || (phone.length <= 13 ? Formatter.phone(phone) : phone);
-        }
-
-      }
+      const author = getInternalMessageAuthor(message, phoneNameMap, users);
       const bodyFinal =
         message.type !== "chat"
           ? types[message.type] || "Enviou um arquivo"
           : replaceMentions(message.body || "", users, contacts);
 
-      safeNotification(name, {
+      safeNotification(author, {
         body: bodyFinal,
         icon: HorizontalLogo.src,
       });

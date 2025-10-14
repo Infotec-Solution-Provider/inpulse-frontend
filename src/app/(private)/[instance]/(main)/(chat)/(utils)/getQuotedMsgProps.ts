@@ -14,11 +14,16 @@ export default function getQuotedMsgProps(
 
   let authorName: string | null = null;
 
-  if (quotedMsg?.from?.startsWith("user:")) {
+  const startsWithUser = quotedMsg?.from?.startsWith("user:");
+  const startsWithExternal = quotedMsg?.from?.startsWith("external:");
+  const hasSpecialChar = ["@", "-"].some((char) => quotedMsg.from.includes(char));
+
+  if (startsWithUser) {
     const userId = +quotedMsg.from.split(":")[1];
     const user = users.find((u) => u.CODIGO === userId);
     authorName = user ? user.NOME : null;
-  } else if (quotedMsg?.from?.startsWith("external:")) {
+  }
+  if (startsWithExternal && !hasSpecialChar) {
     const parts = quotedMsg.from.split(":");
     let raw = parts.length === 3 ? parts[2] : parts[1];
     const phone = raw.split("@")[0].replace(/\D/g, "");
@@ -26,6 +31,11 @@ export default function getQuotedMsgProps(
     const usersPhone = contactsMap?.get(phone);
 
     authorName = user ? user.NOME : usersPhone ? usersPhone : phone;
+  }
+  if (startsWithExternal && hasSpecialChar) {
+    const [type, phone, name] = quotedMsg.from.split(":");
+
+    authorName = name ? name : phone ? phone.replace(/\D/g, "") : "N/D";
   }
 
   if (chat && "contactId" in quotedMsg) {

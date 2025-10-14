@@ -9,6 +9,8 @@ import { ChatContext } from "./chat-context";
 import { InternalChatContext } from "../../internal-context";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { useAuthContext } from "@/app/auth-context";
+import { Logger } from "@in.pulse-crm/utils";
+import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
 
 type BubbleStyle = "system" | "sent" | "received";
 
@@ -36,32 +38,10 @@ export default function RenderInternalGroupMessages({
   const { currentInternalChatMessages, users } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
-  const { contacts } = useContext(ContactsContext);
+  const { phoneNameMap } = useContext(ContactsContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const usersMap = useMemo(() => {
-    const map = new Map<number, User>();
-    (users ?? []).forEach((u) => map.set(u.CODIGO, u));
-    return map;
-  }, [users]);
-
-  const mentionNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-
-    (contacts ?? []).forEach((contact) => {
-      const phone = contact.phone?.replace(/\D/g, "");
-      if (phone && contact.name) map.set(phone, contact.name);
-    });
-
-    (users ?? []).forEach((u) => {
-      const phone = u.WHATSAPP?.replace(/\D/g, "");
-      if (phone && u.NOME) map.set(phone, u.NOME);
-    });
-
-    return map;
-  }, [users, contacts]);
 
   useEffect(() => {
     if (!isSelectionMode && messagesEndRef.current) {
@@ -71,36 +51,18 @@ export default function RenderInternalGroupMessages({
 
   const visibleMessages = useMemo(
     () => (currentInternalChatMessages ?? []).slice(-visibleCount),
-    [currentInternalChatMessages, visibleCount]
+    [currentInternalChatMessages, visibleCount],
   );
-
-  const getSenderName = (message: InternalMessage): string => {
-    if (message.from?.startsWith("user:")) {
-      const userId = Number(message.from.split(":")[1]);
-      const findUser = usersMap.get(userId);
-      return findUser ? findUser.NOME : "Usuário Desconhecido";
-    }
-
-    if (message.from?.startsWith("external:")) {
-      const parts = message.from.split(":");
-      const raw = parts.length > 1 ? parts[parts.length - 1] : "";
-      const phone = raw.split("@")[0].replace(/\D/g, "");
-      return mentionNameMap.get(phone) || phone || "Contato Externo";
-    }
-
-    return "Sistema";
-  };
-
   return (
-    <div className="h-full w-full overflow-y-auto p-2 bg-slate-300 dark:bg-slate-900 scrollbar-whatsapp">
-      {(visibleCount < (currentInternalChatMessages?.length ?? 0)) && (
-        <div className="flex justify-center mb-2">
+    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
+      {visibleCount < (currentInternalChatMessages?.length ?? 0) && (
+        <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
             onClick={() =>
               setVisibleCount((prev) =>
-                Math.min(prev + 30, currentInternalChatMessages?.length ?? prev)
+                Math.min(prev + 30, currentInternalChatMessages?.length ?? prev),
               )
             }
           >
@@ -122,13 +84,13 @@ export default function RenderInternalGroupMessages({
                 getInternalMessageStyle(findQuoted, user?.CODIGO),
                 users ?? [],
                 null,
-                mentionNameMap
+                phoneNameMap,
               )
             : null;
 
           const prev = i > 0 ? arr[i - 1] : null;
           const groupFirst = !prev || prev.from !== m.from;
-          const senderName = getSenderName(m);
+          const senderName = getInternalMessageAuthor(m, phoneNameMap, users);
           const isMine = user?.CODIGO != null && m.from === `user:${user.CODIGO}`;
 
           return (
@@ -155,7 +117,7 @@ export default function RenderInternalGroupMessages({
               isEdited={m.isEdited}
               onSelect={() => toggleSelectMessage(m.id)}
               onForward={() => openManualForward(m)}
-              mentionNameMap={mentionNameMap}
+              mentionNameMap={phoneNameMap}
               onEdit={
                 isMine && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
                   ? () => handleEditMessage(m)
