@@ -22,14 +22,17 @@ function getInternalMessageAuthor(
   }
   if (startsWithExternal && hasSpecialChar) {
     const parts = message.from.split(":");
-    let raw = parts.length === 3 ? parts[2] : parts[1];
+    const raw = parts.length === 3 ? parts[2] : parts[1];
     const phone = raw.split("@")[0].replace(/\D/g, "");
     const contactName = phoneNameMap.get(phone) || phone.replace(/\D/g, "");
 
     authorName = contactName;
   }
   if (startsWithExternal && !hasSpecialChar) {
-    const [_type, phone, name] = message.from.split(":");
+    const splittedFrom = message.from.split(":");
+    const phone = splittedFrom[1];
+    const name = splittedFrom[2];
+
     const isNamePhone = checkIfNameIsPhone(name);
     const realPhone = isNamePhone ? name : phone;
     const sanitizedPhone = realPhone.replace(/\D/g, "");

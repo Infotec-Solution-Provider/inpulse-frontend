@@ -1,11 +1,9 @@
-import type { Metadata } from "next";
-import type React from "react";
-import { Fira_Sans } from "next/font/google";
-import "./globals.css";
-import { Bounce, ToastContainer } from "react-toastify";
 import AuthProvider from "@/app/auth-context";
-import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import type { Metadata } from "next";
+import { Fira_Sans } from "next/font/google";
+import type React from "react";
+import { Bounce, ToastContainer } from "react-toastify";
+import "./globals.css";
 
 const firaSans = Fira_Sans({
   weight: ["400", "500", "600"],
@@ -24,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br">
-      <body suppressHydrationWarning className={`${firaSans.variable} relative bg-fixed text-slate-200`}>
+      <body
+        suppressHydrationWarning
+        className={`${firaSans.variable} relative bg-fixed text-slate-200`}
+      >
         <AuthProvider>
           {children}
           <ToastContainer

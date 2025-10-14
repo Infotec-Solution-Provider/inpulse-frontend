@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useMemo, useContext, useRef, useEffect } from "react";
-import { InternalMessage, User } from "@in.pulse-crm/sdk";
-import { Button } from "@mui/material";
-import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
-import Message from "./message";
-import { ChatContext } from "./chat-context";
-import { InternalChatContext } from "../../internal-context";
 import { useAuthContext } from "@/app/auth-context";
+import { InternalMessage } from "@in.pulse-crm/sdk";
+import { Button } from "@mui/material";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { InternalChatContext } from "../../internal-context";
+import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
+import { ChatContext } from "./chat-context";
+import Message from "./message";
 
 type BubbleStyle = "system" | "sent" | "received";
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
@@ -50,13 +50,13 @@ export default function RenderInternalChatMessages({
   const total = currentInternalChatMessages?.length ?? 0;
   const visibleMessages = useMemo(
     () => (currentInternalChatMessages ?? []).slice(-visibleCount),
-    [currentInternalChatMessages, visibleCount]
+    [currentInternalChatMessages, visibleCount],
   );
 
   return (
-    <div className="h-full w-full overflow-y-auto p-2 bg-slate-300 dark:bg-slate-900 scrollbar-whatsapp">
+    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
       {visibleCount < total && (
-        <div className="flex justify-center mb-2">
+        <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
@@ -78,7 +78,7 @@ export default function RenderInternalChatMessages({
             ? getQuotedMsgProps(
                 findQuoted,
                 getInternalMessageStyle(findQuoted, user?.CODIGO),
-                users ?? []
+                users ?? [],
               )
             : null;
 

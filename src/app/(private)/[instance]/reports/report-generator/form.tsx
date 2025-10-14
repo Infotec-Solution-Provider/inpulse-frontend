@@ -1,26 +1,25 @@
 "use client";
 
-import { useContext, useState } from "react";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import {
-  TextField,
   Button,
   CircularProgress,
   Dialog,
-  DialogTitle,
-  DialogContent,
   DialogActions,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Menu,
   MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TextField,
   Tooltip,
-  Box,
 } from "@mui/material";
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import { useContext, useState } from "react";
 import { SqlReportsContext } from "./sql-reports-context";
 
 export default function SqlReportForm() {
@@ -129,7 +128,7 @@ export default function SqlReportForm() {
           </Tooltip>
 
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-            {["pdf", "csv",].map((format) => (
+            {["pdf", "csv"].map((format) => (
               <MenuItem key={format} onClick={() => handleExportFormat(format as any)}>
                 Exportar como {format.toUpperCase()}
               </MenuItem>

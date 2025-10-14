@@ -1,9 +1,9 @@
-import { SocketClient, WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
-import { safeNotification } from "@/lib/utils/notifications";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
-import { Dispatch, SetStateAction } from "react";
-import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import HorizontalLogo from "@/assets/img/hlogodark.png";
+import { safeNotification } from "@/lib/utils/notifications";
+import { SocketClient, WppMessage } from "@in.pulse-crm/sdk";
+import { Dispatch, SetStateAction } from "react";
 
 interface HandleChatStartedCallbackProps {
   chatId: number;

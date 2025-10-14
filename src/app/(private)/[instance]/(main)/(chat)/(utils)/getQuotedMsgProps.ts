@@ -1,7 +1,7 @@
 import { InternalMessage, User, WppMessage } from "@in.pulse-crm/sdk";
-import { QuotedMessageProps } from "../message";
-import { DetailedChat } from "../../../whatsapp-context";
 import { Formatter } from "@in.pulse-crm/utils";
+import { DetailedChat } from "../../../whatsapp-context";
+import { QuotedMessageProps } from "../message";
 
 export default function getQuotedMsgProps(
   quotedMsg: InternalMessage | WppMessage | null,
@@ -25,7 +25,7 @@ export default function getQuotedMsgProps(
   }
   if (startsWithExternal && !hasSpecialChar) {
     const parts = quotedMsg.from.split(":");
-    let raw = parts.length === 3 ? parts[2] : parts[1];
+    const raw = parts.length === 3 ? parts[2] : parts[1];
     const phone = raw.split("@")[0].replace(/\D/g, "");
     const user = users.find((u) => u.WHATSAPP === phone);
     const usersPhone = contactsMap?.get(phone);
@@ -33,7 +33,9 @@ export default function getQuotedMsgProps(
     authorName = user ? user.NOME : usersPhone ? usersPhone : phone;
   }
   if (startsWithExternal && hasSpecialChar) {
-    const [type, phone, name] = quotedMsg.from.split(":");
+    const splittedFrom = quotedMsg.from.split(":");
+    const phone = splittedFrom[1];
+    const name = splittedFrom[2];
 
     authorName = name ? name : phone ? phone.replace(/\D/g, "") : "N/D";
   }

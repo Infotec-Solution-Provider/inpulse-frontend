@@ -1,10 +1,10 @@
-import { InternalGroup } from "@in.pulse-crm/sdk";
-import { createContext, ReactNode, useContext, useEffect, useState } from "react";
-import { InternalChatContext } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
+import { InternalGroup } from "@in.pulse-crm/sdk";
 import axios from "axios";
-import { WPP_BASE_URL } from "../../whatsapp-context";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { InternalChatContext } from "../../internal-context";
+import { WPP_BASE_URL } from "../../whatsapp-context";
 
 interface IInternalGroupsProviderProps {
   children: ReactNode;
@@ -117,12 +117,11 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         await internalApi.current.deleteInternalChat(id);
         toast.success("Grupo deletado com sucesso!");
         setInternalGroups((prev) => prev.filter((group) => group.id !== id));
-      } catch (error) {
+      } catch {
         toast.error("Erro ao deletar grupo");
       }
     }
   };
-
 
   useEffect(() => {
     if (token && internalApi.current) {

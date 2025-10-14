@@ -146,7 +146,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       const deduped: WppMessage[] = [];
 
       for (const msg of next || []) {
-        const id = (msg as any)?.id;
+        const id = msg.id;
         if (id == null) {
           deduped.push(msg);
           continue;
@@ -297,7 +297,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setNotifications((prev) =>
           prev.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif)),
         );
-      } catch (err) {
+      } catch {
         toast.error("Falha ao marcar notificação como lida!");
       }
     },

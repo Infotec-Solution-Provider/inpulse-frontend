@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
-import { IconButton, CircularProgress } from "@mui/material";
 import MicIcon from "@mui/icons-material/Mic";
 import StopIcon from "@mui/icons-material/Stop";
+import { IconButton } from "@mui/material";
+import { useRef, useState } from "react";
 
 interface AudioRecorderProps {
   onAudioRecorded?: (file: File) => void;
@@ -35,7 +35,7 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
         audioChunksRef.current = [];
 
         if (onAudioRecorded) {
-          const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg", });
+          const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
           onAudioRecorded(file);
         }
       };
@@ -59,7 +59,7 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
   };
 
   return (
-    <div className="pr-2 flex items-center gap-2">
+    <div className="flex items-center gap-2 pr-2">
       {!isRecording ? (
         <IconButton color="primary" onClick={startRecording} size="small">
           <MicIcon />

@@ -1,26 +1,23 @@
-import { useContext, useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  Button,
-  Typography,
-  ListItemButton,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-
 import { AuthContext } from "@/app/auth-context";
 import { ReadyMessage } from "@in.pulse-crm/sdk";
+import CloseIcon from "@mui/icons-material/Close";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  Typography,
+} from "@mui/material";
+import { useContext, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
 import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
 import { useReadyMessagesContext } from "./ready-messages-context";
-
 
 interface Props {
   chat: DetailedChat | DetailedInternalChat;
@@ -54,21 +51,21 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
 
   const chatValues = isWhatsappChat(chat)
     ? {
-        customerCnpj: chat.customer?.CPF_CNPJ || '',
-        customerFirstName: chat.customer?.FANTASIA?.split(" ")[0] || '',
-        customerFullName: chat.customer?.RAZAO || '',
-        customerRazao: chat.customer?.RAZAO || '',
+        customerCnpj: chat.customer?.CPF_CNPJ || "",
+        customerFirstName: chat.customer?.FANTASIA?.split(" ")[0] || "",
+        customerFullName: chat.customer?.RAZAO || "",
+        customerRazao: chat.customer?.RAZAO || "",
       }
     : {
-        groupName: chat.groupName || '',
-        customerCnpj: '',
-        customerFirstName: '',
-        customerFullName: '',
-        customerRazao: '',
+        groupName: chat.groupName || "",
+        customerCnpj: "",
+        customerFirstName: "",
+        customerFullName: "",
+        customerRazao: "",
       };
 
   const text = replaceVariables({
-    message: selectedMessage?.TEXTO_MENSAGEM || '',
+    message: selectedMessage?.TEXTO_MENSAGEM || "",
     values: {
       ...baseValues,
       ...chatValues,
@@ -81,24 +78,24 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
     }
 
     try {
-      if (chat.chatType ==='wpp') {
+      if (chat.chatType === "wpp") {
         await sendWppMessage(chat.contact?.phone ?? "", {
           chatId: chat.id,
           contactId: chat.contactId ?? 0,
           text,
-          fileId: +selectedMessage.ARQUIVO_CODIGO
+          fileId: +selectedMessage.ARQUIVO_CODIGO,
         });
       } else {
         await sendInternalMessage({
           chatId: chat.id,
           text,
-          fileId: +selectedMessage.ARQUIVO_CODIGO
+          fileId: +selectedMessage.ARQUIVO_CODIGO,
         });
       }
 
       toast.success("Mensagem enviada com sucesso!");
       onClose();
-    } catch (err) {
+    } catch {
       toast.error("Erro ao enviar mensagem");
     }
   };
@@ -108,9 +105,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
+      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         Mensagens rápidas
         <IconButton onClick={onClose}>
           <CloseIcon />

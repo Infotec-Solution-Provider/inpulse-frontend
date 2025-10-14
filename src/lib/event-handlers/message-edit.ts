@@ -1,17 +1,7 @@
-import { WhatsappClient, WppMessage, WppMessageEditEventData } from "@in.pulse-crm/sdk";
-
-import { Dispatch, RefObject, SetStateAction } from "react";
-import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
-
-const types: Record<string, string> = {
-  image: "Enviou uma imagem.",
-  video: "Enviou um vídeo.",
-  audio: "Enviou um áudio.",
-  ptt: "Enviou uma mensagem de voz.",
-  document: "Enviou um documento.",
-  file: "Enviou um arquivo.",
-};
+import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import { WppMessage, WppMessageEditEventData } from "@in.pulse-crm/sdk";
+import { Dispatch, RefObject, SetStateAction } from "react";
 
 export default function EditedMessageHandler(
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,

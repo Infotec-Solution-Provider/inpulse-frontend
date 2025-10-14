@@ -6,7 +6,7 @@ import { IconButton, Menu, MenuItem, Button } from "@mui/material";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import CloseIcon from "@mui/icons-material/Close";
-import AspectRatioIcon from '@mui/icons-material/AspectRatio';
+import AspectRatioIcon from "@mui/icons-material/AspectRatio";
 
 interface MessageFileProps {
   fileName: string;
@@ -25,7 +25,15 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
     openModal(<ZoomableImageModal url={url} alt={fileName} onClose={closeModal} />);
   };
 
-  function ZoomableImageModal({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
+  function ZoomableImageModal({
+    url,
+    alt,
+    onClose,
+  }: {
+    url: string;
+    alt: string;
+    onClose: () => void;
+  }) {
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const lastPosition = useRef<{ x: number; y: number } | null>(null);
@@ -42,7 +50,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
       e.preventDefault();
       const delta = -e.deltaY / 500;
       setZoom((z) => {
-        let newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z + delta));
+        const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z + delta));
         if (newZoom !== z && containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
           const offsetX = e.clientX - rect.left - rect.width / 2 - position.x;
@@ -73,7 +81,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
       lastPosition.current = { x: e.clientX, y: e.clientY };
     };
 
-    const onMouseUp = (e: MouseEvent) => {
+    const onMouseUp = () => {
       lastPosition.current = null;
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -101,10 +109,10 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
 
     return (
       <div
-        className="fixed inset-0 flex flex-col bg-black bg-opacity-90 text-white z-50 items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black bg-opacity-90 p-4 text-white"
         style={{ userSelect: "none" }}
       >
-        <header className="w-full max-w-[95vw] flex justify-between items-center mb-2">
+        <header className="mb-2 flex w-full max-w-[95vw] items-center justify-between">
           <Button
             variant="outlined"
             onClick={handleClickDropdown}
@@ -146,7 +154,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
           ref={containerRef}
           onWheel={onWheel}
           onMouseDown={onMouseDown}
-          className="relative bg-black rounded max-w-[95vw] max-h-[85vh] overflow-hidden flex justify-center items-center cursor-grab"
+          className="relative flex max-h-[85vh] max-w-[95vw] cursor-grab items-center justify-center overflow-hidden rounded bg-black"
           style={{ flexGrow: 1, width: "100%" }}
         >
           <img
@@ -164,10 +172,9 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
             }}
           />
           <div
-            className="absolute bottom-3 right-3 flex items-center gap-2 bg-black bg-opacity-60 rounded p-1"
+            className="absolute bottom-3 right-3 flex items-center gap-2 rounded bg-black bg-opacity-60 p-1"
             style={{ userSelect: "none" }}
           >
-
             <IconButton
               onClick={() => setZoom((z) => Math.min(z + 0.25, MAX_ZOOM))}
               sx={{
@@ -202,7 +209,6 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
               <ZoomOutIcon />
             </IconButton>
 
-
             <IconButton
               onClick={resetZoom}
               sx={{
@@ -221,7 +227,6 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
             >
               <AspectRatioIcon fontSize="small" />
             </IconButton>
-
           </div>
         </div>
       </div>
@@ -236,7 +241,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
         <img
           src={url}
           alt={fileName}
-          className="max-h-[20rem] max-w-[40rem] cursor-zoom-in sm:max-w-[100%] sm:max-h-[15rem]"
+          className="max-h-[20rem] max-w-[40rem] cursor-zoom-in sm:max-h-[15rem] sm:max-w-[100%]"
           onClick={handleClickImage}
         />
       );
@@ -246,7 +251,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
       return (
         <video
           controls
-          className="max-h-[15rem] max-w-[40rem] sm:max-w-full sm:max-h-[10rem] object-contain"
+          className="max-h-[15rem] max-w-[40rem] object-contain sm:max-h-[10rem] sm:max-w-full"
         >
           <source src={url} type={fileType} />
         </video>

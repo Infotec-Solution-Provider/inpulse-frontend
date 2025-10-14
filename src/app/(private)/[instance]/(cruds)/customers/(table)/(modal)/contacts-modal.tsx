@@ -114,7 +114,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
     <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
       <header className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
         <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
-          Contatos de "{customer.RAZAO}"
+          Contatos de &quot;{customer.RAZAO}&quot;
         </h1>
         <IconButton
           onClick={closeModal}

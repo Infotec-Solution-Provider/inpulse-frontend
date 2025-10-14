@@ -1,25 +1,25 @@
 "use client";
 
-import { useState, useContext, useEffect, useMemo, useCallback } from "react";
-import {
-  IconButton,
-  Badge,
-  Menu,
-  MenuItem,
-  ListItemText,
-  Typography,
-  Box,
-  Button,
-  CircularProgress,
-  Avatar,
-  ListItemAvatar,
-  ButtonGroup,
-} from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import ChatIcon from "@mui/icons-material/Chat";
-import { useTheme } from "@mui/material/styles";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { AppNotification, WppChatWithDetailsAndMessages, WppContact } from "@in.pulse-crm/sdk";
+import ChatIcon from "@mui/icons-material/Chat";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import {
+  Avatar,
+  Badge,
+  Box,
+  Button,
+  ButtonGroup,
+  CircularProgress,
+  IconButton,
+  ListItemAvatar,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Typography,
+} from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ContactModal from "./contact-modal-detail";
 
 const NOTIFICATIONS_PER_PAGE = 15;
@@ -63,11 +63,10 @@ const useNotificationHandler = () => {
       setIsLoading(true);
       setError(null);
       try {
-        const { totalCount, notifications: newNotifications } =
-          (await getNotifications({
-            page: pageToFetch,
-            pageSize: NOTIFICATIONS_PER_PAGE,
-          })) as GetNotificationsResult;
+        const { totalCount, notifications: newNotifications } = (await getNotifications({
+          page: pageToFetch,
+          pageSize: NOTIFICATIONS_PER_PAGE,
+        })) as GetNotificationsResult;
 
         if (append) {
           setLocalNotifications((prev) => {
@@ -91,13 +90,13 @@ const useNotificationHandler = () => {
         setIsLoading(false);
       }
     },
-    [getNotifications, isLoading]
+    [getNotifications, isLoading],
   );
 
   const markSingleAsReadNotification = useCallback(
     async (notificationId: number) => {
       setLocalNotifications((prev) =>
-        prev.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif))
+        prev.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif)),
       );
       try {
         await markAsReadNotificationById(notificationId);
@@ -105,7 +104,7 @@ const useNotificationHandler = () => {
         console.error("Falha ao marcar notificação como lida:", err);
       }
     },
-    [markAsReadNotificationById]
+    [markAsReadNotificationById],
   );
 
   const handleLoadMore = useCallback(() => {
@@ -125,13 +124,13 @@ const useNotificationHandler = () => {
 
   const unreadCount = useMemo(
     () => localNotifications.filter((notif) => !notif.read).length,
-    [localNotifications]
+    [localNotifications],
   );
 
   const sortedNotifications = useMemo(() => {
     return [...localNotifications].sort((a, b) => {
       if (a.read === b.read) {
-        return new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime();
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       return a.read ? 1 : -1;
     });
@@ -177,14 +176,14 @@ export default function NotificationsDropdown() {
   const [selectedContact, setSelectedContact] = useState<WppContact | null>(null);
   const [selectedChat, setSelectedChat] = useState<WppChatWithDetailsAndMessages | null>(null);
   const [isContactLoading, setIsContactLoading] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [filter, setFilter] = useState<"all" | "unread">("all");
 
   const handleOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       setAnchorEl(event.currentTarget);
       fetchNotifications(1, false);
     },
-    [fetchNotifications]
+    [fetchNotifications],
   );
 
   const handleClose = useCallback(() => setAnchorEl(null), []);
@@ -207,30 +206,28 @@ export default function NotificationsDropdown() {
           throw new Error("Notificação sem ID de chat.");
         }
 
-      await getChatById(notif.chatId);
-      const contactData = chat?.contact ?? chat?.contact ?? null;
+        await getChatById(notif.chatId);
+        const contactData = chat?.contact ?? chat?.contact ?? null;
 
-      setSelectedContact(contactData);
-      setSelectedChat(chat ?? null);
+        setSelectedContact(contactData);
+        setSelectedChat(chat ?? null);
       } catch (err) {
         console.error("Erro ao buscar contato:", err);
         setSelectedContact(null);
-        setSelectedChat( null);
-
+        setSelectedChat(null);
       } finally {
         setIsContactLoading(false);
       }
     },
-    [chat?.contact, getChatById, handleClose, markSingleAsReadNotification]
+    [chat?.contact, getChatById, handleClose, markSingleAsReadNotification],
   );
 
   const filteredNotifications = useMemo(() => {
-    if (filter === 'unread') {
-      return sortedNotifications.filter(n => !n.read);
+    if (filter === "unread") {
+      return sortedNotifications.filter((n) => !n.read);
     }
     return sortedNotifications;
   }, [sortedNotifications, filter]);
-
 
   return (
     <>
@@ -244,7 +241,7 @@ export default function NotificationsDropdown() {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
-        PaperProps={{ style: { maxHeight: 500, width: 380, padding: 0, borderRadius: '8px' } }}
+        PaperProps={{ style: { maxHeight: 500, width: 380, padding: 0, borderRadius: "8px" } }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
@@ -264,7 +261,7 @@ export default function NotificationsDropdown() {
             size="small"
             onClick={handleClear}
             disabled={unreadCount === 0 || isLoading}
-            sx={{ textTransform: "none", fontSize: '0.8rem' }}
+            sx={{ textTransform: "none", fontSize: "0.8rem" }}
           >
             Marcar todas como lidas
           </Button>
@@ -272,8 +269,18 @@ export default function NotificationsDropdown() {
 
         <Box px={2} py={1} borderBottom={1} borderColor="divider">
           <ButtonGroup size="small" fullWidth>
-            <Button variant={filter === 'all' ? 'contained' : 'outlined'} onClick={() => setFilter('all')}>Tudo</Button>
-            <Button variant={filter === 'unread' ? 'contained' : 'outlined'} onClick={() => setFilter('unread')}>Não lidas</Button>
+            <Button
+              variant={filter === "all" ? "contained" : "outlined"}
+              onClick={() => setFilter("all")}
+            >
+              Tudo
+            </Button>
+            <Button
+              variant={filter === "unread" ? "contained" : "outlined"}
+              onClick={() => setFilter("unread")}
+            >
+              Não lidas
+            </Button>
           </ButtonGroup>
         </Box>
 
@@ -287,7 +294,7 @@ export default function NotificationsDropdown() {
           </MenuItem>
         ) : filteredNotifications.length === 0 ? (
           <MenuItem disabled sx={{ justifyContent: "center", fontStyle: "italic", p: 4 }}>
-            {filter === 'unread' ? 'Nenhuma notificação não lida' : 'Sem notificações'}
+            {filter === "unread" ? "Nenhuma notificação não lida" : "Sem notificações"}
           </MenuItem>
         ) : (
           <Box>
@@ -298,67 +305,77 @@ export default function NotificationsDropdown() {
                 sx={{
                   py: 1.5,
                   px: 2,
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   gap: 1.5,
                   backgroundColor: !notif.read ? theme.palette.action.hover : "transparent",
-                  '&:hover': {
+                  "&:hover": {
                     backgroundColor: theme.palette.action.selected,
-                  }
+                  },
                 }}
               >
-                <ListItemAvatar sx={{ minWidth: 'auto' }}>
+                <ListItemAvatar sx={{ minWidth: "auto" }}>
                   <Badge
                     overlap="circular"
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                     badgeContent={
-                      <ChatIcon sx={{
-                        fontSize: 18,
-                        p: '2px',
-                        color: 'white',
-                        backgroundColor: 'primary.main',
-                        borderRadius: '50%',
-                        border: `2px solid ${theme.palette.background.paper}`
-                      }} />
+                      <ChatIcon
+                        sx={{
+                          fontSize: 18,
+                          p: "2px",
+                          color: "white",
+                          backgroundColor: "primary.main",
+                          borderRadius: "50%",
+                          border: `2px solid ${theme.palette.background.paper}`,
+                        }}
+                      />
                     }
                   >
-
                     <Avatar alt={notif.title} sx={{ width: 56, height: 56 }} />
                   </Badge>
                 </ListItemAvatar>
 
                 <ListItemText
                   primary={
-                    <Typography variant="body2" sx={{ fontWeight: '500', color: 'text.primary' }}>
+                    <Typography variant="body2" sx={{ fontWeight: "500", color: "text.primary" }}>
                       {notif.title}
                     </Typography>
                   }
-secondary={
-    <>
-      <Typography
-        component="span"
-        variant="body2"
-        sx={{ whiteSpace: "normal", wordBreak: "break-word", display: "block" }}
-      >
-        {notif.description}
-      </Typography>
-      <Typography
-        component="span"
-        variant="caption"
-        sx={{
-          fontWeight: !notif.read ? "bold" : "normal",
-          color: !notif.read ? "primary.main" : "text.secondary",
-        }}
-      >
-        {formatTimeAgo(notif.createdAt as any)}
-      </Typography>
-                  </>
-              }
+                  secondary={
+                    <>
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        sx={{ whiteSpace: "normal", wordBreak: "break-word", display: "block" }}
+                      >
+                        {notif.description}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{
+                          fontWeight: !notif.read ? "bold" : "normal",
+                          color: !notif.read ? "primary.main" : "text.secondary",
+                        }}
+                      >
+                        {formatTimeAgo(notif.createdAt)}
+                      </Typography>
+                    </>
+                  }
                   sx={{ my: 0 }}
                 />
 
                 {!notif.read && (
-                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0, ml: 1 }} />
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      bgcolor: "primary.main",
+                      flexShrink: 0,
+                      ml: 1,
+                    }}
+                  />
                 )}
               </MenuItem>
             ))}

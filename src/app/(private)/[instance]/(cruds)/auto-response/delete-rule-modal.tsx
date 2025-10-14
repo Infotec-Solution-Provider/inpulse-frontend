@@ -1,6 +1,13 @@
 "use client";
 import { AutomaticResponseRule } from "@in.pulse-crm/sdk";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+} from "@mui/material";
 import { useAutoResponseContext } from "./auto-response.context";
 
 interface DeleteRuleModalProps {
@@ -19,8 +26,8 @@ export default function DeleteRuleModal({ rule }: DeleteRuleModalProps) {
       <DialogTitle>Confirmar Exclusão</DialogTitle>
       <DialogContent>
         <Typography>
-          Tem certeza que deseja excluir a regra <strong>"{rule.name}"</strong>?
-          Esta ação não pode ser desfeita.
+          Tem certeza que deseja excluir a regra <strong>&quot;{rule.name}&quot;</strong>? Esta ação
+          não pode ser desfeita.
         </Typography>
       </DialogContent>
       <DialogActions>

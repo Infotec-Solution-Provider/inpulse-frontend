@@ -29,7 +29,7 @@ export default function DeleteInternalGroupModal({
 
   <div className="flex flex-col gap-3">
     <h1 className="text-lg font-medium">
-      Tem certeza que deseja excluir o grupo <span className="font-bold text-red-600 dark:text-red-400">"{groupName}"</span>?
+      Tem certeza que deseja excluir o grupo <span className="font-bold text-red-600 dark:text-red-400">&quot;{groupName}&quot;</span>?
     </h1>
     <h3 className="text-sm text-slate-600 dark:text-slate-300">
       Todas as mensagens serão <span className="font-semibold">perdidas</span> se fizer isto!

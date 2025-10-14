@@ -1,5 +1,3 @@
-import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
-
 export interface SendMessageDataState {
   mentions?: MentionableUser[];
   text: string;
@@ -37,9 +35,9 @@ type SetMentionsAction = {
   mentions: MentionableUser[];
 };
 type ResetAction = { type: "reset" };
-type ToggleForwardMode = { type: "toggle-forward-mode" }
-type SelectMessage = { type: "select-message"; messageId: number }
-type ClearForward = { type: "clear-forward" }
+type ToggleForwardMode = { type: "toggle-forward-mode" };
+type SelectMessage = { type: "select-message"; messageId: number };
+type ClearForward = { type: "clear-forward" };
 export type ChangeMessageDataAction =
   | ChangeTextAction
   | AddEmojiAction
@@ -54,8 +52,7 @@ export type ChangeMessageDataAction =
   | SetMentionsAction
   | ToggleForwardMode
   | SelectMessage
-  | ClearForward
-  ;
+  | ClearForward;
 
 export default function ChatReducer(
   state: SendMessageDataState,

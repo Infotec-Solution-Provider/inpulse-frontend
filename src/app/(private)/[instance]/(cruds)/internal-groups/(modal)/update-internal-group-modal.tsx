@@ -1,23 +1,23 @@
+import filesService from "@/lib/services/files.service";
+import { InternalGroup } from "@in.pulse-crm/sdk";
+import { PersonAdd } from "@mui/icons-material";
+import ImageIcon from "@mui/icons-material/Image";
+import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import {
-  TextField,
+  Autocomplete,
   Button,
+  IconButton,
   List,
   ListItem,
   ListItemText,
-  IconButton,
-  Autocomplete,
+  TextField,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useAppContext } from "../../../app-context";
-import { PersonAdd } from "@mui/icons-material";
-import { InternalGroup, User, WppContact } from "@in.pulse-crm/sdk";
-import { InternalChatContext } from "../../../internal-context";
-import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
-import { IWppGroup } from "../internal-groups-context";
-import ImageIcon from "@mui/icons-material/Image";
-import filesService from "@/lib/services/files.service";
+import { useAppContext } from "../../../app-context";
+import { InternalChatContext } from "../../../internal-context";
 import { ContactsContext } from "../../contacts/contacts-context";
+import { IWppGroup } from "../internal-groups-context";
 
 // Tipo comum para contatos/usuários
 type UnifiedContact = {
@@ -48,7 +48,7 @@ export default function UpdateInternalGroupModal({
 }: UpdateInternalGroupModalProps) {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
-  const { contacts } = useContext(ContactsContext);
+  const { state } = useContext(ContactsContext);
 
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
@@ -56,33 +56,33 @@ export default function UpdateInternalGroupModal({
     wppGroups.find((g) => g.id.user === group.wppGroupId) || null,
   );
 
-const mergedContacts: UnifiedContact[] = useMemo(() => {
-  const map = new Map<string, UnifiedContact>();
+  const mergedContacts: UnifiedContact[] = useMemo(() => {
+    const map = new Map<string, UnifiedContact>();
 
-  users.forEach((u) => {
-    const userId = u.CODIGO;
-    const key = `user-${userId}`;
+    users.forEach((u) => {
+      const userId = u.CODIGO;
+      const key = `user-${userId}`;
 
-    map.set(key, {
-      name: u.NOME,
-      phone: userId.toString(),
-      userId,
-    });
-  });
-
-  contacts.forEach((c) => {
-    const key = `phone-${c.phone}`;
-    if (!map.has(key)) {
       map.set(key, {
-        name: c.name,
-        phone: c.phone,
-        userId: +c.phone,
+        name: u.NOME,
+        phone: userId.toString(),
+        userId,
       });
-    }
-  });
+    });
 
-  return Array.from(map.values());
-}, [users, contacts]);
+    state.contacts.forEach((c) => {
+      const key = `phone-${c.phone}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          name: c.name,
+          phone: c.phone,
+          userId: +c.phone,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [users, state.contacts]);
 
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
 
@@ -115,7 +115,6 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
       participants: participants.map((p) => p.userId ?? (p.phone ? +p.phone : 0)), // ou Number(p.phone)
       wppGroupId: selectedGroup?.id.user || null,
     });
-
 
     if (groupImageRef.current) {
       await onSubmitImage(group.id, groupImageRef.current);
@@ -171,8 +170,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] dark:bg-slate-800
-             max-w-2xl w-full max-h-[90vh] overflow-auto rounded-md shadow-lg">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col gap-6 overflow-auto rounded-md bg-white px-[2rem] py-[1rem] shadow-lg dark:bg-slate-800">
         <div className="border-b border-black/10 pb-2 dark:border-white/20">
           <header className="text-xl font-semibold text-slate-800 dark:text-white">
             Editar Grupo
@@ -214,7 +212,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
               options={wppGroups}
               getOptionLabel={(option) => option.name}
               getOptionKey={(option) => option.id.user}
-              className="w-full scrollbar-whatsapp"
+              className="scrollbar-whatsapp w-full"
               renderInput={(params) => <TextField {...params} label="Vincular Grupo" />}
               value={selectedGroup}
               onChange={(_, group) => setSelectedGroup(group)}
@@ -240,7 +238,7 @@ const mergedContacts: UnifiedContact[] = useMemo(() => {
           </div>
           <div className="flex min-h-0 flex-1 flex-col rounded border-[1px] border-slate-600 p-2">
             <h1 className="border-b border-slate-200/25 p-2">Integrantes</h1>
-            <div className="mt-2 min-h-0 flex-1 scrollbar-whatsapp px-2">
+            <div className="scrollbar-whatsapp mt-2 min-h-0 flex-1 px-2">
               <List dense sx={{ flexGrow: 1, overflowY: "auto" }}>
                 {participants.map((p) => (
                   <ListItem key={p.phone} divider>

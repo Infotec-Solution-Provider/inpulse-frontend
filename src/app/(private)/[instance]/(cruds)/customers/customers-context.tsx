@@ -123,7 +123,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         perPage: "999999",
       });
       setAllCustomers(res.data);
-    } catch (err) {}
+    } catch {}
   }, []);
 
   useEffect(() => {

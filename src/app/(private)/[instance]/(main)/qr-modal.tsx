@@ -1,7 +1,7 @@
 "use client";
-import { Button, IconButton } from "@mui/material";
-import { QRCodeSVG } from "qrcode.react";
 import CloseIcon from "@mui/icons-material/Close";
+import { IconButton } from "@mui/material";
+import { QRCodeSVG } from "qrcode.react";
 import { useContext } from "react";
 import { AppContext } from "../app-context";
 

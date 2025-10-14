@@ -1,7 +1,7 @@
 import { useCustomersContext } from "@/app/(private)/[instance]/(cruds)/customers/customers-context";
 import { Customer } from "@in.pulse-crm/sdk";
 import { Autocomplete, createFilterOptions, TextField } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface Props {
   defaultValue?: Customer | null;
@@ -14,7 +14,7 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
 
   const filterOptions = createFilterOptions<Customer>({
     stringify: (option) => option.RAZAO.toLowerCase(), // converte pra minúsculo
-    limit: 20
+    limit: 20,
   });
 
   return (
