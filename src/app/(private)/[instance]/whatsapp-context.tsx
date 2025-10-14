@@ -356,12 +356,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
     try {
-      console.log("Criando agendamento...", {
-        contactId: chat.contactId!,
-        scheduledFor: user!.CODIGO,
-        sectorId: chat.sectorId!,
-        date,
-      });
       await api.current.createSchedule({
         contactId: chat.contactId!,
         scheduledFor: user!.CODIGO,
