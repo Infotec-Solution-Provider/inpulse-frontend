@@ -4,13 +4,15 @@ import { Button, IconButton, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { useContactsContext } from "../../contacts-context";
 import { WppContact } from "@in.pulse-crm/sdk";
+import { useAppContext } from "@/app/(private)/[instance]/app-context";
 
 interface DeleteContactModalProps {
   contact: WppContact;
 }
 
 export default function DeleteContactModal({ contact }: DeleteContactModalProps) {
-  const { deleteContact, closeModal } = useContactsContext();
+  const { deleteContact } = useContactsContext();
+  const { closeModal } = useAppContext();
 
   const onClickDelete = () => {
     deleteContact(contact.id);
@@ -20,9 +22,7 @@ export default function DeleteContactModal({ contact }: DeleteContactModalProps)
   return (
     <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
       <header className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
-        <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
-          Deletar Contato
-        </h1>
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Deletar Contato</h1>
         <IconButton
           onClick={closeModal}
           className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"

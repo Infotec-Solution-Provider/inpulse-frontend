@@ -7,13 +7,13 @@ import {
   useMemo,
   useReducer,
   useRef,
-  useState,
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
 import { WhatsappClient, WppContact } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
+import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
 import { WPP_BASE_URL } from "../../whatsapp-context";
 import ContactModal from "./(table)/(modal)/contact-modal";
@@ -32,8 +32,6 @@ interface IContactsContext {
   loadContacts: () => void;
   createContact: (name: string, phone: string) => void;
   openContactModal: (contact?: WppContact) => void;
-  closeModal: () => void;
-  modal: ReactNode;
   handleDeleteContact: (contact: WppContact) => void;
   phoneNameMap: Map<string, string>;
 }
@@ -53,8 +51,8 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     filters: { page: "1", perPage: "10" },
     isLoading: false,
   });
-  const [modal, setModal] = useState<ReactNode>(null);
   const { users } = useInternalChatContext();
+  const { openModal, closeModal } = useAppContext();
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -124,18 +122,14 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
 
   const openContactModal = useCallback(
     (contact?: WppContact) => {
-      setModal(<ContactModal contact={contact} />);
+      openModal(<ContactModal contact={contact} />);
     },
     [createContact, updateContact],
   );
 
-  const closeModal = useCallback(() => {
-    setModal(null);
-  }, []);
-
   const handleDeleteContact = useCallback(
     (contact: WppContact) => {
-      setModal(<DeleteContactModal contact={contact} />);
+      openModal(<DeleteContactModal contact={contact} />);
     },
     [deleteContact],
   );
@@ -206,14 +200,11 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         createContact,
         deleteContact,
         openContactModal,
-        closeModal,
-        modal,
         handleDeleteContact,
         phoneNameMap,
       }}
     >
       {children}
-      {modal}
     </ContactsContext.Provider>
   );
 }

@@ -6,13 +6,15 @@ import { Close } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useContactsContext } from "../../contacts-context";
 import { WppContact } from "@in.pulse-crm/sdk";
+import { useAppContext } from "@/app/(private)/[instance]/app-context";
 
 interface ContactModalProps {
   contact?: WppContact;
 }
 
 export default function ContactModal({ contact }: ContactModalProps) {
-  const { closeModal, createContact, updateContact } = useContactsContext();
+  const { createContact, updateContact } = useContactsContext();
+  const { closeModal } = useAppContext();
   const isEditMode = !!contact;
 
   const [name, setName] = useState(contact?.name || "");
@@ -43,9 +45,9 @@ export default function ContactModal({ contact }: ContactModalProps) {
   };
 
   return (
-    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+    <div className="w-full max-w-md rounded-lg bg-slate-100 p-6 shadow-xl dark:bg-slate-800">
       <header className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
-        <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
           {isEditMode ? "Editar Contato" : "Cadastrar Contato"}
         </h1>
         <IconButton
