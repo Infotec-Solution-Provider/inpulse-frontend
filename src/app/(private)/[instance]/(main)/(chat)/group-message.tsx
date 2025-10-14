@@ -1,19 +1,14 @@
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
-import ForwardIcon from '@mui/icons-material/Forward';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ForwardIcon from "@mui/icons-material/Forward";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { useMemo, useState } from "react";
 import LinkifiedText from "./linkmessage";
-import {
-  liStyleVariants,
-  msgStyleVariants,
-  QuotedMessageProps,
-  statusComponents,
-} from "./message";
+import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
 
@@ -68,7 +63,7 @@ export default function GroupMessage({
   onForward,
   onCopy,
   onEdit,
-  styleWrapper
+  styleWrapper,
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -81,8 +76,14 @@ export default function GroupMessage({
     setAnchorEl(null);
   };
 
-  const handleQuote = () => { onQuote?.(); handleMenuClose(); };
-  const handleForward = () => { onForward?.(); handleMenuClose(); };
+  const handleQuote = () => {
+    onQuote?.();
+    handleMenuClose();
+  };
+  const handleForward = () => {
+    onForward?.();
+    handleMenuClose();
+  };
 
   const handleSelect = () => {
     onSelect?.(id);
@@ -101,7 +102,7 @@ export default function GroupMessage({
   const handleEdit = () => {
     onEdit?.();
     handleMenuClose();
-  }
+  };
 
   const visualText = useMemo(() => {
     if (!mentionNameMap || !text) return text;
@@ -113,30 +114,13 @@ export default function GroupMessage({
   }, [text, mentionNameMap]);
 
   const dateText = useMemo(() => {
-
-    /* const now = new Date();
-    if (
-      date.getDate() === now.getDate() &&
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    ) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
- 
-    return (
-      date.toLocaleDateString() +
-      " " +
-      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    ); */
-
-    return date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
+    return date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
   }, [date]);
-
 
   return (
     <li
       id={String(id)}
-      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? 'bg-blue-500/10' : ''}`}
+      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? "bg-blue-500/10" : ""}`}
       onClick={isForwardMode ? () => onSelect?.(id) : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -144,7 +128,7 @@ export default function GroupMessage({
       }}
       style={styleWrapper}
     >
-      {isForwardMode && style !== 'system' && (
+      {isForwardMode && style !== "system" && (
         <Checkbox
           checked={isSelected}
           onChange={() => onSelect?.(id)}
@@ -152,17 +136,18 @@ export default function GroupMessage({
         />
       )}
 
-      <div className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}>
+      <div
+        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
+      >
         <div className="flex w-full flex-col gap-1">
           {quotedMessage && (
             <div
-              className={`flex w-full flex-col gap-1 rounded-lg mt-2 border-l-2 bg-white/20 dark:bg-slate-300/40 p-2 ${quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"
-                }`}
+              className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/20 p-2 dark:bg-slate-300/40 ${
+                quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"
+              }`}
             >
-              <h2>
-                {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
-              </h2>
-              <div className="w-full h-full text-black dark:text-slate-200 p-4 rounded-md">
+              <h2>{quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}</h2>
+              <div className="h-full w-full rounded-md p-4 text-black dark:text-slate-200">
                 {quotedMessage.text.split("\n").map((line, index) => (
                   <p key={index} className="max-w-[100%] break-words text-sm">
                     <LinkifiedText text={line} />
@@ -181,12 +166,10 @@ export default function GroupMessage({
             </div>
           )}
 
-          {groupFirst && (
-            <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>
-          )}
+          {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
           {isForwarded && (
             <div className="flex items-center gap-1.5 opacity-75">
-              <ForwardIcon sx={{ fontSize: '1rem' }} />
+              <ForwardIcon sx={{ fontSize: "1rem" }} />
               <span className="text-xs font-semibold">Encaminhada</span>
             </div>
           )}
@@ -210,10 +193,8 @@ export default function GroupMessage({
               ))
             )}
           </div>
-          <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-[0.65rem]">
-            {isEdited && (
-              <span>Editada</span>
-            )}
+          <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
+            {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
             {style !== "system" && status && statusComponents[status]}
           </div>
@@ -233,19 +214,25 @@ export default function GroupMessage({
           <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
             {onSelect && (
               <MenuItem onClick={handleSelect}>
-                <ListItemIcon><CheckBoxOutlineBlankIcon fontSize="small" /></ListItemIcon>
+                <ListItemIcon>
+                  <CheckBoxOutlineBlankIcon fontSize="small" />
+                </ListItemIcon>
                 <ListItemText>Selecionar</ListItemText>
               </MenuItem>
             )}
             {onQuote && (
               <MenuItem onClick={handleQuote}>
-                <ListItemIcon><ReplyIcon fontSize="small" /></ListItemIcon>
+                <ListItemIcon>
+                  <ReplyIcon fontSize="small" />
+                </ListItemIcon>
                 <ListItemText>Responder</ListItemText>
               </MenuItem>
             )}
             {onForward && (
               <MenuItem onClick={handleForward}>
-                <ListItemIcon><ForwardIcon fontSize="small" /></ListItemIcon>
+                <ListItemIcon>
+                  <ForwardIcon fontSize="small" />
+                </ListItemIcon>
                 <ListItemText>Encaminhar</ListItemText>
               </MenuItem>
             )}
@@ -258,7 +245,9 @@ export default function GroupMessage({
               </MenuItem>
             )}
             <MenuItem onClick={handleCopy}>
-              <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+              <ListItemIcon>
+                <ContentCopyIcon fontSize="small" />
+              </ListItemIcon>
               <ListItemText>Copiar</ListItemText>
             </MenuItem>
           </Menu>

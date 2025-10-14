@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useState, useMemo, useContext, useEffect, useRef } from "react";
-import { InternalMessage, User } from "@in.pulse-crm/sdk";
-import { Button } from "@mui/material";
-import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
-import GroupMessage from "./group-message";
-import { ChatContext } from "./chat-context";
-import { InternalChatContext } from "../../internal-context";
-import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { useAuthContext } from "@/app/auth-context";
-import { Logger } from "@in.pulse-crm/utils";
 import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
+import { InternalMessage } from "@in.pulse-crm/sdk";
+import { Button } from "@mui/material";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { InternalChatContext } from "../../internal-context";
+import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
+import { ChatContext } from "./chat-context";
+import GroupMessage from "./group-message";
 
 type BubbleStyle = "system" | "sent" | "received";
 
