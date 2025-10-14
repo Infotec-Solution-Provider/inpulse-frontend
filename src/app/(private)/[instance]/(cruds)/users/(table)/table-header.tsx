@@ -30,7 +30,7 @@ export default function UsersTableHeader() {
 
   useEffect(() => {
     const activeCount = Object.keys(filters).filter(
-      (key) => filters[key] && filters[key] !== "none",
+      (key) => key !== "page" && key !== "perPage" && filters[key] && filters[key] !== "none",
     ).length;
     setHasActiveFilters(activeCount > 0);
   }, [filters]);
