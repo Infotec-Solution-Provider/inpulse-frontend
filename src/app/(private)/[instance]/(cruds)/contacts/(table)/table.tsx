@@ -1,86 +1,62 @@
-import { useState, useMemo } from "react";
-import ContactsTableItem from "./table-item";
+"use client";
+
 import {
   Button,
   CircularProgress,
   Table,
   TableBody,
+  TableCell,
   TableContainer,
+  TablePagination,
+  TableRow,
 } from "@mui/material";
-import ClientTableHeader from "./table-header";
-import { useAppContext } from "../../../app-context";
 import { useContactsContext } from "../contacts-context";
-import { WppContact } from "@in.pulse-crm/sdk";
-import { StyledTableCell, StyledTableRow } from "../../users/(table)/styles-table";
-
-type FilterKeys = "id" | "name" | "phone" | "isBlocked" | "isOnlyAdmin";
+import ContactsTableHeader from "./table-header";
+import ContactsTableItem from "./table-item";
 
 export default function ContactsTable() {
-  const { contacts, isLoading,openContactModal, handleDeleteContact } = useContactsContext();
+  const { state, dispatch, openContactModal, handleDeleteContact } = useContactsContext();
 
-  const [filters, setFilters] = useState<Partial<Record<FilterKeys, string>>>({});
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    dispatch({ type: "change-page", page: newPage });
+  };
 
-  function openEditContactModal(contact: WppContact) {
-    openContactModal(contact);
-  }
-
-  function openCreateContactModal() {
-    openContactModal();
-  }
-  function openDeleteContactModal(contact: WppContact) {
-    handleDeleteContact(contact);
-  }
-
-  function handleSetFilters(newFilters: Partial<Record<FilterKeys, string>>) {
-    setFilters(newFilters);
-  }
-
-  const filteredContacts = useMemo(() => {
-    return contacts.filter((contact) => {
-      if (filters.id && contact.id !== Number(filters.id)) return false;
-      if (filters.name && !contact.name.toLowerCase().includes(filters.name.toLowerCase()))
-        return false;
-      if (filters.phone && !contact.phone.includes(filters.phone)) return false;
-
-      if (filters.isBlocked) {
-        if (filters.isBlocked === "true" && !contact.isBlocked) return false;
-        if (filters.isBlocked === "false" && contact.isBlocked) return false;
-      }
-
-      if (filters.isOnlyAdmin) {
-        if (filters.isOnlyAdmin === "true" && !contact.isOnlyAdmin) return false;
-        if (filters.isOnlyAdmin === "false" && contact.isOnlyAdmin) return false;
-      }
-
-      return true;
-    });
-  }, [contacts, filters]);
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch({ type: "change-per-page", perPage: parseInt(event.target.value, 10) });
+  };
 
   return (
-    <div>
-      <TableContainer className="mx-auto max-h-[70vh] overflow-auto rounded-md scrollbar-whatsapp shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
-        <Table className="max-h-[100%] overflow-auto scrollbar-whatsapp">
-          <ClientTableHeader filters={filters} setFilters={handleSetFilters} />
+    <div className="flex h-full w-full flex-col gap-4">
+      <TableContainer className="h-[calc(100vh-280px)] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg scrollbar-whatsapp dark:border-slate-700 dark:bg-slate-800">
+        <Table stickyHeader>
+          <ContactsTableHeader />
           <TableBody>
-            {isLoading ? (
-              <StyledTableRow className="h-32 w-full">
-                <StyledTableCell
-                  colSpan={8}
-                  className="flex items-center justify-center text-center text-gray-600 dark:text-gray-300"
-                >
-                  <div className="flex flex-col items-center">
+            {state.isLoading ? (
+              <TableRow className="h-32">
+                <TableCell colSpan={4} align="center">
+                  <div className="flex flex-col items-center gap-2">
                     <CircularProgress />
-                    <span className="mt-2">Carregando clientes...</span>
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Carregando contatos...
+                    </span>
                   </div>
-                </StyledTableCell>
-              </StyledTableRow>
+                </TableCell>
+              </TableRow>
+            ) : state.contacts.length === 0 ? (
+              <TableRow className="h-32">
+                <TableCell colSpan={4} align="center">
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Nenhum contato encontrado
+                  </span>
+                </TableCell>
+              </TableRow>
             ) : (
-              filteredContacts.map((contact) => (
+              state.contacts.map((contact) => (
                 <ContactsTableItem
                   key={`${contact.id}-${contact.instance}-${contact.phone}`}
                   contact={contact}
-                  openEditModalHandler={openEditContactModal}
-                  deleteContactHandler={openDeleteContactModal}
+                  openEditModalHandler={openContactModal}
+                  deleteContactHandler={handleDeleteContact}
                 />
               ))
             )}
@@ -88,13 +64,24 @@ export default function ContactsTable() {
         </Table>
       </TableContainer>
 
-      {!isLoading && (
-        <div className="flex h-fit w-full justify-center gap-4 px-4 pt-0">
-          <Button onClick={openCreateContactModal} variant="outlined">
-            Cadastrar Contato
-          </Button>
-        </div>
-      )}
+      <div className="flex w-full items-center justify-between px-4">
+        <Button onClick={() => openContactModal()} variant="outlined" color="primary">
+          Cadastrar Contato
+        </Button>
+        <TablePagination
+          component="div"
+          count={state.totalRows}
+          page={parseInt(state.filters.page || "1") - 1}
+          onPageChange={handleChangePage}
+          rowsPerPage={parseInt(state.filters.perPage || "10")}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[10, 25, 50, 100]}
+          labelRowsPerPage="Linhas por página:"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
+          }
+        />
+      </div>
     </div>
   );
 }
