@@ -1,9 +1,9 @@
 "use client";
-import UsersTable from "./(table)/users-table";
+import UsersTable from "./(table)/table";
 
 export default function UsersManagementPage() {
   return (
-    <div className="flex flex-col px-10 pt-5 w-screen h-screen box-border relative bg-white text-black dark:bg-gray-900 dark:text-white">
+    <div className="relative box-border flex h-screen w-screen flex-col px-10 pt-5">
       <UsersTable />
     </div>
   );
