@@ -74,7 +74,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
-  const { contacts } = useContext(ContactsContext);
+  const { contacts, phoneNameMap } = useContext(ContactsContext);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
@@ -235,19 +235,15 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           users,
           contacts,
           user!,
+          phoneNameMap,
         ),
       );
 
       // Evento de edição de mensagem
       socket.on(
         SocketEventType.InternalMessageEdit,
-        InternalMessageEditHandler(
-          setMessages,
-          setCurrentChatMessages,
-          currentChatRef
-        )
+        InternalMessageEditHandler(setMessages, setCurrentChatMessages, currentChatRef),
       );
-
 
       // Evento de status de mensagem
       socket.on(
