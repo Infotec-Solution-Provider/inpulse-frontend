@@ -47,12 +47,23 @@ export default function CustomersTable() {
 
   return (
     <div className="flex flex-col gap-4">
-      <TableContainer className="scrollbar-whatsapp mx-auto max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+      <TableContainer 
+        className="scrollbar-whatsapp mx-auto overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
+        sx={{
+          height: "calc(100vh - 280px)", // Altura fixa para manter paginação no mesmo lugar
+          minHeight: "400px",
+          maxHeight: "70vh",
+        }}
+      >
         <Table className="scrollbar-whatsapp" stickyHeader>
           <ClientTableHeader />
-          <TableBody>
+          <TableBody
+            sx={{
+              minHeight: state.isLoading || state.customers.length === 0 ? "300px" : "auto",
+            }}
+          >
             {state.isLoading && (
-              <TableRow className="h-32">
+              <TableRow sx={{ height: "300px" }}>
                 <TableCell
                   colSpan={8}
                   className="border-0"
@@ -71,7 +82,7 @@ export default function CustomersTable() {
               </TableRow>
             )}
             {!state.isLoading && state.customers.length === 0 && (
-              <TableRow>
+              <TableRow sx={{ height: "300px" }}>
                 <TableCell
                   colSpan={8}
                   className="border-0"
@@ -100,8 +111,7 @@ export default function CustomersTable() {
           </TableBody>
         </Table>
       </TableContainer>
-      {!state.isLoading && (
-        <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
+      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
           <Button
             onClick={openCreateCustomerModal}
             variant="contained"
@@ -129,7 +139,6 @@ export default function CustomersTable() {
             }}
           />
         </div>
-      )}
     </div>
   );
 }

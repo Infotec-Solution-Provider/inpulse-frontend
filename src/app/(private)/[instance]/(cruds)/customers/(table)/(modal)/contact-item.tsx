@@ -47,52 +47,88 @@ export default function ContactItem({
   };
 
   return (
-    <li className="mb-4 flex items-center gap-2">
-      <TextField
-        defaultValue={contact.name}
-        className="w-64"
-        disabled={!state.isEditing}
-        onChange={handleChangeName}
-      />
-      <TextField
-        value={Formatter.phone(contact.phone)}
-        className="pointer-events-none w-64"
-        disabled={!state.isEditing}
-        onChange={handleChangePhone}
-      />
-      <div className="flex items-center">
-        <IconButton
-          aria-hidden={state.isEditing}
-          onClick={onClickEdit}
-          className="aria-hidden:hidden"
-        >
-          <Edit />
-        </IconButton>
-        <IconButton
-          aria-hidden={!state.isEditing}
-          onClick={onClickCancel}
-          className="aria-hidden:hidden"
-          color="warning"
-        >
-          <Cancel />
-        </IconButton>
-        <IconButton
-          aria-hidden={!state.isEditing}
-          onClick={onClickSave}
-          className="aria-hidden:hidden"
-          color="success"
-        >
-          <Save />
-        </IconButton>
-
-        <IconButton
-          aria-hidden={state.isEditing}
-          onClick={onClickDelete}
-          className="aria-hidden:hidden"
-          color="error"
-        >
-          <Delete />
-        </IconButton>
+    <li className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-600">
+      <div className="flex flex-1 gap-4">
+        <TextField
+          value={state.name}
+          variant="outlined"
+          size="small"
+          disabled={!state.isEditing}
+          onChange={handleChangeName}
+          placeholder="Nome do contato"
+          className="flex-1 bg-white dark:bg-slate-700"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+            },
+            "& .Mui-disabled": {
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark" ? "rgb(30 41 59)" : "rgb(249 250 251)",
+            },
+          }}
+        />
+        <TextField
+          value={state.isEditing ? state.phone : Formatter.phone(state.phone)}
+          variant="outlined"
+          size="small"
+          disabled={!state.isEditing}
+          onChange={handleChangePhone}
+          placeholder="Número do WhatsApp"
+          className="flex-1 bg-white dark:bg-slate-700"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+            },
+            "& .Mui-disabled": {
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark" ? "rgb(30 41 59)" : "rgb(249 250 251)",
+            },
+          }}
+        />
+      </div>
+      
+      <div className="flex items-center gap-1">
+        {!state.isEditing ? (
+          <>
+            <IconButton
+              onClick={onClickEdit}
+              size="small"
+              className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+              title="Editar contato"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+            <IconButton
+              onClick={onClickDelete}
+              size="small"
+              className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+              title="Excluir contato"
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          </>
+        ) : (
+          <>
+            <IconButton
+              onClick={onClickSave}
+              size="small"
+              className="text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
+              title="Salvar alterações"
+            >
+              <Save fontSize="small" />
+            </IconButton>
+            <IconButton
+              onClick={onClickCancel}
+              size="small"
+              className="text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950/30"
+              title="Cancelar edição"
+            >
+              <Cancel fontSize="small" />
+            </IconButton>
+          </>
+        )}
       </div>
     </li>
   );

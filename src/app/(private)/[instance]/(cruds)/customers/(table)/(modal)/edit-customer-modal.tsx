@@ -72,125 +72,194 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
   };
 
   return (
-    <aside className="flex h-full w-full flex-col items-center gap-4 bg-white p-4 dark:bg-slate-800">
-      <header className="flex text-lg w-full font-semibold font-medium items-center justify-between py-2 text-slate-800 dark:text-white">
-        <h1>Editar cliente</h1>
-        <IconButton onClick={closeModal}>
+    <aside className="flex h-full w-full max-w-4xl flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+      <header className="flex w-full items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
+          Editar Cliente
+        </h1>
+        <IconButton 
+          onClick={closeModal}
+          className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
           <CloseIcon />
         </IconButton>
       </header>
-      <div className="flex w-full flex-row justify-center gap-4">
-        <TextField
-          fullWidth
-          label="Razão Social"
-          name="RAZAO"
-          type="text"
-          id="RAZAO"
-          defaultValue={customer.RAZAO}
-          required
-          onChange={(e) => {
-            formRef.current = { ...formRef.current, RAZAO: e.target.value };
-          }}
-        />
-        <TextField
-          fullWidth
-          label="Fantasia"
-          name="FANTASIA"
-          type="text"
-          id="FANTASIA"
-          defaultValue={customer.FANTASIA}
-          onChange={(e) => {
-            formRef.current = { ...formRef.current, FANTASIA: e.target.value };
-          }}
-        />
-      </div>
-      <div className="flex flex-row justify-center gap-4">
-        <TextField
-          label="CPF/CNPJ"
-          name="CPF_CNPJ"
-          type="text"
-          id="CPF_CNPJ"
-          defaultValue={customer.CPF_CNPJ}
-          fullWidth
-          required
-          onChange={(e) => {
-            formRef.current = { ...formRef.current, CPF_CNPJ: e.target.value.trim() };
-          }}
-        />
-        <TextField
-          label="Cidade"
-          name="CIDADE"
-          type="text"
-          fullWidth
-          defaultValue={customer.CIDADE}
-          id="CIDADE"
-          required
-          onChange={(e) => {
-            formRef.current = { ...formRef.current, CIDADE: e.target.value };
-          }}
-        />
-        <TextField
-          label="ERP"
-          name="COD_ERP"
-          type="text"
-          defaultValue={customer.COD_ERP}
-          fullWidth
-          onChange={(e) => {
-            formRef.current = { ...formRef.current, COD_ERP: e.target.value.trim() ?? "" };
-          }}
-        />
-      </div>
-      <div className="flex h-full w-full flex-row items-center gap-4">
-        <TextField
-          name="ATIVO"
-          defaultValue={customer.ATIVO}
-          label="Ativo"
-          fullWidth
-          select
-          required
-          onChange={(e) => {
-            formRef.current = {
-              ...formRef.current,
-              ATIVO: e.target.value as "SIM" | "NAO" | null,
-            };
-          }}
-        >
-          <MenuItem value="SIM" key="SIM">
-            Sim
-          </MenuItem>
-          <MenuItem value="NAO" key="NAO">
-            Não
-          </MenuItem>
-        </TextField>
-        <TextField
-          select
-          label="Tipo de Pessoa"
-          name="PESSOA"
-          defaultValue={customer.PESSOA}
-          id="PESSOA"
-          fullWidth
-          required
-          onChange={(e) => {
-            formRef.current = {
-              ...formRef.current,
-              PESSOA: e.target.value as "FIS" | "JUR" | null,
-            };
-          }}
-        >
-          <MenuItem value="FIS" key="FIS">
-            Física
-          </MenuItem>
-          <MenuItem value="JUR" key="JUR">
-            Jurídica
-          </MenuItem>
-        </TextField>
+
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <TextField
+            fullWidth
+            label="Razão Social"
+            name="RAZAO"
+            type="text"
+            id="RAZAO"
+            defaultValue={customer.RAZAO}
+            required
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = { ...formRef.current, RAZAO: e.target.value };
+            }}
+          />
+          <TextField
+            fullWidth
+            label="Fantasia"
+            name="FANTASIA"
+            type="text"
+            id="FANTASIA"
+            defaultValue={customer.FANTASIA}
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = { ...formRef.current, FANTASIA: e.target.value };
+            }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <TextField
+            label="CPF/CNPJ"
+            name="CPF_CNPJ"
+            type="text"
+            id="CPF_CNPJ"
+            defaultValue={customer.CPF_CNPJ}
+            fullWidth
+            required
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = { ...formRef.current, CPF_CNPJ: e.target.value.trim() };
+            }}
+          />
+          <TextField
+            label="Cidade"
+            name="CIDADE"
+            type="text"
+            fullWidth
+            defaultValue={customer.CIDADE}
+            id="CIDADE"
+            required
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = { ...formRef.current, CIDADE: e.target.value };
+            }}
+          />
+          <TextField
+            label="Código ERP"
+            name="COD_ERP"
+            type="text"
+            defaultValue={customer.COD_ERP}
+            fullWidth
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = { ...formRef.current, COD_ERP: e.target.value.trim() ?? "" };
+            }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <TextField
+            name="ATIVO"
+            defaultValue={customer.ATIVO}
+            label="Ativo"
+            fullWidth
+            select
+            required
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = {
+                ...formRef.current,
+                ATIVO: e.target.value as "SIM" | "NAO" | null,
+              };
+            }}
+          >
+            <MenuItem value="SIM">Sim</MenuItem>
+            <MenuItem value="NAO">Não</MenuItem>
+          </TextField>
+          <TextField
+            select
+            label="Tipo de Pessoa"
+            name="PESSOA"
+            defaultValue={customer.PESSOA}
+            id="PESSOA"
+            fullWidth
+            required
+            variant="outlined"
+            className="bg-white dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+            onChange={(e) => {
+              formRef.current = {
+                ...formRef.current,
+                PESSOA: e.target.value as "FIS" | "JUR" | null,
+              };
+            }}
+          >
+            <MenuItem value="FIS">Física</MenuItem>
+            <MenuItem value="JUR">Jurídica</MenuItem>
+          </TextField>
+        </div>
       </div>
 
-      <div className="flex w-full flex-row items-center justify-end gap-4">
-        <Button color="error" onClick={closeModal}>
+      <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
+        <Button 
+          variant="outlined" 
+          color="error" 
+          onClick={closeModal}
+          className="px-6 py-2"
+        >
           Cancelar
         </Button>
-        <Button onClick={onClickSave}>Salvar</Button>
+        <Button 
+          variant="contained" 
+          onClick={onClickSave}
+          className="bg-indigo-600 px-6 py-2 hover:bg-indigo-700"
+        >
+          Salvar
+        </Button>
       </div>
     </aside>
   );

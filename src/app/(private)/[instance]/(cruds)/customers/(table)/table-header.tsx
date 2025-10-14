@@ -12,6 +12,7 @@ import { Search, FilterAltOff, FilterAlt } from "@mui/icons-material";
 import { Customer } from "@in.pulse-crm/sdk";
 import { useState, useEffect } from "react";
 import { useCustomersContext } from "../customers-context";
+import { CUSTOMERS_TABLE_COLUMNS } from "./table-config";
 
 export default function ClientTableHeader() {
   const { dispatch, loadCustomers, state } = useCustomersContext();
@@ -72,19 +73,19 @@ export default function ClientTableHeader() {
           },
         }}
       >
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.CODIGO.width, minWidth: CUSTOMERS_TABLE_COLUMNS.CODIGO.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Código
+              {CUSTOMERS_TABLE_COLUMNS.CODIGO.label}
             </label>
             <TextField
               variant="outlined"
               size="small"
-              placeholder="Ex: 123"
+              placeholder={CUSTOMERS_TABLE_COLUMNS.CODIGO.placeholder}
               value={filters.CODIGO || ""}
               onChange={(e) => onChangeFilter("CODIGO", e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-20 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
@@ -93,10 +94,10 @@ export default function ClientTableHeader() {
             />
           </div>
         </TableCell>
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.ATIVO.width, minWidth: CUSTOMERS_TABLE_COLUMNS.ATIVO.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Ativo
+              {CUSTOMERS_TABLE_COLUMNS.ATIVO.label}
             </label>
             <TextField
               select
@@ -104,23 +105,25 @@ export default function ClientTableHeader() {
               size="small"
               value={filters.ATIVO || ""}
               onChange={(e) => onChangeFilter("ATIVO", e.target.value)}
-              className="w-24 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
                 },
               }}
             >
-              <MenuItem value="">Ambos</MenuItem>
-              <MenuItem value="SIM">Sim</MenuItem>
-              <MenuItem value="NAO">Não</MenuItem>
+              {CUSTOMERS_TABLE_COLUMNS.ATIVO.options?.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
             </TextField>
           </div>
         </TableCell>
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.PESSOA.width, minWidth: CUSTOMERS_TABLE_COLUMNS.PESSOA.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Tipo
+              {CUSTOMERS_TABLE_COLUMNS.PESSOA.label}
             </label>
             <TextField
               select
@@ -128,32 +131,34 @@ export default function ClientTableHeader() {
               size="small"
               value={filters.PESSOA || ""}
               onChange={(e) => onChangeFilter("PESSOA", e.target.value)}
-              className="w-28 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
                 },
               }}
             >
-              <MenuItem value="">Ambos</MenuItem>
-              <MenuItem value="JUR">Jurídica</MenuItem>
-              <MenuItem value="FIS">Física</MenuItem>
+              {CUSTOMERS_TABLE_COLUMNS.PESSOA.options?.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
             </TextField>
           </div>
         </TableCell>
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.RAZAO.width, minWidth: CUSTOMERS_TABLE_COLUMNS.RAZAO.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Razão Social
+              {CUSTOMERS_TABLE_COLUMNS.RAZAO.label}
             </label>
             <TextField
               variant="outlined"
               size="small"
-              placeholder="Nome da empresa..."
+              placeholder={CUSTOMERS_TABLE_COLUMNS.RAZAO.placeholder}
               value={filters.RAZAO || ""}
               onChange={(e) => onChangeFilter("RAZAO", e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-48 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
@@ -162,19 +167,19 @@ export default function ClientTableHeader() {
             />
           </div>
         </TableCell>
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width, minWidth: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              CPF/CNPJ
+              {CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.label}
             </label>
             <TextField
               variant="outlined"
               size="small"
-              placeholder="000.000.000-00"
+              placeholder={CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.placeholder}
               value={filters.CPF_CNPJ || ""}
               onChange={(e) => onChangeFilter("CPF_CNPJ", e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-36 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
@@ -183,19 +188,19 @@ export default function ClientTableHeader() {
             />
           </div>
         </TableCell>
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.CIDADE.width, minWidth: CUSTOMERS_TABLE_COLUMNS.CIDADE.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Cidade
+              {CUSTOMERS_TABLE_COLUMNS.CIDADE.label}
             </label>
             <TextField
               variant="outlined"
               size="small"
-              placeholder="Ex: São Paulo"
+              placeholder={CUSTOMERS_TABLE_COLUMNS.CIDADE.placeholder}
               value={filters.CIDADE || ""}
               onChange={(e) => onChangeFilter("CIDADE", e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-32 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
@@ -204,19 +209,19 @@ export default function ClientTableHeader() {
             />
           </div>
         </TableCell>
-        <TableCell className="px-3">
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width, minWidth: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Cód. ERP
+              {CUSTOMERS_TABLE_COLUMNS.COD_ERP.label}
             </label>
             <TextField
               variant="outlined"
               size="small"
-              placeholder="Código..."
+              placeholder={CUSTOMERS_TABLE_COLUMNS.COD_ERP.placeholder}
               value={filters.COD_ERP || ""}
               onChange={(e) => onChangeFilter("COD_ERP", e.target.value)}
               onKeyPress={handleKeyPress}
-              className="w-28 bg-white dark:bg-slate-700"
+              className="w-full bg-white dark:bg-slate-700"
               sx={{
                 "& .MuiOutlinedInput-root": {
                   fontSize: "0.875rem",
@@ -225,10 +230,10 @@ export default function ClientTableHeader() {
             />
           </div>
         </TableCell>
-        <TableCell className="px-3" sx={{ width: "180px", minWidth: "180px" }}>
+        <TableCell className="px-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width, minWidth: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width }}>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Ações
+              {CUSTOMERS_TABLE_COLUMNS.ACTIONS.label}
             </label>
             <div className="flex min-h-[40px] items-center gap-1">
               <Tooltip title="Pesquisar" arrow>
