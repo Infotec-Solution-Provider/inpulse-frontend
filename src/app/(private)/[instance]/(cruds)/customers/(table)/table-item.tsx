@@ -16,12 +16,8 @@ export default function CustomersTableItem({
 }: ClientListItemProps) {
   return (
     <TableRow
-      className="transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      className="even:bg-indigo-700/5 transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
       sx={{
-        "&:nth-of-type(even)": {
-          backgroundColor: (theme) =>
-            theme.palette.mode === "dark" ? "rgba(99, 102, 241, 0.05)" : "rgba(99, 102, 241, 0.03)",
-        },
         "& .MuiTableCell-root": {
           borderBottom: "1px solid",
           borderColor: (theme) =>
@@ -29,10 +25,22 @@ export default function CustomersTableItem({
         },
       }}
     >
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.CODIGO.width, minWidth: CUSTOMERS_TABLE_COLUMNS.CODIGO.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
+        }}
+      >
         <span className="font-mono text-sm font-medium">{customer.CODIGO}</span>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.ATIVO.width, minWidth: CUSTOMERS_TABLE_COLUMNS.ATIVO.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
+        }}
+      >
         <span
           className={`rounded-full px-2 py-1 text-xs font-semibold ${
             customer.ATIVO === "SIM"
@@ -43,7 +51,13 @@ export default function CustomersTableItem({
           {customer.ATIVO || "N/D"}
         </span>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.PESSOA.width, minWidth: CUSTOMERS_TABLE_COLUMNS.PESSOA.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
+        }}
+      >
         <span className="text-sm">
           {customer.PESSOA === "FIS"
             ? "Física"
@@ -52,10 +66,22 @@ export default function CustomersTableItem({
               : "Não cadastrado"}
         </span>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.RAZAO.width, minWidth: CUSTOMERS_TABLE_COLUMNS.RAZAO.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
+        }}
+      >
         <p className="truncate text-sm font-medium">{customer.RAZAO || "N/D"}</p>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width, minWidth: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
+        }}
+      >
         <p className="font-mono text-sm">
           {customer.CPF_CNPJ
             ? customer.CPF_CNPJ.length === 11
@@ -64,13 +90,31 @@ export default function CustomersTableItem({
             : "N/D"}
         </p>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.CIDADE.width, minWidth: CUSTOMERS_TABLE_COLUMNS.CIDADE.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
+        }}
+      >
         <p className="truncate text-sm">{customer.CIDADE || "N/D"}</p>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width, minWidth: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
+        }}
+      >
         <p className="font-mono text-sm">{customer.COD_ERP || "N/D"}</p>
       </TableCell>
-      <TableCell className="px-3 py-3" sx={{ width: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width, minWidth: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width }}>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
+          minWidth: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
+        }}
+      >
         <div className="flex items-center gap-1">
           <IconButton
             title="Editar Cliente"
