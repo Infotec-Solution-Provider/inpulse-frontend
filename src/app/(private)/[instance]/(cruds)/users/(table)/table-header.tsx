@@ -11,7 +11,7 @@ import {
   Theme,
   Tooltip,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useUsersContext } from "../users-context";
 import { USERS_TABLE_COLUMNS } from "./table-config";
 

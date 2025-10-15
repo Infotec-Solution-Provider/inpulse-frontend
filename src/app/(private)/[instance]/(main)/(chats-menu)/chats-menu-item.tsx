@@ -33,7 +33,8 @@ export default function ChatsMenuItem({
 }: ChatsMenuItemProps) {
   const { user } = useContext(AuthContext);
   const { users } = useContext(InternalChatContext);
-  const { contacts } = useContext(ContactsContext);
+  const { state } = useContext(ContactsContext);
+
   const lastMessageDateText = useMemo(() => {
     if (!messageDate) {
       return "Nunca";
@@ -131,7 +132,7 @@ export default function ChatsMenuItem({
     }
 
     // Busca nos contacts (caso o número não esteja nos users)
-    for (const contact of contacts) {
+    for (const contact of state.contacts) {
       if (contact.id === user?.CODIGO && contact.phone) {
         userPhones.add(contact.phone.replace(/\D/g, ""));
       }

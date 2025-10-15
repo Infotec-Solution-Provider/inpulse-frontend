@@ -41,24 +41,18 @@ export default function ContactModal({
   isLoading,
 }: ContactModalProps) {
   const { startChatByContactId, chats, monitorChats } = useWhatsappContext();
-  const { createContact, contact: newCreatedContact } = useContactsContext();
+  const { createContact } = useContactsContext();
   const { users } = useInternalChatContext();
   const theme = useTheme();
   const [isCreating, setIsCreating] = useState(false);
   const [shouldStartChat, setShouldStartChat] = useState(false);
 
   useEffect(() => {
-    if (
-      shouldStartChat &&
-      newCreatedContact &&
-      newCreatedContact.id &&
-      newCreatedContact.phone === contact?.phone
-    ) {
-      startChatByContactId(newCreatedContact.id);
+    if (shouldStartChat) {
       setShouldStartChat(false);
       onClose();
     }
-  }, [newCreatedContact, shouldStartChat, startChatByContactId, onClose, contact?.phone]);
+  }, [shouldStartChat, startChatByContactId, onClose, contact?.phone]);
 
   const handleStartConversation = () => {
     if (!contact || !contact.id) return;

@@ -1,4 +1,4 @@
-import { FilterAlt, FilterAltOff, Search } from "@mui/icons-material";
+import { FilterAltOff, Search } from "@mui/icons-material";
 import {
   IconButton,
   SxProps,

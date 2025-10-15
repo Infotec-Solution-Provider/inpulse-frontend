@@ -33,7 +33,7 @@ export default function DeleteInternalGroupModal({ group }: DeleteInternalGroupM
 
       <div className="flex flex-col gap-4">
         <p className="text-slate-700 dark:text-slate-300">
-          Tem certeza que deseja deletar o grupo <strong>"{group.groupName}"</strong>?
+          Tem certeza que deseja deletar o grupo <strong>&quot;{group.groupName}&quot;</strong>?
         </p>
         <p className="text-sm text-red-600 dark:text-red-400">
           Esta ação não pode ser desfeita.
