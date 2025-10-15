@@ -22,6 +22,17 @@ type UnifiedContact = {
   phone: string | null;
   userId?: number;
 };
+const getParticipantKey = (participant: UnifiedContact) => {
+  if (participant.userId !== undefined) {
+    return `user-${participant.userId}`;
+  }
+
+  if (participant.phone) {
+    return `phone-${participant.phone}`;
+  }
+
+  return undefined;
+};
 
 export default function CreateInternalGroupModal() {
   const { closeModal } = useAppContext();
@@ -79,19 +90,31 @@ export default function CreateInternalGroupModal() {
   };
 
   const handleAddUser = () => {
-    if (
-      selectedUser &&
-      !participants.some(
-        (p) => (p.userId && p.userId === selectedUser.userId) || p.phone === selectedUser.phone,
-      )
-    ) {
-      setParticipants((prev) => [selectedUser, ...prev]);
-      setSelectedUser(null);
+    if (!selectedUser) {
+      return;
     }
+
+    const newKey = getParticipantKey(selectedUser);
+
+    const alreadyAdded = participants.some((participant) => {
+      const participantKey = getParticipantKey(participant);
+      return participantKey && participantKey === newKey;
+    });
+
+    if (!alreadyAdded) {
+      setParticipants((prev) => [selectedUser, ...prev]);
+    }
+
+    setSelectedUser(null);
   };
 
-  const handleRmvUser = (id: string) => () => {
-    setParticipants((prev) => prev.filter((p) => String(p.userId ?? p.phone) !== id));
+  const handleRmvUser = (targetKey: string) => () => {
+    setParticipants((prev) =>
+      prev.filter((participant) => {
+        const participantKey = getParticipantKey(participant);
+        return participantKey !== targetKey;
+      }),
+    );
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +144,7 @@ export default function CreateInternalGroupModal() {
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <aside className="flex h-full w-full max-w-3xl flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+      <aside className="flex h-full w-[40rem] flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
         <header className="flex w-full items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
           <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Criar Novo Grupo</h1>
           <IconButton
@@ -176,6 +199,7 @@ export default function CreateInternalGroupModal() {
               <Autocomplete
                 options={availableWppGroups}
                 getOptionLabel={(option) => option.name}
+                getOptionKey={(option) => option.id.user}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -230,30 +254,34 @@ export default function CreateInternalGroupModal() {
               <h2 className="mb-3 border-b border-slate-200 pb-2 font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300">
                 Participantes ({participants.length})
               </h2>
-              <div className="scrollbar-whatsapp max-h-60 overflow-y-auto">
-                <List dense>
+              <div className="scrollbar-whatsapp h-60 overflow-y-auto">
+                <List dense className="h-60">
                   {participants.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <p className="flex h-full items-center justify-center py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       Nenhum participante adicionado
                     </p>
                   ) : (
-                    participants.map((p) => (
-                      <ListItem
-                        key={p.userId ?? p.phone}
-                        className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                        divider
-                      >
-                        <ListItemText primary={p.name} secondary={`ID: ${p.userId ?? p.phone}`} />
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={handleRmvUser(String(p.userId ?? p.phone))}
-                          className="hover:bg-red-50 dark:hover:bg-red-950/30"
+                    participants.map((p, index) => {
+                      const participantKey = getParticipantKey(p) ?? `participant-${index}`;
+
+                      return (
+                        <ListItem
+                          key={participantKey}
+                          className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                          divider
                         >
-                          <PersonRemoveIcon />
-                        </IconButton>
-                      </ListItem>
-                    ))
+                          <ListItemText primary={p.name} secondary={`ID: ${p.userId ?? p.phone}`} />
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={handleRmvUser(participantKey)}
+                            className="hover:bg-red-50 dark:hover:bg-red-950/30"
+                          >
+                            <PersonRemoveIcon />
+                          </IconButton>
+                        </ListItem>
+                      );
+                    })
                   )}
                 </List>
               </div>

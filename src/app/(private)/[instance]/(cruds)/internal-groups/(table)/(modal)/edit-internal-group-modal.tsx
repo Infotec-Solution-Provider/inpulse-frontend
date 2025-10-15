@@ -25,6 +25,31 @@ type UnifiedContact = {
   userId?: number;
 };
 
+const getParticipantKey = (participant: UnifiedContact) => {
+  if (participant.userId !== undefined) {
+    return `user-${participant.userId}`;
+  }
+
+  if (participant.phone) {
+    return `phone-${participant.phone}`;
+  }
+
+  return undefined;
+};
+
+const ensureNumericId = (value: number | string | null | undefined) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+};
+
 interface EditInternalGroupModalProps {
   group: InternalGroup;
 }
@@ -34,10 +59,12 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
   const { users } = useContext(InternalChatContext);
   const { updateInternalGroup, updateInternalGroupImage, wppGroups } = useInternalGroupsContext();
 
+  const availableWppGroups = wppGroups ?? [];
+
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<{ id: { user: string }; name: string } | null>(
-    wppGroups.find((g) => g.id.user === group.wppGroupId) || null,
+    availableWppGroups.find((g) => g.id.user === group.wppGroupId) || null,
   );
 
   const mergedContacts: UnifiedContact[] = useMemo(() => {
@@ -60,22 +87,34 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
 
   useEffect(() => {
-    const participantesComInfo = group.participants.map((p) => {
-      const match = mergedContacts.find((c) => c.userId === p.userId);
-      if (match) return match;
+    const participantsWithInfo = group.participants.map((participant) => {
+      const match = mergedContacts.find((contact) => contact.userId === participant.userId);
+
+      if (match) {
+        return match;
+      }
 
       return {
-        name: `ID: ${p.userId}`,
-        phone: p.userId.toString(),
-        userId: p.userId,
+        name: `ID: ${participant.userId}`,
+        phone: participant.userId ? participant.userId.toString() : null,
+        userId: participant.userId,
       };
     });
 
-    setParticipants(participantesComInfo);
+    setParticipants(participantsWithInfo);
   }, [group.participants, mergedContacts]);
 
   const userOptions = useMemo(() => {
-    return mergedContacts.filter((c) => !participants.some((p) => p.userId === c.userId));
+    const existingKeys = new Set(
+      participants
+        .map((participant) => getParticipantKey(participant))
+        .filter((key): key is string => Boolean(key)),
+    );
+
+    return mergedContacts.filter((contact) => {
+      const key = getParticipantKey(contact);
+      return !key || !existingKeys.has(key);
+    });
   }, [mergedContacts, participants]);
 
   const groupImageRef = useRef<File | null>(null);
@@ -88,9 +127,13 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
       return;
     }
 
+    const participantIds = participants
+      .map((participant) => ensureNumericId(participant.userId ?? participant.phone))
+      .filter((id): id is number => typeof id === "number");
+
     await updateInternalGroup(group.id, {
       name,
-      participants: participants.map((p) => p.userId ?? 0),
+      participants: participantIds,
       wppGroupId: selectedGroup?.id.user || null,
     });
 
@@ -102,14 +145,31 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
   };
 
   const handleAddUser = () => {
-    if (selectedUser && !participants.some((p) => p.userId === selectedUser.userId)) {
-      setParticipants((prev) => [selectedUser, ...prev]);
-      setSelectedUser(null);
+    if (!selectedUser) {
+      return;
     }
+
+    const newKey = getParticipantKey(selectedUser);
+
+    const alreadyAdded = participants.some((participant) => {
+      const participantKey = getParticipantKey(participant);
+      return participantKey && participantKey === newKey;
+    });
+
+    if (!alreadyAdded) {
+      setParticipants((prev) => [selectedUser, ...prev]);
+    }
+
+    setSelectedUser(null);
   };
 
-  const handleRmvUser = (userId: number) => () => {
-    setParticipants((prev) => prev.filter((user) => user.userId !== userId));
+  const handleRemoveUser = (targetKey: string) => () => {
+    setParticipants((prev) =>
+      prev.filter((participant) => {
+        const participantKey = getParticipantKey(participant);
+        return participantKey !== targetKey;
+      }),
+    );
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,12 +207,10 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <aside className="flex h-full w-full max-w-3xl flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+      <aside className="flex h-full w-[40rem] flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
         <header className="flex w-full items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
-          <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
-            Editar Grupo
-          </h1>
-          <IconButton 
+          <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Editar Grupo</h1>
+          <IconButton
             onClick={closeModal}
             className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
           >
@@ -202,11 +260,12 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
                 }}
               />
               <Autocomplete
-                options={wppGroups}
+                options={availableWppGroups}
                 getOptionLabel={(option) => option.name}
+                getOptionKey={option => option.id.user}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
+                  <TextField
+                    {...params}
                     label="Vincular Grupo WhatsApp"
                     className="bg-white dark:bg-slate-700"
                     sx={{
@@ -218,7 +277,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
                   />
                 )}
                 value={selectedGroup}
-                onChange={(_, group) => setSelectedGroup(group)}
+                onChange={(_, groupOption) => setSelectedGroup(groupOption)}
               />
             </div>
           </div>
@@ -227,14 +286,15 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
             <div className="flex gap-2">
               <Autocomplete
                 options={userOptions}
-                getOptionLabel={(option) =>
-                  `${option.name} (ID: ${option.userId ?? option.phone})`
+                getOptionLabel={(option) => `${option.name} (ID: ${option.userId ?? option.phone})`}
+                getOptionKey={(option) =>
+                  option.userId ? "user:" + option.userId : "phone:" + option.phone
                 }
                 fullWidth
                 value={selectedUser}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
+                  <TextField
+                    {...params}
                     label="Adicionar Participante"
                     className="bg-white dark:bg-slate-700"
                     sx={{
@@ -245,10 +305,10 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
                     }}
                   />
                 )}
-                onChange={(_, user) => setSelectedUser(user)}
+                onChange={(_, userOption) => setSelectedUser(userOption)}
               />
-              <IconButton 
-                color="success" 
+              <IconButton
+                color="success"
                 onClick={handleAddUser}
                 className="hover:bg-green-50 dark:hover:bg-green-950/30"
               >
@@ -261,32 +321,37 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
                 Participantes ({participants.length})
               </h2>
               <div className="scrollbar-whatsapp max-h-60 overflow-y-auto">
-                <List dense>
+                <List dense className="h-60">
                   {participants.length === 0 ? (
                     <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                       Nenhum participante adicionado
                     </p>
                   ) : (
-                    participants.map((p) => (
-                      <ListItem 
-                        key={p.userId ?? p.phone}
-                        className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                        divider
-                      >
-                        <ListItemText
-                          primary={p.name}
-                          secondary={`ID: ${p.userId ?? p.phone}`}
-                        />
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={handleRmvUser(p.userId ?? 0)}
-                          className="hover:bg-red-50 dark:hover:bg-red-950/30"
+                    participants.map((participant, index) => {
+                      const participantKey =
+                        getParticipantKey(participant) ?? `participant-${index}`;
+
+                      return (
+                        <ListItem
+                          key={participantKey}
+                          className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                          divider
                         >
-                          <PersonRemoveIcon />
-                        </IconButton>
-                      </ListItem>
-                    ))
+                          <ListItemText
+                            primary={participant.name}
+                            secondary={`ID: ${participant.userId ?? participant.phone}`}
+                          />
+                          <IconButton
+                            color="error"
+                            size="small"
+                            onClick={handleRemoveUser(participantKey)}
+                            className="hover:bg-red-50 dark:hover:bg-red-950/30"
+                          >
+                            <PersonRemoveIcon />
+                          </IconButton>
+                        </ListItem>
+                      );
+                    })
                   )}
                 </List>
               </div>
@@ -295,16 +360,11 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
-          <Button 
-            variant="outlined" 
-            color="error" 
-            onClick={closeModal}
-            className="px-6 py-2"
-          >
+          <Button variant="outlined" color="error" onClick={closeModal} className="px-6 py-2">
             Cancelar
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleSubmit}
             disabled={!name || !participants.length}
             className="bg-indigo-600 px-6 py-2 hover:bg-indigo-700"
