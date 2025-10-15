@@ -27,11 +27,14 @@ export default function CreateInternalGroupModal() {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
   const { createInternalGroup, wppGroups } = useInternalGroupsContext();
+  const availableWppGroups = wppGroups ?? [];
 
   const [name, setName] = useState("");
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<{ id: { user: string }; name: string } | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<{ id: { user: string }; name: string } | null>(
+    null,
+  );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -55,10 +58,7 @@ export default function CreateInternalGroupModal() {
 
   const userOptions = useMemo(() => {
     return mergedContacts.filter(
-      (c) =>
-        !participants.some(
-          (p) => (p.userId && p.userId === c.userId) || p.phone === c.phone,
-        ),
+      (c) => !participants.some((p) => (p.userId && p.userId === c.userId) || p.phone === c.phone),
     );
   }, [mergedContacts, participants]);
 
@@ -91,9 +91,7 @@ export default function CreateInternalGroupModal() {
   };
 
   const handleRmvUser = (id: string) => () => {
-    setParticipants((prev) =>
-      prev.filter((p) => String(p.userId ?? p.phone) !== id),
-    );
+    setParticipants((prev) => prev.filter((p) => String(p.userId ?? p.phone) !== id));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,10 +123,8 @@ export default function CreateInternalGroupModal() {
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
       <aside className="flex h-full w-full max-w-3xl flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
         <header className="flex w-full items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
-          <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
-            Criar Novo Grupo
-          </h1>
-          <IconButton 
+          <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Criar Novo Grupo</h1>
+          <IconButton
             onClick={closeModal}
             className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
           >
@@ -178,11 +174,11 @@ export default function CreateInternalGroupModal() {
                 }}
               />
               <Autocomplete
-                options={wppGroups}
+                options={availableWppGroups}
                 getOptionLabel={(option) => option.name}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
+                  <TextField
+                    {...params}
                     label="Vincular Grupo WhatsApp"
                     className="bg-white dark:bg-slate-700"
                     sx={{
@@ -203,14 +199,12 @@ export default function CreateInternalGroupModal() {
             <div className="flex gap-2">
               <Autocomplete
                 options={userOptions}
-                getOptionLabel={(option) =>
-                  `${option.name} (ID: ${option.userId ?? option.phone})`
-                }
+                getOptionLabel={(option) => `${option.name} (ID: ${option.userId ?? option.phone})`}
                 fullWidth
                 value={selectedUser}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
+                  <TextField
+                    {...params}
                     label="Adicionar Participante"
                     className="bg-white dark:bg-slate-700"
                     sx={{
@@ -223,8 +217,8 @@ export default function CreateInternalGroupModal() {
                 )}
                 onChange={(_, user) => setSelectedUser(user)}
               />
-              <IconButton 
-                color="success" 
+              <IconButton
+                color="success"
                 onClick={handleAddUser}
                 className="hover:bg-green-50 dark:hover:bg-green-950/30"
               >
@@ -244,15 +238,12 @@ export default function CreateInternalGroupModal() {
                     </p>
                   ) : (
                     participants.map((p) => (
-                      <ListItem 
+                      <ListItem
                         key={p.userId ?? p.phone}
                         className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
                         divider
                       >
-                        <ListItemText
-                          primary={p.name}
-                          secondary={`ID: ${p.userId ?? p.phone}`}
-                        />
+                        <ListItemText primary={p.name} secondary={`ID: ${p.userId ?? p.phone}`} />
                         <IconButton
                           color="error"
                           size="small"
@@ -271,16 +262,11 @@ export default function CreateInternalGroupModal() {
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
-          <Button 
-            variant="outlined" 
-            color="error" 
-            onClick={closeModal}
-            className="px-6 py-2"
-          >
+          <Button variant="outlined" color="error" onClick={closeModal} className="px-6 py-2">
             Cancelar
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={handleSubmit}
             disabled={!name || !participants.length}
             className="bg-indigo-600 px-6 py-2 hover:bg-indigo-700"
