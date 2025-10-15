@@ -26,17 +26,7 @@ export default function ReadyMessagesTable() {
   function openEditReadyMessageModal(readyMessage: ReadyMessage) {
     openModal(
       <UpdateReadyMessageModal
-        onSubmit={({ title, message, sectorId, file }) =>
-          updateReadyMessage(
-            readyMessage.id,
-            {
-              ...readyMessage,
-              title,
-              message,
-            },
-            file || undefined,
-          )
-        }
+        onSubmit={(data, file) => updateReadyMessage(readyMessage.id, data, file)}
         readyMessage={readyMessage}
       />,
     );

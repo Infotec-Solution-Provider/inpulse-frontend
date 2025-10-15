@@ -1,6 +1,6 @@
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
-import { ReadyMessage } from "@in.pulse-crm/sdk";
+import { ReadyMessage, UpdateReadyMessageDto } from "@in.pulse-crm/sdk";
 import {
   Button,
   List,
@@ -22,12 +22,7 @@ import FilePicker from "./file-picker";
 
 interface Props {
   readyMessage: ReadyMessage;
-  onSubmit: (data: {
-    title: string;
-    message: string;
-    sectorId: number | null;
-    file: File | null;
-  }) => Promise<void>;
+  onSubmit: (data: UpdateReadyMessageDto, file: File | null) => Promise<void>;
 }
 
 export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Props) {
@@ -113,12 +108,14 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
       return;
     }
 
-    await onSubmit({
-      title: title,
-      message: text,
-      sectorId: sector,
-      file: selectedFile,
-    });
+    await onSubmit(
+      {
+        title: title,
+        message: text,
+        sectorId: sector,
+      },
+      selectedFile,
+    );
 
     toast.success("Mensagem rápida atualizada com sucesso!");
     closeModal();

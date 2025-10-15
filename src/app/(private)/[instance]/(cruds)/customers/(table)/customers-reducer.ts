@@ -1,6 +1,4 @@
 import { Customer, RequestFilters, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
-import { Logger } from "@in.pulse-crm/utils";
-
 // State Type
 export interface CustomersContextState {
   customers: Customer[];

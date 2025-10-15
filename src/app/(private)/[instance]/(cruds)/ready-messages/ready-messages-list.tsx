@@ -16,13 +16,9 @@ export default function ReadyMessagesList() {
 
   const { createReadyMessage } = useReadyMessagesContext();
 
-  const openCreateGroupModal = () => {
+  const openCreateReadyMessageModal = () => {
     openModal(
-      <CreateReadyMessageModal
-        onSubmit={({ TITULO, TEXTO_MENSAGEM, SETOR, ARQUIVO }) =>
-          createReadyMessage(ARQUIVO, TITULO, TEXTO_MENSAGEM, SETOR ?? undefined)
-        }
-      />,
+      <CreateReadyMessageModal onSubmit={(data, file) => createReadyMessage(data, file)} />,
     );
   };
 
@@ -31,15 +27,7 @@ export default function ReadyMessagesList() {
   const openUpdateGroupModal = (readyMessage: ReadyMessage) => () => {
     openModal(
       <UpdateReadyMessageModal
-        onSubmit={({ TITULO, TEXTO_MENSAGEM, SETOR, ARQUIVO }) =>
-          updateReadyMessage(readyMessage.CODIGO, {
-            ...readyMessage,
-            TITULO,
-            TEXTO_MENSAGEM,
-            SETOR: SETOR ?? 0,
-            ARQUIVO: ARQUIVO ? ARQUIVO.name : "",
-          })
-        }
+        onSubmit={(data, file) => updateReadyMessage(readyMessage.id, data, file)}
         readyMessage={readyMessage}
       />,
     );
@@ -48,8 +36,8 @@ export default function ReadyMessagesList() {
   const openDeleteGroupModal = (readyMessage: ReadyMessage) => () => {
     openModal(
       <DeleteReadyMessageModal
-        readyMessageId={readyMessage.CODIGO}
-        readyMessageName={readyMessage.TITULO || ""}
+        readyMessageId={readyMessage.id}
+        readyMessageName={readyMessage.title || ""}
         deleteGroup={deleteReadyMessage}
       />,
     );
@@ -76,31 +64,31 @@ export default function ReadyMessagesList() {
               readyMessages
                 ?.filter((item) => item)
                 .map((readyMessage) => (
-                  <tr className="even:bg-indigo-700/5" key={readyMessage.CODIGO}>
-                    <td className="w-32 truncate px-2 py-6 pl-16 text-lg">{readyMessage.CODIGO}</td>
+                  <tr className="even:bg-indigo-700/5" key={readyMessage.id}>
+                    <td className="w-32 truncate px-2 py-6 pl-16 text-lg">{readyMessage.id}</td>
                     <td
                       className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg"
-                      title={readyMessage.TITULO}
+                      title={readyMessage.title}
                     >
-                      {readyMessage.TITULO}
+                      {readyMessage.title}
                     </td>
                     <td
                       className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg"
-                      title={readyMessage.ARQUIVO}
+                      title={readyMessage.fileId ? "Arquivo anexado" : "Nenhum arquivo"}
                     >
-                      {readyMessage.ARQUIVO}
+                      {readyMessage.fileId ? "Arquivo anexado" : "Nenhum arquivo"}
                     </td>
                     <td
                       className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg"
-                      title={readyMessage.TEXTO_MENSAGEM}
+                      title={readyMessage.message}
                     >
-                      {readyMessage.TEXTO_MENSAGEM}
+                      {readyMessage.message}
                     </td>
                     <td className="max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-6 text-lg">
-                      {sectors?.find((s) => s.id === readyMessage.SETOR)?.name}
+                      {sectors?.find((s) => s.id === readyMessage.sectorId)?.name}
                     </td>
                     <td className="w-72 truncate px-2 py-6 text-lg">
-                      {Formatter.date(readyMessage.LAST_UPDATE)}
+                      {Formatter.date(readyMessage.updatedAt)}
                     </td>
                     <td className="w-24 truncate px-2 py-6 pr-16 text-lg">
                       <IconButton onClick={openUpdateGroupModal(readyMessage)}>
@@ -117,7 +105,7 @@ export default function ReadyMessagesList() {
       </TableContainer>
 
       <div className="flex h-max justify-end">
-        <Button variant="outlined" size="large" onClick={openCreateGroupModal}>
+        <Button variant="outlined" size="large" onClick={openCreateReadyMessageModal}>
           Cadastrar
         </Button>
       </div>

@@ -52,7 +52,11 @@ interface IReadyMessagesContext {
   sectors: Array<{ id: number; name: string }>;
   createReadyMessage: (data: CreateReadyMessageDto, file?: File | null) => Promise<void>;
   deleteReadyMessage: (id: number) => Promise<void>;
-  updateReadyMessage: (id: number, data: UpdateReadyMessageDto, file?: File) => Promise<void>;
+  updateReadyMessage: (
+    id: number,
+    data: UpdateReadyMessageDto,
+    file?: File | null,
+  ) => Promise<void>;
   variables: Array<Variable>;
   replaceVariables: (props: ReplaceVariablesOptions) => string;
   fetchReadyMessages: () => Promise<void>;
@@ -103,7 +107,7 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
   }
 
   const updateReadyMessage = useCallback(
-    async (id: number, data: UpdateReadyMessageDto, file?: File) => {
+    async (id: number, data: UpdateReadyMessageDto, file?: File | null) => {
       if (token) {
         try {
           if (!file) return;
