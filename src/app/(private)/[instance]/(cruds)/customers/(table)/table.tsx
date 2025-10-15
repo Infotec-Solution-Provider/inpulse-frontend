@@ -1,22 +1,23 @@
 "use client";
-import CustomersTableItem from "./table-item";
+import { Customer } from "@in.pulse-crm/sdk";
 import {
   Button,
   CircularProgress,
   Table,
   TableBody,
+  TableCell,
   TableContainer,
   TablePagination,
+  TableRow,
 } from "@mui/material";
-import { StyledTableCell, StyledTableRow } from "./mui-style";
 import { useContext } from "react";
-import EditCustomerModal from "./(modal)/edit-customer-modal";
-import CreateCustomerModal from "./(modal)/create-customer-modal";
-import { Customer } from "@in.pulse-crm/sdk";
-import ClientTableHeader from "./table-header";
 import { AppContext } from "../../../app-context";
-import ContactsModal from "./(modal)/contacts-modal";
 import { CustomersContext } from "../customers-context";
+import ContactsModal from "./(modal)/contacts-modal";
+import CreateCustomerModal from "./(modal)/create-customer-modal";
+import EditCustomerModal from "./(modal)/edit-customer-modal";
+import ClientTableHeader from "./table-header";
+import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
@@ -27,8 +28,7 @@ export default function CustomersTable() {
   }
 
   function openCreateCustomerModal() {
-    openModal(<CreateCustomerModal />
-    );
+    openModal(<CreateCustomerModal />);
   }
 
   function openContactModal(customer: Customer) {
@@ -37,56 +37,94 @@ export default function CustomersTable() {
 
   const onChangePage = (page: number) => {
     dispatch({ type: "change-page", page });
-    loadCustomers();
+    loadCustomers({ ...state.filters, page: String(page) });
   };
 
   const onChangePerPage = (perPage: number) => {
     dispatch({ type: "change-per-page", perPage });
-    loadCustomers();
+    loadCustomers({ ...state.filters, perPage: String(perPage) });
   };
 
   return (
-    <div>
-      <TableContainer className="mx-auto max-h-[70vh] overflow-auto rounded-md scrollbar-whatsapp shadow-md bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">
-        <Table className="max-h-[100%] overflow-auto scrollbar-whatsapp">
+    <div className="flex flex-col gap-4">
+      <TableContainer 
+        className="scrollbar-whatsapp mx-auto overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
+        sx={{
+          height: "calc(100vh - 280px)", // Altura fixa para manter paginação no mesmo lugar
+          minHeight: "400px",
+          maxHeight: "70vh",
+        }}
+      >
+        <Table className="scrollbar-whatsapp" stickyHeader>
           <ClientTableHeader />
-          <TableBody>
+          <TableBody
+            sx={{
+              minHeight: state.isLoading || state.customers.length === 0 ? "300px" : "auto",
+            }}
+          >
             {state.isLoading && (
-              <StyledTableRow className="h-32 w-full">
-                <StyledTableCell
+              <TableRow sx={{ height: "300px" }}>
+                <TableCell
                   colSpan={8}
-                  className="flex items-center justify-center text-center text-gray-600 dark:text-gray-300"
+                  className="border-0"
+                  sx={{
+                    textAlign: "center",
+                    backgroundColor: "transparent",
+                  }}
                 >
-                  <div className="flex flex-col items-center">
-                    <CircularProgress />
-                    <span className="mt-2">Carregando clientes...</span>
+                  <div className="flex flex-col items-center gap-3 py-8">
+                    <CircularProgress size={40} />
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      Carregando clientes...
+                    </span>
                   </div>
-                </StyledTableCell>
-              </StyledTableRow>
+                </TableCell>
+              </TableRow>
             )}
-            {
-              !state.isLoading && state.customers.map((client) => (
+            {!state.isLoading && state.customers.length === 0 && (
+              <TableRow sx={{ height: "300px" }}>
+                <TableCell
+                  colSpan={8}
+                  className="border-0"
+                  sx={{
+                    textAlign: "center",
+                    backgroundColor: "transparent",
+                  }}
+                >
+                  <div className="flex flex-col items-center gap-2 py-8">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Nenhum cliente encontrado
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+            {!state.isLoading &&
+              state.customers.map((client) => (
                 <CustomersTableItem
                   key={`${client.RAZAO}_${client.CODIGO}`}
                   customer={client}
                   openEditModalHandler={openEditCustomerModal}
                   openContactModalHandler={openContactModal}
                 />
-              ))
-
-            }
+              ))}
           </TableBody>
         </Table>
       </TableContainer>
-      {!state.isLoading && (
-        <div className="flex h-fit w-full justify-center gap-4 px-4 pt-0">
-          <Button onClick={openCreateCustomerModal} variant="outlined">
-            Cadastrar cliente
+      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
+          <Button
+            onClick={openCreateCustomerModal}
+            variant="contained"
+            color="primary"
+            size="medium"
+            className="w-full sm:w-auto"
+          >
+            + Cadastrar Cliente
           </Button>
           <TablePagination
             component="div"
             count={state.totalRows}
-            page={+(state.filters.page ?? 1)}
+            page={Math.max(0, +(state.filters.page ?? 1) - 1)} // Convert from 1-based (backend) to 0-based (MUI)
             rowsPerPage={+(state.filters.perPage ?? 10)}
             labelRowsPerPage="Entradas por página"
             labelDisplayedRows={({ from, to, count }) => {
@@ -94,9 +132,13 @@ export default function CustomersTable() {
             }}
             onRowsPerPageChange={(e) => onChangePerPage(+e.target.value)}
             onPageChange={(_, newPage) => onChangePage(newPage)}
+            sx={{
+              ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
+                marginBottom: 0,
+              },
+            }}
           />
         </div>
-      )}
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { Button } from "@mui/material";
 import { useAppContext } from "../../../app-context";
 
-
 interface DeleteInternalGroupModalProps {
   readyMessageId: number;
   readyMessageName: string;
@@ -22,10 +21,10 @@ export default function DeleteInternalGroupModal({
 
   return (
     <div>
-      <div className="flex flex-col gap-6 bg-white text-gray-800 dark:bg-slate-800 dark:text-white px-[2rem] py-[1rem]">
-        <header className="text-lg text-semibold">Deletar Mensagem pronta</header>
+      <div className="flex flex-col gap-6 bg-white px-[2rem] py-[1rem] text-gray-800 dark:bg-slate-800 dark:text-white">
+        <header className="text-semibold text-lg">Deletar Mensagem pronta</header>
         <div className="flex flex-col gap-4">
-          <h1>Tem certeza que deseja excluir a Menssagem pronta "{readyMessageName}"?</h1>
+          <h1>Tem certeza que deseja excluir a Menssagem pronta &quot;{readyMessageName}&quot;?</h1>
         </div>
 
         <div className="flex w-full flex-row justify-end gap-4 pt-4">

@@ -1,53 +1,24 @@
+"use client";
+
 import { useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  IconButton,
-  useTheme,
-  useMediaQuery,
-  Stack,
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { TextField, Button, IconButton } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import { toast } from "react-toastify";
 import { useContactsContext } from "../../contacts-context";
 import { WppContact } from "@in.pulse-crm/sdk";
+import { useAppContext } from "@/app/(private)/[instance]/app-context";
 
 interface ContactModalProps {
   contact?: WppContact;
 }
 
 export default function ContactModal({ contact }: ContactModalProps) {
-  const { closeModal, modal, createContact, updateContact } = useContactsContext();
+  const { createContact, updateContact } = useContactsContext();
+  const { closeModal } = useAppContext();
   const isEditMode = !!contact;
 
   const [name, setName] = useState(contact?.name || "");
-  const [ddi, setDdi] = useState("+55");
-  const [number, setNumber] = useState("");
-
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
-
-  const formatPhone = (value: string) => {
-    const cleaned = value.replace(/\D/g, "");
-
-    if (cleaned.length <= 2) {
-      return `(${cleaned}`;
-    }
-
-    if (cleaned.length <= 6) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-    }
-
-    if (cleaned.length <= 10) {
-      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-    }
-
-    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
-  };
+  const [phone, setPhone] = useState("");
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -58,91 +29,88 @@ export default function ContactModal({ contact }: ContactModalProps) {
     if (isEditMode) {
       updateContact(contact.id, name);
     } else {
-      if (!number.trim() || !ddi.trim()) {
-        toast.error("Telefone completo (DDI + Número) é obrigatório!");
+      if (!phone.trim()) {
+        toast.error("O telefone é obrigatório!");
         return;
       }
 
-      const fullPhone = `${ddi}${number.replace(/\D/g, "")}`;
-      createContact(name, fullPhone);
-    }
+      const cleanedPhone = phone.replace(/\D/g, "");
+      if (cleanedPhone.length < 10 || cleanedPhone.length > 15) {
+        toast.error("Telefone inválido! Use o formato: 5511999999999");
+        return;
+      }
 
-    closeModal();
+      createContact(name, cleanedPhone);
+    }
   };
 
   return (
-    <Dialog
-      open={!!modal}
-      onClose={(e, reason) => {
-        if (reason !== "backdropClick") {
-          closeModal();
-        }
-      }}
-      fullScreen={fullScreen}
-      maxWidth={false}
-      sx={{
-        "& .MuiDialog-paper": {
-          width: "360px",
-          maxWidth: "90vw",
-          borderRadius: 3,
-          padding: 2,
-        },
-      }}
-    >
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "8px 16px",
-        }}
-      >
-        {isEditMode ? "Editar Contato" : "Cadastrar Contato"}
-        <IconButton onClick={closeModal}>
-          <CloseIcon />
+    <div className="w-full max-w-md rounded-lg bg-slate-100 p-6 shadow-xl dark:bg-slate-800">
+      <header className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
+          {isEditMode ? "Editar Contato" : "Cadastrar Contato"}
+        </h1>
+        <IconButton
+          onClick={closeModal}
+          className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
+          <Close />
         </IconButton>
-      </DialogTitle>
+      </header>
 
-      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, paddingTop: 5 }}>
+      <div className="mb-6 flex flex-col gap-4 w-80">
         <TextField
           label="Nome"
-          fullWidth
+          placeholder="João Silva"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          variant="filled"
-
+          fullWidth
+          autoFocus
+          required
+          variant="outlined"
+          className="bg-slate-50 dark:bg-slate-700"
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              backgroundColor: (theme) =>
+                theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(248 250 252)",
+            },
+          }}
         />
 
         {!isEditMode && (
-          <Stack direction="row" spacing={1}>
-            <TextField
-              label="DDI"
-              value={ddi}
-              onChange={(e) => setDdi(e.target.value)}
-              sx={{ width: "80px" }}
-              variant="filled"
-            />
-
-            <TextField
-              label="Número"
-              placeholder="(11) 91234-5678"
-              fullWidth
-              value={number}
-              variant="filled"
-              onChange={(e) => setNumber(formatPhone(e.target.value))}
-            />
-          </Stack>
+          <TextField
+            label="WhatsApp"
+            placeholder="5511999999999"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+            fullWidth
+            required
+            variant="outlined"
+            helperText="Digite apenas números com DDI (Ex: 5511999999999)"
+            className="bg-slate-50 dark:bg-slate-700"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(248 250 252)",
+              },
+            }}
+          />
         )}
-      </DialogContent>
+      </div>
 
-      <DialogActions sx={{ justifyContent: "flex-end" }}>
-        <Button color="error" onClick={closeModal}>
+      <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+        <Button onClick={closeModal} variant="outlined" color="inherit">
           Cancelar
         </Button>
-        <Button variant="contained" onClick={handleSubmit}>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          color="primary"
+          disabled={!name.trim() || (!isEditMode && !phone.trim())}
+        >
           {isEditMode ? "Salvar" : "Cadastrar"}
         </Button>
-      </DialogActions>
-    </Dialog>
+      </div>
+    </div>
   );
 }

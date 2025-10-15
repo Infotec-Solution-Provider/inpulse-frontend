@@ -18,7 +18,7 @@ export default function RangeDatePicker({
 
   const handleFromChange = (value: string) => {
     // Se "from" for maior que "to", ajusta "to" para ser igual a "from"
-    let newFrom = value;
+    const newFrom = value;
     let newTo = to;
     if (to && value > to) {
       newTo = value;
@@ -30,7 +30,7 @@ export default function RangeDatePicker({
 
   const handleToChange = (value: string) => {
     // Se "to" for menor que "from", ajusta "from" para ser igual a "to"
-    let newTo = value;
+    const newTo = value;
     let newFrom = from;
     if (from && value < from) {
       newFrom = value;

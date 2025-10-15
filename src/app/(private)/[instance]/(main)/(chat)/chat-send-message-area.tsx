@@ -30,7 +30,7 @@ export default function ChatSendMessageArea() {
   } = useContext(ChatContext);
 
   const { users } = useInternalChatContext();
-  const { contacts } = useContactsContext();
+  const { state: contactsState } = useContactsContext();
   const { openModal, closeModal } = useAppContext();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +52,7 @@ export default function ChatSendMessageArea() {
     mentions: state.mentions || [],
     participants: (currentChat as any)?.participants || [],
     users,
-    contacts,
+    contacts: contactsState.contacts,
     dispatch,
   });
 
@@ -149,11 +149,6 @@ export default function ChatSendMessageArea() {
 
   const refMessage = quotedMessage || editingMessage || null;
 
-  const handleRemoveRefMessage = () => {
-    if (editingMessage) handleStopEditMessage();
-    if (quotedMessage) handleQuoteMessageRemove();
-  };
-
   useEffect(() => {
     if (editingMessage) {
       dispatch({ type: "change-text", text: editingMessage.body || "" });
@@ -225,15 +220,15 @@ export default function ChatSendMessageArea() {
                 </span>
               )}
             </div>
-            {
-              quotedMessage && <IconButton
+            {quotedMessage && (
+              <IconButton
                 size="small"
                 className="bg-white/20 dark:text-indigo-400"
                 onClick={handleQuoteMessageRemove}
               >
                 <Close />
               </IconButton>
-            }
+            )}
           </div>
         )}
 
@@ -299,18 +294,16 @@ export default function ChatSendMessageArea() {
           </div>
         )}
       </div>
-      {
-        editingMessage && (
-          <IconButton
-            size="small"
-            className="bg-white/20 dark:text-indigo-400"
-            onClick={handleStopEditMessage}
-            title="Cancelar edição"
-          >
-            <Close />
-          </IconButton>
-        )
-      }
+      {editingMessage && (
+        <IconButton
+          size="small"
+          className="bg-white/20 dark:text-indigo-400"
+          onClick={handleStopEditMessage}
+          title="Cancelar edição"
+        >
+          <Close />
+        </IconButton>
+      )}
 
       <IconButton
         size="small"

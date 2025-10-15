@@ -1,23 +1,21 @@
 "use client";
-import { useContext, useEffect, useState, useMemo } from "react";
-import { IconButton, TextField } from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
+import toDateString from "@/lib/utils/date-string";
+import { Formatter } from "@in.pulse-crm/utils";
 import { AssignmentTurnedIn, SyncAlt } from "@mui/icons-material";
-import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
-import { AppContext } from "../../app-context";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { useContext, useEffect, useMemo, useState } from "react";
+import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
+import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
 import ChatProvider from "../../(main)/(chat)/chat-context";
 import ChatHeader from "../../(main)/(chat)/chat-header";
 import ChatMessagesList from "../../(main)/(chat)/chat-messages-list";
 import ChatSendMessageArea from "../../(main)/(chat)/chat-send-message-area";
-import FinishChatModal from "../../(main)/(chat)/(actions)/finish-chat-modal";
-import TransferChatModal from "../../(main)/(chat)/(actions)/transfer-chat-modal";
+import { AppContext } from "../../app-context";
 import { InternalChatContext } from "../../internal-context";
-import { Formatter } from "@in.pulse-crm/utils";
-import { WppChat } from "@in.pulse-crm/sdk";
-import toDateString from "@/lib/utils/date-string";
+import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
 
 export default function MonitorAttendances() {
-  const { getChatsMonitor, monitorChats, setCurrentChat, openChat, chats, getChats } =
+  const { getChatsMonitor, monitorChats, setCurrentChat, openChat, getChats } =
     useWhatsappContext();
 
   const { users } = useContext(InternalChatContext);
@@ -25,12 +23,12 @@ export default function MonitorAttendances() {
   const [fCode, setFCode] = useState("");
   const [fPart, setFPart] = useState("");
   const [fStart, setFStart] = useState("");
-  const [fEnd, setFEnd] = useState("");
-  const [fResult, setFResult] = useState("");
+  const [fEnd] = useState("");
+  const [fResult] = useState("");
   const [fCodeERP, setFCodeERP] = useState("");
   const [fPhone, setFPhone] = useState("");
   const [fContactName, setFContactName] = useState("");
-  const [fCustomerName, setFCustomerName] = useState("");
+  const [fCustomerName] = useState("");
   const [fOperator, setFOperator] = useState("");
 
   useEffect(() => {
@@ -58,9 +56,8 @@ export default function MonitorAttendances() {
       if (fCustomerName && !customerName.toLowerCase().includes(fCustomerName.toLowerCase()))
         return false;
 
-      const operatorFromList = users.find((user: any) =>
-        String(user.CODIGO) === String(chat?.userId)
-      )?.NOME || "";
+      const operatorFromList =
+        users.find((user: any) => String(user.CODIGO) === String(chat?.userId))?.NOME || "";
       if (fOperator && !operatorFromList.toLowerCase().includes(fOperator.toLowerCase())) {
         return false;
       }
@@ -114,7 +111,6 @@ export default function MonitorAttendances() {
             codErp={chat.customer?.COD_ERP || null}
             customerId={chat.customer?.CODIGO || null}
             startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
-
           />
           <div className="scrollbar-whatsapp flex-1 bg-white text-black drop-shadow-md dark:bg-slate-900 dark:text-white">
             <ChatMessagesList />

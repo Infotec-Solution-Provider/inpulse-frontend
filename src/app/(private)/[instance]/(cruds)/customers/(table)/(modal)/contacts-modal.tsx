@@ -111,65 +111,119 @@ export default function ContactsModal({ customer }: ContactModalProps) {
   };
 
   return (
-    <div className="text-semibold w-full max-w-3xl rounded-md bg-white p-4 text-gray-800 dark:bg-slate-800 dark:text-white">
-      <header className="mb-4 flex items-center justify-between">
-        <h1 className="max-w-80 truncate">Contatos de &quot;{customer.RAZAO}&quot;</h1>
-        <IconButton onClick={closeModal}>
+    <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+      <header className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
+        <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
+          Contatos de &quot;{customer.RAZAO}&quot;
+        </h1>
+        <IconButton
+          onClick={closeModal}
+          className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+        >
           <Close />
         </IconButton>
       </header>
-      <div className="mb-2 flex items-center gap-2 py-2">
-        <TextField
-          variant="standard"
-          label="Nome"
-          className="w-64 px-1 font-bold"
-          value={filter.name}
-          onChange={(e) => setFilter((prev) => ({ ...prev, name: e.target.value }))}
-        />
-        <TextField
-          variant="standard"
-          label="Telefone"
-          className="w-64 px-1 font-bold"
-          value={filter.phone}
-          onChange={(e) =>
-            setFilter((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, "") }))
-          }
-        />
-        <p className="w-32"></p>
+
+      {/* Lista de contatos */}
+      <div className="mb-6">
+        <div className="mb-2 flex flex-wrap gap-3 rounded-md bg-slate-50 p-2 dark:bg-slate-700">
+          <TextField
+            variant="outlined"
+            placeholder="Filtrar por nome..."
+            size="small"
+            value={filter.name}
+            onChange={(e) => setFilter((prev) => ({ ...prev, name: e.target.value }))}
+            className="w-56 bg-white dark:bg-slate-600"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                fontSize: "0.875rem",
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+          />
+          <TextField
+            variant="outlined"
+            placeholder="Filtrar por telefone..."
+            size="small"
+            value={filter.phone}
+            onChange={(e) =>
+              setFilter((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, "") }))
+            }
+            className="w-56 bg-white dark:bg-slate-600"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                fontSize: "0.875rem",
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
+          />
+        </div>
+        <div className="scrollbar-whatsapp h-[350px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600">
+          {filteredContacts.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-slate-500 dark:text-slate-400">
+              Nenhum contato encontrado
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-200 dark:divide-slate-600">
+              {filteredContacts.map((c) => (
+                <ContactItem
+                  key={c.id}
+                  contact={c}
+                  handleEdit={handleEdit}
+                  handleDelete={handleDelete}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-      <ul className="scrollbar-whatsapp max-h-[20rem]">
-        {filteredContacts.map((c) => (
-          <ContactItem key={c.id} contact={c} handleEdit={handleEdit} handleDelete={handleDelete} />
-        ))}
-      </ul>
-      <div className="pt-4">
-        <h2 className="mb-4">Adicionar Contato</h2>
-        <form className="flex items-center gap-2">
+
+      {/* Adicionar novo contato */}
+      <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-700">
+        <h2 className="mb-4 text-lg font-medium text-slate-700 dark:text-slate-300">
+          Adicionar Novo Contato
+        </h2>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end">
           <TextField
             label="Nome"
-            placeholder="John Doe"
+            placeholder="João Silva"
             onChange={handleChangeName}
             value={form.name}
-            className="w-64"
+            variant="outlined"
+            className="flex-1 bg-white dark:bg-slate-600"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
           />
           <TextField
             label="WhatsApp"
-            placeholder="551100000000"
+            placeholder="5511999999999"
             onChange={handleChangePhone}
             value={form.phone}
-            className="w-64"
+            variant="outlined"
+            className="flex-1 bg-white dark:bg-slate-600"
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+              },
+            }}
           />
-
           <Button
             variant="contained"
-            sx={{ height: "3.5rem" }}
             disabled={!isFormValid}
             onClick={handleClickRegister}
-            className="!ml-auto"
+            className="bg-indigo-600 px-6 py-3 hover:bg-indigo-700"
+            startIcon={<Add />}
           >
-            <Add />
+            Adicionar
           </Button>
-        </form>
+        </div>
       </div>
     </div>
   );

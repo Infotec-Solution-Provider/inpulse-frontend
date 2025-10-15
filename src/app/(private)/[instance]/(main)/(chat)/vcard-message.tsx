@@ -12,7 +12,7 @@ interface VCardMessageProps {
 
 export default function VCardMessage({ vCardString }: VCardMessageProps) {
   const { instance } = useContext(AuthContext);
-  const { contacts } = useContactsContext();
+  const { state } = useContactsContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [contactForModal, setContactForModal] = useState<WppContact | null>(null);
   const [isLoadingModal, setIsLoadingModal] = useState(false);
@@ -28,8 +28,8 @@ export default function VCardMessage({ vCardString }: VCardMessageProps) {
     setIsLoadingModal(true);
     setIsModalOpen(true);
     try {
-      let contactToShow = contacts.find((c) => c.phone === phone.replace(/\D/g, ""));
-      let contactW: WppContact = {
+      const contactToShow = state.contacts.find((c) => c.phone === phone.replace(/\D/g, ""));
+      const contactW: WppContact = {
         id: contactToShow ? contactToShow.id : 0,
         name: contactToShow ? contactToShow.name : name,
         phone: contactToShow ? contactToShow.phone : phone,

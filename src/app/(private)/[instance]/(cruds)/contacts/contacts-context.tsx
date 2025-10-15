@@ -5,34 +5,33 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
-  useState,
 } from "react";
 
-import { WhatsappClient, WppContact } from "@in.pulse-crm/sdk";
 import { useAuthContext } from "@/app/auth-context";
+import { WhatsappClient, WppContact } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
+import { useAppContext } from "../../app-context";
+import useInternalChatContext from "../../internal-context";
 import { WPP_BASE_URL } from "../../whatsapp-context";
 import ContactModal from "./(table)/(modal)/contact-modal";
 import DeleteContactModal from "./(table)/(modal)/delete-contact-modal";
-import useInternalChatContext from "../../internal-context";
+import contactsReducer, { ContactsContextState } from "./(table)/contacts-reducer";
 
 interface IContactsProviderProps {
   children: ReactNode;
 }
 
 interface IContactsContext {
+  state: ContactsContextState;
+  dispatch: React.Dispatch<any>;
   deleteContact: (id: number) => void;
   updateContact: (id: number, name: string) => Promise<void>;
   loadContacts: () => void;
-  contacts: WppContact[];
-  contact: WppContact | null;
   createContact: (name: string, phone: string) => void;
-  isLoading: boolean;
   openContactModal: (contact?: WppContact) => void;
-  closeModal: () => void;
-  modal: ReactNode;
   handleDeleteContact: (contact: WppContact) => void;
   phoneNameMap: Map<string, string>;
 }
@@ -46,16 +45,19 @@ export const useContactsContext = () => {
 export default function ContactsProvider({ children }: IContactsProviderProps) {
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const { token } = useAuthContext();
-  const [contacts, setContacts] = useState<WppContact[]>([]);
-  const [contact, setContact] = useState<WppContact | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [modal, setModal] = useState<ReactNode>(null);
+  const [state, dispatch] = useReducer(contactsReducer, {
+    contacts: [],
+    totalRows: 0,
+    filters: { page: "1", perPage: "10" },
+    isLoading: false,
+  });
   const { users } = useInternalChatContext();
+  const { openModal, closeModal } = useAppContext();
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
 
-    (contacts ?? []).forEach((contact) => {
+    (state.contacts ?? []).forEach((contact) => {
       const phone = contact.phone?.replace(/\D/g, "");
       if (phone && contact.name) map.set(phone, contact.name);
     });
@@ -66,17 +68,14 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     });
 
     return map;
-  }, [users, contacts]);
+  }, [users, state.contacts]);
 
   const updateContact = useCallback(
     async (id: number, name: string) => {
       try {
         if (token) {
           const updatedContact = await api.current.updateContact(id, name);
-          setContact(updatedContact);
-          setContacts((prevContacts) =>
-            prevContacts.map((c) => (c.id === id ? updatedContact : c)),
-          );
+          dispatch({ type: "update-contact", id, name: updatedContact.name });
           closeModal();
           toast.success("Cliente atualizado com sucesso!");
         }
@@ -93,7 +92,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       try {
         if (token) {
           await api.current.deleteContact(id);
-          setContacts((prevContacts) => prevContacts.filter((contact) => contact.id !== id));
+          dispatch({ type: "delete-contact", id });
           toast.success("Contato deletado com sucesso!");
         }
       } catch (err) {
@@ -109,7 +108,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       try {
         if (token) {
           const newContact = await api.current.createContact(name, phone.replace(/\D/g, ""));
-          setContacts((prevContacts) => [...prevContacts, newContact]);
+          dispatch({ type: "add-contact", data: newContact });
           toast.success("Contato criado com sucesso!");
           closeModal();
         }
@@ -123,61 +122,89 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
 
   const openContactModal = useCallback(
     (contact?: WppContact) => {
-      setModal(<ContactModal contact={contact} />);
+      openModal(<ContactModal contact={contact} />);
     },
     [createContact, updateContact],
   );
 
-  const closeModal = useCallback(() => {
-    setModal(null);
-  }, []);
-
   const handleDeleteContact = useCallback(
     (contact: WppContact) => {
-      setModal(<DeleteContactModal contact={contact} />);
+      openModal(<DeleteContactModal contact={contact} />);
     },
     [deleteContact],
   );
 
   const loadContacts = useCallback(async () => {
     try {
-      setIsLoading(true);
+      dispatch({ type: "change-loading", isLoading: true });
 
       const res = await api.current.getContacts();
-      setContacts(res);
+
+      // Apply client-side filtering
+      let filteredContacts = res;
+      const filters: any = state.filters;
+
+      if (filters.id) {
+        filteredContacts = filteredContacts.filter((c) => c.id === parseInt(filters.id || "0"));
+      }
+      if (filters.name) {
+        filteredContacts = filteredContacts.filter((c) =>
+          c.name.toLowerCase().includes(filters.name?.toLowerCase() || ""),
+        );
+      }
+      if (filters.phone) {
+        filteredContacts = filteredContacts.filter((c) => c.phone.includes(filters.phone || ""));
+      }
+
+      const totalRows = filteredContacts.length;
+
+      // Apply client-side pagination
+      const page = parseInt(state.filters.page || "1");
+      const perPage = parseInt(state.filters.perPage || "10");
+      const startIndex = (page - 1) * perPage;
+      const paginatedContacts = filteredContacts.slice(startIndex, startIndex + perPage);
+
+      dispatch({
+        type: "multiple",
+        actions: [
+          { type: "load-contacts", contacts: paginatedContacts },
+          { type: "change-total-rows", totalRows },
+          { type: "change-loading", isLoading: false },
+        ],
+      });
     } catch (err) {
       Logger.error("Error loading contacts", err as Error);
       toast.error("Falha ao carregar clientes!");
-    } finally {
-      setIsLoading(false);
+      dispatch({ type: "change-loading", isLoading: false });
     }
-  }, []);
+  }, [state.filters]);
 
   useEffect(() => {
     if (!token || !api.current) return;
     api.current.setAuth(token);
-    loadContacts();
   }, [token, api.current]);
+
+  useEffect(() => {
+    if (token) {
+      loadContacts();
+    }
+  }, [token, state.filters, loadContacts]);
 
   return (
     <ContactsContext.Provider
       value={{
-        contacts,
+        state,
+        dispatch,
         updateContact,
         loadContacts,
         createContact,
         deleteContact,
-        isLoading,
         openContactModal,
-        closeModal,
-        modal,
         handleDeleteContact,
-        contact,
-        phoneNameMap
+        phoneNameMap,
       }}
     >
       {children}
-      {modal}
     </ContactsContext.Provider>
   );
 }

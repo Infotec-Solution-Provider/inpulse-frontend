@@ -44,16 +44,24 @@ export default function customersReducer(
     case "change-loading":
       return { ...next, isLoading: action.isLoading };
     case "change-page":
-      next.filters.page = action.page.toString();
+      // MUI uses 0-based pages, backend uses 1-based, so we add 1
+      next.filters.page = (action.page + 1).toString();
       return next;
     case "change-per-page":
       next.filters.perPage = action.perPage.toString();
+      next.filters.page = "1"; // Reset to first page (backend uses 1-based)
       return next;
     case "change-total-rows":
       next.totalRows = action.totalRows;
       return { ...next, totalRows: action.totalRows };
     case "change-filters":
-      next.filters = { page: prev.filters.page, perPage: prev.filters.perPage, ...action.filters };
+      next.filters = { 
+        page: "1", // Reset to first page when applying filters
+        perPage: prev.filters.perPage || "10", 
+        ...action.filters 
+      };
+
+      console.log(next.filters)
       return next;
     case "load-customers":
       next.customers = action.customers;

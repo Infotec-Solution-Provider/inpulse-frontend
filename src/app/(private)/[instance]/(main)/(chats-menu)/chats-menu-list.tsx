@@ -43,7 +43,7 @@ export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
   const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
-  const { contacts } = useContext(ContactsContext);
+  const { state } = useContext(ContactsContext);
 
   const mentionNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -53,14 +53,14 @@ export default function ChatsMenuList() {
         map.set(phone, user.NOME);
       }
     }
-    for (const contact of contacts) {
+    for (const contact of state.contacts) {
       const phone = contact.phone?.replace(/\D/g, "");
       if (phone && !map.has(phone)) {
         map.set(phone, contact.name);
       }
     }
     return map;
-  }, [users, contacts]);
+  }, [users, state.contacts]);
 
   const replaceMentionsWpp = (text: string): string => {
     return text.replace(/@(\d{6,})/g, (match, phone) => {

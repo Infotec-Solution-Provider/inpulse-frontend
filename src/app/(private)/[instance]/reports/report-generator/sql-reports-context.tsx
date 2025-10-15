@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  createContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useContext,
-} from "react";
+import React, { createContext, useState, useEffect, ReactNode, useContext } from "react";
 import reportsService from "@/lib/services/reports.service";
 import { SqlReport } from "./sql-report";
 import { AuthContext } from "@/app/auth-context";
@@ -20,7 +14,7 @@ interface SqlReportsContextType {
   setSql: (sql: string) => void;
   setDescription: (desc: string) => void;
   fillForm: (sql: string, desc: string) => void;
-  exportReport: (sql: string, description: string, format: 'pdf' | 'csv' | 'txt') => Promise<void>;
+  exportReport: (sql: string, description: string, format: "pdf" | "csv" | "txt") => Promise<void>;
   executeReport: (sql: string, description: string) => Promise<ReportResult>;
   reloadHistory: () => Promise<void>;
   resultData: any[];
@@ -45,15 +39,12 @@ export const SqlReportsContext = createContext<SqlReportsContextType>({
   reloadHistory: async () => {},
   resultData: [],
   resultColumns: [],
-  deleteReport: async (id: string) => {},
-
+  deleteReport: async (id: string) => {
+    console.log(`Deletando ID: ${id}`);
+  },
 });
 
-export default function SqlReportsProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function SqlReportsProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<SqlReport[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,62 +67,62 @@ export default function SqlReportsProvider({
       const data = await reportsService.getSqlReportsHistory();
       setHistory(data);
       setError(null);
-    } catch (err) {
+    } catch {
       setError("Erro ao carregar histórico");
     } finally {
       setLoading(false);
     }
   }
 
-async function executeReport(sql: string, description: string) {
-  setLoading(true);
-  try {
-    if (token) reportsService.setAuth(token);
+  async function executeReport(sql: string, description: string) {
+    setLoading(true);
+    try {
+      if (token) reportsService.setAuth(token);
 
-    const rows = await reportsService.executeSqlReport({ sql, description }) || [];
+      const rows = (await reportsService.executeSqlReport({ sql, description })) || [];
 
-    if (rows.length) {
-      setResultColumns(Object.keys(rows[0]));
-      setResultData(rows);
-    } else {
-      setResultColumns([]);
-      setResultData([]);
+      if (rows.length) {
+        setResultColumns(Object.keys(rows[0]));
+        setResultData(rows);
+      } else {
+        setResultColumns([]);
+        setResultData([]);
+      }
+
+      await reloadHistory();
+      setError(null);
+      return { rows }; // para manter o tipo ReportResult
+    } catch {
+      setError("Erro ao gerar relatório");
+      throw new Error("Erro ao gerar relatório");
+    } finally {
+      setLoading(false);
     }
-
-    await reloadHistory();
-    setError(null);
-    return { rows }; // para manter o tipo ReportResult
-  } catch (err) {
-    setError("Erro ao gerar relatório");
-    throw new Error("Erro ao gerar relatório");
-  } finally {
-    setLoading(false);
   }
-}
 
-async function exportReport(sql: string, description: string, format: 'pdf' | 'csv' | 'txt') {
-  setLoading(true);
-  try {
-    if (token) reportsService.setAuth(token);
-    const blob = await reportsService.exportReportSql({ sql, description, format });
+  async function exportReport(sql: string, description: string, format: "pdf" | "csv" | "txt") {
+    setLoading(true);
+    try {
+      if (token) reportsService.setAuth(token);
+      const blob = await reportsService.exportReportSql({ sql, description, format });
 
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `relatorio.${format}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-    await reloadHistory();
-    setError(null);
-  } catch {
-    setError("Erro ao exportar relatório SQL");
-  } finally {
-    setLoading(false);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      await reloadHistory();
+      setError(null);
+    } catch {
+      setError("Erro ao exportar relatório SQL");
+    } finally {
+      setLoading(false);
+    }
   }
-}
- async function deleteReport(id: string) {
+  async function deleteReport(id: string) {
     setLoading(true);
     try {
       if (token) reportsService.setAuth(token);

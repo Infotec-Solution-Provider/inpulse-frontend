@@ -1,14 +1,14 @@
 "use-client";
 
 // --- 1. IMPORTAÇÕES ---
-import React, { useState, useMemo, useContext, useCallback, useRef, useEffect } from "react";
+import { AuthContext } from "@/app/auth-context";
 import { WppMessage } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
-import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
-import Message from "./message";
-import { ChatContext } from "./chat-context";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
-import { AuthContext } from "@/app/auth-context";
+import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
+import { ChatContext } from "./chat-context";
+import Message from "./message";
 
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
 
@@ -58,14 +58,14 @@ export default function RenderWhatsappChatMessages({
     () =>
       instance === "nunes"
         ? (() => {
-          const boolArray = [...currentChatMessages].map(
-            (msg) => msg.from === "system" && msg.body?.startsWith("Atendimento transferido"),
-          );
-          const lastTransferIndex = boolArray.lastIndexOf(true);
-          return lastTransferIndex !== -1
-            ? currentChatMessages.slice(lastTransferIndex)
-            : currentChatMessages;
-        })()
+            const boolArray = [...currentChatMessages].map(
+              (msg) => msg.from === "system" && msg.body?.startsWith("Atendimento transferido"),
+            );
+            const lastTransferIndex = boolArray.lastIndexOf(true);
+            return lastTransferIndex !== -1
+              ? currentChatMessages.slice(lastTransferIndex)
+              : currentChatMessages;
+          })()
         : currentChatMessages,
     [currentChatMessages, instance],
   );
@@ -95,11 +95,11 @@ export default function RenderWhatsappChatMessages({
           const quotedMsgProps =
             findQuoted && "to" in findQuoted
               ? getQuotedMsgProps(
-                findQuoted,
-                getWppMessageStyle(findQuoted),
-                [],
-                {} as DetailedChat,
-              )
+                  findQuoted,
+                  getWppMessageStyle(findQuoted),
+                  [],
+                  {} as DetailedChat,
+                )
               : null;
 
           return (

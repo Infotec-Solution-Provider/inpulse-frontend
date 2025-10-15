@@ -1,12 +1,11 @@
-import { InternalChatClient, InternalMessage, User, WppContact } from "@in.pulse-crm/sdk";
-import { safeNotification } from "@/lib/utils/notifications";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
-import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { Formatter } from "@in.pulse-crm/utils";
-import { replaceMentions } from "../utils/message-mentions";
+import HorizontalLogo from "@/assets/img/hlogodark.png";
+import { safeNotification } from "@/lib/utils/notifications";
+import { InternalChatClient, InternalMessage, User, WppContact } from "@in.pulse-crm/sdk";
+import { Dispatch, RefObject, SetStateAction } from "react";
 import getInternalMessageAuthor from "../utils/get-internal-message-author";
+import { replaceMentions } from "../utils/message-mentions";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;

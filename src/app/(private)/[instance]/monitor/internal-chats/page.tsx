@@ -31,7 +31,7 @@ export default function MonitorInternalAttendances() {
   const [fPart, setFPart] = useState("");
   const [fStart, setFStart] = useState("");
   const [fEnd, setFEnd] = useState("");
-  const [fResult, setFResult] = useState("");
+  const [fResult] = useState("");
 
   useEffect(() => {
     getInternalChatsMonitor()

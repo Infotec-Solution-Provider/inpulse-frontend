@@ -8,27 +8,24 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
+  useReducer,
   useRef,
   useState,
 } from "react";
 import { toast } from "react-toastify";
-import UsersModal from "./(modal)/user-modal";
 import { WhatsappContext } from "../../whatsapp-context";
+import UsersModal from "./(modal)/user-modal";
+import usersReducer, { UsersContextState } from "./(table)/users-reducer";
 
 interface IUsersProviderProps {
   children: ReactNode;
 }
 
 interface IUsersContext {
-  users: User[];
+  state: UsersContextState;
+  dispatch: React.Dispatch<any>;
   modal: ReactNode;
-  loading: boolean;
-  order: "desc" | "asc";
-  orderBy: keyof User;
-  sortedUsers: User[];
   sectors: Array<{ id: number; name: string }>;
-  handleSort: (property: keyof User) => void;
   createUser: (data: CreateUserDTO) => void;
   updateUser: (userId: number, data: UpdateUserDTO) => void;
   openUserModal: (user?: User) => void;
@@ -39,95 +36,89 @@ interface IUsersContext {
 const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001";
 export const UsersContext = createContext<IUsersContext>({} as IUsersContext);
 
+export const useUsersContext = () => {
+  const context = useContext(UsersContext);
+  if (!context) {
+    throw new Error("useUsersContext must be used within UsersProvider");
+  }
+  return context;
+};
+
 export default function UsersProvider({ children }: IUsersProviderProps) {
   const { wppApi } = useContext(WhatsappContext);
   const { token } = useContext(AuthContext);
-  const [users, setUsers] = useState<User[]>([]);
+  const [state, dispatch] = useReducer(usersReducer, {
+    users: [],
+    totalRows: 0,
+    filters: { page: "1", perPage: "10" },
+    isLoading: false,
+  });
   const [modal, setModal] = useState<ReactNode>(null);
-  const [loading, setLoading] = useState(true);
-  const [orderBy, setOrderBy] = useState<keyof User>("CODIGO");
-  const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
   const apiRef = useRef(new UsersClient(USERS_URL));
 
-  const sortedUsers = useMemo(() => {
-    return [...users].sort((a, b) => {
-      const aValue = a[orderBy];
-      const bValue = b[orderBy];
-
-      if (aValue === bValue) return 0;
-      if (aValue == null) return 1;
-      if (bValue == null) return -1;
-
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        return order === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+  const createUser = useCallback(
+    async (data: CreateUserDTO) => {
+      try {
+        const res = await apiRef.current.createUser(data);
+        dispatch({ type: "add-user", data: res });
+        toast.success("Usuário criado com sucesso!");
+        closeModal();
+      } catch (err) {
+        toast.error(`Falha ao criar usuário.\n${sanitizeErrorMessage(err)}`);
+      } finally {
+        loadUsers();
       }
-
-      return order === "asc" ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
-    });
-  }, [users, order, orderBy]);
-
-  const handleSort = (property: keyof User) => {
-    const isAsc = orderBy === property && order === "asc";
-    setOrder(isAsc ? "desc" : "asc");
-    setOrderBy(property);
-  };
-
-  const createUser = useCallback(async (data: CreateUserDTO) => {
-    try {
-      const res = await apiRef.current.createUser(data);
-      setUsers((prev) => [...prev, res]);
-      loadUsers();
-      toast.success("Usuário criado com sucesso!");
-      closeModal();
-    } catch (err) {
-      toast.error(`Falha ao criar usuário.\n${sanitizeErrorMessage(err)}`);
-    }
-  }, []);
-
-  const updateUser = useCallback(async (userId: number, data: UpdateUserDTO) => {
-    try {
-      await apiRef.current.updateUser(String(userId), data);
-      loadUsers();
-      toast.success("Usuário atualizado com sucesso!");
-      closeModal();
-    } catch (err) {
-      toast.error(`Falha ao atualizar usuário.\n${sanitizeErrorMessage(err)}`);
-    }
-  }, []);
-
-  const openUserModal = useCallback(
-    (user?: User) => {
-      setModal(<UsersModal user={user} />);
     },
-    [createUser, updateUser],
+    [token],
   );
+
+  const updateUser = useCallback(
+    async (userId: number, data: UpdateUserDTO) => {
+      try {
+        await apiRef.current.updateUser(String(userId), data);
+        toast.success("Usuário atualizado com sucesso!");
+        closeModal();
+      } catch (err) {
+        toast.error(`Falha ao atualizar usuário.\n${sanitizeErrorMessage(err)}`);
+      } finally {
+        loadUsers();
+      }
+    },
+    [token],
+  );
+
+  const openUserModal = useCallback((user?: User) => {
+    setModal(<UsersModal user={user} />);
+  }, []);
 
   const closeModal = useCallback(() => {
     setModal(null);
   }, []);
 
-  const loadUsers = useCallback(() => {
-    if (!token) return;
-    apiRef.current.setAuth(token);
-    setLoading(true);
-    apiRef.current
-      .getUsers()
-      .then((res) => {
-        setUsers(res.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+  const loadUsers = useCallback(async () => {
+    dispatch({ type: "change-loading", isLoading: true });
+
+    try {
+      const res = await apiRef.current.getUsers(state.filters);
+      dispatch({
+        type: "multiple",
+        actions: [
+          { type: "load-users", users: res.data },
+          { type: "change-loading", isLoading: false },
+        ],
+      });
+    } catch {
+      dispatch({ type: "change-loading", isLoading: false });
+      toast.error("Falha ao carregar usuários!");
+    }
+  }, [state.filters]);
 
   useEffect(() => {
-    if (token) {
-      apiRef.current.setAuth(token);
-      setLoading(true);
-
-      loadUsers();
-    }
-  }, [token]);
+    if (!token || !apiRef.current) return;
+    apiRef.current.setAuth(token);
+    loadUsers();
+  }, [token, apiRef.current]);
 
   useEffect(() => {
     if (wppApi.current && token) {
@@ -141,14 +132,10 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   return (
     <UsersContext.Provider
       value={{
-        users,
+        state,
+        dispatch,
         modal,
-        loading,
-        order,
-        orderBy,
-        sortedUsers,
         sectors,
-        handleSort,
         createUser,
         updateUser,
         openUserModal,

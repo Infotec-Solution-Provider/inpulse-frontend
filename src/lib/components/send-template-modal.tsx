@@ -1,15 +1,11 @@
-import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
+import { MessageTemplate, useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { useAuthContext } from "@/app/auth-context";
+import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import CloseIcon from "@mui/icons-material/Close";
-import {
-  DetailedChat,
-  MessageTemplate,
-  useWhatsappContext,
-} from "@/app/(private)/[instance]/whatsapp-context";
+import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { TemplateVariables } from "../types/chats.types";
-import { useAuthContext } from "@/app/auth-context";
 import { getFirstName, getFullName } from "../utils/name";
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
 
 export interface SendTemplateData {
   template: MessageTemplate;
@@ -25,7 +21,7 @@ interface Props {
 }
 
 export default function SendTemplateModal({ onClose, onSendTemplate, customer, contact }: Props) {
-  const { templates, currentChat } = useWhatsappContext();
+  const { templates } = useWhatsappContext();
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [variables, setVariables] = useState<Record<number, string>>({});
   const { user } = useAuthContext();
@@ -61,7 +57,6 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
     (selectedTemplate.source !== "waba" && Object.values(variables).some((v) => !v));
 
   const handleSend = () => {
-    const chat = currentChat! as DetailedChat;
     if (onSendTemplate && selectedTemplate && templateText) {
       onSendTemplate({
         template: selectedTemplate,

@@ -60,7 +60,7 @@ export default function ChatsMenuFilters() {
     handleStartMenuClose();
   };
 
-  const handleOpenStartChatModal = (event: React.MouseEvent<HTMLElement>) => {
+  const handleOpenStartChatModal = () => {
     openModal(<StartChatModal onClose={closeModal} />);
     handleStartMenuClose();
   };

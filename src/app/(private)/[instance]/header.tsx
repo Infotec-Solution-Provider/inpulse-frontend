@@ -1,48 +1,41 @@
 "use client";
-import Image from "next/image";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
-import LogoutIcon from "@mui/icons-material/Logout";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "@/app/auth-context";
+import HorizontalLogo from "@/assets/img/hlogodark.png";
+import NotificationsDropdown from "@/lib/components/notifications-dropdown";
+import ThemeToggleButton from "@/lib/components/theme-toggle-button";
+import { UserRole } from "@in.pulse-crm/sdk";
+import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
+import LogoutIcon from "@mui/icons-material/Logout";
+import MenuIcon from "@mui/icons-material/Menu";
+import MonitorIcon from "@mui/icons-material/Monitor";
+import NotificationsIcon from "@mui/icons-material/Notifications";
 import {
-  IconButton,
+  Box,
+  Divider,
   Drawer,
+  IconButton,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Divider,
-  Box,
 } from "@mui/material";
-import HeaderNavItem from "./header-nav-item";
-import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
-import MonitorIcon from "@mui/icons-material/Monitor";
-import MenuIcon from "@mui/icons-material/Menu";
-import BarChartIcon from "@mui/icons-material/BarChart";
-import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
-import { UserRole } from "@in.pulse-crm/sdk";
+import Image from "next/image";
 import Link from "next/link";
-import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
-import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { usePathname } from "next/navigation";
-import NotificationsDropdown from "@/lib/components/notifications-dropdown";
-
-const monitorRoutes = [{ title: "Conversas (Novo)", href: "/monitor" }];
+import { useContext, useEffect, useState } from "react";
+import HeaderNavItem from "./header-nav-item";
+import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
 
 const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
   const arr = [{ title: "Clientes", href: "/customers" }];
 
   if (isAdmin) {
-    // { title: "Atendimentos", href: "/attendances" },
-    // { title: "Agendamentos", href: "/schedules" },
-    // { title: "Templates", href: "/templates" },
-    // { title: "Tags", href: "/tags" },
     arr.push({ title: "Usuários", href: "/users" });
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
-
   }
 
   if (params["disable_internal_groups"] !== "true") {
@@ -66,7 +59,6 @@ const toolsRoutes = [
 const MobileMenu = ({
   open,
   onClose,
-  user,
   instance,
   isUserAdmin,
   signOut,
@@ -74,7 +66,6 @@ const MobileMenu = ({
 }: {
   open: boolean;
   onClose: () => void;
-  user: any;
   instance: string;
   isUserAdmin: boolean;
   signOut: () => void;
@@ -280,7 +271,6 @@ export default function Header() {
       <MobileMenu
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
-        user={user}
         instance={instance}
         isUserAdmin={isUserAdmin}
         signOut={signOut}

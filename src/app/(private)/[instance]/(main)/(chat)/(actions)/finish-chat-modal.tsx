@@ -1,24 +1,19 @@
 "use client";
-import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { WhatsappContext } from "../../../whatsapp-context";
 
 export default function FinishChatModal() {
   const { closeModal } = useContext(AppContext);
-  const { finishChat, currentChat, wppApi, parameters } = useContext(WhatsappContext);
+  const { finishChat, currentChat, wppApi } = useContext(WhatsappContext);
   const [resultId, setResultId] = useState<number | null>(null);
   const [results, setResults] = useState<{ id: number; name: string }[]>([]);
-  const [triggerSatisfactionSurvey, setTriggerSatisfactionSurvey] = useState(false);
 
   const handleFinishChat = () => {
     if (currentChat && resultId) {
-      finishChat(
-        currentChat.id,
-        resultId,
-        triggerSatisfactionSurvey && parameters["satisfaction_survey_enabled"] === "true",
-      );
+      finishChat(currentChat.id, resultId, false);
       closeModal();
     }
   };

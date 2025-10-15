@@ -1,10 +1,18 @@
 import Checkbox from "@/lib/components/checkbox";
 import RangeDateField from "@/lib/components/range-date-field";
-import { IconButton, InputAdornment, MenuItem, TextField, FormControl, InputLabel, Select, SelectChangeEvent } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import useMonitorContext from "../context";
-import useInternalChatContext from "../../internal-context";
+import {
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
+  TextField,
+} from "@mui/material";
 import { useState } from "react";
+import useInternalChatContext from "../../internal-context";
+import useMonitorContext from "../context";
 
 export default function MonitorFilters() {
   const { filters, setFilters, resetFilters } = useMonitorContext();

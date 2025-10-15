@@ -150,10 +150,7 @@ function getChatContactNumber(chat: DetailedInternalChat | DetailedChat | Detail
   return null;
 }
 
-function getChatParticipants(
-  chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
-  users: User[],
-) {
+function getChatParticipants(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
   if (!("chatType" in chat)) {
     return [];
   }
@@ -278,9 +275,7 @@ export default function MonitorPage() {
                 <ChatMessagesList />
               </div>
               <div className="border-t border-gray-200 bg-white p-2 text-black dark:border-gray-700 dark:bg-slate-900">
-                {chat.isFinished === false && (
-                  <ChatSendMessageArea />
-                )}
+                {chat.isFinished === false && <ChatSendMessageArea />}
               </div>
             </ChatProvider>
           </div>,
@@ -373,7 +368,7 @@ export default function MonitorPage() {
                     scheduledAt={getChatScheduledAt(chat)}
                     scheduledFor={getChatScheduledFor(chat)}
                     isScheduled={"schedule" in chat && chat.schedule ? true : false}
-                    participants={getChatParticipants(chat, users)}
+                    participants={getChatParticipants(chat)}
                     groupName={getChatGroupName(chat)}
                     groupDescription={getChatGroupDescription(chat)}
                     handleTransfer={getHandleTransfer(chat)}
@@ -401,7 +396,7 @@ export default function MonitorPage() {
                   isScheduled={
                     !("chatType" in chat) || ("schedule" in chat && chat.schedule) ? true : false
                   }
-                  participants={getChatParticipants(chat, users)}
+                  participants={getChatParticipants(chat)}
                   groupName={getChatGroupName(chat)}
                   groupDescription={getChatGroupDescription(chat)}
                   handleTransfer={getHandleTransfer(chat)}

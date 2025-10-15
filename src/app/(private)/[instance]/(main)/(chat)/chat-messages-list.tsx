@@ -14,8 +14,7 @@ import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
 
 export default function ChatMessagesList() {
   const { currentChat, currentChatMessages, chats, forwardMessages } = useContext(WhatsappContext);
-  const { users, internalChats, sendInternalMessage, currentInternalChatMessages } =
-    useContext(InternalChatContext);
+  const { users, internalChats, currentInternalChatMessages } = useContext(InternalChatContext);
 
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string | number>>(new Set());
   const [manualForwardMessages, setManualForwardMessages] = useState<ForwardableMessage[] | null>(

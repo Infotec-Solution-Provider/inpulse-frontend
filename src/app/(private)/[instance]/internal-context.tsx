@@ -1,4 +1,11 @@
-import { createContext, useState, useEffect, useRef, useCallback, useContext } from "react";
+import { AuthContext } from "@/app/auth-context";
+import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
+import InternalChatStartedHandler from "@/lib/event-handlers/internal-chat-started";
+import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
+import InternalMessageEditHandler from "@/lib/event-handlers/internal-message-edit";
+import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-status";
+import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
+import usersService from "@/lib/services/users.service";
 import {
   InternalChat,
   InternalChatClient,
@@ -8,18 +15,11 @@ import {
   SocketEventType,
   User,
 } from "@in.pulse-crm/sdk";
-import { AuthContext } from "@/app/auth-context";
-import { SocketContext } from "./socket-context";
-import InternalChatStartedHandler from "@/lib/event-handlers/internal-chat-started";
-import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-status";
-import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
-import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
-import usersService from "@/lib/services/users.service";
-import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
-import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { ContactsContext } from "./(cruds)/contacts/contacts-context";
-import InternalMessageEditHandler from "@/lib/event-handlers/internal-message-edit";
+import { SocketContext } from "./socket-context";
+import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -74,7 +74,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
-  const { contacts, phoneNameMap } = useContext(ContactsContext);
+  const { state, phoneNameMap } = useContext(ContactsContext);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
@@ -127,7 +127,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         await api.current.deleteInternalChat(id);
         toast.success("Chat deletado com sucesso!");
         setInternalChats((prev) => prev.filter((chat) => chat.id !== id));
-      } catch (error) {
+      } catch {
         toast.error("Erro ao deletar Chat");
       }
     }
@@ -233,7 +233,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           setInternalChats,
           currentChatRef,
           users,
-          contacts,
+          state.contacts,
           user!,
           phoneNameMap,
         ),

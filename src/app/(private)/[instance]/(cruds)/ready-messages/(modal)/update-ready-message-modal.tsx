@@ -1,24 +1,23 @@
+import { AuthContext } from "@/app/auth-context";
+import filesService from "@/lib/services/files.service";
+import { ReadyMessage } from "@in.pulse-crm/sdk";
 import {
   Button,
-  TextField,
-  MenuItem,
-  Typography,
-  Modal,
-  Popper,
-  Paper,
   List,
   ListItemButton,
+  MenuItem,
+  Modal,
+  Paper,
+  Popper,
+  TextField,
+  Typography,
 } from "@mui/material";
 import { useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
-import { UsersContext } from "../../users/users-context";
-import { VariablesMenu } from "./Variables";
-import { useReadyMessagesContext } from "../ready-messages-context";
-import filesService from "@/lib/services/files.service";
-import { ReadyMessage } from "@in.pulse-crm/sdk";
-import { AuthContext } from "@/app/auth-context";
 import { useWhatsappContext } from "../../../whatsapp-context";
+import { useReadyMessagesContext } from "../ready-messages-context";
+import { VariablesMenu } from "./Variables";
 
 interface Props {
   readyMessage: ReadyMessage;
@@ -101,8 +100,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
 
     if (atIndex < 0) return;
 
-    const newText =
-      textBeforeCursor.slice(0, atIndex) + variableName + textAfterCursor;
+    const newText = textBeforeCursor.slice(0, atIndex) + variableName + textAfterCursor;
 
     setText(newText);
     setAnchorEl(null);
@@ -115,7 +113,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   };
 
   const filteredVariables = variables.filter((v) =>
-    v.name.toLowerCase().includes(filter.toLowerCase())
+    v.name.toLowerCase().includes(filter.toLowerCase()),
   );
 
   const handleSubmit = async () => {
@@ -140,11 +138,14 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   };
 
   return (
-<div className="flex flex-col gap-6 bg-white text-gray-800 dark:bg-slate-800 dark:text-white px-8 py-6 rounded-md w-full max-w-3xl" style={{ width: 500 }}>
+    <div
+      className="flex w-full max-w-3xl flex-col gap-6 rounded-md bg-white px-8 py-6 text-gray-800 dark:bg-slate-800 dark:text-white"
+      style={{ width: 500 }}
+    >
       <Typography variant="h6">Editar mensagem rápida</Typography>
 
-      <div className="flex gap-4 items-center">
-        <div className="flex flex-col gap-2 w-full">
+      <div className="flex items-center gap-4">
+        <div className="flex w-full flex-col gap-2">
           <TextField
             label="Título"
             fullWidth
@@ -158,9 +159,7 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
             fullWidth
             value={sector ?? ""}
             disabled={!(instance === "nunes" && user?.SETOR === 3)}
-            onChange={(e) =>
-              setSector(e.target.value === "" ? null : Number(e.target.value))
-            }
+            onChange={(e) => setSector(e.target.value === "" ? null : Number(e.target.value))}
           >
             <MenuItem value="">Nenhum</MenuItem>
             {sectors?.map((s) => (
@@ -200,20 +199,11 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
             {fileRef.current.name}
           </Typography>
         ) : imagePreview ? (
-          <img
-            src={imagePreview}
-            alt="Preview"
-            className="h-16 w-16 rounded-md object-cover"
-          />
+          <img src={imagePreview} alt="Preview" className="h-16 w-16 rounded-md object-cover" />
         ) : null}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        hidden
-        onChange={handleFileChange}
-      />
+      <input ref={fileInputRef} type="file" hidden onChange={handleFileChange} />
 
       <Popper
         open={Boolean(anchorEl)}
@@ -247,11 +237,8 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
 
       <Modal open={varModal} onClose={() => setVarModal(false)}>
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-md shadow-lg p-4 max-w-md w-full">
-            <VariablesMenu
-              onSelect={handleSelectVariable}
-              onClose={() => setVarModal(false)}
-            />
+          <div className="w-full max-w-md rounded-md bg-white p-4 shadow-lg">
+            <VariablesMenu onSelect={handleSelectVariable} onClose={() => setVarModal(false)} />
           </div>
         </div>
       </Modal>
