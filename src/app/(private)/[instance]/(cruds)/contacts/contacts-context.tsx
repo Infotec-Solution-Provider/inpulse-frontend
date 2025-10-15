@@ -12,13 +12,18 @@ import {
 import { useAuthContext } from "@/app/auth-context";
 import { WhatsappClient, WppContact } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
+import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
 import { WPP_BASE_URL } from "../../whatsapp-context";
 import ContactModal from "./(table)/(modal)/contact-modal";
 import DeleteContactModal from "./(table)/(modal)/delete-contact-modal";
-import contactsReducer, { ContactsContextState } from "./(table)/contacts-reducer";
+import contactsReducer, {
+  ChangeContactsStateAction,
+  ContactsContextState,
+  MultipleActions,
+} from "./(table)/contacts-reducer";
 
 interface IContactsProviderProps {
   children: ReactNode;
@@ -26,7 +31,7 @@ interface IContactsProviderProps {
 
 interface IContactsContext {
   state: ContactsContextState;
-  dispatch: React.Dispatch<any>;
+  dispatch: ActionDispatch<[action: ChangeContactsStateAction | MultipleActions]>;
   deleteContact: (id: number) => void;
   updateContact: (id: number, name: string) => Promise<void>;
   loadContacts: () => void;
@@ -75,7 +80,8 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       try {
         if (token) {
           const updatedContact = await api.current.updateContact(id, name);
-          dispatch({ type: "update-contact", id, name: updatedContact.name });
+          console.log("Updated contact from API:", updatedContact);
+          dispatch({ type: "update-contact", id, name });
           closeModal();
           toast.success("Cliente atualizado com sucesso!");
         }
@@ -84,7 +90,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao atualizar cliente!");
       }
     },
-    [token],
+    [token, dispatch],
   );
 
   const deleteContact = useCallback(
@@ -182,13 +188,13 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   useEffect(() => {
     if (!token || !api.current) return;
     api.current.setAuth(token);
-  }, [token, api.current]);
+  }, [token]);
 
   useEffect(() => {
     if (token) {
       loadContacts();
     }
-  }, [token, state.filters, loadContacts]);
+  }, [token, state.filters.page, state.filters.perPage, loadContacts]);
 
   return (
     <ContactsContext.Provider

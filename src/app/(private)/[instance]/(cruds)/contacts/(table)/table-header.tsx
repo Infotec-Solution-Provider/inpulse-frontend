@@ -12,9 +12,9 @@ import {
   Theme,
   Tooltip,
 } from "@mui/material";
-import { useState } from "react";
 import { useContactsContext } from "../contacts-context";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
+import { WppContact } from "@in.pulse-crm/sdk";
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {
@@ -22,41 +22,45 @@ const textFieldStlye: SxProps<Theme> = {
   },
 };
 
+const isKeyOfContact = (key: string): key is keyof WppContact => {
+  const accepted: string[] = ["id", "name", "phone"];
+  return accepted.includes(key);
+};
+
 const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 
 export default function ContactsTableHeader() {
-  const { dispatch, state } = useContactsContext();
-  const [filters, setFilters] = useState<Record<string, string>>(state.filters || {});
+  const { dispatch, state, loadContacts } = useContactsContext();
 
-  const activeFiltersCount = Object.keys(filters).filter(
-    (key) => key !== "page" && key !== "perPage" && filters[key] && filters[key] !== "none",
-  ).length;
+  const activeFilters = Object.keys(state.filters).filter((k) => {
+    const key = k as keyof typeof state.filters;
+    const isPageFilter = key === "page" || key === "perPage";
+    const isFilterActive = state.filters[key] && state.filters[key] !== "none";
 
-  const onChangeFilter = (key: string, value: string) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev };
-      if (value === "" || value === "none") {
-        delete newFilters[key];
-      } else {
-        newFilters[key] = value;
-      }
-      return newFilters;
-    });
-  };
+    return !isPageFilter && isFilterActive;
+  });
 
-  const onClickSearch = () => {
-    dispatch({ type: "change-filters", filters });
-  };
+  const activeFiltersCount = activeFilters.length;
 
-  const onClearFilters = () => {
-    setFilters({});
-    dispatch({ type: "change-filters", filters: {} });
-  };
+  const onClickSearch = () => loadContacts();
+  const onClearFilters = () => dispatch({ type: "clear-filters" });
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       onClickSearch();
     }
+  };
+
+  const handleChangeFilter = (key: string) => {
+    return (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isKeyOfContact(key)) return;
+      const value = event.target.value || null;
+      if (value === null || value === "{{all}}") {
+        dispatch({ type: "remove-filter", key });
+      } else {
+        dispatch({ type: "change-filter", key, value });
+      }
+    };
   };
 
   return (
@@ -91,8 +95,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.ID.placeholder}
-              value={filters.id || ""}
-              onChange={(e) => onChangeFilter("id", e.target.value)}
+              value={state.filters.id || ""}
+              onChange={handleChangeFilter("id")}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -114,8 +118,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.NAME.placeholder}
-              value={filters.name || ""}
-              onChange={(e) => onChangeFilter("name", e.target.value)}
+              value={state.filters.name || ""}
+              onChange={handleChangeFilter("name")}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -137,8 +141,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.PHONE.placeholder}
-              value={filters.phone || ""}
-              onChange={(e) => onChangeFilter("phone", e.target.value)}
+              value={state.filters.phone || ""}
+              onChange={handleChangeFilter("phone")}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}

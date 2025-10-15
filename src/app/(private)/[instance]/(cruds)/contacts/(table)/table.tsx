@@ -27,7 +27,7 @@ export default function ContactsTable() {
 
   return (
     <div className="flex h-full w-full flex-col gap-4">
-      <TableContainer className="h-[calc(100vh-280px)] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg scrollbar-whatsapp dark:border-slate-700 dark:bg-slate-800">
+      <TableContainer className="scrollbar-whatsapp h-[calc(100vh-280px)] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
         <Table stickyHeader>
           <ContactsTableHeader />
           <TableBody>
@@ -43,8 +43,14 @@ export default function ContactsTable() {
                 </TableCell>
               </TableRow>
             ) : state.contacts.length === 0 ? (
-              <TableRow className="h-32">
-                <TableCell colSpan={4} align="center">
+              <TableRow className="h-[30rem]">
+                <TableCell
+                  colSpan={8}
+                  align="center"
+                  sx={{
+                    borderBottom: "none",
+                  }}
+                >
                   <span className="text-slate-600 dark:text-slate-300">
                     Nenhum contato encontrado
                   </span>
@@ -53,7 +59,7 @@ export default function ContactsTable() {
             ) : (
               state.contacts.map((contact) => (
                 <ContactsTableItem
-                  key={`${contact.id}-${contact.instance}-${contact.phone}`}
+                  key={`${contact.id}`}
                   contact={contact}
                   openEditModalHandler={openContactModal}
                   deleteContactHandler={handleDeleteContact}
@@ -76,13 +82,14 @@ export default function ContactsTable() {
         </Button>
         <TablePagination
           component="div"
-          count={state.totalRows}
-          page={parseInt(state.filters.page || "1") - 1}
+          count={Number(state.totalRows || 0)}
+          page={Number(state.filters.page || 1) - 1}
           onPageChange={handleChangePage}
-          rowsPerPage={parseInt(state.filters.perPage || "10")}
+          rowsPerPage={Number(state.filters.perPage || 10)}
           onRowsPerPageChange={handleChangeRowsPerPage}
           labelRowsPerPage="Entradas por página"
-          labelDisplayedRows={({ from, to, count }) => {
+          labelDisplayedRows={(info) => {
+            const { from, to, count } = info;
             return `${from}-${to} de ${count}`;
           }}
           sx={{

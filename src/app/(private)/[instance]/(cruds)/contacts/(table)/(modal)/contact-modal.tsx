@@ -58,7 +58,7 @@ export default function ContactModal({ contact }: ContactModalProps) {
         </IconButton>
       </header>
 
-      <div className="mb-6 flex flex-col gap-4 w-80">
+      <div className="mb-6 flex w-80 flex-col gap-4">
         <TextField
           label="Nome"
           placeholder="João Silva"
@@ -86,7 +86,6 @@ export default function ContactModal({ contact }: ContactModalProps) {
             fullWidth
             required
             variant="outlined"
-            helperText="Digite apenas números com DDI (Ex: 5511999999999)"
             className="bg-slate-50 dark:bg-slate-700"
             sx={{
               "& .MuiOutlinedInput-root": {
