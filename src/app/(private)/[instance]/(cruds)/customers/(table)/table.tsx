@@ -99,7 +99,7 @@ export default function CustomersTable() {
             {!state.isLoading &&
               state.customers.map((client) => (
                 <CustomersTableItem
-                  key={`${client.RAZAO}_${client.CODIGO}`}
+                  key={`${client.CODIGO}`}
                   customer={client}
                   openEditModalHandler={openEditCustomerModal}
                   openContactModalHandler={openContactModal}

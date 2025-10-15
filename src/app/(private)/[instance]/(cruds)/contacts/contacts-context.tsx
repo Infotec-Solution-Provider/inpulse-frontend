@@ -82,6 +82,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
           const updatedContact = await api.current.updateContact(id, name);
           console.log("Updated contact from API:", updatedContact);
           dispatch({ type: "update-contact", id, name });
+          /* loadContacts(); */
           closeModal();
           toast.success("Cliente atualizado com sucesso!");
         }
@@ -90,7 +91,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao atualizar cliente!");
       }
     },
-    [token, dispatch],
+    [token, state],
   );
 
   const deleteContact = useCallback(
@@ -99,6 +100,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         if (token) {
           await api.current.deleteContact(id);
           dispatch({ type: "delete-contact", id });
+          /* loadContacts(); */
           toast.success("Contato deletado com sucesso!");
         }
       } catch (err) {
@@ -106,7 +108,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao deletar cliente!");
       }
     },
-    [token],
+    [token, state],
   );
 
   const createContact = useCallback(
@@ -116,6 +118,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
           const newContact = await api.current.createContact(name, phone.replace(/\D/g, ""));
           dispatch({ type: "add-contact", data: newContact });
           toast.success("Contato criado com sucesso!");
+          /* loadContacts(); */
           closeModal();
         }
       } catch (err) {
@@ -123,7 +126,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao atualizar cliente!");
       }
     },
-    [token],
+    [token, state],
   );
 
   const openContactModal = useCallback(

@@ -1,4 +1,5 @@
 import { Customer, RequestFilters, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
+import { Logger } from "@in.pulse-crm/utils";
 
 // State Type
 export interface CustomersContextState {
@@ -78,7 +79,7 @@ export default function customersReducer(
             return updatedCustomer;
           }
           return customer;
-        })
+        }),
       };
     case "add-customer":
       next.customers.unshift(action.data);

@@ -68,8 +68,6 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       } catch (err) {
         Logger.error("Error creating customer", err as Error);
         toast.error("Falha ao cadastrar cliente!");
-      } finally {
-        loadCustomers();
       }
     },
     [token],

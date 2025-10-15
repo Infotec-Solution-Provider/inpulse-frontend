@@ -110,8 +110,6 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
       }
       const res = await apiRef.current.getUsers(state.filters);
 
-      Logger.debug("UsersContext:loadUsers: ", res);
-
       dispatch({
         type: "multiple",
         actions: [

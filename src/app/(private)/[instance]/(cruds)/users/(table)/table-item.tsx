@@ -43,7 +43,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.CODIGO.width,
-          minWidth: USERS_TABLE_COLUMNS.CODIGO.width,
+          maxWidth: USERS_TABLE_COLUMNS.CODIGO.width,
         }}
       >
         <span className="font-mono text-sm font-medium">{user.CODIGO}</span>
@@ -52,7 +52,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.NOME.width,
-          minWidth: USERS_TABLE_COLUMNS.NOME.width,
+          maxWidth: USERS_TABLE_COLUMNS.NOME.width,
         }}
       >
         <p className="truncate text-sm font-medium">{user.NOME || "N/D"}</p>
@@ -61,7 +61,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.LOGIN.width,
-          minWidth: USERS_TABLE_COLUMNS.LOGIN.width,
+          maxWidth: USERS_TABLE_COLUMNS.LOGIN.width,
         }}
       >
         <p className="font-mono text-sm">{user.LOGIN || "N/D"}</p>
@@ -70,7 +70,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.EMAIL.width,
-          minWidth: USERS_TABLE_COLUMNS.EMAIL.width,
+          maxWidth: USERS_TABLE_COLUMNS.EMAIL.width,
         }}
       >
         <p className="truncate text-sm">{user.EMAIL || "N/D"}</p>
@@ -79,7 +79,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.NIVEL.width,
-          minWidth: USERS_TABLE_COLUMNS.NIVEL.width,
+          maxWidth: USERS_TABLE_COLUMNS.NIVEL.width,
         }}
       >
         <span
@@ -98,7 +98,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.SETOR.width,
-          minWidth: USERS_TABLE_COLUMNS.SETOR.width,
+          maxWidth: USERS_TABLE_COLUMNS.SETOR.width,
         }}
       >
         <p className="truncate text-sm">{sector?.name || "N/D"}</p>
@@ -107,7 +107,7 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         className="px-3 py-3"
         sx={{
           width: USERS_TABLE_COLUMNS.ACTIONS.width,
-          minWidth: USERS_TABLE_COLUMNS.ACTIONS.width,
+          maxWidth: USERS_TABLE_COLUMNS.ACTIONS.width,
         }}
       >
         <div className="flex items-center gap-1">

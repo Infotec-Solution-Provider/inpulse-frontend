@@ -16,7 +16,7 @@ export default function CustomersTableItem({
 }: ClientListItemProps) {
   return (
     <TableRow
-      className="even:bg-indigo-700/5 transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      className="transition-colors even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
       sx={{
         "& .MuiTableCell-root": {
           borderBottom: "1px solid",
@@ -29,7 +29,7 @@ export default function CustomersTableItem({
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
         }}
       >
         <span className="font-mono text-sm font-medium">{customer.CODIGO}</span>
@@ -38,7 +38,7 @@ export default function CustomersTableItem({
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
         }}
       >
         <span
@@ -55,7 +55,7 @@ export default function CustomersTableItem({
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
         }}
       >
         <span className="text-sm">
@@ -67,19 +67,19 @@ export default function CustomersTableItem({
         </span>
       </TableCell>
       <TableCell
-        className="px-3 py-3"
+        className="truncate px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
         }}
       >
-        <p className="truncate text-sm font-medium">{customer.RAZAO || "N/D"}</p>
+        <p className={`truncate text-sm font-medium`}>{customer.RAZAO || "N/D"}</p>
       </TableCell>
       <TableCell
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
         }}
       >
         <p className="font-mono text-sm">
@@ -94,7 +94,7 @@ export default function CustomersTableItem({
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
         }}
       >
         <p className="truncate text-sm">{customer.CIDADE || "N/D"}</p>
@@ -103,7 +103,7 @@ export default function CustomersTableItem({
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
         }}
       >
         <p className="font-mono text-sm">{customer.COD_ERP || "N/D"}</p>
@@ -112,7 +112,7 @@ export default function CustomersTableItem({
         className="px-3 py-3"
         sx={{
           width: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
-          minWidth: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
+          maxWidth: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
         }}
       >
         <div className="flex items-center gap-1">
