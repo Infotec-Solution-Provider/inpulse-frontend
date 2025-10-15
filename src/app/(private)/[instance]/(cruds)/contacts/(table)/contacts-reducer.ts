@@ -46,13 +46,10 @@ export default function contactsReducer(
       return { ...next, isLoading: action.isLoading };
     case "change-page":
       // MUI uses 0-based pages, backend uses 1-based, so we add 1
-      next.filters.page = (action.page + 1).toString();
-      return next;
+      return { ...next, filters: { ...next.filters, page: (action.page + 1).toString() } };
     case "change-per-page":
       // Reset to page 1 when changing items per page
-      next.filters.perPage = action.perPage.toString();
-      next.filters.page = "1";
-      return next;
+      return { ...next, filters: { ...next.filters, perPage: action.perPage.toString(), page: "1" } };
     case "change-total-rows":
       next.totalRows = action.totalRows;
       return next;

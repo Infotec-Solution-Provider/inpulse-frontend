@@ -1,26 +1,25 @@
-export const CONTACTS_TABLE_COLUMNS = [
-  {
-    key: "ID",
+// Configuração centralizada das colunas da tabela de contatos
+export const CONTACTS_TABLE_COLUMNS = {
+  ID: {
     label: "ID",
-    width: "80px",
+    width: "8rem",
     placeholder: "ID...",
   },
-  {
-    key: "NAME",
+  NAME: {
     label: "Nome",
-    width: "400px",
+    width: "16rem",
     placeholder: "Nome do contato...",
   },
-  {
-    key: "PHONE",
+  PHONE: {
     label: "Telefone",
-    width: "200px",
+    width: "12rem",
     placeholder: "Telefone...",
   },
-  {
-    key: "ACTIONS",
+  ACTIONS: {
     label: "Ações",
-    width: "120px",
+    width: "8rem",
   },
-] as const;
+} as const;
+
+export type ColumnKey = keyof typeof CONTACTS_TABLE_COLUMNS;
 

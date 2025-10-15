@@ -19,16 +19,16 @@ export default function ContactsTableItem({
 }: ContactsTableItemProps) {
   return (
     <TableRow className="even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS[0].width }}>
+      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.ID.width }}>
         {contact.id}
       </TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS[1].width }}>
+      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.NAME.width }}>
         {contact.name}
       </TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS[2].width }}>
+      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.PHONE.width }}>
         {contact.phone}
       </TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS[3].width }} align="right">
+      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.ACTIONS.width }} align="right">
         <div className="flex items-center justify-end gap-1">
           <Tooltip title="Editar">
             <IconButton onClick={() => openEditModalHandler(contact)} size="small" color="primary">

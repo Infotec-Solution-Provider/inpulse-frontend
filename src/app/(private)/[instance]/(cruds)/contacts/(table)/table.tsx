@@ -64,9 +64,15 @@ export default function ContactsTable() {
         </Table>
       </TableContainer>
 
-      <div className="flex w-full items-center justify-between px-4">
-        <Button onClick={() => openContactModal()} variant="outlined" color="primary">
-          Cadastrar Contato
+      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
+        <Button
+          onClick={() => openContactModal()}
+          variant="contained"
+          color="primary"
+          size="medium"
+          className="w-full sm:w-auto"
+        >
+          + Cadastrar Contato
         </Button>
         <TablePagination
           component="div"
@@ -75,11 +81,15 @@ export default function ContactsTable() {
           onPageChange={handleChangePage}
           rowsPerPage={parseInt(state.filters.perPage || "10")}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[10, 25, 50, 100]}
-          labelRowsPerPage="Linhas por página:"
-          labelDisplayedRows={({ from, to, count }) =>
-            `${from}-${to} de ${count !== -1 ? count : `mais de ${to}`}`
-          }
+          labelRowsPerPage="Entradas por página"
+          labelDisplayedRows={({ from, to, count }) => {
+            return `${from}-${to} de ${count}`;
+          }}
+          sx={{
+            ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
+              marginBottom: 0,
+            },
+          }}
         />
       </div>
     </div>
