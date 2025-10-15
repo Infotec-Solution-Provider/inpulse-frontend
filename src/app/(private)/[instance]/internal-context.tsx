@@ -33,7 +33,7 @@ interface InternalChatContextType {
   internalApi: React.RefObject<InternalChatClient>;
   internalChats: DetailedInternalChat[];
   messages: Record<number, InternalMessage[]>;
-  sendInternalMessage: (data: InternalSendMessageData) => void;
+  sendInternalMessage: (data: InternalSendMessageData) => Promise<void>;
   openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
@@ -133,10 +133,10 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     }
   };
   const sendInternalMessage = useCallback(
-    (data: InternalSendMessageData) => {
+    async (data: InternalSendMessageData) => {
       if (token) {
         api.current.setAuth(token);
-        api.current.sendMessageToInternalChat(data);
+        await api.current.sendMessageToInternalChat(data);
       }
     },
     [token],

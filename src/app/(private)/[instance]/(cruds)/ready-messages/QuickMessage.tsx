@@ -65,7 +65,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
       };
 
   const text = replaceVariables({
-    message: selectedMessage?.TEXTO_MENSAGEM || "",
+    message: selectedMessage?.message || "",
     values: {
       ...baseValues,
       ...chatValues,
@@ -83,13 +83,13 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
           chatId: chat.id,
           contactId: chat.contactId ?? 0,
           text,
-          fileId: +selectedMessage.ARQUIVO_CODIGO,
+          fileId: selectedMessage.fileId || undefined,
         });
       } else {
         await sendInternalMessage({
           chatId: chat.id,
           text,
-          fileId: +selectedMessage.ARQUIVO_CODIGO,
+          fileId: selectedMessage.fileId || undefined,
         });
       }
 
@@ -116,20 +116,16 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
           <List>
             {readyMessages?.map((msg) => (
               <ListItemButton
-                key={msg.CODIGO}
-                selected={selectedMessage?.CODIGO === msg.CODIGO}
+                key={msg.id}
+                selected={selectedMessage?.id === msg.id}
                 onClick={() => setSelectedMessage(msg)}
                 sx={{
                   borderRadius: 2,
                   mb: 1,
                   border:
-                    selectedMessage?.CODIGO === msg.CODIGO
-                      ? "1px solid #1976d2"
-                      : "1px solid transparent",
+                    selectedMessage?.id === msg.id ? "1px solid #1976d2" : "1px solid transparent",
                   backgroundColor:
-                    selectedMessage?.CODIGO === msg.CODIGO
-                      ? "rgba(25, 118, 210, 0.1)"
-                      : "transparent",
+                    selectedMessage?.id === msg.id ? "rgba(25, 118, 210, 0.1)" : "transparent",
                   transition: "all 0.2s",
                   "&:hover": {
                     backgroundColor: "rgba(25, 118, 210, 0.08)",
@@ -139,7 +135,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
                 <ListItemText
                   primary={
                     <Typography variant="body2" color="textPrimary" noWrap>
-                      {msg.TEXTO_MENSAGEM}
+                      {msg.message}
                     </Typography>
                   }
                 />

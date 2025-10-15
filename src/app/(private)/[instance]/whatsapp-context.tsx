@@ -73,11 +73,11 @@ interface IWhatsappContext {
   openChat: (chat: DetailedChat) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
-  sendMessage: (to: string, data: SendMessageData) => void;
-  editMessage: (messageId: string, newText: string, isInternal?: boolean) => void;
+  sendMessage: (to: string, data: SendMessageData) => Promise<void>;
+  editMessage: (messageId: string, newText: string, isInternal?: boolean) => Promise<void>;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
 
-  transferAttendance: (chatId: number, userId: number) => void;
+  transferAttendance: (chatId: number, userId: number) => Promise<void>;
   chatFilters: ChatsFiltersState;
   getChatsMonitor: () => void;
   getMonitorSchedules: () => void;
@@ -232,9 +232,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const transferAttendance = useCallback(
-    (chatId: number, selectedUser: number) => {
+    async(chatId: number, selectedUser: number) => {
       api.current.setAuth(token || "");
-      api.current.transferAttendance(chatId, selectedUser).then(() => {
+      await api.current.transferAttendance(chatId, selectedUser).then(() => {
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
         getChatsMonitor();
       });
@@ -251,6 +251,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
     try {
+      console.log("Sending message to", { to, data});
       await api.current.sendMessage(to, data);
     } catch (err) {
       toast.error(sanitizeErrorMessage(err));
@@ -517,6 +518,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       };
     }
   }, [socket, chats, currentChat]);
+
+  useEffect(() => {
+    console.log(sectors)
+  }, [sectors])
 
   return (
     <WhatsappContext.Provider

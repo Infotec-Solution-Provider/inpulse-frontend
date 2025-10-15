@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import { CreateReadyMessageDto } from "@in.pulse-crm/sdk";
 import {
   Button,
   List,
@@ -10,42 +11,34 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useContext, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
 import { useWhatsappContext } from "../../../whatsapp-context";
 import { useReadyMessagesContext } from "../ready-messages-context";
 import { VariablesMenu } from "./Variables";
+import FilePicker from "./file-picker";
 
 interface Props {
-  onSubmit: (data: {
-    TITULO: string;
-    TEXTO_MENSAGEM: string;
-    SETOR: number | null;
-    ARQUIVO: File | null;
-  }) => Promise<void>;
+  onSubmit: (data: CreateReadyMessageDto, file: File | null) => Promise<void>;
 }
 
 export default function CreateReadyMessageModal({ onSubmit }: Props) {
   const { closeModal } = useAppContext();
   const { user, instance } = useContext(AuthContext);
-  const [title, setTitle] = useState("");
-  const [text, setText] = useState("");
-  const [sector, setSector] = useState<number | null>(null);
-
-  const fileRef = useRef<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { sectors } = useWhatsappContext();
+  const { variables = [] } = useReadyMessagesContext() || {};
+
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [sectorId, setSectorId] = useState<number | null>(null);
   const [varModal, setVarModal] = useState(false);
-  const textFieldRef = useRef<HTMLInputElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [filter, setFilter] = useState("");
-  const { variables = [] } = useReadyMessagesContext() || {};
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    fileRef.current = file;
-  };
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const textFieldRef = useRef<HTMLInputElement>(null);
 
   const filteredVariables = variables.filter((v) =>
     v.name.toLowerCase().includes(filter.toLowerCase()),
@@ -53,7 +46,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
 
   const handleTextChange = (e: any) => {
     const value = e.target.value;
-    setText(value);
+    setMessage(value);
 
     const cursorPos = e.target.selectionStart || 0;
     const textBeforeCursor = value.slice(0, cursorPos);
@@ -80,15 +73,15 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
 
     const input = textFieldRef.current;
     const cursorPos = input.selectionStart || 0;
-    const textBeforeCursor = text.slice(0, cursorPos);
-    const textAfterCursor = text.slice(cursorPos);
+    const textBeforeCursor = message.slice(0, cursorPos);
+    const textAfterCursor = message.slice(cursorPos);
 
     const atIndex = textBeforeCursor.lastIndexOf("@");
     if (atIndex < 0) return;
 
     const newText = textBeforeCursor.slice(0, atIndex) + variableName + textAfterCursor;
 
-    setText(newText);
+    setMessage(newText);
     setAnchorEl(null);
 
     setTimeout(() => {
@@ -98,22 +91,9 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
     }, 0);
   };
   const handleSubmit = async () => {
-    if (title.length < 6) {
-      toast.error("Título deve ter pelo menos 6 caracteres");
-      return;
-    }
-    if (text.length < 10) {
-      toast.error("Texto da mensagem deve ter pelo menos 10 caracteres");
-      return;
-    }
     setIsSubmitting(true);
     try {
-      await onSubmit({
-        TITULO: title,
-        TEXTO_MENSAGEM: text,
-        SETOR: sector,
-        ARQUIVO: fileRef.current,
-      });
+      await onSubmit({ title, message, sectorId }, selectedFile);
 
       toast.success("Mensagem rápida criada com sucesso!");
       closeModal();
@@ -123,6 +103,10 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    console.log("sectors", sectors);
+  }, []);
 
   return (
     <div
@@ -145,8 +129,8 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
             label="Setor"
             fullWidth
             disabled={!(instance === "nunes" && user?.SETOR === 3)}
-            value={sector ?? user?.SETOR ?? ""}
-            onChange={(e) => setSector(e.target.value === "" ? null : Number(e.target.value))}
+            value={sectorId ?? user?.SETOR ?? ""}
+            onChange={(e) => setSectorId(e.target.value === "" ? null : Number(e.target.value))}
           >
             <MenuItem value="">Nenhum</MenuItem>
             {sectors?.map((s) => (
@@ -162,32 +146,18 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
         label="Texto da mensagem"
         multiline
         minRows={4}
-        value={text}
+        value={message}
         onChange={handleTextChange}
         inputRef={textFieldRef}
         fullWidth
       />
 
-      <div className="flex items-center gap-4 pt-2">
-        <Button
-          variant="outlined"
-          onClick={() => fileInputRef.current?.click()}
-          sx={{ minWidth: 150 }}
-        >
-          Selecionar arquivo
-        </Button>
-        {fileRef.current && (
-          <Typography
-            variant="body2"
-            noWrap
-            sx={{ maxWidth: 200, userSelect: "all", color: "white" }}
-          >
-            {fileRef.current.name}
-          </Typography>
-        )}
+      <div className="pt-2">
+        <FilePicker
+          selectedFile={selectedFile}
+          onChangeFile={setSelectedFile}
+        />
       </div>
-
-      <input ref={fileInputRef} type="file" hidden onChange={handleFileChange} />
 
       <Popper
         open={Boolean(anchorEl)}

@@ -1,11 +1,10 @@
 "use client";
-import ReadyMessagesList from "./ready-messages-list";
+import ReadyMessagesTable from "./(table)/table";
 
 export default function ReadyMessagesPage() {
-
   return (
-    <div className="flex flex-col px-10 pt-5 w-screen h-screen box-border relative ">
-      <ReadyMessagesList />
+    <div className="relative box-border flex h-screen w-screen flex-col px-10 pt-5">
+      <ReadyMessagesTable />
     </div>
   );
 }

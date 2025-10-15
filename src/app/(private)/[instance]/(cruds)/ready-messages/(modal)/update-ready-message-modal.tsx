@@ -18,14 +18,15 @@ import { useAppContext } from "../../../app-context";
 import { useWhatsappContext } from "../../../whatsapp-context";
 import { useReadyMessagesContext } from "../ready-messages-context";
 import { VariablesMenu } from "./Variables";
+import FilePicker from "./file-picker";
 
 interface Props {
   readyMessage: ReadyMessage;
   onSubmit: (data: {
-    TITULO: string;
-    TEXTO_MENSAGEM: string;
-    SETOR: number | null;
-    ARQUIVO: File | null;
+    title: string;
+    message: string;
+    sectorId: number | null;
+    file: File | null;
   }) => Promise<void>;
 }
 
@@ -34,12 +35,11 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   const { sectors } = useWhatsappContext();
   const { variables = [] } = useReadyMessagesContext() || {};
   const { user, instance } = useContext(AuthContext);
-  const [title, setTitle] = useState(readyMessage.TITULO || "");
-  const [text, setText] = useState(readyMessage.TEXTO_MENSAGEM || "");
-  const [sector, setSector] = useState<number | null>(readyMessage.SETOR || null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const fileRef = useRef<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [title, setTitle] = useState(readyMessage.title || "");
+  const [text, setText] = useState(readyMessage.message || "");
+  const [sector, setSector] = useState<number | null>(readyMessage.sectorId || null);
+  const [existingFileUrl, setExistingFileUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const textFieldRef = useRef<HTMLInputElement>(null);
 
   const [varModal, setVarModal] = useState(false);
@@ -47,24 +47,11 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    if (readyMessage.ARQUIVO) {
-      const imageUrl = filesService.getFileDownloadUrl(readyMessage.SETOR);
-      setImagePreview(imageUrl);
+    if (readyMessage.fileId) {
+      const imageUrl = filesService.getFileDownloadUrl(readyMessage.fileId);
+      setExistingFileUrl(imageUrl);
     }
   }, [readyMessage]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    fileRef.current = file;
-
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => setImagePreview(ev.target?.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setImagePreview(null);
-    }
-  };
 
   const handleTextChange = (e: any) => {
     const value = e.target.value;
@@ -127,10 +114,10 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
     }
 
     await onSubmit({
-      TITULO: title,
-      TEXTO_MENSAGEM: text,
-      SETOR: sector,
-      ARQUIVO: fileRef.current,
+      title: title,
+      message: text,
+      sectorId: sector,
+      file: selectedFile,
     });
 
     toast.success("Mensagem rápida atualizada com sucesso!");
@@ -181,29 +168,18 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
         fullWidth
       />
 
-      <div className="flex items-center gap-4 pt-2">
-        <Button
-          variant="outlined"
-          onClick={() => fileInputRef.current?.click()}
-          sx={{ minWidth: 150 }}
-        >
-          Selecionar arquivo
-        </Button>
-
-        {fileRef.current ? (
-          <Typography
-            variant="body2"
-            noWrap
-            sx={{ maxWidth: 200, userSelect: "all", color: "white" }}
-          >
-            {fileRef.current.name}
-          </Typography>
-        ) : imagePreview ? (
-          <img src={imagePreview} alt="Preview" className="h-16 w-16 rounded-md object-cover" />
-        ) : null}
+      <div className="pt-2">
+        <FilePicker
+          selectedFile={selectedFile}
+          onChangeFile={(file) => {
+            setSelectedFile(file);
+            if (file) {
+              setExistingFileUrl(null); // Limpa a URL existente quando um novo arquivo é selecionado
+            }
+          }}
+          existingFilePreview={existingFileUrl}
+        />
       </div>
-
-      <input ref={fileInputRef} type="file" hidden onChange={handleFileChange} />
 
       <Popper
         open={Boolean(anchorEl)}
