@@ -9,7 +9,7 @@ export const CUSTOMERS_TABLE_COLUMNS = {
     label: "Ativo",
     width: "8rem",
     options: [
-      { value: "", label: "Ambos" },
+      { value: "{{all}}", label: "Ambos" },
       { value: "SIM", label: "Sim" },
       { value: "NAO", label: "Não" },
     ],
@@ -18,7 +18,7 @@ export const CUSTOMERS_TABLE_COLUMNS = {
     label: "Tipo",
     width: "10rem",
     options: [
-      { value: "", label: "Ambos" },
+      { value: "{{all}}", label: "Ambos" },
       { value: "JUR", label: "Jurídica" },
       { value: "FIS", label: "Física" },
     ],

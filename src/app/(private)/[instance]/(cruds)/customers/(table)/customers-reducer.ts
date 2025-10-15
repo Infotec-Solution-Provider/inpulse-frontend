@@ -13,16 +13,18 @@ type ChanngeLoadingAction = { type: "change-loading"; isLoading: boolean };
 type ChangePageAction = { type: "change-page"; page: number };
 type ChangePerPageAction = { type: "change-per-page"; perPage: number };
 type ChangeTotalRowsAction = { type: "change-total-rows"; totalRows: number };
-type ChangeFiltersAction = { type: "change-filters"; filters: RequestFilters<Customer> };
+type ChangeFilterAction = { type: "change-filter"; key: keyof Customer; value: string };
+type RemoveFilterAction = { type: "remove-filter"; key: keyof Customer };
+type ClearFiltersAction = { type: "clear-filters" };
 type LoadCustomersAction = { type: "load-customers"; customers: Customer[] };
 type UpdateCustomerAction = { type: "update-customer"; id: number; data: UpdateCustomerDTO };
 type AddCustomerAction = { type: "add-customer"; data: Customer };
 
 type PaginationActions = ChangePageAction | ChangePerPageAction | ChangeTotalRowsAction;
-type FilterActions = ChangeFiltersAction;
+type FilterActions = ChangeFilterAction | RemoveFilterAction | ClearFiltersAction;
 type CustomerActions = LoadCustomersAction | UpdateCustomerAction | AddCustomerAction;
 
-type MultipleActions = {
+export type MultipleActions = {
   type: "multiple";
   actions: ChangeCustomersStateAction[];
 };
@@ -54,14 +56,14 @@ export default function customersReducer(
     case "change-total-rows":
       next.totalRows = action.totalRows;
       return { ...next, totalRows: action.totalRows };
-    case "change-filters":
-      next.filters = { 
-        page: "1", // Reset to first page when applying filters
-        perPage: prev.filters.perPage || "10", 
-        ...action.filters 
-      };
-
-      console.log(next.filters)
+    case "change-filter":
+      next.filters[action.key] = action.value;
+      return next;
+    case "clear-filters":
+      next.filters = { page: prev.filters.page, perPage: prev.filters.perPage };
+      return next;
+    case "remove-filter":
+      delete next.filters[action.key];
       return next;
     case "load-customers":
       next.customers = action.customers;

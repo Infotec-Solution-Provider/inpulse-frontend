@@ -11,9 +11,9 @@ import {
   Theme,
   Tooltip,
 } from "@mui/material";
-import { useState } from "react";
 import { useCustomersContext } from "../customers-context";
 import { CUSTOMERS_TABLE_COLUMNS } from "./table-config";
+import { Customer } from "@in.pulse-crm/sdk";
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {
@@ -21,44 +21,53 @@ const textFieldStlye: SxProps<Theme> = {
   },
 };
 
+const isKeyOfCustomer = (key: string): key is keyof Customer => {
+  const accepted: string[] = [
+    "CODIGO",
+    "ATIVO",
+    "PESSOA",
+    "RAZAO",
+    "CPF_CNPJ",
+    "CIDADE",
+    "COD_ERP",
+  ];
+  return accepted.includes(key);
+};
+
 const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 
 export default function ClientTableHeader() {
   const { dispatch, loadCustomers, state } = useCustomersContext();
-  const [filters, setFilters] = useState<Record<string, string>>(state.filters || {});
 
-  const activeFiltersCount = Object.keys(filters).filter(
-    (key) => key !== "page" && key !== "perPage" && filters[key] && filters[key] !== "none",
-  ).length;
+  const activeFilters = Object.keys(state.filters).filter((k) => {
+    const key = k as keyof typeof state.filters;
+    const isPageFilter = key === "page" || key === "perPage";
+    const isFilterActive = state.filters[key] && state.filters[key] !== "none";
 
-  const onChangeFilter = (key: string, value: string) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev };
-      if (value === "" || value === "none") {
-        delete newFilters[key];
-      } else {
-        newFilters[key] = value;
-      }
-      return newFilters;
-    });
-  };
+    return !isPageFilter && isFilterActive;
+  });
 
-  const onClickSearch = () => {
-    dispatch({ type: "change-filters", filters });
-    loadCustomers(filters);
-  };
+  const activeFiltersCount = activeFilters.length;
 
-  const onClearFilters = () => {
-    console.log("🧹 [onClearFilters] Clearing filters");
-    setFilters({});
-    dispatch({ type: "change-filters", filters: {} });
-    loadCustomers({});
-  };
+  const onClickSearch = () => loadCustomers();
+  const onClearFilters = () => dispatch({ type: "clear-filters" });
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       onClickSearch();
     }
+  };
+
+  const handleChangeFilter = (key: string) => {
+    return (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isKeyOfCustomer(key)) return;
+      const value = event.target.value || null;
+      if (value === null || value === "{{all}}") {
+        dispatch({ type: "remove-filter", key });
+      } else {
+        dispatch({ type: "change-filter", key, value });
+      }
+    };
   };
 
   return (
@@ -93,8 +102,8 @@ export default function ClientTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CUSTOMERS_TABLE_COLUMNS.CODIGO.placeholder}
-              value={filters.CODIGO || ""}
-              onChange={(e) => onChangeFilter("CODIGO", e.target.value)}
+              value={state.filters.CODIGO || ""}
+              onChange={handleChangeFilter("CODIGO")}
               onKeyDown={handleKeyPress}
               className="w-full bg-slate-200 dark:bg-slate-700"
               sx={textFieldStlye}
@@ -116,8 +125,8 @@ export default function ClientTableHeader() {
               select
               variant="outlined"
               size="small"
-              value={filters.ATIVO || ""}
-              onChange={(e) => onChangeFilter("ATIVO", e.target.value)}
+              value={state.filters.ATIVO || "{{all}}"}
+              onChange={handleChangeFilter("ATIVO")}
               className={textFieldClassName}
               sx={textFieldStlye}
             >
@@ -144,8 +153,8 @@ export default function ClientTableHeader() {
               select
               variant="outlined"
               size="small"
-              value={filters.PESSOA || ""}
-              onChange={(e) => onChangeFilter("PESSOA", e.target.value)}
+              value={state.filters.PESSOA || "{{all}}"}
+              onChange={handleChangeFilter("PESSOA")}
               className={textFieldClassName}
               sx={textFieldStlye}
             >
@@ -172,9 +181,9 @@ export default function ClientTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CUSTOMERS_TABLE_COLUMNS.RAZAO.placeholder}
-              value={filters.RAZAO || ""}
-              onChange={(e) => onChangeFilter("RAZAO", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.RAZAO || ""}
+              onChange={handleChangeFilter("RAZAO")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
             />
@@ -195,11 +204,12 @@ export default function ClientTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.placeholder}
-              value={filters.CPF_CNPJ || ""}
-              onChange={(e) => onChangeFilter("CPF_CNPJ", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.CPF_CNPJ || ""}
+              onChange={handleChangeFilter("CPF_CNPJ")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
+            
             />
           </div>
         </TableCell>
@@ -218,9 +228,9 @@ export default function ClientTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CUSTOMERS_TABLE_COLUMNS.CIDADE.placeholder}
-              value={filters.CIDADE || ""}
-              onChange={(e) => onChangeFilter("CIDADE", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.CIDADE || ""}
+              onChange={handleChangeFilter("CIDADE")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
             />
@@ -241,9 +251,9 @@ export default function ClientTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CUSTOMERS_TABLE_COLUMNS.COD_ERP.placeholder}
-              value={filters.COD_ERP || ""}
-              onChange={(e) => onChangeFilter("COD_ERP", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.COD_ERP || ""}
+              onChange={handleChangeFilter("COD_ERP")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
             />

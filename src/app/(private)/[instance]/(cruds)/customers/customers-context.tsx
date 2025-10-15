@@ -11,18 +11,13 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import {
-  CreateCustomerDTO,
-  Customer,
-  CustomersClient,
-  RequestFilters,
-  UpdateCustomerDTO,
-} from "@in.pulse-crm/sdk";
+import { CreateCustomerDTO, Customer, CustomersClient, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import customersReducer, {
   ChangeCustomersStateAction,
   CustomersContextState,
+  MultipleActions,
 } from "./(table)/customers-reducer";
 
 interface ICustomersProviderProps {
@@ -32,10 +27,10 @@ interface ICustomersProviderProps {
 interface ICustomersContext {
   state: CustomersContextState;
   allCustomers: Customer[];
-  dispatch: ActionDispatch<[ChangeCustomersStateAction]>;
+  dispatch: ActionDispatch<[action: ChangeCustomersStateAction | MultipleActions]>;
   updateCustomer: (id: number, data: UpdateCustomerDTO) => void;
   createCustomer: (data: CreateCustomerDTO) => void;
-  loadCustomers: (filters: RequestFilters<Customer>) => void;
+  loadCustomers: () => void;
 }
 
 export const CustomersContext = createContext<ICustomersContext>({} as ICustomersContext);
@@ -74,7 +69,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         Logger.error("Error creating customer", err as Error);
         toast.error("Falha ao cadastrar cliente!");
       } finally {
-        loadCustomers({});
+        loadCustomers();
       }
     },
     [token],
@@ -96,16 +91,18 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     [token],
   );
 
-  const loadCustomers = useCallback(async (filters: RequestFilters<Customer>) => {
+  const loadCustomers = useCallback(async () => {
     dispatch({ type: "change-loading", isLoading: true });
-    console.log("🔍 [loadCustomers] Filters being sent:", filters);
 
     try {
-      const res = await api.current.getCustomers(filters);
+      if (!token) {
+        return dispatch({ type: "change-loading", isLoading: false });
+      }
+      const res = await api.current.getCustomers(state.filters);
       dispatch({
         type: "multiple",
         actions: [
-          { type: "change-total-rows", totalRows: res.page.totalRows },
+          { type: "change-total-rows", totalRows: res.page.totalRows || 0 },
           { type: "change-loading", isLoading: false },
           { type: "load-customers", customers: res.data },
         ],
@@ -115,7 +112,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       Logger.error("Error loading customers", err as Error);
       toast.error("Falha ao carregar clientes!");
     }
-  }, []);
+  }, [state.filters, token]);
 
   const loadAllCustomers = useCallback(async () => {
     try {
@@ -124,14 +121,18 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       });
       setAllCustomers(res.data);
     } catch {}
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (!token || !api.current) return;
     api.current.setAuth(token);
-    loadCustomers({});
+    loadCustomers();
     loadAllCustomers();
-  }, [token, api.current]);
+  }, [token]);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [state.filters.perPage, state.filters.page]);
 
   return (
     <CustomersContext.Provider
