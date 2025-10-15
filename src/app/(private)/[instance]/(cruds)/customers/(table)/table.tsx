@@ -80,13 +80,11 @@ export default function CustomersTable() {
               </TableRow>
             )}
             {!state.isLoading && state.customers.length === 0 && (
-              <TableRow sx={{ height: "300px" }}>
+              <TableRow className="h-[30rem]">
                 <TableCell
                   colSpan={8}
-                  className="border-0"
+                  align="center"
                   sx={{
-                    textAlign: "center",
-                    backgroundColor: "transparent",
                     borderBottom: "none",
                   }}
                 >
