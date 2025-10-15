@@ -2,42 +2,43 @@
 export const USERS_TABLE_COLUMNS = {
   CODIGO: {
     label: "Código",
-    width: "100px",
+    width: "6rem",
     placeholder: "Ex: 123",
   },
   NOME: {
     label: "Nome",
-    width: "300px",
+    width: "16rem",
     placeholder: "Nome do usuário...",
   },
   LOGIN: {
     label: "Login",
-    width: "180px",
+    width: "12rem",
     placeholder: "Nome de login...",
   },
   EMAIL: {
     label: "Email",
-    width: "280px",
+    width: "12rem",
     placeholder: "email@exemplo.com",
   },
   NIVEL: {
     label: "Nível",
-    width: "120px",
+    width: "12rem",
     options: [
-      { value: "", label: "Todos" },
-      { value: "0", label: "Admin" },
-      { value: "1", label: "Gerente" },
-      { value: "2", label: "Usuário" },
+      { value: "{{all}}", label: "Todos" },
+      { value: "ADMIN", label: "Supervisor" },
+      { value: "ATIVO", label: "Ativo" },
+      { value: "RECEPTIVO", label: "Receptivo" },
+      { value: "AMBOS", label: "Ambos" },
     ],
   },
   SETOR: {
     label: "Setor",
-    width: "150px",
+    width: "12rem",
     placeholder: "Setor...",
   },
   ACTIONS: {
     label: "Ações",
-    width: "120px",
+    width: "8rem",
   },
 } as const;
 

@@ -1,8 +1,9 @@
 "use client";
 import { AuthContext } from "@/app/auth-context";
 import { CreateUserDTO, UpdateUserDTO, User, UsersClient } from "@in.pulse-crm/sdk";
-import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import { Logger, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
+  ActionDispatch,
   createContext,
   ReactNode,
   useCallback,
@@ -15,7 +16,11 @@ import {
 import { toast } from "react-toastify";
 import { WhatsappContext } from "../../whatsapp-context";
 import UsersModal from "./(modal)/user-modal";
-import usersReducer, { UsersContextState } from "./(table)/users-reducer";
+import usersReducer, {
+  ChangeUsersStateAction,
+  MultipleActions,
+  UsersContextState,
+} from "./(table)/users-reducer";
 
 interface IUsersProviderProps {
   children: ReactNode;
@@ -23,7 +28,7 @@ interface IUsersProviderProps {
 
 interface IUsersContext {
   state: UsersContextState;
-  dispatch: React.Dispatch<any>;
+  dispatch: ActionDispatch<[action: ChangeUsersStateAction | MultipleActions]>;
   modal: ReactNode;
   sectors: Array<{ id: number; name: string }>;
   createUser: (data: CreateUserDTO) => void;
@@ -100,25 +105,32 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
     dispatch({ type: "change-loading", isLoading: true });
 
     try {
+      if (!token) {
+        return dispatch({ type: "change-loading", isLoading: false });
+      }
       const res = await apiRef.current.getUsers(state.filters);
+
+      Logger.debug("UsersContext:loadUsers: ", res);
+
       dispatch({
         type: "multiple",
         actions: [
           { type: "load-users", users: res.data },
           { type: "change-loading", isLoading: false },
+          { type: "change-total-rows", totalRows: res.page.totalRows || 0 },
         ],
       });
     } catch {
       dispatch({ type: "change-loading", isLoading: false });
       toast.error("Falha ao carregar usuários!");
     }
-  }, [state.filters]);
+  }, [state.filters, token]);
 
   useEffect(() => {
     if (!token || !apiRef.current) return;
     apiRef.current.setAuth(token);
     loadUsers();
-  }, [token, apiRef.current]);
+  }, [token]);
 
   useEffect(() => {
     if (wppApi.current && token) {
@@ -128,6 +140,10 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
       });
     }
   }, [wppApi, token]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [state.filters.perPage, state.filters.page]);
 
   return (
     <UsersContext.Provider

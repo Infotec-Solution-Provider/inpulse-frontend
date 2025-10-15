@@ -15,7 +15,7 @@ import UsersTableHeader from "./table-header";
 import UsersTableItem from "./table-item";
 
 export default function UsersTable() {
-  const { state, dispatch, loadUsers, openUserModal } = useUsersContext();
+  const { state, dispatch, openUserModal } = useUsersContext();
 
   function openEditUserModal(user: User) {
     openUserModal(user);
@@ -23,12 +23,10 @@ export default function UsersTable() {
 
   const onChangePage = (page: number) => {
     dispatch({ type: "change-page", page });
-    loadUsers();
   };
 
   const onChangePerPage = (perPage: number) => {
     dispatch({ type: "change-per-page", perPage });
-    loadUsers();
   };
 
   return (
@@ -75,6 +73,7 @@ export default function UsersTable() {
                   sx={{
                     textAlign: "center",
                     backgroundColor: "transparent",
+                    borderBottom: "none",
                   }}
                 >
                   <div className="flex flex-col items-center gap-2 py-8">
@@ -108,11 +107,14 @@ export default function UsersTable() {
         </Button>
         <TablePagination
           component="div"
-          count={state.totalRows}
-          page={Math.max(0, +(state.filters.page ?? 1) - 1)}
-          rowsPerPage={+(state.filters.perPage ?? 10)}
+          count={Number(state.totalRows || 0)}
+          page={Number(state.filters.page || 1) - 1}
+          rowsPerPage={Number(state.filters.perPage || 10)}
           labelRowsPerPage="Entradas por página"
-          labelDisplayedRows={({ from, to, count }) => {
+          labelDisplayedRows={(info) => {
+            console.log(state);
+            console.log(info);
+            const { from, to, count } = info;
             return `${from}-${to} de ${count}`;
           }}
           onRowsPerPageChange={(e) => onChangePerPage(+e.target.value)}

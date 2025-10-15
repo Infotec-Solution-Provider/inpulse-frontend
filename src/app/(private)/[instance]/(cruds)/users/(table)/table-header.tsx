@@ -11,9 +11,9 @@ import {
   Theme,
   Tooltip,
 } from "@mui/material";
-import { useState } from "react";
 import { useUsersContext } from "../users-context";
 import { USERS_TABLE_COLUMNS } from "./table-config";
+import { User } from "@in.pulse-crm/sdk";
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {
@@ -21,42 +21,45 @@ const textFieldStlye: SxProps<Theme> = {
   },
 };
 
+const isKeyOfUser = (key: string): key is keyof User => {
+  const accepted: string[] = ["CODIGO", "NOME", "LOGIN", "EMAIL", "NIVEL", "SETOR"];
+  return accepted.includes(key);
+};
+
 const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 
 export default function UsersTableHeader() {
   const { dispatch, loadUsers, state, sectors } = useUsersContext();
-  const [filters, setFilters] = useState<Record<string, string>>(state.filters || {});
-  const activeFiltersCount = Object.keys(filters).filter(
-    (key) => key !== "page" && key !== "perPage" && filters[key] && filters[key] !== "none",
-  ).length;
 
-  const onChangeFilter = (key: string, value: string) => {
-    setFilters((prev) => {
-      const newFilters = { ...prev };
-      if (value === "" || value === "none") {
-        delete newFilters[key];
-      } else {
-        newFilters[key] = value;
-      }
-      return newFilters;
-    });
-  };
+  const activeFilters = Object.keys(state.filters).filter((k) => {
+    const key = k as keyof typeof state.filters;
+    const isPageFilter = key === "page" || key === "perPage";
+    const isFilterActive = state.filters[key] && state.filters[key] !== "none";
 
-  const onClickSearch = () => {
-    dispatch({ type: "change-filters", filters });
-    loadUsers();
-  };
+    return !isPageFilter && isFilterActive;
+  });
 
-  const onClearFilters = () => {
-    setFilters({});
-    dispatch({ type: "change-filters", filters: {} });
-    loadUsers();
-  };
+  const activeFiltersCount = activeFilters.length;
+
+  const onClickSearch = () => loadUsers();
+  const onClearFilters = () => dispatch({ type: "clear-filters" });
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       onClickSearch();
     }
+  };
+
+  const handleChangeFilter = (key: string) => {
+    return (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isKeyOfUser(key)) return;
+      const value = event.target.value || null;
+      if (value === null || value === "{{all}}") {
+        dispatch({ type: "remove-filter", key });
+      } else {
+        dispatch({ type: "change-filter", key, value });
+      }
+    };
   };
 
   return (
@@ -91,8 +94,8 @@ export default function UsersTableHeader() {
               variant="outlined"
               size="small"
               placeholder={USERS_TABLE_COLUMNS.CODIGO.placeholder}
-              value={filters.CODIGO || ""}
-              onChange={(e) => onChangeFilter("CODIGO", e.target.value)}
+              value={state.filters.CODIGO || ""}
+              onChange={handleChangeFilter("CODIGO")}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -114,9 +117,9 @@ export default function UsersTableHeader() {
               variant="outlined"
               size="small"
               placeholder={USERS_TABLE_COLUMNS.NOME.placeholder}
-              value={filters.NOME || ""}
-              onChange={(e) => onChangeFilter("NOME", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.NOME || ""}
+              onChange={handleChangeFilter("NOME")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
             />
@@ -137,9 +140,9 @@ export default function UsersTableHeader() {
               variant="outlined"
               size="small"
               placeholder={USERS_TABLE_COLUMNS.LOGIN.placeholder}
-              value={filters.LOGIN || ""}
-              onChange={(e) => onChangeFilter("LOGIN", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.LOGIN || ""}
+              onChange={handleChangeFilter("LOGIN")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
             />
@@ -160,9 +163,9 @@ export default function UsersTableHeader() {
               variant="outlined"
               size="small"
               placeholder={USERS_TABLE_COLUMNS.EMAIL.placeholder}
-              value={filters.EMAIL || ""}
-              onChange={(e) => onChangeFilter("EMAIL", e.target.value)}
-              onKeyPress={handleKeyPress}
+              value={state.filters.EMAIL || ""}
+              onChange={handleChangeFilter("EMAIL")}
+              onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
             />
@@ -183,8 +186,8 @@ export default function UsersTableHeader() {
               select
               variant="outlined"
               size="small"
-              value={filters.NIVEL || ""}
-              onChange={(e) => onChangeFilter("NIVEL", e.target.value)}
+              value={state.filters.NIVEL || "{{all}}"}
+              onChange={handleChangeFilter("NIVEL")}
               className={textFieldClassName}
               sx={textFieldStlye}
             >
@@ -211,12 +214,12 @@ export default function UsersTableHeader() {
               select
               variant="outlined"
               size="small"
-              value={filters.SETOR || ""}
-              onChange={(e) => onChangeFilter("SETOR", e.target.value)}
+              value={state.filters.SETOR || "{{all}}"}
+              onChange={handleChangeFilter("SETOR")}
               className={textFieldClassName}
               sx={textFieldStlye}
             >
-              <MenuItem value="">Todos</MenuItem>
+              <MenuItem value="{{all}}">Todos</MenuItem>
               {sectors.map((sector: { id: number; name: string }) => (
                 <MenuItem key={sector.id} value={sector.id.toString()}>
                   {sector.name}
