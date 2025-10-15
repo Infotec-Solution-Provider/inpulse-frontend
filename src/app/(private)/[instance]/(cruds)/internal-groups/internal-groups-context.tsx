@@ -211,7 +211,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         setWppGroups(res.data.data);
       })
       .catch((err) => {
-        Logger.error("Error loading WhatsApp groups", err as Error);
+        Logger.debug("Error loading WhatsApp groups", err as Error);
       });
   }, [token, internalApi, loadInternalGroups]);
 
