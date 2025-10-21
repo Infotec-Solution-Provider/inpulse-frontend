@@ -259,10 +259,16 @@ export default function MonitorPage() {
 
     if (chat.chatType === "wpp") {
       return async () => {
+        // Para chats finalizados, carrega as mensagens primeiro
         if (chat.isFinished === true) {
           await loadChatMessages(chat);
+          // Pequeno delay para garantir que o estado React foi atualizado
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
+        
+        // Agora abre o chat com as mensagens já carregadas no estado
         openChat(chat);
+        
         openModal(
           <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
             <button

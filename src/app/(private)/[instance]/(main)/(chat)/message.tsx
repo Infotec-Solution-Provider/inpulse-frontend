@@ -16,6 +16,7 @@ import React, { ReactNode, useMemo, useState } from "react";
 import LinkifiedText from "./linkmessage";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
+import { useWhatsappContext } from "../../whatsapp-context";
 
 export interface QuotedMessageProps {
   id: number | string;
@@ -98,6 +99,7 @@ export default function Message({
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+  const { parameters } = useWhatsappContext();
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -131,23 +133,10 @@ export default function Message({
   };
 
   const dateText = useMemo(() => {
-    /* const now = new Date();
-    if (
-      date.getDate() === now.getDate() &&
-      date.getMonth() === now.getMonth() &&
-      date.getFullYear() === now.getFullYear()
-    ) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-
-    return (
-      date.toLocaleDateString() +
-      " " +
-      date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    ); */
-
     return date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
   }, [date]);
+
+  const isOfficial = parameters["is_official"] === "true";
 
   return (
     <li
@@ -274,7 +263,7 @@ export default function Message({
                 <ListItemText>Responder</ListItemText>
               </MenuItem>
             )}
-            {onForward && (
+            {!isOfficial && onForward && (
               <MenuItem onClick={handleForward}>
                 <ListItemIcon>
                   <ForwardIcon fontSize="small" />
@@ -282,7 +271,7 @@ export default function Message({
                 <ListItemText>Encaminhar</ListItemText>
               </MenuItem>
             )}
-            {onEdit && (
+            {!isOfficial && onEdit && (
               <MenuItem onClick={handleEdit}>
                 <ListItemIcon>
                   <EditIcon fontSize="small" />

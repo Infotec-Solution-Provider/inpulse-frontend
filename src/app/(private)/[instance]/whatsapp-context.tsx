@@ -96,7 +96,7 @@ interface IWhatsappContext {
   markAsReadNotificationById: (notificationId: number) => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
-  loadChatMessages: (chat: DetailedChat) => Promise<void>;
+  loadChatMessages: (chat: DetailedChat) => Promise<WppMessage[]>;
 }
 
 interface WhatsappProviderProps {
@@ -372,12 +372,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, []);
 
   const loadChatMessages = useCallback(async (chat: DetailedChat) => {
-    if (!chat.id) return;
+    if (!chat.id) return [];
 
-    if (chat.contactId && !messages[chat.contactId]) {
+    if (chat.contactId) {
       const res = await api.current.getChatById(chat.id);
-      setMessages((prev) => ({ ...prev, [chat.contactId || 0]: res.messages || [] }));
+      const loadedMessages = res.messages || [];
+      setMessages((prev) => ({ ...prev, [chat.contactId || 0]: loadedMessages }));
+      return loadedMessages;
     }
+    return [];
   }, []);
   const getChatById = useCallback(async (chatId: number) => {
     if (!chatId) return;

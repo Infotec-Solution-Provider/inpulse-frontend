@@ -7,6 +7,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PhoneIcon from "@mui/icons-material/Phone";
 import BusinessIcon from "@mui/icons-material/Business";
 import GroupIcon from "@mui/icons-material/Group";
+import PersonIcon from "@mui/icons-material/Person";
 
 interface MonitorCardProps {
   type: "external-chat" | "internal-chat" | "internal-group" | "schedule" | "finished-chat";
@@ -54,31 +55,31 @@ export default function MonitorCard({
 }: MonitorCardProps) {
   const typeConfig = {
     "external-chat": {
-      borderColor: "border-l-blue-600",
+      borderColor: "#2563eb", // blue-600
       bgColor: "bg-blue-50/40 dark:bg-blue-950/10",
       labelColor: "text-blue-700 dark:text-blue-400",
       label: "Atendimento",
     },
     "finished-chat": {
-      borderColor: "border-l-gray-500",
+      borderColor: "#6b7280", // gray-500
       bgColor: "bg-gray-50/40 dark:bg-gray-950/10",
       labelColor: "text-gray-700 dark:text-gray-400",
       label: "Finalizado",
     },
     "internal-chat": {
-      borderColor: "border-l-indigo-600",
-      bgColor: "bg-indigo-50/40 dark:bg-indigo-950/10",
-      labelColor: "text-indigo-700 dark:text-indigo-400",
+      borderColor: "#9333ea", // purple-600
+      bgColor: "bg-purple-50/60 dark:bg-purple-950/20",
+      labelColor: "text-purple-700 dark:text-purple-400",
       label: "Conversa Interna",
     },
     "internal-group": {
-      borderColor: "border-l-teal-600",
+      borderColor: "#0d9488", // teal-600
       bgColor: "bg-teal-50/40 dark:bg-teal-950/10",
       labelColor: "text-teal-700 dark:text-teal-400",
       label: "Grupo Interno",
     },
     schedule: {
-      borderColor: "border-l-amber-600",
+      borderColor: "#d97706", // amber-600
       bgColor: "bg-amber-50/40 dark:bg-amber-950/10",
       labelColor: "text-amber-700 dark:text-amber-400",
       label: "Agendamento",
@@ -89,7 +90,8 @@ export default function MonitorCard({
 
   return (
     <div
-      className={`${config.bgColor} ${config.borderColor} mb-3 w-full rounded-lg border border-l-8 border-gray-200 bg-white shadow-sm transition-shadow duration-200 hover:shadow-md dark:border-gray-700 dark:bg-slate-800`}
+      className={`mb-3 w-full rounded-lg border border-l-8 shadow-sm transition-shadow duration-200 hover:shadow-md border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-800 ${config.bgColor}`}
+      style={{ borderLeftColor: config.borderColor }}
     >
       <div className={`rounded-s-md py-2 pl-2 pr-4`}>
         <div className="flex gap-3">
@@ -141,8 +143,16 @@ export default function MonitorCard({
           )}
 
           {type === "internal-chat" && (
-            <div className="flex flex-1 flex-col gap-1 text-xs">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{chatTitle}</h3>
+            <div className="flex flex-1 flex-col gap-2 text-xs">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                {chatTitle}
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                  <PersonIcon sx={{ fontSize: 12 }} />
+                  Conversa Interna
+                </span>
+              </div>
             </div>
           )}
           {type === "internal-group" && (
