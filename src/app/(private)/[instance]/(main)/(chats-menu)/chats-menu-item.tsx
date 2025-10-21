@@ -221,7 +221,7 @@ export default function ChatsMenuItem({
             <p className="truncate text-sm leading-none text-gray-900 dark:text-slate-100">
               {name}
             </p>
-            <div className="flex items-center gap-2 text-gray-700 group-aria-busy:text-orange-200 dark:text-slate-300">
+            <div className="flex items-center gap-2 text-orange-600 group-aria-busy:dark:text-orange-200">
               <p className="text-xs">{lastMessageDateText}</p>
               {isUnread && (
                 <div className="flex items-center gap-1">
