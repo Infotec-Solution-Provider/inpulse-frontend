@@ -27,6 +27,8 @@ interface MonitorFiltersState {
   showOngoing: boolean;
   showFinished: boolean;
   showOnlyScheduled: boolean;
+  showUnreadOnly: boolean;
+  showPendingResponseOnly: boolean;
   sortBy: "startedAt" | "finishedAt" | "lastMessage" | "name" | "scheduledAt";
   sortOrder: "asc" | "desc";
   startedAt: {
@@ -62,6 +64,8 @@ const initialFilters: MonitorFiltersState = {
   showOngoing: true,
   showFinished: true,
   showOnlyScheduled: false,
+  showUnreadOnly: false,
+  showPendingResponseOnly: false,
   sortBy: "startedAt",
   sortOrder: "desc",
   startedAt: {
@@ -199,6 +203,25 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
       if (!filters.showOngoing && !filters.showFinished) return false;
       if (filters.showOngoing && !filters.showFinished && !isOngoing) return false;
       if (!filters.showOngoing && filters.showFinished && !isFinished) return false;
+
+      // Filtro: Conversas não lidas
+      if (filters.showUnreadOnly && !chat.isUnread) return false;
+
+      // Filtro: Conversas sem resposta (última mensagem não é do atendente)
+      if (filters.showPendingResponseOnly) {
+        const lastMsg = chat.lastMessage;
+        if (!lastMsg) return false;
+        
+        // Verifica se a última mensagem é do atendente/sistema/bot
+        const isFromUs = 
+          lastMsg.from.startsWith("me:") ||
+          lastMsg.from.startsWith("system:") ||
+          lastMsg.from.startsWith("bot") ||
+          lastMsg.from.startsWith("thirdparty");
+        
+        // Se a última mensagem é nossa, não mostrar (conversa já foi respondida)
+        if (isFromUs) return false;
+      }
 
       if (filters.startedAt.from && new Date(chat.startedAt) < new Date(filters.startedAt.from)) {
         return false;

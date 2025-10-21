@@ -1,26 +1,30 @@
 "use client";
+import filesService from "@/lib/services/files.service";
+import toDateString from "@/lib/utils/date-string";
+import { User } from "@in.pulse-crm/sdk";
+import { Formatter } from "@in.pulse-crm/utils";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
+import { IconButton } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import MonitorCard from "./(components)/card";
-import MonitorFilters from "./(components)/filters";
-import useMonitorContext from "./context";
+import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
+import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
+import ChatProvider from "../(main)/(chat)/chat-context";
+import ChatHeader from "../(main)/(chat)/chat-header";
+import ChatMessagesList from "../(main)/(chat)/chat-messages-list";
+import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor";
+import ChatSendMessageArea from "../(main)/(chat)/chat-send-message-area";
+import { AppContext } from "../app-context";
 import useInternalChatContext, {
   DetailedInternalChat,
   InternalChatContext,
 } from "../internal-context";
 import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
-import toDateString from "@/lib/utils/date-string";
-import { User } from "@in.pulse-crm/sdk";
-import filesService from "@/lib/services/files.service";
-import { Formatter } from "@in.pulse-crm/utils";
-import { AppContext } from "../app-context";
-import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
-import ChatProvider from "../(main)/(chat)/chat-context";
-import ChatHeader from "../(main)/(chat)/chat-header";
-import ChatMessagesList from "../(main)/(chat)/chat-messages-list";
-import ChatSendMessageArea from "../(main)/(chat)/chat-send-message-area";
-import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor";
-import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
-import { Pagination } from "@mui/material";
+import MonitorCard from "./(components)/card";
+import MonitorFilters from "./(components)/filters";
+import useMonitorContext from "./context";
 
 function getChatType(
   chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
@@ -145,7 +149,15 @@ function getChatCustomerDocument(chat: DetailedInternalChat | DetailedChat | Det
 
 function getChatContactNumber(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
   if (!("chatType" in chat) || chat.chatType === "wpp") {
-    return chat.contact?.phone ? Formatter.phone(chat.contact.phone) : "Whatsapp não encontrado";
+    if (!chat.contact?.phone) {
+      return "Whatsapp não encontrado";
+    }
+    try {
+      return Formatter.phone(chat.contact.phone);
+    } catch (error) {
+      console.error("Erro ao formatar telefone:", chat.contact.phone, error);
+      return chat.contact.phone; // Retorna o telefone sem formatação em caso de erro
+    }
   }
   return null;
 }
@@ -336,6 +348,7 @@ export default function MonitorPage() {
   }
 
   const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const pageSize = 20;
   const totalPages = Math.ceil(chats.length / pageSize);
   const paginatedChats = chats.slice((page - 1) * pageSize, page * pageSize);
@@ -344,11 +357,100 @@ export default function MonitorPage() {
     setPage(1);
   }, [filters]);
 
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [chats]);
+
   return (
     <div className="mx-auto grid h-[98%] w-full max-w-[1366px] grid-rows-[auto_1fr] gap-0">
       <div className="flex w-full gap-2 overflow-hidden p-4">
         <MonitorFilters />
-        <main className="scrollbar-whatsapp grid grow grid-rows-[1fr_max-content] gap-4">
+        <main className="scrollbar-whatsapp grid grow grid-rows-[auto_1fr_auto] gap-4">
+          {/* Contador de Resultados */}
+          <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-indigo-200 to-purple-200 px-6 py-3 shadow-sm dark:from-indigo-800/30 dark:to-purple-800/30">
+            <div className="flex items-center gap-3">
+              <AssessmentIcon
+                className="text-indigo-600 dark:text-indigo-400"
+                sx={{ fontSize: 28 }}
+              />
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">
+                  Monitor de Conversas
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  {isLoading ? (
+                    "Carregando..."
+                  ) : (
+                    <>
+                      Exibindo{" "}
+                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                        {paginatedChats.length}
+                      </span>{" "}
+                      de{" "}
+                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                        {chats.length}
+                      </span>{" "}
+                      conversas
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Página</p>
+                <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                  {page} / {totalPages || 1}
+                </p>
+              </div>
+              {totalPages > 1 && (
+                <>
+                  <IconButton
+                    size="small"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "rgb(229, 231, 235)",
+                      "&:hover": {
+                        borderColor: "rgb(99, 102, 241)",
+                        backgroundColor: "rgb(238, 242, 255)",
+                      },
+                      "&.Mui-disabled": {
+                        borderColor: "rgb(229, 231, 235)",
+                        opacity: 0.5,
+                      },
+                    }}
+                  >
+                    <ChevronLeftIcon sx={{ fontSize: 20 }} />
+                  </IconButton>
+
+                  <IconButton
+                    size="small"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "rgb(229, 231, 235)",
+                      "&:hover": {
+                        borderColor: "rgb(99, 102, 241)",
+                        backgroundColor: "rgb(238, 242, 255)",
+                      },
+                      "&.Mui-disabled": {
+                        borderColor: "rgb(229, 231, 235)",
+                        opacity: 0.5,
+                      },
+                    }}
+                  >
+                    <ChevronRightIcon sx={{ fontSize: 20 }} />
+                  </IconButton>
+                </>
+              )}
+            </div>
+          </div>
+
           <ul className="overflow-auto">
             {paginatedChats.map((chat) => {
               if ("chatType" in chat) {
@@ -406,18 +508,20 @@ export default function MonitorPage() {
               );
             })}
           </ul>
-          {chats.length === 0 && (
-            <div className="mt-8 text-center text-gray-500">Nenhum chat encontrado.</div>
+
+          {chats.length === 0 && !isLoading && (
+            <div className="flex h-full flex-col items-center justify-center gap-4 text-gray-400">
+              <SearchOffIcon sx={{ fontSize: 80, opacity: 0.3 }} />
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300">
+                  Nenhuma conversa encontrada
+                </h3>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Ajuste os filtros ou aguarde novas conversas
+                </p>
+              </div>
+            </div>
           )}
-          <div className="mt-4 flex justify-center">
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              color="primary"
-              size="medium"
-            />
-          </div>
         </main>
       </div>
     </div>
