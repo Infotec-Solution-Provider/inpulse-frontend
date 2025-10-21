@@ -88,6 +88,7 @@ export default function StartChatModalItem({
                   try {
                     return Formatter.phone(contact.phone);
                   } catch (error) {
+                    console.error(error );
                     // Se o formatador falhar, retorna o número original
                     return contact.phone;
                   }
