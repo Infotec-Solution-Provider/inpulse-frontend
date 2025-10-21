@@ -218,11 +218,13 @@ export default function ChatsMenuItem({
         </div>
         <div className="flex flex-col gap-1 truncate">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm leading-none text-gray-900 dark:text-slate-100">
+            <p className="font-semibold truncate text-sm leading-none text-gray-900 dark:text-slate-100">
               {name}
             </p>
-            <div className="flex items-center gap-2 text-orange-600 group-aria-busy:dark:text-orange-200">
-              <p className="text-xs">{lastMessageDateText}</p>
+            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 group-aria-busy:dark:text-orange-200">
+              <p className={`text-xs font-semibold ${isUnread ? "text-red-600" : ""}`}>
+                {lastMessageDateText}
+              </p>
               {isUnread && (
                 <div className="flex items-center gap-1">
                   <div className="h-3 w-3 rounded-full bg-red-600"></div>
@@ -233,7 +235,7 @@ export default function ChatsMenuItem({
               )}
             </div>
           </div>
-          <div className="font-emoji truncate text-sm text-gray-700 dark:text-slate-300">
+          <div className="font-emoji truncate text-xs text-gray-700 dark:text-slate-300">
             {message}
           </div>
           <div className="flex items-center justify-end gap-1">
