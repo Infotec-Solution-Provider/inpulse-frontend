@@ -84,7 +84,14 @@ export default function StartChatModalItem({
             <div className="flex items-center gap-2">
               <PhoneIcon className="text-gray-500" sx={{ fontSize: 16 }} />
               <span className="text-sm text-gray-600 dark:text-gray-300">
-                {Formatter.phone(contact.phone)}
+                {(() => {
+                  try {
+                    return Formatter.phone(contact.phone);
+                  } catch (error) {
+                    // Se o formatador falhar, retorna o número original
+                    return contact.phone;
+                  }
+                })()}
               </span>
             </div>
           </div>
