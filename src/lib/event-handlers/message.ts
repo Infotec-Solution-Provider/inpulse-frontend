@@ -25,7 +25,7 @@ export default function ReceiveMessageHandler(
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
-  chats: (DetailedChat)[],
+  chats: DetailedChat[],
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
@@ -38,15 +38,13 @@ export default function ReceiveMessageHandler(
         raw = parts[2];
       } else if (parts.length === 2) {
         raw = parts[1];
-
       }
       const phone = raw.split("@")[0].replace(/\D/g, "");
       const contactName = matchedChat?.contact?.name;
+
+      const isTextMsg = ["chat", "text"].includes(message.type);
       safeNotification(contactName || Formatter.phone(phone), {
-        body:
-          message.type !== "chat"
-            ? types[message.type] || "Enviou um arquivo"
-            : message.body,
+        body: isTextMsg ? types[message.type] || "Enviou um arquivo" : message.body,
         icon: HorizontalLogo.src,
       });
     }
@@ -87,7 +85,6 @@ export default function ReceiveMessageHandler(
           (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
         ),
     );
-
 
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
