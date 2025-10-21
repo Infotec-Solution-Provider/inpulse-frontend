@@ -70,7 +70,7 @@ interface IWhatsappContext {
   currentChat: DetailedChat | DetailedInternalChat | null;
   currentChatMessages: WppMessage[];
   monitorSchedules: DetailedSchedule[];
-  openChat: (chat: DetailedChat) => void;
+  openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[]) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageData) => Promise<void>;
@@ -169,9 +169,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   });
 
   const openChat = useCallback(
-    (chat: DetailedChat) => {
+    (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
       setCurrentChat(chat);
-      setUniqueCurrentChatMessages(messages[chat.contactId || 0] || []);
+      // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
+      const messagesToUse = preloadedMessages !== undefined 
+        ? preloadedMessages 
+        : (messages[chat.contactId || 0] || []);
+      setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
 
       if (chat.contactId) {
