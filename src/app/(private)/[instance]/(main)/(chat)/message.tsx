@@ -1,20 +1,20 @@
 import { WppMessageStatus } from "@in.pulse-crm/sdk";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import DeleteIcon from "@mui/icons-material/Delete";
 import DoneIcon from "@mui/icons-material/Done";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
-import ErrorIcon from "@mui/icons-material/Error";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ReplyIcon from "@mui/icons-material/Reply";
-import ForwardIcon from "@mui/icons-material/Forward";
 import EditIcon from "@mui/icons-material/Edit";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ErrorIcon from "@mui/icons-material/Error";
+import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import ReplyIcon from "@mui/icons-material/Reply";
+import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
-import MessageFile from "./message-file";
-import { IconButton, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import LinkifiedText from "./linkmessage";
+import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
 
 export interface QuotedMessageProps {
@@ -190,7 +190,7 @@ export default function Message({
             }}
           >
             <h2
-              className={`${quotedMessage.style === "sent" ? "text-indigo-800 dark:text-indigo-200" : "text-orange-800 dark:text-orange-200"}`}
+              className={`${quotedMessage.style === "sent" ? "text-indigo-800 dark:text-indigo-200" : "text-slate-800 dark:text-orange-200"}`}
             >
               {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
             </h2>
