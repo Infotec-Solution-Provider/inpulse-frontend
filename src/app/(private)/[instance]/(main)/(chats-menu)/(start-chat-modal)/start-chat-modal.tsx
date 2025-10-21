@@ -42,6 +42,14 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const pageSize = 10;
 
+  // Debug: monitora mudanças no estado de contatos
+  useEffect(() => {
+    console.log("🔄 ESTADO DE CONTATOS MUDOU:", {
+      quantidade: contacts.length,
+      contatos: contacts,
+    });
+  }, [contacts]);
+
   // Debounce do termo de busca
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -53,6 +61,9 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
 
   // Busca os contatos com filtros e paginação no backend
   useEffect(() => {
+    console.log("🔄 EFFECT DISPARADO - Buscando contatos...");
+    console.log("🔍 wppApi.current existe?", !!wppApi.current);
+    
     if (wppApi.current) {
       setLoading(true);
 
@@ -63,8 +74,14 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
       };
 
       const sanitizedTerm = getSearchValue(debouncedSearchTerm, searchField);
+      
+      console.log("📝 TERMO ORIGINAL:", debouncedSearchTerm);
+      console.log("📝 TERMO SANITIZADO:", sanitizedTerm);
+      console.log("📝 CAMPO DE BUSCA:", searchField);
+      console.log("⚠️ TERMO ESTÁ VAZIO?", !sanitizedTerm);
 
       if (sanitizedTerm) {
+        console.log("✅ Adicionando filtro de busca aos params");
         switch (searchField) {
           case "nome":
             params.name = sanitizedTerm;
@@ -85,18 +102,32 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
             params.customerName = sanitizedTerm;
             break;
         }
+      } else {
+        console.log("⚠️ BUSCA VAZIA - Isso pode ser o problema! A API pode exigir um termo de busca.");
       }
 
       wppApi.current
         .getContactsWithCustomer(params)
         .then((response: any) => {
-          setContacts(response.data || []);
-          // Calcula total de páginas baseado no total de registros
-          const totalRecords = response.total || response.data?.length || 0;
+          console.log("📞 RESPOSTA DA API:", response);
+          console.log("📊 É um array direto?", Array.isArray(response));
+          console.log("📈 COMPRIMENTO:", Array.isArray(response) ? response.length : "não é array");
+          console.log("🔍 PARAMS ENVIADOS:", params);
+          
+          // A API retorna diretamente o array de contatos, não um objeto com .data
+          const contactsData = Array.isArray(response) ? response : (response.data || []);
+          
+          setContacts(contactsData);
+          // Como a API retorna array direto, usamos o length do array para calcular páginas
+          const totalRecords = contactsData.length;
           setTotalPages(Math.ceil(totalRecords / pageSize) || 1);
+          
+          console.log("✅ CONTATOS SETADOS:", contactsData.length);
+          console.log("📄 TOTAL DE PÁGINAS:", Math.ceil(totalRecords / pageSize) || 1);
         })
         .catch((error) => {
-          console.error("Erro ao buscar contatos:", error);
+          console.error("❌ ERRO AO BUSCAR CONTATOS:", error);
+          console.error("❌ DETALHES DO ERRO:", error.response?.data || error.message);
           setContacts([]);
           setTotalPages(1);
         })
@@ -287,24 +318,30 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
             ) : (
               <Fade in={!loading}>
                 <div className="space-y-2">
-                  {contacts.map((contact, index) => (
-                    <Fade in={true} key={contact.id} style={{ transitionDelay: `${index * 50}ms` }}>
-                      <div>
-                        <StartChatModalItem
-                          contact={
-                            {
-                              ...contact,
-                              customerId: contact.customerId ?? undefined,
-                              avatarUrl: contact.avatarUrl ?? undefined,
-                            } as any
-                          }
-                          customer={contact.customer}
-                          chatingWith={contact.chatingWith}
-                          onSelect={onClose}
-                        />
-                      </div>
-                    </Fade>
-                  ))}
+                  {(() => {
+                    console.log("🎨 RENDERIZANDO LISTA - Contatos:", contacts.length);
+                    return contacts.map((contact, index) => {
+                      console.log(`📋 Renderizando contato ${index + 1}:`, contact.name, contact.id);
+                      return (
+                        <Fade in={true} key={contact.id} style={{ transitionDelay: `${index * 50}ms` }}>
+                          <div>
+                            <StartChatModalItem
+                              contact={
+                                {
+                                  ...contact,
+                                  customerId: contact.customerId ?? undefined,
+                                  avatarUrl: contact.avatarUrl ?? undefined,
+                                } as any
+                              }
+                              customer={contact.customer}
+                              chatingWith={contact.chatingWith}
+                              onSelect={onClose}
+                            />
+                          </div>
+                        </Fade>
+                      );
+                    });
+                  })()}
                   {contacts.length === 0 && (
                     <li className="flex h-[26rem] flex-col items-center justify-center gap-3 text-gray-400 dark:text-gray-500">
                       <SearchIcon sx={{ fontSize: 64, opacity: 0.3 }} />

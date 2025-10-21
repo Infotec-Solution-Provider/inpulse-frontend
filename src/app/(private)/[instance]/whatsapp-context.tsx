@@ -421,8 +421,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         const parameters: Record<string, string> = res.data["parameters"];
         if (parameters["is_official"] === "true") {
           const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
-
-          console.log(templatesResponse);
           setTemplates(templatesResponse.data.templates);
         }
         setParameters(parameters);
