@@ -35,34 +35,28 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   const { wppApi } = useContext(WhatsappContext);
   const [contacts, setContacts] = useState<Array<WppContactWithCustomer>>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [searchField, setSearchField] = useState("codigo-erp");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const pageSize = 10;
 
-  // Debounce do termo de busca
+  // Busca os contatos APENAS quando appliedSearchTerm ou page mudam
+  // Não busca automaticamente ao digitar ou mudar filtro
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Busca os contatos com filtros e paginação no backend
-  useEffect(() => {
-    if (wppApi.current) {
+    // Se nunca pesquisou, não faz nada
+    async function fetchContacts() {
+      if (!wppApi.current) return;
       setLoading(true);
 
-      // Mapeamento dos campos de busca para os parâmetros da API
       const params: any = {
         page,
         perPage: pageSize,
       };
 
-      const sanitizedTerm = getSearchValue(debouncedSearchTerm, searchField);
+      const sanitizedTerm = getSearchValue(appliedSearchTerm, searchField);
 
       if (sanitizedTerm) {
         switch (searchField) {
@@ -107,14 +101,9 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
           setLoading(false);
         });
     }
-  }, [page, debouncedSearchTerm, searchField]);
 
-  // Volta para a primeira página ao pesquisar
-  useEffect(() => {
-    if (page !== 1) {
-      setPage(1);
-    }
-  }, [debouncedSearchTerm, searchField]);
+    fetchContacts();
+  }, [page, appliedSearchTerm]);
 
   const handleChangeTerm: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (e) => {
     setSearchTerm(e.target.value);
@@ -122,6 +111,16 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
 
   const handleChangeField: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (e) => {
     setSearchField(e.target.value);
+    // Ao mudar o filtro, limpa a pesquisa atual
+    setAppliedSearchTerm("");
+    setHasSearched(false);
+  };
+
+  // Função que executa a busca ao clicar no botão ou pressionar Enter
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm);
+    setPage(1);
+    setHasSearched(true);
   };
 
   return (
@@ -163,6 +162,12 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                 placeholder="Digite para pesquisar..."
                 value={searchTerm}
                 onChange={handleChangeTerm}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSearch();
+                  }
+                }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     paddingLeft: "40px",
@@ -254,16 +259,43 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                 Razão Social
               </MenuItem>
             </TextField>
+            <Button
+              variant="contained"
+              size="medium"
+              onClick={handleSearch}
+              disabled={loading}
+              startIcon={<SearchIcon />}
+              sx={{
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: 600,
+                px: 3,
+                whiteSpace: "nowrap",
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",
+                },
+                "&.Mui-disabled": {
+                  background: "rgba(0, 0, 0, 0.12)",
+                },
+              }}
+            >
+              Pesquisar
+            </Button>
           </div>
 
           {/* Chip de informação */}
-          {debouncedSearchTerm && (
+          {appliedSearchTerm && (
             <Fade in={true}>
               <div className="flex items-center gap-2">
                 <Chip
-                  label={`Buscando: "${debouncedSearchTerm}"`}
+                  label={`Buscando: "${appliedSearchTerm}"`}
                   size="small"
-                  onDelete={() => setSearchTerm("")}
+                  onDelete={() => {
+                    setSearchTerm("");
+                    setAppliedSearchTerm("");
+                    setHasSearched(false);
+                  }}
                   color="primary"
                   sx={{ borderRadius: "8px" }}
                 />
@@ -291,11 +323,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               <Fade in={!loading}>
                 <div className="space-y-2">
                   {contacts.map((contact, index) => (
-                    <Fade
-                      in={true}
-                      key={contact.id}
-                      style={{ transitionDelay: `${index * 50}ms` }}
-                    >
+                    <Fade in={true} key={contact.id} style={{ transitionDelay: `${index * 50}ms` }}>
                       <div>
                         <StartChatModalItem
                           contact={
