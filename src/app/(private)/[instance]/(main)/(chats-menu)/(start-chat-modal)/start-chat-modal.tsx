@@ -17,7 +17,7 @@ import { Button } from "@mui/material";
 function getSearchValue(value: string, key: string) {
   switch (key) {
     case "nome":
-      return value.toLocaleLowerCase().replaceAll(" ", "");
+      return value.toLocaleLowerCase().trim().replace(/\s+/g, " ");
     case "telefone":
       return value.replace(/\D/g, "");
     case "cpf-cnpj":
