@@ -172,8 +172,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
-      const messagesToUse = preloadedMessages !== undefined 
-        ? preloadedMessages 
+      const messagesToUse = preloadedMessages !== undefined
+        ? preloadedMessages
         : (messages[chat.contactId || 0] || []);
       setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
@@ -390,6 +390,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (!chatId) return;
     const res = await api.current.getChatById(chatId);
     setChat(res);
+    return res;
   }, []);
   const forwardMessages = useCallback(
     async (data: ForwardMessagesData) => {
