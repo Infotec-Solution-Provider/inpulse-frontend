@@ -74,7 +74,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   >(new Map());
   const { users } = useInternalChatContext();
   const { openModal, closeModal } = useAppContext();
-  const { wppApi, globalChannel } = useWhatsappContext();
+  const { wppApi } = useWhatsappContext();
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();

@@ -169,7 +169,7 @@ export default function NotificationsDropdown() {
     markSingleAsReadNotification,
   } = useNotificationHandler();
 
-  const { getChatById, chat } = useContext(WhatsappContext);
+  const { getChatById } = useContext(WhatsappContext);
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -206,11 +206,15 @@ export default function NotificationsDropdown() {
           throw new Error("Notificação sem ID de chat.");
         }
 
-        await getChatById(notif.chatId);
-        const contactData = chat?.contact ?? chat?.contact ?? null;
+        const chatResult = (await getChatById(notif.chatId)) as
+          | WppChatWithDetailsAndMessages
+          | null
+          | undefined;
+        console.log("Chat retornado pela getChatById:", chatResult);
 
+        const contactData = chatResult?.contact ?? null;
         setSelectedContact(contactData);
-        setSelectedChat(chat ?? null);
+        setSelectedChat(chatResult ?? null);
       } catch (err) {
         console.error("Erro ao buscar contato:", err);
         setSelectedContact(null);
@@ -219,7 +223,7 @@ export default function NotificationsDropdown() {
         setIsContactLoading(false);
       }
     },
-    [chat?.contact, getChatById, handleClose, markSingleAsReadNotification],
+    [getChatById, handleClose, markSingleAsReadNotification],
   );
 
   const filteredNotifications = useMemo(() => {

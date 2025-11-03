@@ -17,7 +17,7 @@ import { Button } from "@mui/material";
 function getSearchValue(value: string, key: string) {
   switch (key) {
     case "nome":
-      return value.toLocaleLowerCase().replaceAll(" ", "");
+      return value.toLocaleLowerCase().trim().replace(/\s+/g, " ");
     case "telefone":
       return value.replace(/\D/g, "");
     case "cpf-cnpj":
@@ -40,7 +40,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+
   const pageSize = 10;
 
   // Busca os contatos APENAS quando appliedSearchTerm ou page mudam
@@ -113,14 +113,12 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
     setSearchField(e.target.value);
     // Ao mudar o filtro, limpa a pesquisa atual
     setAppliedSearchTerm("");
-    setHasSearched(false);
   };
 
   // Função que executa a busca ao clicar no botão ou pressionar Enter
   const handleSearch = () => {
     setAppliedSearchTerm(searchTerm);
     setPage(1);
-    setHasSearched(true);
   };
 
   return (
@@ -294,7 +292,6 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                   onDelete={() => {
                     setSearchTerm("");
                     setAppliedSearchTerm("");
-                    setHasSearched(false);
                   }}
                   color="primary"
                   sx={{ borderRadius: "8px" }}

@@ -34,7 +34,7 @@ function getDefaultSelectedChannel(
     console.log("No currentChat or chatType is not 'wpp'. Returning null.");
     return null;
   }
-  const channelIdFromMap = chatsChannels.get(currentChat.contact?.id!);
+  const channelIdFromMap = chatsChannels.get(currentChat.contact?.id || 0);
   console.log("channelIdFromMap", channelIdFromMap);
   const channelFromMap = channels.find((ch) => ch.id === channelIdFromMap);
   console.log("channelFromMap", channelFromMap);
@@ -107,8 +107,8 @@ export default function ChatSendMessageArea() {
       setSelectedChannel(selected);
       if (currentChat && currentChat.chatType === "wpp") {
         console.log("Definindo canal para o chat", selected);
-        console.log("currentChat.contact?.id!", currentChat.contact?.id!);
-        chatsChannels.current.set(currentChat.contact?.id!, selected.id);
+        console.log("currentChat.contact?.id!", currentChat.contact?.id || 0);
+        chatsChannels.current.set(currentChat.contact?.id || 0, selected.id);
       }
     },
     [currentChat],
