@@ -195,9 +195,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
 
-      const messagesToUse = preloadedMessages !== undefined
-        ? preloadedMessages
-        : (messages[chat.contactId || 0] || []);
+      const messagesToUse =
+        preloadedMessages !== undefined ? preloadedMessages : messages[chat.contactId || 0] || [];
 
       setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
@@ -406,21 +405,24 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [token, api.current]);
 
-  const createSchedule = useCallback(async (chat: WppChat, date: Date) => {
-    try {
-      await api.current.createSchedule({
-        contactId: chat.contactId!,
-        scheduledFor: user!.CODIGO,
-        sectorId: chat.sectorId!,
-        date,
-      });
+  const createSchedule = useCallback(
+    async (chat: WppChat, date: Date) => {
+      try {
+        await api.current.createSchedule({
+          contactId: chat.contactId!,
+          scheduledFor: user!.CODIGO,
+          sectorId: chat.sectorId!,
+          date,
+        });
 
-      toast.success("Agendamento criado com sucesso!");
-    } catch (err) {
-      toast.error("Falha ao criar agendamento\n" + sanitizeErrorMessage(err));
-      console.error("Falha ao criar agendamento", err);
-    }
-  }, [user]);
+        toast.success("Agendamento criado com sucesso!");
+      } catch (err) {
+        toast.error("Falha ao criar agendamento\n" + sanitizeErrorMessage(err));
+        console.error("Falha ao criar agendamento", err);
+      }
+    },
+    [user],
+  );
 
   const loadChatMessages = useCallback(async (chat: DetailedChat) => {
     if (!chat.id) return [];
@@ -489,15 +491,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         const secs = res as SectorData[];
 
-        api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
-          const parameters: Record<string, string> = res.data["parameters"];
-          if (parameters["is_official"] === "true") {
-            const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
-            setTemplates(templatesResponse.data.templates);
-          }
-          setParameters(parameters);
-        });
-
         api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
           const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
             chats,
@@ -510,15 +503,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         const sector = secs.find((s) => s.id === user.SETOR);
 
-        console.log("Sectors", secs);
-        console.log("User sector:", user.SETOR, sector);
-
         api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then((res) => {
           const channelsData: WppClient[] = res.data.data;
           const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
           globalChannel.current = defaultChannel || channelsData[0] || null;
 
-          console.log("Current Global Channel:", globalChannel.current);
+          api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
+            const parameters: Record<string, string> = res.data["parameters"];
+            if (parameters["is_official"] === "true") {
+              const templatesResponse = await api.current.ax.get(
+                `/api/whatsapp/${globalChannel.current?.id}/templates`,
+              );
+              setTemplates(templatesResponse.data.templates);
+            }
+            setParameters(parameters);
+          });
+
           setChannels(res.data.data);
           setLoaded(true);
         });
