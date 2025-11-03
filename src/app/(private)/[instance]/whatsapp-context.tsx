@@ -287,7 +287,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       }
 
       console.log("Enviando mensagem para", to, "pelo canal", channel);
-      toast.info(`Enviando mensagem pelo canal ${channel?.id || "padrão"}...`);
 
       if (channel) {
         await api.current.sendMessage(String(channel.id), to, data);
