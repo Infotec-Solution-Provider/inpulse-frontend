@@ -11,14 +11,46 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useAppContext } from "../../app-context";
-import useInternalChatContext from "../../internal-context";
-import { useWhatsappContext } from "../../whatsapp-context";
+import useInternalChatContext, { DetailedInternalChat } from "../../internal-context";
+import { DetailedChat, useWhatsappContext, WppClient } from "../../whatsapp-context";
 import AudioRecorder from "./audio-recorder";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
+import ChannelSelect from "./channels-select";
+
+function getDefaultSelectedChannel(
+  currentChat: DetailedChat | DetailedInternalChat | null,
+  channels: WppClient[],
+  globalChannel: WppClient | null,
+  chatsChannels: Map<number, number>,
+) {
+  console.log("------------------- START: getDefaultSelectedChannel called", {
+    currentChat,
+    channels,
+    globalChannel,
+    chatsChannels,
+  });
+  if (!currentChat || currentChat.chatType !== "wpp") {
+    console.log("No currentChat or chatType is not 'wpp'. Returning null.");
+    return null;
+  }
+  const channelIdFromMap = chatsChannels.get(currentChat.contact?.id!);
+  console.log("channelIdFromMap", channelIdFromMap);
+  const channelFromMap = channels.find((ch) => ch.id === channelIdFromMap);
+  console.log("channelFromMap", channelFromMap);
+
+  if (channelFromMap) {
+    console.log("Returning channelFromMap", channelFromMap);
+    return channelFromMap;
+  }
+
+  console.log("Returning globalChannel", globalChannel);
+  return globalChannel;
+}
 
 export default function ChatSendMessageArea() {
-  const { currentChat, wppApi, parameters } = useWhatsappContext();
+  const { currentChat, wppApi, parameters, globalChannel, chatsChannels, channels, loaded } =
+    useWhatsappContext();
   const {
     sendMessage: sendMessageContext,
     state,
@@ -39,6 +71,20 @@ export default function ChatSendMessageArea() {
 
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState(
+    getDefaultSelectedChannel(currentChat, channels, globalChannel.current, chatsChannels.current),
+  );
+
+  useEffect(() => {
+    setSelectedChannel(
+      getDefaultSelectedChannel(
+        currentChat,
+        channels,
+        globalChannel.current,
+        chatsChannels.current,
+      ),
+    );
+  }, [loaded, currentChat]);
 
   const {
     textWithNames,
@@ -55,6 +101,18 @@ export default function ChatSendMessageArea() {
     contacts: contactsState.contacts,
     dispatch,
   });
+
+  const onChangeChannel = useCallback(
+    (selected: any) => {
+      setSelectedChannel(selected);
+      if (currentChat && currentChat.chatType === "wpp") {
+        console.log("Definindo canal para o chat", selected);
+        console.log("currentChat.contact?.id!", currentChat.contact?.id!);
+        chatsChannels.current.set(currentChat.contact?.id!, selected.id);
+      }
+    },
+    [currentChat],
+  );
 
   const openAttachFile = () => {
     if (fileInputRef.current) fileInputRef.current.click();
@@ -203,6 +261,11 @@ export default function ChatSendMessageArea() {
             />
           </div>
         </div>
+        <ChannelSelect
+          channels={channels}
+          selectedChannel={selectedChannel!}
+          onChange={onChangeChannel}
+        />
       </div>
 
       <div className="flex w-full flex-col gap-2">

@@ -4,13 +4,19 @@ import { WppContact } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import { IconButton, TableCell, TableRow, Tooltip } from "@mui/material";
+import { IconButton, TableCell, TableRow, Tooltip, Chip } from "@mui/material";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
+import { useContactsContext } from "../contacts-context";
+
+interface ContactWithExtras extends WppContact {
+  customerId?: number;
+  CLIENTE_ID?: number;
+}
 
 interface ContactsTableItemProps {
-  contact: WppContact;
-  openEditModalHandler: (c?: WppContact) => void;
-  deleteContactHandler: (c: WppContact) => void;
+  contact: ContactWithExtras;
+  openEditModalHandler: (c?: ContactWithExtras) => void;
+  deleteContactHandler: (c: ContactWithExtras) => void;
 }
 
 export default function ContactsTableItem({
@@ -18,7 +24,9 @@ export default function ContactsTableItem({
   openEditModalHandler,
   deleteContactHandler,
 }: ContactsTableItemProps) {
-  const safeFormatPhone = (phone: string) => {
+  const { customerMap } = useContactsContext();
+
+  const safeFormatPhone = (phone: string): string => {
     try {
       return Formatter.phone(phone);
     } catch {
@@ -26,12 +34,38 @@ export default function ContactsTableItem({
     }
   };
 
+  const customerId: number | null = contact.customerId || contact.CLIENTE_ID || null;
+  const customerName: string | undefined = customerId ? customerMap.get(customerId) : undefined;
+  const sectors = contact.sectors ?? [];
+
   return (
     <TableRow className="even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.ID.width }}>{contact.id}</TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.NAME.width }}>{contact.name}</TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.PHONE.width }}>
         {safeFormatPhone(contact.phone)}
+      </TableCell>
+      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width }}>
+        <span className="text-slate-700 dark:text-slate-300">
+          {customerName || "—"}
+        </span>
+      </TableCell>
+      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.SECTORS.width }}>
+        <div className="flex flex-wrap gap-1">
+          {sectors.length > 0 ? (
+            sectors.map((sector, index: number) => (
+              <Chip
+                key={`${contact.id}-sector-${sector.sectorId}-${index}`}
+                label={sector.sectorId}
+                size="small"
+                variant="outlined"
+                color="primary"
+              />
+            ))
+          ) : (
+            <span className="text-slate-500 dark:text-slate-400">—</span>
+          )}
+        </div>
       </TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.ACTIONS.width }} align="right">
         <div className="flex items-center justify-end gap-1">

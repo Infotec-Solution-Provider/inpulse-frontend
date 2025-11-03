@@ -124,7 +124,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-  <div className="w-full max-w-[48rem] mx-3 sm:mx-auto my-4 max-h-[90vh] overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 flex flex-col">
+    <div className="mx-3 my-4 flex max-h-[90vh] w-full max-w-[48rem] flex-col overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto">
       {/* Header com gradiente */}
       <header className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white shadow-lg">
         <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
       </header>
 
       {/* Conteúdo principal */}
-  <div className="p-6 flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden p-6">
         {/* Área de busca melhorada */}
         <div className="mb-6 space-y-4">
           <div className="flex items-center gap-3">
@@ -309,10 +309,10 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Lista de contatos com scroll suave */}
-        <div className="mb-6 rounded-xl bg-white p-2 shadow-inner dark:bg-slate-800/50 flex flex-col flex-1 overflow-hidden">
-          <ul className="scrollbar-whatsapp flex-1 flex flex-col gap-2 overflow-y-auto px-2 pb-24">
+        <div className="mb-6 flex flex-1 flex-col overflow-hidden rounded-xl bg-white p-2 shadow-inner dark:bg-slate-800/50">
+          <ul className="scrollbar-whatsapp flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-24">
             {loading ? (
-              <li className="flex flex-col items-center justify-center gap-4 text-gray-500 dark:text-gray-400 py-8 min-h-[14rem]">
+              <li className="flex min-h-[14rem] flex-col items-center justify-center gap-4 py-8 text-gray-500 dark:text-gray-400">
                 <CircularProgress size={48} sx={{ color: "indigo" }} />
                 <div className="text-center">
                   <p className="text-lg font-medium">Carregando contatos...</p>
@@ -343,7 +343,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                 ))}
 
                 {contacts.length === 0 && (
-                  <li className="flex flex-col items-center justify-center gap-3 text-gray-400 dark:text-gray-500 py-8 min-h-[12rem]">
+                  <li className="flex min-h-[12rem] flex-col items-center justify-center gap-3 py-8 text-gray-400 dark:text-gray-500">
                     <SearchIcon sx={{ fontSize: 64, opacity: 0.3 }} />
                     <div className="text-center">
                       <p className="text-lg font-medium">Nenhum contato encontrado</p>

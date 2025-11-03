@@ -84,7 +84,6 @@ export default function ChatProvider({ children }: ChatProviderProps) {
       }
     }
 
-
     if (currentChat && currentChat.chatType === "internal" && !editingMessage) {
       sendInternalMessage({
         chatId: currentChat.id,

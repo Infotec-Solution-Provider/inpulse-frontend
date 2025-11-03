@@ -76,7 +76,6 @@ interface IWhatsappContext {
   sendMessage: (to: string, data: SendMessageData) => Promise<void>;
   editMessage: (messageId: string, newText: string, isInternal?: boolean) => Promise<void>;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
-
   transferAttendance: (chatId: number, userId: number) => Promise<void>;
   chatFilters: ChatsFiltersState;
   getChatsMonitor: () => void;
@@ -97,6 +96,10 @@ interface IWhatsappContext {
   templates: MessageTemplate[];
   parameters: Record<string, string>;
   loadChatMessages: (chat: DetailedChat) => Promise<WppMessage[]>;
+  globalChannel: React.RefObject<WppClient | null>;
+  chatsChannels: React.RefObject<Map<number, number>>;
+  channels: WppClient[];
+  loaded: boolean;
 }
 
 interface WhatsappProviderProps {
@@ -114,28 +117,47 @@ export interface MessageTemplate {
   raw: any;
 }
 
+export interface WppClient {
+  id: number;
+  name: string;
+  type: "WWEBJS" | "WABA" | "GUPSHUP";
+}
+
+interface SectorData {
+  defaultClientId: number;
+  id: number;
+  instance: string;
+  name: string;
+  receiveChats: boolean;
+  startChats: boolean;
+}
+
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
 export const NOTIFICATIONS_PER_PAGE = 15;
-
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token, instance, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 
+  const [channels, setChannels] = useState<WppClient[]>([]);
+  const globalChannel = useRef<WppClient | null>(null);
+  const chatsChannels = useRef(new Map<number, number>());
   const [chats, setChats] = useState<DetailedChat[]>([]);
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
   const currentChatRef = useRef<DetailedChat | null>(null);
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
-  const [sectors, setSectors] = useState<{ id: number; name: string }[]>([]);
+  const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
+
+  const [loaded, setLoaded] = useState(false);
 
   function setUniqueCurrentChatMessages(update: SetStateAction<WppMessage[]>) {
     setCurrentChatMessages((prev) => {
@@ -172,13 +194,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
-      const messagesToUse = preloadedMessages !== undefined 
-        ? preloadedMessages 
-        : (messages[chat.contactId || 0] || []);
+      const messagesToUse =
+        preloadedMessages !== undefined ? preloadedMessages : messages[chat.contactId || 0] || [];
       setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
 
-      if (chat.contactId) {
+      if (chat.contactId && globalChannel.current) {
         api.current.markContactMessagesAsRead(chat.contactId);
 
         setChats((prev) =>
@@ -236,7 +257,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const transferAttendance = useCallback(
-    async(chatId: number, selectedUser: number) => {
+    async (chatId: number, selectedUser: number) => {
       api.current.setAuth(token || "");
       await api.current.transferAttendance(chatId, selectedUser).then(() => {
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
@@ -255,8 +276,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
     try {
-      console.log("Sending message to", { to, data});
-      await api.current.sendMessage(to, data);
+      let channel = globalChannel.current;
+
+      if (chatsChannels.current.has(data.contactId)) {
+        const chatChannelId = chatsChannels.current.get(data.contactId);
+        const channelFromMap = channels.find((ch) => ch.id === chatChannelId);
+        channel = channelFromMap || channel;
+      }
+
+      console.log("Enviando mensagem para", to, "pelo canal", channel);
+      toast.info(`Enviando mensagem pelo canal ${channel?.id || "padrão"}...`);
+
+      if (channel) {
+        await api.current.sendMessage(String(channel.id), to, data);
+      } else {
+        toast.error("Canal não encontrado para enviar a mensagem.");
+      }
     } catch (err) {
       toast.error(sanitizeErrorMessage(err));
     }
@@ -264,7 +299,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const editMessage = useCallback(
     async (messageId: string, newText: string, isInternal: boolean = false) => {
-      api.current.editMessage(messageId, newText, isInternal);
+      api.current.editMessage(String(globalChannel.current!.id), messageId, newText, isInternal);
     },
     [],
   );
@@ -273,9 +308,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsMonitor().then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+        const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
+          chats,
+          messages,
+        );
         setMonitorChats(detailedChats);
         setMessages(chatsMessages);
+        for (const [chatId, channelId] of channelsIds.entries()) {
+          chatsChannels.current.set(chatId, channelId);
+        }
       });
     } else {
       setMonitorChats([]);
@@ -324,7 +365,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
       api.current.setAuth(token);
 
-      const response = await api.current.getNotifications({ page, pageSize });
+      const response = await api.current.getNotifications({
+        page,
+        pageSize,
+      });
 
       const { notifications: newNotifications, totalCount } = response.data;
 
@@ -373,7 +417,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       toast.error("Falha ao criar agendamento\n" + sanitizeErrorMessage(err));
       console.error("Falha ao criar agendamento", err);
     }
-  }, []);
+  }, [user]);
 
   const loadChatMessages = useCallback(async (chat: DetailedChat) => {
     if (!chat.id) return [];
@@ -386,16 +430,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
     return [];
   }, []);
+
   const getChatById = useCallback(async (chatId: number) => {
     if (!chatId) return;
     const res = await api.current.getChatById(chatId);
     setChat(res);
   }, []);
+
   const forwardMessages = useCallback(
     async (data: ForwardMessagesData) => {
       try {
         api.current.setAuth(token || "");
-        await api.current.forwardMessages(data);
+        await api.current.forwardMessages(String(globalChannel.current!.id), data);
         toast.success("Mensagens encaminhadas com sucesso!");
       } catch (err) {
         const errorMessage = sanitizeErrorMessage(err);
@@ -410,11 +456,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+        const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
+          chats,
+          messages,
+        );
+
+        for (const [chatId, channelId] of channelsIds.entries()) {
+          chatsChannels.current.set(chatId, channelId);
+        }
+
         setChats(detailedChats);
         setMessages(chatsMessages);
       });
-      api.current.getSectors().then((res) => setSectors(res));
     } else {
       setChats([]);
       setMessages({});
@@ -422,35 +475,64 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, [token, api.current]);
 
   useEffect(() => {
-    if (typeof token === "string" && token.length > 0 && api.current) {
+    console.log(
+      `Token:${token}\nInstance:${instance}\nUser:${user?.NOME}\nSectors:${sectors.length}`,
+    );
+    if (token?.length && api.current && user) {
       api.current.setAuth(token);
-      api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
-        const parameters: Record<string, string> = res.data["parameters"];
-        if (parameters["is_official"] === "true") {
-          const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
-          setTemplates(templatesResponse.data.templates);
-        }
-        setParameters(parameters);
+      api.current.getSectors().then((res) => {
+        setSectors(res as SectorData[]);
+
+        const secs = res as SectorData[];
+
+        api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
+          const parameters: Record<string, string> = res.data["parameters"];
+          if (parameters["is_official"] === "true") {
+            const templatesResponse = await api.current.ax.get("/api/whatsapp/templates");
+            setTemplates(templatesResponse.data.templates);
+          }
+          setParameters(parameters);
+        });
+
+        api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
+          const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
+            chats,
+            messages,
+          );
+          setChats(detailedChats);
+          setMessages(chatsMessages);
+          chatsChannels.current = channelsIds;
+        });
+
+        const sector = secs.find((s) => s.id === user.SETOR);
+
+        console.log("Sectors", secs);
+        console.log("User sector:", user.SETOR, sector);
+
+        api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then((res) => {
+          const channelsData: WppClient[] = res.data.data;
+          const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
+          globalChannel.current = defaultChannel || channelsData[0] || null;
+
+          console.log("Current Global Channel:", globalChannel.current);
+          setChannels(res.data.data);
+          setLoaded(true);
+        });
+
+        getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
       });
 
-      api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-        setChats(detailedChats);
-        setMessages(chatsMessages);
-      });
-
-      api.current.getSectors().then((res) => setSectors(res));
-
-      getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
       return () => {
         setChats([]);
         setMessages([]);
         setTemplates([]);
         setParameters({});
         setNotifications([]);
+        setLoaded(false);
       };
     }
-  }, [token, api.current, instance]);
+    // Removendo api.current das dependências para evitar loop infinito
+  }, [token, instance, user]);
 
   useEffect(() => {
     if (socket) {
@@ -524,10 +606,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [socket, chats, currentChat]);
 
-  useEffect(() => {
-    console.log(sectors)
-  }, [sectors])
-
   return (
     <WhatsappContext.Provider
       value={{
@@ -565,6 +643,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         markAsReadNotificationById,
         getChatById,
         chat,
+        channels,
+        globalChannel,
+        chatsChannels,
+        loaded,
       }}
     >
       {children}

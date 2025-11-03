@@ -189,7 +189,7 @@ export default function MonitorCard({
               </div>
             </div>
           )}
-          <div className="ml-auto flex flex-col items-center gap-2">
+          <div className="ml-auto flex flex-col items-end gap-2 w-16 ">
             {handleView && (
               <Tooltip title="Visualizar" arrow placement="left">
                 <IconButton

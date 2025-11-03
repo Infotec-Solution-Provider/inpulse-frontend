@@ -33,7 +33,7 @@ export default function ContactsTable() {
           <TableBody>
             {state.isLoading ? (
               <TableRow className="h-32">
-                <TableCell colSpan={4} align="center">
+                <TableCell colSpan={6} align="center">
                   <div className="flex flex-col items-center gap-2">
                     <CircularProgress />
                     <span className="text-slate-600 dark:text-slate-300">
@@ -45,7 +45,7 @@ export default function ContactsTable() {
             ) : state.contacts.length === 0 ? (
               <TableRow className="h-[30rem]">
                 <TableCell
-                  colSpan={8}
+                  colSpan={6}
                   align="center"
                   sx={{
                     borderBottom: "none",

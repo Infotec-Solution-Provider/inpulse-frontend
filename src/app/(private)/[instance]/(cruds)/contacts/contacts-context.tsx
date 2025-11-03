@@ -6,17 +6,17 @@ import {
   useEffect,
   useMemo,
   useReducer,
-  useRef,
+  useState,
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { WhatsappClient, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
-import { WPP_BASE_URL } from "../../whatsapp-context";
+import { useWhatsappContext } from "../../whatsapp-context";
 import ContactModal from "./(table)/(modal)/contact-modal";
 import DeleteContactModal from "./(table)/(modal)/delete-contact-modal";
 import contactsReducer, {
@@ -24,6 +24,11 @@ import contactsReducer, {
   ContactsContextState,
   MultipleActions,
 } from "./(table)/contacts-reducer";
+
+interface ContactWithCustomer extends WppContact {
+  customerId?: number;
+  customer?: Customer;
+}
 
 interface IContactsProviderProps {
   children: ReactNode;
@@ -33,12 +38,20 @@ interface IContactsContext {
   state: ContactsContextState;
   dispatch: ActionDispatch<[action: ChangeContactsStateAction | MultipleActions]>;
   deleteContact: (id: number) => void;
-  updateContact: (id: number, name: string) => Promise<void>;
+  updateContact: (
+    id: number,
+    name: string,
+    sectorIds?: number[],
+    customerId?: number,
+  ) => Promise<void>;
   loadContacts: () => void;
-  createContact: (name: string, phone: string) => void;
+  createContact: (name: string, phone: string, sectorIds?: number[], customerId?: number) => void;
   openContactModal: (contact?: WppContact) => void;
   handleDeleteContact: (contact: WppContact) => void;
   phoneNameMap: Map<string, string>;
+  customerMap: Map<number, string>;
+  customerObjectMap: Map<number, Customer>;
+  sectorMap: Map<number, string>;
 }
 
 export const ContactsContext = createContext<IContactsContext>({} as IContactsContext);
@@ -48,7 +61,6 @@ export const useContactsContext = () => {
 };
 
 export default function ContactsProvider({ children }: IContactsProviderProps) {
-  const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const { token } = useAuthContext();
   const [state, dispatch] = useReducer(contactsReducer, {
     contacts: [],
@@ -56,8 +68,13 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     filters: { page: "1", perPage: "10" },
     isLoading: false,
   });
+  const [contactsWithCustomers, setContactsWithCustomers] = useState<ContactWithCustomer[]>([]);
+  const [contactSectors, setContactSectors] = useState<
+    Map<number, Array<{ contactId: number; sectorId: number }>>
+  >(new Map());
   const { users } = useInternalChatContext();
   const { openModal, closeModal } = useAppContext();
+  const { wppApi, globalChannel } = useWhatsappContext();
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -75,14 +92,53 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     return map;
   }, [users, state.contacts]);
 
+  const customerMap = useMemo(() => {
+    const map = new Map<number, string>();
+    contactsWithCustomers.forEach((contact: any) => {
+      if (contact.customerId && contact.customer?.RAZAO) {
+        map.set(contact.customerId, contact.customer.RAZAO);
+      }
+    });
+    return map;
+  }, [contactsWithCustomers]);
+
+  const customerObjectMap = useMemo(() => {
+    const map = new Map<number, Customer>();
+    contactsWithCustomers.forEach((contact: ContactWithCustomer) => {
+      if (contact.customerId && contact.customer) {
+        map.set(contact.customerId, contact.customer);
+      }
+    });
+    return map;
+  }, [contactsWithCustomers]);
+
+  const sectorMap = useMemo(() => {
+    const map = new Map<number, string>();
+    contactSectors.forEach((sectors) => {
+      sectors.forEach((sector) => {
+        if (sector.sectorId) {
+          // Aqui poderíamos ter o nome do setor se viesse da API
+          // Por enquanto, armazenaremos apenas o ID
+          map.set(sector.sectorId, `Setor ${sector.sectorId}`);
+        }
+      });
+    });
+    return map;
+  }, [contactSectors]);
+
   const updateContact = useCallback(
-    async (id: number, name: string) => {
+    async (id: number, name: string, sectorIds?: number[], customerId?: number) => {
       try {
         if (token) {
-          const updatedContact = await api.current.updateContact(id, name);
+          const updatedContact = await wppApi.current.updateContact(
+            id,
+            name,
+            customerId,
+            sectorIds,
+          );
           console.log("Updated contact from API:", updatedContact);
+
           dispatch({ type: "update-contact", id, name });
-          /* loadContacts(); */
           closeModal();
           toast.success("Cliente atualizado com sucesso!");
         }
@@ -98,7 +154,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     async (id: number) => {
       try {
         if (token) {
-          await api.current.deleteContact(id);
+          await wppApi.current.deleteContact(id);
           dispatch({ type: "delete-contact", id });
           /* loadContacts(); */
           toast.success("Contato deletado com sucesso!");
@@ -112,13 +168,18 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   );
 
   const createContact = useCallback(
-    async (name: string, phone: string) => {
+    async (name: string, phone: string, sectorIds?: number[], customerId?: number) => {
       try {
         if (token) {
-          const newContact = await api.current.createContact(name, phone.replace(/\D/g, ""));
+          const newContact = await wppApi.current.createContact(
+            name,
+            phone.replace(/\D/g, ""),
+            customerId,
+            sectorIds,
+          );
+
           dispatch({ type: "add-contact", data: newContact });
           toast.success("Contato criado com sucesso!");
-          /* loadContacts(); */
           closeModal();
         }
       } catch (err) {
@@ -147,7 +208,39 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     try {
       dispatch({ type: "change-loading", isLoading: true });
 
-      const res = await api.current.getContacts();
+      // Tentar carregar com clientes; se falhar, fallback para getContacts
+      let res: ContactWithCustomer[] = [];
+      try {
+        const response: unknown = await wppApi.current.getContactsWithCustomer();
+        // Verificar se a resposta é um array ou um objeto com array dentro
+        const data = Array.isArray(response)
+          ? response
+          : (response as any)?.data || (response as any)?.contacts || [];
+        res = data as ContactWithCustomer[];
+        setContactsWithCustomers(res);
+
+        // Extrair setores de cada contato (mantém a estrutura original { contactId, sectorId })
+        const sectorsMap = new Map<number, Array<{ contactId: number; sectorId: number }>>();
+        res.forEach((contact: ContactWithCustomer) => {
+          if (contact.id && contact.sectors && Array.isArray(contact.sectors)) {
+            sectorsMap.set(contact.id, contact.sectors);
+          }
+        });
+        setContactSectors(sectorsMap);
+      } catch (err) {
+        console.warn("Falha ao carregar contatos com clientes, usando getContacts:", err);
+        const response: unknown = await wppApi.current.getContacts();
+        const data = Array.isArray(response)
+          ? response
+          : (response as any)?.data || (response as any)?.contacts || [];
+        res = data as ContactWithCustomer[];
+        setContactsWithCustomers([]);
+      }
+
+      // Garantir que res é um array antes de prosseguir
+      if (!Array.isArray(res)) {
+        res = [];
+      }
 
       // Apply client-side filtering
       let filteredContacts = res;
@@ -189,8 +282,8 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   }, [state.filters]);
 
   useEffect(() => {
-    if (!token || !api.current) return;
-    api.current.setAuth(token);
+    if (!token || !wppApi.current) return;
+    wppApi.current.setAuth(token);
   }, [token]);
 
   useEffect(() => {
@@ -211,6 +304,9 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         openContactModal,
         handleDeleteContact,
         phoneNameMap,
+        customerMap,
+        customerObjectMap,
+        sectorMap,
       }}
     >
       {children}

@@ -7,7 +7,7 @@ interface RangeDateFieldProps extends RangeDatePickerProps {
 export default function RangeDateField(props: RangeDateFieldProps) {
   return (
     <div>
-      <h3 className="mb-1">{props.label}</h3>
+      <h3 className="mb-1 text-slate-800 dark:text-slate-200 font-semibold">{props.label}</h3>
       <RangeDatePicker
         initialFrom={props.initialFrom}
         initialTo={props.initialTo}

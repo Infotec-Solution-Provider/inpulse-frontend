@@ -152,6 +152,34 @@ export default function ContactsTableHeader() {
         <TableCell
           className="px-3"
           sx={{
+            width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width,
+            minWidth: CONTACTS_TABLE_COLUMNS.CUSTOMER.width,
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              {CONTACTS_TABLE_COLUMNS.CUSTOMER.label}
+            </label>
+            <div className="h-[40px] bg-slate-300 dark:bg-slate-600 rounded px-2" />
+          </div>
+        </TableCell>
+        <TableCell
+          className="px-3"
+          sx={{
+            width: CONTACTS_TABLE_COLUMNS.SECTORS.width,
+            minWidth: CONTACTS_TABLE_COLUMNS.SECTORS.width,
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              {CONTACTS_TABLE_COLUMNS.SECTORS.label}
+            </label>
+            <div className="h-[40px] bg-slate-300 dark:bg-slate-600 rounded px-2" />
+          </div>
+        </TableCell>
+        <TableCell
+          className="px-3"
+          sx={{
             width: CONTACTS_TABLE_COLUMNS.ACTIONS.width,
             minWidth: CONTACTS_TABLE_COLUMNS.ACTIONS.width,
           }}

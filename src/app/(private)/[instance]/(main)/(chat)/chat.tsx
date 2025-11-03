@@ -1,12 +1,21 @@
 "use client";
-import ChatHeader, { ChatContactInfoProps } from "./chat-header";
-import ChatSendMessageArea from "./chat-send-message-area";
-import ChatMessagesList from "./chat-messages-list";
-import { ChatContext } from "./chat-context";
 import { useContext } from "react";
 import ChatAttachmentPreview from "./chat-attachment-preview";
+import { ChatContext } from "./chat-context";
+import ChatHeader, { ChatContactInfoProps } from "./chat-header";
+import ChatMessagesList from "./chat-messages-list";
+import ChatSendMessageArea from "./chat-send-message-area";
 
-export default function Chat({ avatarUrl, name, customerName, phone, codErp, cpfCnpj, customerId, startDate }: ChatContactInfoProps) {
+export default function Chat({
+  avatarUrl,
+  name,
+  customerName,
+  phone,
+  codErp,
+  cpfCnpj,
+  customerId,
+  startDate,
+}: ChatContactInfoProps) {
   const { state, dispatch } = useContext(ChatContext);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -35,8 +44,8 @@ export default function Chat({ avatarUrl, name, customerName, phone, codErp, cpf
   };
 
   return (
-    <div className="relative h-full overflow-hidden md:grid md:grid-rows-[auto_1fr_auto] rounded-md bg-white text-black dark:bg-slate-900 dark:text-white shadow-md ">
-      <div className="md:static fixed inset-x-0 top-0 z-50 ">
+    <div className="relative h-full overflow-hidden rounded-md bg-white text-black shadow-md dark:bg-slate-900 dark:text-white md:grid md:grid-rows-[auto_1fr_auto]">
+      <div className="fixed inset-x-0 top-0 z-50 md:static">
         <ChatHeader
           avatarUrl={avatarUrl}
           name={name}
@@ -50,15 +59,13 @@ export default function Chat({ avatarUrl, name, customerName, phone, codErp, cpf
       </div>
 
       <div
-        className="h-full overflow-y-auto pt-[68px] pb-[80px] md:pt-0 md:pb-0 md:row-start-2 md:row-end-3"
+        className="h-full overflow-y-auto pb-[80px] pt-[68px] md:row-start-2 md:row-end-3 md:pb-0 md:pt-0"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onPaste={handlePaste}
       >
         <ChatMessagesList />
-        {state?.file && !state.sendAsAudio && (
-          <ChatAttachmentPreview file={state.file} />
-        )}
+        {state?.file && !state.sendAsAudio && <ChatAttachmentPreview file={state.file} />}
       </div>
       {(!state?.file || state.sendAsAudio) && (
         <>

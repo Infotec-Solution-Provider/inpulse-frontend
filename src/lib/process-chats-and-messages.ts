@@ -10,6 +10,7 @@ export default function processChatsAndMessages(
 
   const lastMessages: Record<number, WppMessage> = {};
   const chatsMessages: Record<number, WppMessage[]> = {};
+  const channelsIds: Map<number, number> = new Map();
 
   for (const message of messages) {
     const contactIdOrZero = message.contactId || 0;
@@ -54,9 +55,15 @@ export default function processChatsAndMessages(
     detailedChats.push(detailedChat);
   }
 
+  for (const [chatId, lastMessage] of Object.entries(lastMessages)) {
+    if (lastMessage.clientId) {
+      channelsIds.set(+chatId, lastMessage.clientId);
+    }
+  }
+
   detailedChats.sort((a, b) =>
     (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
   );
 
-  return { detailedChats, chatsMessages };
+  return { detailedChats, chatsMessages, channelsIds };
 }

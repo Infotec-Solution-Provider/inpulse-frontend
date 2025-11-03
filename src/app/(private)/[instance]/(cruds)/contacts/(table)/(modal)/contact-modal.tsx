@@ -1,24 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { TextField, Button, IconButton } from "@mui/material";
+import { useAppContext } from "@/app/(private)/[instance]/app-context";
+import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import SelectCustomerInput from "@/lib/components/select-customer-input";
+import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import { Close } from "@mui/icons-material";
+import { Autocomplete, Button, Chip, IconButton, TextField } from "@mui/material";
+import { useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useContactsContext } from "../../contacts-context";
-import { WppContact } from "@in.pulse-crm/sdk";
-import { useAppContext } from "@/app/(private)/[instance]/app-context";
 
 interface ContactModalProps {
-  contact?: WppContact;
+  contact?: WppContact & { customerId?: number; customer?: Customer };
 }
 
 export default function ContactModal({ contact }: ContactModalProps) {
-  const { createContact, updateContact } = useContactsContext();
+  const { createContact, updateContact, customerObjectMap } = useContactsContext();
   const { closeModal } = useAppContext();
+  const { sectors } = useContext(WhatsappContext);
   const isEditMode = !!contact;
 
   const [name, setName] = useState(contact?.name || "");
   const [phone, setPhone] = useState("");
+  const [selectedSectors, setSelectedSectors] = useState<Array<{ id: number; name: string }>>([]);
+
+  // Carregar cliente pré-selecionado se em modo de edição
+  // Primeiro tenta usar o objeto customer completo do contato, depois busca do mapa
+  const defaultCustomer = isEditMode
+    ? contact.customer || (contact.customerId ? customerObjectMap.get(contact.customerId) : null)
+    : null;
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    defaultCustomer || null,
+  );
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -27,7 +40,12 @@ export default function ContactModal({ contact }: ContactModalProps) {
     }
 
     if (isEditMode) {
-      updateContact(contact.id, name);
+      updateContact(
+        contact.id,
+        name,
+        selectedSectors.map((s) => s.id),
+        selectedCustomer?.CODIGO,
+      );
     } else {
       if (!phone.trim()) {
         toast.error("O telefone é obrigatório!");
@@ -40,9 +58,27 @@ export default function ContactModal({ contact }: ContactModalProps) {
         return;
       }
 
-      createContact(name, cleanedPhone);
+      createContact(
+        name,
+        cleanedPhone,
+        selectedSectors.map((s) => s.id),
+        selectedCustomer?.CODIGO,
+      );
     }
   };
+
+  useEffect(() => {
+    if (contact?.sectors) {
+      setSelectedSectors(
+        contact.sectors.map((s) => {
+          return {
+            id: s.sectorId,
+            name: sectors?.find((sec) => sec.id === s.sectorId)?.name || "",
+          };
+        }),
+      );
+    }
+  }, [contact, sectors]);
 
   return (
     <div className="w-full max-w-md rounded-lg bg-slate-100 p-6 shadow-xl dark:bg-slate-800">
@@ -95,6 +131,51 @@ export default function ContactModal({ contact }: ContactModalProps) {
             }}
           />
         )}
+
+        <SelectCustomerInput
+          defaultValue={selectedCustomer}
+          onChange={(customer) => setSelectedCustomer(customer)}
+        />
+
+        <Autocomplete
+          multiple
+          options={sectors || []}
+          getOptionLabel={(option) => option.name}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
+          value={selectedSectors}
+          onChange={(e, newValue) => setSelectedSectors(newValue)}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Setores"
+              placeholder="Selecione setores..."
+              variant="outlined"
+              className="bg-slate-50 dark:bg-slate-700"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(248 250 252)",
+                },
+              }}
+            />
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                {...getTagProps({ index })}
+                key={option.id}
+                label={option.name}
+                variant="outlined"
+                size="small"
+              />
+            ))
+          }
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              padding: "8px 8px",
+            },
+          }}
+        />
       </div>
 
       <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">

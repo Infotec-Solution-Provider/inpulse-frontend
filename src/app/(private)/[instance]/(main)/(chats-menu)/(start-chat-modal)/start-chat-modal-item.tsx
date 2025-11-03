@@ -48,7 +48,7 @@ export default function StartChatModalItem({
   };
 
   return (
-    <li
+    <div
       key={contact.id}
       className="group w-full transform rounded-xl bg-white p-4 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-lg dark:bg-slate-800/80"
     >
@@ -162,6 +162,6 @@ export default function StartChatModalItem({
           )}
         </div>
       </div>
-    </li>
+    </div>
   );
 }

@@ -7,13 +7,23 @@ export const CONTACTS_TABLE_COLUMNS = {
   },
   NAME: {
     label: "Nome",
-    width: "16rem",
+    width: "14rem",
     placeholder: "Nome do contato...",
   },
   PHONE: {
     label: "Telefone",
     width: "12rem",
     placeholder: "Telefone...",
+  },
+  CUSTOMER: {
+    label: "Cliente",
+    width: "16rem",
+    placeholder: "Cliente...",
+  },
+  SECTORS: {
+    label: "Setores",
+    width: "18rem",
+    placeholder: "Setores...",
   },
   ACTIONS: {
     label: "Ações",
