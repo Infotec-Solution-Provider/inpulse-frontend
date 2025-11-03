@@ -145,7 +145,7 @@ export default function ChatSendMessageArea() {
         <SendTemplateModal
           onClose={closeModal}
           onSendTemplate={(data) => {
-            wppApi.current.ax.post("/api/whatsapp/templates/send", {
+            wppApi.current.ax.post(`/api/whatsapp/${globalChannel.current?.id}/templates/send`, {
               to: currentChat.contact?.phone,
               chatId: currentChat.id,
               contactId: currentChat.contactId,
