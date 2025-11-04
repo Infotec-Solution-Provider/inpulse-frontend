@@ -31,7 +31,7 @@ export default function SchedulesModal({ onClose }: Props) {
         const res = await wppApi.current.getSchedules(String(user.CODIGO), String(user.SETOR), {
           perPage: "999",
         });
-        console.log(res.data);
+
         if (!mounted) return;
 
         const list = (res.data as DetailedSchedule[]).slice().sort((a, b) => {

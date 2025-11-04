@@ -112,8 +112,6 @@ export default function UsersTable() {
           rowsPerPage={Number(state.filters.perPage || 10)}
           labelRowsPerPage="Entradas por página"
           labelDisplayedRows={(info) => {
-            console.log(state);
-            console.log(info);
             const { from, to, count } = info;
             return `${from}-${to} de ${count}`;
           }}

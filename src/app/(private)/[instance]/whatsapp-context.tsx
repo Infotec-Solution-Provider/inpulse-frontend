@@ -286,7 +286,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         channel = channelFromMap || channel;
       }
 
-      console.log("Enviando mensagem para", to, "pelo canal", channel);
+      console.log("Enviando mensagem pelo canal", channel);
 
       if (channel) {
         await api.current.sendMessage(String(channel.id), to, data);
@@ -480,9 +480,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, [token, api.current]);
 
   useEffect(() => {
-    console.log(
-      `Token:${token}\nInstance:${instance}\nUser:${user?.NOME}\nSectors:${sectors.length}`,
-    );
     if (token?.length && api.current && user) {
       api.current.setAuth(token);
       api.current.getSectors().then((res) => {
@@ -518,8 +515,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             setParameters(parameters);
           });
 
-          console.log("Canais do setor:", channelsData);
-          console.log("Canal global definido para", globalChannel.current);
           setChannels(res.data.data);
           setLoaded(true);
         });
