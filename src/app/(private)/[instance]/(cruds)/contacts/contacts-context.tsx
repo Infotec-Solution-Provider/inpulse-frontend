@@ -207,76 +207,17 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   const loadContacts = useCallback(async () => {
     try {
       dispatch({ type: "change-loading", isLoading: true });
-
-      // Tentar carregar com clientes; se falhar, fallback para getContacts
-      let res: ContactWithCustomer[] = [];
-      try {
-        const response: unknown = await wppApi.current.getContactsWithCustomer();
-        // Verificar se a resposta é um array ou um objeto com array dentro
-        const data = Array.isArray(response)
-          ? response
-          : (response as any)?.data || (response as any)?.contacts || [];
-        res = data as ContactWithCustomer[];
-        setContactsWithCustomers(res);
-
-        // Extrair setores de cada contato (mantém a estrutura original { contactId, sectorId })
-        const sectorsMap = new Map<number, Array<{ contactId: number; sectorId: number }>>();
-        res.forEach((contact: ContactWithCustomer) => {
-          if (contact.id && contact.sectors && Array.isArray(contact.sectors)) {
-            sectorsMap.set(contact.id, contact.sectors);
-          }
-        });
-        setContactSectors(sectorsMap);
-      } catch (err) {
-        console.warn("Falha ao carregar contatos com clientes, usando getContacts:", err);
-        const response: unknown = await wppApi.current.getContacts();
-        const data = Array.isArray(response)
-          ? response
-          : (response as any)?.data || (response as any)?.contacts || [];
-        res = data as ContactWithCustomer[];
-        setContactsWithCustomers([]);
-      }
-
-      // Garantir que res é um array antes de prosseguir
-      if (!Array.isArray(res)) {
-        res = [];
-      }
-
-      // Apply client-side filtering
-      let filteredContacts = res;
-      const filters: any = state.filters;
-
-      if (filters.id) {
-        filteredContacts = filteredContacts.filter((c) => c.id === parseInt(filters.id || "0"));
-      }
-      if (filters.name) {
-        filteredContacts = filteredContacts.filter((c) =>
-          c.name.toLowerCase().includes(filters.name?.toLowerCase() || ""),
-        );
-      }
-      if (filters.phone) {
-        filteredContacts = filteredContacts.filter((c) => c.phone.includes(filters.phone || ""));
-      }
-
-      const totalRows = filteredContacts.length;
-
-      // Apply client-side pagination
-      const page = parseInt(state.filters.page || "1");
-      const perPage = parseInt(state.filters.perPage || "10");
-      const startIndex = (page - 1) * perPage;
-      const paginatedContacts = filteredContacts.slice(startIndex, startIndex + perPage);
-
-      dispatch({
-        type: "multiple",
-        actions: [
-          { type: "load-contacts", contacts: paginatedContacts },
-          { type: "change-total-rows", totalRows },
-          { type: "change-loading", isLoading: false },
-        ],
+      const response = await wppApi.current.getContactsWithCustomer({
+        name: state.filters.name,
+        phone: state.filters.phone,
+        page: state.filters.page ? Number(state.filters.page) : undefined,
+        perPage: state.filters.perPage ? Number(state.filters.perPage) : undefined,
       });
+      dispatch({ type: "load-contacts", contacts: response.data as ContactWithCustomer[] });
     } catch (err) {
       Logger.error("Error loading contacts", err as Error);
       toast.error("Falha ao carregar clientes!");
+    } finally {
       dispatch({ type: "change-loading", isLoading: false });
     }
   }, [state.filters]);

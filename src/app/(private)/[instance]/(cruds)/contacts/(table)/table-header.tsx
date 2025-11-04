@@ -100,9 +100,11 @@ export default function ContactsTableHeader() {
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
+              disabled
             />
           </div>
         </TableCell>
+
         <TableCell
           className="px-3"
           sx={{
@@ -160,7 +162,7 @@ export default function ContactsTableHeader() {
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
               {CONTACTS_TABLE_COLUMNS.CUSTOMER.label}
             </label>
-            <div className="h-[40px] bg-slate-300 dark:bg-slate-600 rounded px-2" />
+            <div className="h-[40px] rounded bg-slate-300 px-2 dark:bg-slate-600" />
           </div>
         </TableCell>
         <TableCell
@@ -174,7 +176,7 @@ export default function ContactsTableHeader() {
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
               {CONTACTS_TABLE_COLUMNS.SECTORS.label}
             </label>
-            <div className="h-[40px] bg-slate-300 dark:bg-slate-600 rounded px-2" />
+            <div className="h-[40px] rounded bg-slate-300 px-2 dark:bg-slate-600" />
           </div>
         </TableCell>
         <TableCell
