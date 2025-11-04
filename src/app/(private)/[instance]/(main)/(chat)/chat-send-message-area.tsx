@@ -261,11 +261,13 @@ export default function ChatSendMessageArea() {
             />
           </div>
         </div>
-        <ChannelSelect
-          channels={channels}
-          selectedChannel={selectedChannel!}
-          onChange={onChangeChannel}
-        />
+        {currentChat && currentChat.chatType === "wpp" && channels.length > 0 && (
+          <ChannelSelect
+            channels={channels}
+            selectedChannel={selectedChannel!}
+            onChange={onChangeChannel}
+          />
+        )}
       </div>
 
       <div className="flex w-full flex-col gap-2">

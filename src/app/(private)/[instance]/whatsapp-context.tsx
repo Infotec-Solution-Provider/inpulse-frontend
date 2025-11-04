@@ -518,6 +518,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             setParameters(parameters);
           });
 
+          console.log("Canais do setor:", channelsData);
+          console.log("Canal global definido para", globalChannel.current);
           setChannels(res.data.data);
           setLoaded(true);
         });
