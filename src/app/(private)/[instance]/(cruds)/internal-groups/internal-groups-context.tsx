@@ -208,7 +208,6 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         },
       })
       .then((res) => {
-        console.log(res.data);
         setWppGroups(res.data.data);
       })
       .catch((err) => {

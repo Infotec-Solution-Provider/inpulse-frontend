@@ -136,8 +136,6 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
             customerId,
             sectorIds,
           );
-          console.log("Updated contact from API:", updatedContact);
-
           dispatch({ type: "update-contact", id, name });
           closeModal();
           toast.success("Cliente atualizado com sucesso!");

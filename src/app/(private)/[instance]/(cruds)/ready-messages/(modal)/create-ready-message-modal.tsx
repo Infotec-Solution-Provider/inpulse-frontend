@@ -104,10 +104,6 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
     }
   };
 
-  useEffect(() => {
-    console.log("sectors", sectors);
-  }, []);
-
   return (
     <div
       className="flex w-full max-w-3xl flex-col gap-6 rounded-md bg-white px-8 py-6 text-gray-800 dark:bg-slate-800 dark:text-white"
@@ -153,10 +149,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
       />
 
       <div className="pt-2">
-        <FilePicker
-          selectedFile={selectedFile}
-          onChangeFile={setSelectedFile}
-        />
+        <FilePicker selectedFile={selectedFile} onChangeFile={setSelectedFile} />
       </div>
 
       <Popper
