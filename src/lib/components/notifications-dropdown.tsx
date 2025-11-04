@@ -210,7 +210,6 @@ export default function NotificationsDropdown() {
           | WppChatWithDetailsAndMessages
           | null
           | undefined;
-        console.log("Chat retornado pela getChatById:", chatResult);
 
         const contactData = chatResult?.contact ?? null;
         setSelectedContact(contactData);
