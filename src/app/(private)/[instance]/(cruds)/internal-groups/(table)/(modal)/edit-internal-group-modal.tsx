@@ -1,9 +1,9 @@
 import filesService from "@/lib/services/files.service";
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup, User } from "@in.pulse-crm/sdk";
 import { PersonAdd } from "@mui/icons-material";
+import CloseIcon from "@mui/icons-material/Close";
 import ImageIcon from "@mui/icons-material/Image";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
-import CloseIcon from "@mui/icons-material/Close";
 import {
   Autocomplete,
   Button,
@@ -13,46 +13,29 @@ import {
   ListItemText,
   TextField,
 } from "@mui/material";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../../app-context";
 import { InternalChatContext } from "../../../../internal-context";
 import { useInternalGroupsContext } from "../../internal-groups-context";
 
-type UnifiedContact = {
-  name: string;
-  phone: string | null;
-  userId?: number;
-};
-
-const getParticipantKey = (participant: UnifiedContact) => {
-  if (participant.userId !== undefined) {
-    return `user-${participant.userId}`;
-  }
-
-  if (participant.phone) {
-    return `phone-${participant.phone}`;
-  }
-
-  return undefined;
-};
-
-const ensureNumericId = (value: number | string | null | undefined) => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-
-  return undefined;
-};
-
 interface EditInternalGroupModalProps {
   group: InternalGroup;
 }
+
+const getUser = (users: User[], userId: number) => {
+  return users.find((user) => user.CODIGO === userId);
+};
+
+const getParticipantName = (users: User[], participantId: string) => {
+  if (participantId.startsWith("user:")) {
+    const userId = Number(participantId.replace("user:", ""));
+    const user = getUser(users, userId);
+    return user ? user.NOME_EXIBICAO || user.NOME || user.LOGIN : "Usuário Excluído";
+  }
+
+  return "Contato Externo";
+};
 
 export default function EditInternalGroupModal({ group }: EditInternalGroupModalProps) {
   const { closeModal } = useAppContext();
@@ -62,64 +45,14 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
   const availableWppGroups = wppGroups ?? [];
 
   const [name, setName] = useState(group.groupName);
-  const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<{ id: { user: string }; name: string } | null>(
     availableWppGroups.find((g) => g.id.user === group.wppGroupId) || null,
   );
-
-  const mergedContacts: UnifiedContact[] = useMemo(() => {
-    const map = new Map<string, UnifiedContact>();
-
-    users.forEach((u) => {
-      const userId = u.CODIGO;
-      const key = `user-${userId}`;
-
-      map.set(key, {
-        name: u.NOME,
-        phone: userId.toString(),
-        userId,
-      });
-    });
-
-    return Array.from(map.values());
-  }, [users]);
-
-  const [participants, setParticipants] = useState<UnifiedContact[]>([]);
-
-  useEffect(() => {
-    const participantsWithInfo = group.participants.map((participant) => {
-      const match = mergedContacts.find((contact) => contact.userId === participant.userId);
-
-      if (match) {
-        return match;
-      }
-
-      return {
-        name: `ID: ${participant.userId}`,
-        phone: participant.userId ? participant.userId.toString() : null,
-        userId: participant.userId,
-      };
-    });
-
-    setParticipants(participantsWithInfo);
-  }, [group.participants, mergedContacts]);
-
-  const userOptions = useMemo(() => {
-    const existingKeys = new Set(
-      participants
-        .map((participant) => getParticipantKey(participant))
-        .filter((key): key is string => Boolean(key)),
-    );
-
-    return mergedContacts.filter((contact) => {
-      const key = getParticipantKey(contact);
-      return !key || !existingKeys.has(key);
-    });
-  }, [mergedContacts, participants]);
-
+  const [participants, setParticipants] = useState(group.participants.map((p) => p.participantId));
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!name || participants.length === 0) {
@@ -127,49 +60,30 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
       return;
     }
 
-    const participantIds = participants
-      .map((participant) => ensureNumericId(participant.userId ?? participant.phone))
-      .filter((id): id is number => typeof id === "number");
-
-    await updateInternalGroup(group.id, {
+    updateInternalGroup(group.id, {
       name,
-      participants: participantIds,
+      participants,
       wppGroupId: selectedGroup?.id.user || null,
     });
 
     if (groupImageRef.current) {
-      await updateInternalGroupImage(group.id, groupImageRef.current);
+      updateInternalGroupImage(group.id, groupImageRef.current);
     }
 
     closeModal();
   };
 
   const handleAddUser = () => {
-    if (!selectedUser) {
-      return;
+    if (selectedUser) {
+      const participantId = `user:${selectedUser.CODIGO}`;
+      if (!participants.includes(participantId)) {
+        setParticipants((prev) => [...prev, participantId]);
+      }
     }
-
-    const newKey = getParticipantKey(selectedUser);
-
-    const alreadyAdded = participants.some((participant) => {
-      const participantKey = getParticipantKey(participant);
-      return participantKey && participantKey === newKey;
-    });
-
-    if (!alreadyAdded) {
-      setParticipants((prev) => [selectedUser, ...prev]);
-    }
-
-    setSelectedUser(null);
   };
 
-  const handleRemoveUser = (targetKey: string) => () => {
-    setParticipants((prev) =>
-      prev.filter((participant) => {
-        const participantKey = getParticipantKey(participant);
-        return participantKey !== targetKey;
-      }),
-    );
+  const handleRemoveUser = (participant: string) => () => {
+    setParticipants((prev) => prev.filter((p) => p !== participant));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,7 +176,8 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
               <Autocomplete
                 options={availableWppGroups}
                 getOptionLabel={(option) => option.name}
-                getOptionKey={option => option.id.user}
+                getOptionKey={(option) => option.id.user}
+                getOptionDisabled={(option) => selectedGroup?.id.user === option.id.user}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -285,11 +200,10 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
           <div className="flex flex-col gap-4">
             <div className="flex gap-2">
               <Autocomplete
-                options={userOptions}
-                getOptionLabel={(option) => `${option.name} (ID: ${option.userId ?? option.phone})`}
-                getOptionKey={(option) =>
-                  option.userId ? "user:" + option.userId : "phone:" + option.phone
-                }
+                options={users}
+                getOptionLabel={(option) => `(${option.CODIGO}) ${option.NOME}`}
+                getOptionKey={(option) => option.CODIGO}
+                getOptionDisabled={(option) => participants.includes(`user:${option.CODIGO}`)}
                 fullWidth
                 value={selectedUser}
                 renderInput={(params) => (
@@ -328,23 +242,20 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
                     </p>
                   ) : (
                     participants.map((participant, index) => {
-                      const participantKey =
-                        getParticipantKey(participant) ?? `participant-${index}`;
-
                       return (
                         <ListItem
-                          key={participantKey}
+                          key={`participant-${index}`}
                           className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
                           divider
                         >
                           <ListItemText
-                            primary={participant.name}
-                            secondary={`ID: ${participant.userId ?? participant.phone}`}
+                            primary={getParticipantName(users, participant)}
+                            secondary={`${participant}`}
                           />
                           <IconButton
                             color="error"
                             size="small"
-                            onClick={handleRemoveUser(participantKey)}
+                            onClick={handleRemoveUser(participant)}
                             className="hover:bg-red-50 dark:hover:bg-red-950/30"
                           >
                             <PersonRemoveIcon />

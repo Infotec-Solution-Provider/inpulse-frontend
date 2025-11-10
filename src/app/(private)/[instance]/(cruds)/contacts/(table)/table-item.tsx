@@ -4,9 +4,8 @@ import { WppContact } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import { IconButton, TableCell, TableRow, Tooltip, Chip } from "@mui/material";
+import { Chip, IconButton, TableCell, TableRow, Tooltip } from "@mui/material";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
-import { useContactsContext } from "../contacts-context";
 
 interface ContactWithExtras extends WppContact {
   customerId?: number;
@@ -24,8 +23,6 @@ export default function ContactsTableItem({
   openEditModalHandler,
   deleteContactHandler,
 }: ContactsTableItemProps) {
-  const { customerMap } = useContactsContext();
-
   const safeFormatPhone = (phone: string): string => {
     try {
       return Formatter.phone(phone);
@@ -34,8 +31,6 @@ export default function ContactsTableItem({
     }
   };
 
-  const customerId: number | null = contact.customerId || contact.CLIENTE_ID || null;
-  const customerName: string | undefined = customerId ? customerMap.get(customerId) : undefined;
   const sectors = contact.sectors ?? [];
 
   return (
@@ -46,9 +41,7 @@ export default function ContactsTableItem({
         {safeFormatPhone(contact.phone)}
       </TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width }}>
-        <span className="text-slate-700 dark:text-slate-300">
-          {customerName || "—"}
-        </span>
+        <span className="text-slate-700 dark:text-slate-300">{contact.customerId || "—"}</span>
       </TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.SECTORS.width }}>
         <div className="flex flex-wrap gap-1">

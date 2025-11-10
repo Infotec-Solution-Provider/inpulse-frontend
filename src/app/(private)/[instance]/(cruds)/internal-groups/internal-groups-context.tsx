@@ -38,11 +38,15 @@ interface IInternalGroupsContext {
   dispatch: ActionDispatch<[ChangeInternalGroupsStateAction]>;
   updateInternalGroup: (
     id: number,
-    data: { name: string; participants: number[]; wppGroupId: string | null },
+    data: {
+      name: string;
+      participants: string[];
+      wppGroupId: string | null;
+    },
   ) => void;
   createInternalGroup: (data: {
     name: string;
-    participants: number[];
+    participants: string[];
     groupId: string | null;
     groupImage?: File | null;
   }) => Promise<void>;
@@ -77,7 +81,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
   const createInternalGroup = useCallback(
     async (data: {
       name: string;
-      participants: number[];
+      participants: string[];
       groupId: string | null;
       groupImage?: File | null;
     }) => {
@@ -106,7 +110,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
   const updateInternalGroup = useCallback(
     async (
       id: number,
-      data: { name: string; participants: number[]; wppGroupId: string | null },
+      data: { name: string; participants: string[]; wppGroupId: string | null },
     ) => {
       try {
         if (token && internalApi.current) {

@@ -11,7 +11,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../app-context";
 import { useWhatsappContext } from "../../../whatsapp-context";

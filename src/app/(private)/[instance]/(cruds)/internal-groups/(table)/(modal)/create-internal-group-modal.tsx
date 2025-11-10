@@ -81,7 +81,7 @@ export default function CreateInternalGroupModal() {
 
     await createInternalGroup({
       name,
-      participants: participants.map((p) => p.userId ?? 0),
+      participants: participants.filter((p) => !!p.userId).map((p) => `user:${p.userId}`),
       groupId: selectedGroup?.id.user || null,
       groupImage: groupImageRef.current,
     });

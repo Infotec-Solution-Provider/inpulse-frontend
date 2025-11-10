@@ -2,7 +2,6 @@
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import SelectCustomerInput from "@/lib/components/select-customer-input";
 import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import { Close } from "@mui/icons-material";
 import { Autocomplete, Button, Chip, IconButton, TextField } from "@mui/material";
@@ -15,7 +14,7 @@ interface ContactModalProps {
 }
 
 export default function ContactModal({ contact }: ContactModalProps) {
-  const { createContact, updateContact, customerObjectMap } = useContactsContext();
+  const { createContact, updateContact } = useContactsContext();
   const { closeModal } = useAppContext();
   const { sectors } = useContext(WhatsappContext);
   const isEditMode = !!contact;
@@ -23,15 +22,6 @@ export default function ContactModal({ contact }: ContactModalProps) {
   const [name, setName] = useState(contact?.name || "");
   const [phone, setPhone] = useState("");
   const [selectedSectors, setSelectedSectors] = useState<Array<{ id: number; name: string }>>([]);
-
-  // Carregar cliente pré-selecionado se em modo de edição
-  // Primeiro tenta usar o objeto customer completo do contato, depois busca do mapa
-  const defaultCustomer = isEditMode
-    ? contact.customer || (contact.customerId ? customerObjectMap.get(contact.customerId) : null)
-    : null;
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    defaultCustomer || null,
-  );
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -44,7 +34,6 @@ export default function ContactModal({ contact }: ContactModalProps) {
         contact.id,
         name,
         selectedSectors.map((s) => s.id),
-        selectedCustomer?.CODIGO,
       );
     } else {
       if (!phone.trim()) {
@@ -62,7 +51,6 @@ export default function ContactModal({ contact }: ContactModalProps) {
         name,
         cleanedPhone,
         selectedSectors.map((s) => s.id),
-        selectedCustomer?.CODIGO,
       );
     }
   };
@@ -132,11 +120,6 @@ export default function ContactModal({ contact }: ContactModalProps) {
           />
         )}
 
-        <SelectCustomerInput
-          defaultValue={selectedCustomer}
-          onChange={(customer) => setSelectedCustomer(customer)}
-        />
-
         <Autocomplete
           multiple
           options={sectors || []}
@@ -159,7 +142,7 @@ export default function ContactModal({ contact }: ContactModalProps) {
               }}
             />
           )}
-          renderTags={(value, getTagProps) =>
+          renderValue={(value, getTagProps) =>
             value.map((option, index) => (
               <Chip
                 {...getTagProps({ index })}

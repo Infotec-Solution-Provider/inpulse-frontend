@@ -169,7 +169,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const startDirectChat = useCallback(
     (userId: number) => {
       if (!token || !user) return;
-      api.current.createInternalChat([userId, user!.CODIGO], false, "");
+      api.current.createInternalChat([`user:${userId}`, `user:${user.CODIGO}`], false, "");
     },
     [api, token, user],
   );
