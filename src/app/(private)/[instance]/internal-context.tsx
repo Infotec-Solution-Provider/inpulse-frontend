@@ -14,8 +14,17 @@ import {
   InternalSendMessageData,
   SocketEventType,
   User,
+  WppContact,
 } from "@in.pulse-crm/sdk";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "react-toastify";
 import { ContactsContext } from "./(cruds)/contacts/contacts-context";
 import { SocketContext } from "./socket-context";
@@ -42,6 +51,7 @@ interface InternalChatContextType {
   getInternalChatsMonitor: () => void;
   monitorMessages: Record<number, InternalMessage[]>;
   deleteInternalChat: (id: number) => Promise<void>;
+  phoneNameMap: Map<string, string>;
 
   users: User[];
 }
@@ -67,6 +77,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     currentChatRef,
     setCurrentChatMessages: setWppCurrMsgs,
     chats: wppChats,
+    wppApi,
   } = useWhatsappContext();
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
@@ -74,7 +85,23 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
-  const { state, phoneNameMap } = useContext(ContactsContext);
+  const [contacts, setContacts] = useState<WppContact[]>([]);
+
+  const phoneNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    contacts.forEach((contact) => {
+      const phone = contact.phone?.replace(/\D/g, "");
+      if (phone && contact.name) map.set(phone, contact.name);
+    });
+
+    users.forEach((u) => {
+      const phone = u.WHATSAPP?.replace(/\D/g, "");
+      if (phone && u.NOME) map.set(phone, u.NOME);
+    });
+
+    return map;
+  }, [users, contacts]);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
@@ -149,6 +176,10 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     }
     if (token && user && users.length > 0) {
       api.current.setAuth(token);
+      wppApi.current.getContacts().then((res) => {
+        console.log("Contacts loaded:", res);
+        setContacts(res);
+      });
       api.current.getInternalChatsBySession().then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
           user!.CODIGO,
@@ -233,7 +264,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           setInternalChats,
           currentChatRef,
           users,
-          state.contacts,
+          contacts,
           user!,
           phoneNameMap,
         ),
@@ -276,6 +307,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         getInternalChatsMonitor,
         monitorMessages,
         deleteInternalChat,
+        phoneNameMap,
       }}
     >
       {children}

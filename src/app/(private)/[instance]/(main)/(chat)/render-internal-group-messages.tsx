@@ -34,10 +34,9 @@ export default function RenderInternalGroupMessages({
   toggleSelectMessage,
   openManualForward,
 }: RenderInternalGroupMessagesProps) {
-  const { currentInternalChatMessages, users } = useContext(InternalChatContext);
+  const { currentInternalChatMessages, users, phoneNameMap } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
-  const { phoneNameMap } = useContext(ContactsContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
   const messagesEndRef = useRef<HTMLDivElement>(null);
