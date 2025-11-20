@@ -68,8 +68,8 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     filters: { page: "1", perPage: "10" },
     isLoading: false,
   });
-  const [contactsWithCustomers, setContactsWithCustomers] = useState<ContactWithCustomer[]>([]);
-  const [contactSectors, setContactSectors] = useState<
+  const [contactsWithCustomers, /* setContactsWithCustomers */] = useState<ContactWithCustomer[]>([]);
+  const [contactSectors, /* setContactSectors */] = useState<
     Map<number, Array<{ contactId: number; sectorId: number }>>
   >(new Map());
   const { users } = useInternalChatContext();
@@ -130,12 +130,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     async (id: number, name: string, sectorIds?: number[], customerId?: number) => {
       try {
         if (token) {
-          const updatedContact = await wppApi.current.updateContact(
-            id,
-            name,
-            customerId,
-            sectorIds,
-          );
+          await wppApi.current.updateContact(id, name, customerId, sectorIds);
           dispatch({ type: "update-contact", id, name });
           closeModal();
           toast.success("Cliente atualizado com sucesso!");

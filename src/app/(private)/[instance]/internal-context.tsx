@@ -26,7 +26,6 @@ import {
   useState,
 } from "react";
 import { toast } from "react-toastify";
-import { ContactsContext } from "./(cruds)/contacts/contacts-context";
 import { SocketContext } from "./socket-context";
 import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
 

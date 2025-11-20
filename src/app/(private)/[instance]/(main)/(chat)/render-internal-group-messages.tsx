@@ -5,7 +5,6 @@ import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
 import { InternalMessage } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { InternalChatContext } from "../../internal-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
