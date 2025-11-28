@@ -6,6 +6,7 @@ import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
 import { toast } from "react-toastify";
 import SelectCustomerInput from "@/lib/components/select-customer-input";
 import { Customer } from "@in.pulse-crm/sdk";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 
 export default function EditContactModal() {
   const { closeModal } = useContext(AppContext);
@@ -18,11 +19,16 @@ export default function EditContactModal() {
   const handleEditContact = async () => {
     if (!currentChat || !wppApi.current || !chat.contact) return;
     const { contact } = chat;
-    await wppApi.current.updateContact(contact.id, name, customer?.CODIGO || null);
+    try {
+      await wppApi.current.updateContact(contact.id, name, customer?.CODIGO || null);
 
-    toast.success("Contato atualizado com sucesso!");
-    updateChatContact(contact.id, name, customer);
-    closeModal();
+      toast.success("Contato atualizado com sucesso!");
+      updateChatContact(contact.id, name, customer);
+      closeModal();
+    } catch (err) {
+      toast.error(sanitizeErrorMessage(err));
+      console.error(err);
+    }
   };
 
   useEffect(() => {
