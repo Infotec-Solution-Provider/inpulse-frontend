@@ -119,12 +119,12 @@ export default function FinishChatModal() {
             color="primary"
             className="w-32"
             onClick={handleFinishChat}
-            disabled={
+            disabled={Boolean(
               !resultId ||
-              (resultId &&
-                results.find((r) => r.id === resultId)?.COD_ACAO === 2 &&
-                !scheduleDate)
-            }
+                (resultId &&
+                  results.find((r) => r.id === resultId)?.COD_ACAO === 2 &&
+                  !scheduleDate),
+            )}
           >
             Finalizar
           </Button>
