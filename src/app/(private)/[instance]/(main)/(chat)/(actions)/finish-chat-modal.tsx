@@ -121,7 +121,7 @@ export default function FinishChatModal() {
             onClick={handleFinishChat}
             disabled={
               !resultId ||
-              (!!resultId &&
+              (resultId &&
                 results.find((r) => r.id === resultId)?.COD_ACAO === 2 &&
                 !scheduleDate)
             }

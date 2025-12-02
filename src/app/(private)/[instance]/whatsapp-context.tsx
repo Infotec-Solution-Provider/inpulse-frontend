@@ -298,7 +298,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     } catch (err) {
       toast.error(sanitizeErrorMessage(err));
     }
-  }, []);
+  }, [channels]);
 
   const editMessage = useCallback(
     async (messageId: string, newText: string, isInternal: boolean = false) => {
