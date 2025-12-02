@@ -12,6 +12,15 @@ import FinishChatModal from "./(actions)/finish-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 
+const safeFormatPhone = (phone: string | null): string => {
+  try {
+    if (!phone) return "";
+    return Formatter.phone(phone);
+  } catch {
+    return phone || "";
+  }
+};
+
 export interface ChatContactInfoProps {
   name: string;
   customerName: string | null;
@@ -67,9 +76,7 @@ export default function ChatHeader({
             <h2 className="text-sm text-slate-700 dark:text-slate-200">
               {customerName || "Contato Não Atribuído"}
             </h2>
-            <h2 className="text-sm text-slate-400 dark:text-slate-300">
-              {phone ? Formatter.phone(phone) : ""}
-            </h2>
+            <h2 className="text-sm text-slate-400 dark:text-slate-300">{safeFormatPhone(phone)}</h2>
           </div>
         </div>
         {customerId && (
