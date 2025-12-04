@@ -81,6 +81,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
   const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
@@ -169,11 +170,27 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   );
 
   useEffect(() => {
-    if (token && users.length === 0) {
-      usersService.setAuth(token);
-      usersService.getUsers({ perPage: "999" }).then((res) => setUsers(res.data));
+    if (!token) {
+      setUsers([]);
+      setUsersLoaded(false);
+      return;
     }
-    if (token && user && users.length > 0) {
+
+    usersService.setAuth(token);
+    setUsersLoaded(false);
+
+    usersService
+      .getUsers({ perPage: "999" })
+      .then((res) => setUsers(res.data))
+      .catch((err) => {
+        console.error("Falha ao carregar usuários internos", err);
+        setUsers([]);
+      })
+      .finally(() => setUsersLoaded(true));
+  }, [token]);
+
+  useEffect(() => {
+    if (token && user && usersLoaded && users.length > 0) {
       api.current.setAuth(token);
       wppApi.current.getContacts().then((res) => {
         console.log("Contacts loaded:", res);
@@ -190,11 +207,12 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         setInternalChats(detailedChats || []);
         setMessages(chatsMessages || []);
       });
-    } else {
-      setInternalChats([]);
-      setMessages({});
+      return;
     }
-  }, [token, api.current, user, users]);
+
+    setInternalChats([]);
+    setMessages({});
+  }, [token, user, usersLoaded, users]);
 
   const startDirectChat = useCallback(
     (userId: number) => {
