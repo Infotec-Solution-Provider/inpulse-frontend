@@ -52,9 +52,9 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
     }
   }, [selectedTemplate]);
 
-  const hasVariables = Object.keys(variables).length > 0;
-
-  const disabled = !selectedTemplate || (hasVariables && Object.values(variables).some((v) => !v));
+  const disabled =
+    !selectedTemplate ||
+    (selectedTemplate.source !== "waba" && Object.values(variables).some((v) => !v));
 
   const handleSend = () => {
     if (onSendTemplate && selectedTemplate && templateText) {
@@ -115,7 +115,7 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
               {selectedTemplate.source === "waba" &&
                 templateText?.split("\n").map((line, idx) => <p key={idx}>{line}</p>)}
             </div>
-            {hasVariables && (
+            {selectedTemplate.source !== "waba" && (
               <div className="flex flex-col gap-2">
                 {Object.entries(variables).map(([key, value]) => (
                   <TextField
