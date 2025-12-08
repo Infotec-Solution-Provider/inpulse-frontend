@@ -232,8 +232,8 @@ function getScheduledForUser(schedule: DetailedSchedule, users: User[]) {
 export default function MonitorPage() {
   const { chats, filters, page, setPage, pageSize, totalCount, isLoading, refetch } =
     useMonitorContext();
-  const { sectors } = useWhatsappContext();
-  const { users } = useInternalChatContext();
+  const { sectors = [] } = useWhatsappContext();
+  const { users = [] } = useInternalChatContext();
   const { setCurrentChat, openChat, loadChatMessages } = useWhatsappContext();
   const { openInternalChat, setCurrentChat: setCurrentInternalChat } =
     useContext(InternalChatContext);
@@ -355,7 +355,7 @@ export default function MonitorPage() {
     return null;
   }
   const totalPages = Math.ceil(totalCount / pageSize);
-  const paginatedChats = chats;
+  const paginatedChats = Array.isArray(chats) ? chats : [];
 
   return (
     <div className="mx-auto grid h-[98%] w-full max-w-[1366px] grid-rows-[auto_1fr] gap-0">

@@ -145,8 +145,10 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
         filters,
       });
 
-      setChats(res.items || []);
-      setTotalCount(res.totalCount || 0);
+      const items = Array.isArray(res?.items) ? res.items : [];
+      const total = typeof res?.totalCount === "number" ? res.totalCount : items.length;
+      setChats(items);
+      setTotalCount(total);
     } finally {
       setIsLoading(false);
     }
