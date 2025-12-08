@@ -8,7 +8,7 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import { IconButton } from "@mui/material";
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
 import ChatProvider from "../(main)/(chat)/chat-context";
@@ -230,10 +230,11 @@ function getScheduledForUser(schedule: DetailedSchedule, users: User[]) {
 }
 
 export default function MonitorPage() {
-  const { chats, filters } = useMonitorContext();
+  const { chats, filters, page, setPage, pageSize, totalCount, isLoading, refetch } =
+    useMonitorContext();
   const { sectors } = useWhatsappContext();
   const { users } = useInternalChatContext();
-  const { getChatsMonitor, setCurrentChat, openChat, loadChatMessages } = useWhatsappContext();
+  const { setCurrentChat, openChat, loadChatMessages } = useWhatsappContext();
   const { openInternalChat, setCurrentChat: setCurrentInternalChat } =
     useContext(InternalChatContext);
 
@@ -269,7 +270,7 @@ export default function MonitorPage() {
           // Para chats ativos, abre normalmente
           openChat(chat);
         }
-        
+
         openModal(
           <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
             <button
@@ -347,28 +348,14 @@ export default function MonitorPage() {
       return () => {
         setCurrentChat(chat);
         openModal(<FinishChatModal />);
-        getChatsMonitor();
+        refetch();
       };
     }
 
     return null;
   }
-
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const pageSize = 20;
-  const totalPages = Math.ceil(chats.length / pageSize);
-  const paginatedChats = chats.slice((page - 1) * pageSize, page * pageSize);
-
-  useEffect(() => {
-    setPage(1);
-  }, [filters]);
-
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 300);
-    return () => clearTimeout(timer);
-  }, [chats]);
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const paginatedChats = chats;
 
   return (
     <div className="mx-auto grid h-[98%] w-full max-w-[1366px] grid-rows-[auto_1fr] gap-0">
@@ -397,7 +384,7 @@ export default function MonitorPage() {
                       </span>{" "}
                       de{" "}
                       <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                        {chats.length}
+                        {totalCount}
                       </span>{" "}
                       conversas
                     </>

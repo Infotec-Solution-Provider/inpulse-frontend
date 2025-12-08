@@ -4,6 +4,7 @@ import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import CloseIcon from "@mui/icons-material/Close";
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import { TemplateVariables } from "../types/chats.types";
 import { getFirstName, getFullName } from "../utils/name";
 
@@ -26,6 +27,13 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
   const [variables, setVariables] = useState<Record<number, string>>({});
   const { user } = useAuthContext();
 
+  const contactKey = useMemo(() => {
+    if (contact?.id) return `contact:${contact.id}`;
+    if (contact?.phone) return `phone:${contact.phone}`;
+    if (customer?.CPF_CNPJ) return `customer:${customer.CPF_CNPJ}`;
+    return null;
+  }, [contact?.id, contact?.phone, customer?.CPF_CNPJ]);
+
   const templateVariablesValues: TemplateVariables = useMemo(
     () => ({
       atendente_nome: user?.NOME || "atendente",
@@ -39,7 +47,7 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
     [user?.NOME, user?.NOME_EXIBICAO, customer?.CPF_CNPJ, customer?.RAZAO, contact?.name],
   );
 
-  const gupshupTemplateText = selectedTemplate?.text.replace(/{{\d+}}/g, (match) => {
+  const gupshupTemplateText = selectedTemplate?.text.replace(/{{\d+}}/g, (match: string) => {
     const key = match.replaceAll("{", "").replaceAll("}", "");
     return variables[+key] || match; // Se não houver valor, mostra o placeholder original
   });
@@ -72,11 +80,11 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
     } else {
       const matches = selectedTemplate.text.match(/{{\d+}}/g) || [];
 
-      const newVariables = matches.reduce((a, b) => {
-        const number = +b.replaceAll("{", "").replaceAll("}", "");
-        a = { ...a, [number]: "" };
-        return a;
-      }, {});
+      const newVariables = matches.reduce<Record<number, string>>((acc, current) => {
+        const number = +current.replaceAll("{", "").replaceAll("}", "");
+        acc[number] = "";
+        return acc;
+      }, {} as Record<number, string>);
 
       setVariables(newVariables);
     }
@@ -86,8 +94,43 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
     !selectedTemplate ||
     (selectedTemplate.source !== "waba" && Object.values(variables).some((v) => !v));
 
+  const TEMPLATE_LIMIT = 2;
+  const WINDOW_MS = 24 * 60 * 60 * 1000;
+  const STORAGE_KEY = "template-send-history-v1";
+
+  const readHistory = (): Record<string, number[]> => {
+    if (typeof window === "undefined") return {};
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    try {
+      return JSON.parse(raw) as Record<string, number[]>;
+    } catch {
+      return {};
+    }
+  };
+
+  const saveHistory = (history: Record<string, number[]>) => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  };
+
   const handleSend = () => {
     if (onSendTemplate && selectedTemplate && templateText) {
+      if (contactKey) {
+        const now = Date.now();
+        const history = readHistory();
+        const pruned = (history[contactKey] || []).filter((ts) => now - ts < WINDOW_MS);
+
+        if (pruned.length >= TEMPLATE_LIMIT) {
+          toast.warn("Limite de 2 templates nas últimas 24h para este cliente.");
+          saveHistory({ ...history, [contactKey]: pruned });
+          return;
+        }
+
+        history[contactKey] = [...pruned, now];
+        saveHistory(history);
+      }
+
       onSendTemplate({
         template: selectedTemplate,
         components: Object.values(variables),
@@ -110,11 +153,11 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
           onChange={(_, value) => setSelectedTemplate(value || null)}
           renderInput={(p) => <TextField label="Template" {...p} />}
           // Garantir label textual; fallback para id se name ausente
-          getOptionLabel={(option) => (option?.name || option?.id || "").toString()}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
+          getOptionLabel={(option: MessageTemplate) => (option?.name || option?.id || "").toString()}
+          isOptionEqualToValue={(option: MessageTemplate, value: MessageTemplate) => option.id === value.id}
           // Evita tentar renderizar objeto direto caso API retorne algo inesperado
           filterOptions={(options, state) =>
-            options.filter((opt) =>
+            options.filter((opt: MessageTemplate) =>
               (opt.name || opt.id || "")
                 .toString()
                 .toLowerCase()
@@ -131,11 +174,11 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
                 typeof templateText === "string" &&
                 templateText
                   .split("\n")
-                  .map((line, idx) => (
+                  .map((line: string, idx: number) => (
                     <p key={idx}>{typeof line === "string" ? line : JSON.stringify(line)}</p>
                   ))}
               {selectedTemplate.source === "waba" &&
-                templateText?.split("\n").map((line, idx) => <p key={idx}>{line}</p>)}
+                templateText?.split("\n").map((line: string, idx: number) => <p key={idx}>{line}</p>)}
             </div>
             {selectedTemplate.source !== "waba" && (
               <div className="flex flex-col gap-2">
