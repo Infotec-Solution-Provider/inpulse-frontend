@@ -7,7 +7,6 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { useMemo, useState } from "react";
-import LinkifiedText from "./linkmessage";
 import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
@@ -150,7 +149,7 @@ export default function GroupMessage({
               <div className="h-full w-full rounded-md p-4 text-black dark:text-slate-200">
                 {quotedMessage.text.split("\n").map((line, index) => (
                   <p key={index} className="max-w-[100%] break-words text-sm">
-                    <LinkifiedText text={line} />
+                    {line}
                   </p>
                 ))}
               </div>
@@ -188,7 +187,7 @@ export default function GroupMessage({
             ) : (
               visualText?.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
-                  <LinkifiedText text={line} />
+                  {line}
                 </p>
               ))
             )}

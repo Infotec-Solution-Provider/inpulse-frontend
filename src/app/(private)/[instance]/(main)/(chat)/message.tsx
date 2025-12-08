@@ -13,10 +13,9 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
-import LinkifiedText from "./linkmessage";
+import { useWhatsappContext } from "../../whatsapp-context";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
-import { useWhatsappContext } from "../../whatsapp-context";
 
 export interface QuotedMessageProps {
   id: number | string;
@@ -186,7 +185,7 @@ export default function Message({
             <div className="h-full w-full rounded-md px-3 py-1 text-black dark:text-slate-200">
               {quotedMessage.text.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
-                  <LinkifiedText text={line} />
+                  {line}
                 </p>
               ))}
             </div>
@@ -223,7 +222,7 @@ export default function Message({
             ) : (
               text?.split("\n").map((line, index) => (
                 <p key={index} className="max-w-[100%] break-words text-sm">
-                  <LinkifiedText text={line} />
+                  {line}
                 </p>
               ))
             )}
