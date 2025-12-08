@@ -115,7 +115,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   const loadAllCustomers = useCallback(async () => {
     try {
       const res = await api.current.getCustomers({
-        perPage: "9999",
+        perPage: "2000",
       });
       setAllCustomers(res.data);
     } catch {}
