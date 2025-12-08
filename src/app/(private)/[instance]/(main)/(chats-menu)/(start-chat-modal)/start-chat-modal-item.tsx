@@ -38,6 +38,8 @@ export default function StartChatModalItem({
               startChatByContactId(contact.id, data);
               closeModal();
             }}
+            contact={contact}
+            customer={customer}
           />,
         );
       }, 1000); // delay de 1000 ms (1 segundo)

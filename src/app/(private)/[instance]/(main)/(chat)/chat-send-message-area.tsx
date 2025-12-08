@@ -140,6 +140,8 @@ export default function ChatSendMessageArea() {
             });
             closeModal();
           }}
+          contact={currentChat.contact}
+          customer={(currentChat as any)?.customer || null}
         />,
       );
     }

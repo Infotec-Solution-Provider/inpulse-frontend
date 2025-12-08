@@ -3,7 +3,7 @@ import { useAuthContext } from "@/app/auth-context";
 import { Customer, WppContact } from "@in.pulse-crm/sdk";
 import CloseIcon from "@mui/icons-material/Close";
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TemplateVariables } from "../types/chats.types";
 import { getFirstName, getFullName } from "../utils/name";
 
@@ -26,12 +26,42 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
   const [variables, setVariables] = useState<Record<number, string>>({});
   const { user } = useAuthContext();
 
+  const templateVariablesValues: TemplateVariables = useMemo(
+    () => ({
+      atendente_nome: user?.NOME || "atendente",
+      atendente_nome_exibição: user?.NOME_EXIBICAO || "vendedor",
+      cliente_cnpj: customer?.CPF_CNPJ || "000.000.000-00",
+      cliente_razao: customer?.RAZAO || "CLIENTE NÃO CADASTRADO",
+      contato_nome_completo: getFullName(contact?.name) || "Contato Nome Completo",
+      contato_primeiro_nome: getFirstName(contact?.name) || "Contato",
+      saudação_tempo: "Saudação Tempo",
+    }),
+    [user?.NOME, user?.NOME_EXIBICAO, customer?.CPF_CNPJ, customer?.RAZAO, contact?.name],
+  );
+
   const gupshupTemplateText = selectedTemplate?.text.replace(/{{\d+}}/g, (match) => {
     const key = match.replaceAll("{", "").replaceAll("}", "");
     return variables[+key] || match; // Se não houver valor, mostra o placeholder original
   });
 
-  const wabaTemplateText = selectedTemplate?.text;
+  const wabaTemplateText = useMemo(() => {
+    if (!selectedTemplate || selectedTemplate.source !== "waba" || !selectedTemplate.text) {
+      return selectedTemplate?.text;
+    }
+
+    const bodyComponent = selectedTemplate.raw?.components?.find((c: any) => c.type === "BODY");
+    const exampleValues: string[] | undefined = bodyComponent?.example?.body_text?.[0];
+
+    return selectedTemplate.text.replace(/{{(\d+)}}/g, (_match: string, group: string) => {
+      const index = Number(group) - 1;
+      const exampleKey = exampleValues?.[index];
+      const value = exampleKey
+        ? templateVariablesValues[exampleKey as keyof TemplateVariables]
+        : undefined;
+
+      return value || exampleKey || `{{${group}}}`;
+    });
+  }, [selectedTemplate, templateVariablesValues]);
 
   const templateText =
     selectedTemplate?.source === "gupshup" ? gupshupTemplateText : wabaTemplateText;
@@ -61,15 +91,7 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
       onSendTemplate({
         template: selectedTemplate,
         components: Object.values(variables),
-        templateVariables: {
-          atendente_nome: user!.NOME,
-          atendente_nome_exibição: user!.NOME_EXIBICAO || "vendedor",
-          cliente_cnpj: customer?.CPF_CNPJ || "000.000.000-00",
-          cliente_razao: customer?.RAZAO || "CLIENTE NÃO CADASTRADO",
-          contato_nome_completo: getFullName(contact?.name) || "Contato Nome Completo",
-          contato_primeiro_nome: getFirstName(contact?.name) || "Contato",
-          saudação_tempo: "Saudação Tempo",
-        },
+        templateVariables: templateVariablesValues,
       });
     }
   };
