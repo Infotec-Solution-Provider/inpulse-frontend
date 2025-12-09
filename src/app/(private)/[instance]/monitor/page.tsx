@@ -70,6 +70,19 @@ function getChatUser(chat: DetailedInternalChat | DetailedChat, users: User[]): 
   return user ? user.NOME : "BOT";
 }
 
+function getInternalUsers(chat: DetailedInternalChat, users: User[]) {
+  const asAny = chat as any;
+  if (Array.isArray(asAny.users) && asAny.users.length) {
+    return asAny.users as User[];
+  }
+  if (Array.isArray(asAny.participants)) {
+    return (asAny.participants as { userId?: number }[])
+      .map((p) => users.find((u) => u.CODIGO === p.userId))
+      .filter(Boolean) as User[];
+  }
+  return [];
+}
+
 function getChatSector(
   chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
   sectors: any[],
@@ -87,7 +100,7 @@ function getChatSector(
   }
   if (chat.chatType === "internal") {
     const creator = users.find((u) => u.CODIGO === chat.creatorId);
-    const sector = creator && sectors.find((s) => s.id === creator.SETOR);
+    const sector = creator && sectors.find((s) => s.id === creator?.SETOR);
     return sector ? sector.name : null;
   }
 }
@@ -128,7 +141,8 @@ function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedu
     return chat.groupName || "Grupo Interno";
   }
   if (chat.chatType === "internal" && !chat.isGroup) {
-    return chat.users.map((u) => u.NOME).join(" e ") || "Usuário Desconhecido";
+    const internalUsers = getInternalUsers(chat, []);
+    return internalUsers.map((u) => u.NOME).join(" e ") || "Usuário Desconhecido";
   }
   return "Chat sem título";
 }
@@ -168,10 +182,12 @@ function getChatParticipants(chat: DetailedInternalChat | DetailedChat | Detaile
   }
 
   if (chat.chatType === "internal" && chat.isGroup) {
-    return chat.users.map((u) => u.NOME);
+    const internalUsers = getInternalUsers(chat, []);
+    return internalUsers.map((u) => u.NOME);
   }
   if (chat.chatType === "internal" && !chat.isGroup) {
-    const otherUser = chat.users.find((u) => u.CODIGO !== chat.creatorId);
+    const internalUsers = getInternalUsers(chat, []);
+    const otherUser = internalUsers.find((u) => u.CODIGO !== chat.creatorId);
     return otherUser ? [otherUser.NOME] : [];
   }
   return [];
@@ -306,6 +322,7 @@ export default function MonitorPage() {
       return () => {
         setCurrentInternalChat(chat);
         openInternalChat(chat, false);
+        const internalUsers = getInternalUsers(chat, users);
         openModal(
           <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
             <button
@@ -317,9 +334,9 @@ export default function MonitorPage() {
             <ChatProvider>
               <ChatHeader
                 avatarUrl={""}
-                name={chat.groupName || chat.users[0].NOME}
-                customerName={chat.groupDescription || chat.users[0].NOME_EXIBICAO || ""}
-                phone={chat.users[0].SETOR_NOME || ""}
+                name={chat.groupName || internalUsers[0]?.NOME || "Conversa interna"}
+                customerName={chat.groupDescription || internalUsers[0]?.NOME_EXIBICAO || ""}
+                phone={internalUsers[0]?.SETOR_NOME || ""}
                 chatType={chat.chatType}
                 codErp={null}
                 cpfCnpj={null}
