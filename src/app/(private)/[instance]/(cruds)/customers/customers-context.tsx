@@ -7,11 +7,16 @@ import {
   useEffect,
   useReducer,
   useRef,
-  useState,
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { CreateCustomerDTO, Customer, CustomersClient, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
+import {
+  CreateCustomerDTO,
+  Customer,
+  CustomersClient,
+  RequestFilters,
+  UpdateCustomerDTO,
+} from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import customersReducer, {
@@ -26,11 +31,11 @@ interface ICustomersProviderProps {
 
 interface ICustomersContext {
   state: CustomersContextState;
-  allCustomers: Customer[];
   dispatch: ActionDispatch<[action: ChangeCustomersStateAction | MultipleActions]>;
   updateCustomer: (id: number, data: UpdateCustomerDTO) => void;
   createCustomer: (data: CreateCustomerDTO) => void;
   loadCustomers: () => void;
+  searchCustomers: (term: string) => Promise<Customer[]>;
 }
 
 export const CustomersContext = createContext<ICustomersContext>({} as ICustomersContext);
@@ -55,8 +60,6 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     },
     isLoading: false,
   });
-
-  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
   const createCustomer = useCallback(
     async (data: CreateCustomerDTO) => {
@@ -112,20 +115,34 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     }
   }, [state.filters, token]);
 
-  const loadAllCustomers = useCallback(async () => {
-    try {
-      const res = await api.current.getCustomers({
-        perPage: "2000",
-      });
-      setAllCustomers(res.data);
-    } catch {}
-  }, [token]);
+  const searchCustomers = useCallback(
+    async (term: string) => {
+      if (!token) return [];
+
+      try {
+        const filters: RequestFilters<Customer> = {
+          perPage: "20",
+          page: "1",
+        };
+
+        if (term.trim()) {
+          filters.RAZAO = term.trim();
+        }
+
+        const res = await api.current.getCustomers(filters);
+        return res.data;
+      } catch (err) {
+        Logger.error("Error searching customers", err as Error);
+        return [];
+      }
+    },
+    [token],
+  );
 
   useEffect(() => {
     if (!token || !api.current) return;
     api.current.setAuth(token);
     loadCustomers();
-    loadAllCustomers();
   }, [token]);
 
   useEffect(() => {
@@ -140,7 +157,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         updateCustomer,
         createCustomer,
         loadCustomers,
-        allCustomers,
+        searchCustomers,
       }}
     >
       {children}

@@ -1,3 +1,5 @@
+"use client";
+
 import { ShowingMessagesType } from "@/lib/reducers/chats-filter.reducer";
 import { FilterList } from "@mui/icons-material";
 import AddIcon from "@mui/icons-material/Add";
@@ -205,7 +207,12 @@ export default function ChatsMenuFilters() {
       </header>
 
       <div className="flex gap-2">
-        <TextField label="Pesquisar conversa" className="grow" onChange={handleChangeText} />
+        <TextField
+          id="chats-search"
+          label="Pesquisar conversa"
+          className="grow"
+          onChange={handleChangeText}
+        />
       </div>
       <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <FormControl fullWidth size="small">
