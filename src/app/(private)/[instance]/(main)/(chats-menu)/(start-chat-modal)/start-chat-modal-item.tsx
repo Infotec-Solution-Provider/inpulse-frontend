@@ -49,6 +49,18 @@ export default function StartChatModalItem({
     }
   };
 
+  const formatPhoneSafe = (phone: string) => {
+    const digits = phone?.replace(/\D/g, "") ?? "";
+    if (!digits) return phone;
+    if (digits.length < 10 || digits.length > 13) return phone;
+
+    try {
+      return Formatter.phone(phone);
+    } catch (error) {
+      return phone;
+    }
+  };
+
   return (
     <div
       key={contact.id}
@@ -86,15 +98,7 @@ export default function StartChatModalItem({
             <div className="flex items-center gap-2">
               <PhoneIcon className="text-gray-500" sx={{ fontSize: 16 }} />
               <span className="text-sm text-gray-600 dark:text-gray-300">
-                {(() => {
-                  try {
-                    return Formatter.phone(contact.phone);
-                  } catch (error) {
-                    console.error(error );
-                    // Se o formatador falhar, retorna o número original
-                    return contact.phone;
-                  }
-                })()}
+                {formatPhoneSafe(contact.phone)}
               </span>
             </div>
           </div>

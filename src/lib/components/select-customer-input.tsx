@@ -24,15 +24,12 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
       const results = await searchCustomers(inputValue);
 
       if (active) {
-        // Dedupe by CODIGO to avoid duplicate option keys
+        // Dedupe by CODIGO and keep only the latest search result set
         const deduped = Array.from(
           new Map(results.map((customer) => [customer.CODIGO, customer])).values(),
         );
 
-        setOptions((prev) => {
-          const merged = [...prev, ...deduped];
-          return Array.from(new Map(merged.map((c) => [c.CODIGO, c])).values());
-        });
+        setOptions(deduped);
       }
       setLoading(false);
     }, 300);
@@ -68,6 +65,14 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
       }}
       loadingText="Buscando clientes..."
       noOptionsText={inputValue ? "Nenhum cliente encontrado" : "Digite para buscar"}
+      renderOption={(props, option) => {
+        const { key, ...rest } = props;
+        return (
+          <li key={option.CODIGO} {...rest}>
+            {option.RAZAO || option.FANTASIA || ""}
+          </li>
+        );
+      }}
       renderInput={(params) => (
         <TextField
           {...params}
