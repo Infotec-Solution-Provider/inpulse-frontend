@@ -35,7 +35,10 @@ interface ICustomersContext {
   updateCustomer: (id: number, data: UpdateCustomerDTO) => void;
   createCustomer: (data: CreateCustomerDTO) => void;
   loadCustomers: () => void;
-  searchCustomers: (term: string) => Promise<Customer[]>;
+  searchCustomers: (
+    term: string,
+    filterBy?: "RAZAO" | "COD_ERP" | "CODIGO"
+  ) => Promise<Customer[]>;
 }
 
 export const CustomersContext = createContext<ICustomersContext>({} as ICustomersContext);
@@ -45,7 +48,7 @@ export const useCustomersContext = () => {
 };
 
 const CUSTOMERS_BASE_URL: string =
-  process.env["NEXT_PUBLIC_CUSTOMERS_URL"] || "http://localhost:8002";
+  process.env["NEXT_PUBLIC_CUSTOMERS_URL"] || "https://inpulse.infotecrs.inf.br";
 
 export default function CustomersProvider({ children }: ICustomersProviderProps) {
   const api = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
@@ -116,7 +119,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   }, [state.filters, token]);
 
   const searchCustomers = useCallback(
-    async (term: string) => {
+    async (term: string, filterBy: "RAZAO" | "COD_ERP" | "CODIGO" = "RAZAO") => {
       if (!token) return [];
 
       try {
@@ -126,7 +129,15 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         };
 
         if (term.trim()) {
-          filters.RAZAO = term.trim();
+          const trimmed = term.trim();
+          const digitsOnly = trimmed.replace(/\D/g, "");
+          if (filterBy === "RAZAO") {
+            filters.RAZAO = trimmed;
+          } else if (filterBy === "COD_ERP") {
+            filters.COD_ERP = trimmed;
+          } else if (filterBy === "CODIGO") {
+            filters.CODIGO = digitsOnly || trimmed;
+          }
         }
 
         const res = await api.current.getCustomers(filters);

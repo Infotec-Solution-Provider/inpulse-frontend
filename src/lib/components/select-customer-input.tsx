@@ -1,6 +1,6 @@
 import { useCustomersContext } from "@/app/(private)/[instance]/(cruds)/customers/customers-context";
 import { Customer } from "@in.pulse-crm/sdk";
-import { Autocomplete, CircularProgress, TextField } from "@mui/material";
+import { Autocomplete, CircularProgress, MenuItem, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 
 interface Props {
@@ -14,6 +14,7 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
   const [inputValue, setInputValue] = useState(
     defaultValue?.RAZAO || defaultValue?.FANTASIA || "",
   );
+  const [filterBy, setFilterBy] = useState<"RAZAO" | "COD_ERP" | "CODIGO">("RAZAO");
   const [options, setOptions] = useState<Customer[]>(defaultValue ? [defaultValue] : []);
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,7 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
     let active = true;
     const handler = setTimeout(async () => {
       setLoading(true);
-      const results = await searchCustomers(inputValue);
+      const results = await searchCustomers(inputValue, filterBy);
 
       if (active) {
         // Dedupe by CODIGO and keep only the latest search result set
@@ -38,7 +39,7 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
       active = false;
       clearTimeout(handler);
     };
-  }, [inputValue, searchCustomers]);
+  }, [inputValue, filterBy, searchCustomers]);
 
   useEffect(() => {
     if (!defaultValue) return;
@@ -50,45 +51,63 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
   }, [defaultValue]);
 
   return (
-    <Autocomplete
-      value={selectedCustomer}
-      options={options}
-      loading={loading}
-      filterOptions={(x) => x}
-      getOptionLabel={(option) => option.RAZAO || option.FANTASIA || ""}
-      isOptionEqualToValue={(option, value) => option.CODIGO === value.CODIGO} // Necessário p/ evitar warnings do MUI
-      onInputChange={(_, value) => setInputValue(value)}
-      onChange={(_, value) => {
-        setSelectedCustomer(value);
-        setInputValue(value?.RAZAO || value?.FANTASIA || "");
-        onChange && onChange(value); // Chama callback do pai
-      }}
-      loadingText="Buscando clientes..."
-      noOptionsText={inputValue ? "Nenhum cliente encontrado" : "Digite para buscar"}
-      renderOption={(props, option) => {
-        const { key, ...rest } = props;
-        return (
-          <li key={option.CODIGO} {...rest}>
-            {option.RAZAO || option.FANTASIA || ""}
-          </li>
-        );
-      }}
-      renderInput={(params) => (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
         <TextField
-          {...params}
-          label="Cliente"
-          variant="outlined"
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (
-              <>
-                {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                {params.InputProps.endAdornment}
-              </>
-            ),
-          }}
-        />
-      )}
-    />
+          select
+          size="small"
+          label="Filtrar por"
+          value={filterBy}
+          onChange={(e) => setFilterBy(e.target.value as any)}
+          sx={{ minWidth: 130 }}
+        >
+          <MenuItem value="RAZAO">Razão</MenuItem>
+          <MenuItem value="COD_ERP">Cód. ERP</MenuItem>
+          <MenuItem value="CODIGO">Código</MenuItem>
+        </TextField>
+        <div className="flex-1">
+          <Autocomplete
+            value={selectedCustomer}
+            options={options}
+            loading={loading}
+            filterOptions={(x) => x}
+            getOptionLabel={(option) => option.RAZAO || option.FANTASIA || ""}
+            isOptionEqualToValue={(option, value) => option.CODIGO === value.CODIGO} // Necessário p/ evitar warnings do MUI
+            onInputChange={(_, value) => setInputValue(value)}
+            onChange={(_, value) => {
+              setSelectedCustomer(value);
+              setInputValue(value?.RAZAO || value?.FANTASIA || "");
+              onChange && onChange(value); // Chama callback do pai
+            }}
+            loadingText="Buscando clientes..."
+            noOptionsText={inputValue ? "Nenhum cliente encontrado" : "Digite para buscar"}
+            renderOption={(props, option) => {
+              const { key, ...rest } = props;
+              return (
+                <li key={option.CODIGO} {...rest}>
+                  {option.RAZAO || option.FANTASIA || ""}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Cliente"
+                variant="outlined"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
