@@ -18,10 +18,25 @@ export default function VCardMessage({ vCardString }: VCardMessageProps) {
   const [isLoadingModal, setIsLoadingModal] = useState(false);
 
   const { name, phone } = useMemo(() => {
-    const lines = vCardString.split("\n");
-    const vCardPhone = lines[2]?.trim() || "";
-    const vCardName = lines[1]?.trim() || vCardPhone;
-    return { name: vCardName, phone: vCardPhone };
+    const lines = vCardString.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+    const waMatch = vCardString.match(/wa:([0-9]+)/);
+    const rawPhone = waMatch?.[1] || vCardString.match(/\+?\d[\d\s().-]+/)?.[0] || "";
+    const normalizedPhone = rawPhone.replace(/\D/g, "");
+
+    const nameLine = lines.find(
+      (line) =>
+        line &&
+        !/^[-]+$/.test(line) &&
+        !/contato/i.test(line) &&
+        !/telefone/i.test(line) &&
+        !/^•/.test(line)
+    );
+
+    return {
+      name: nameLine || normalizedPhone || "Contato",
+      phone: normalizedPhone,
+    };
   }, [vCardString]);
 
   const handleViewContact = async () => {

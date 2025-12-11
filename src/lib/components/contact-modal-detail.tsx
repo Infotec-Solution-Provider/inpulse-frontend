@@ -41,11 +41,29 @@ export default function ContactModal({
   isLoading,
 }: ContactModalProps) {
   const { startChatByContactId, chats, monitorChats } = useWhatsappContext();
-  const { createContact } = useContactsContext();
+  const { createContact, state: contactsState } = useContactsContext();
   const { users } = useInternalChatContext();
   const theme = useTheme();
   const [isCreating, setIsCreating] = useState(false);
   const [shouldStartChat, setShouldStartChat] = useState(false);
+
+  const normalizedPhone = useMemo(
+    () => contact?.phone?.replace(/\D/g, "") || "",
+    [contact?.phone]
+  );
+
+  const existingContact = useMemo(() => {
+    if (!normalizedPhone && contact?.id == null) return null;
+    const byId = contact?.id
+      ? contactsState.contacts.find((c) => c.id === contact.id)
+      : null;
+    if (byId) return byId;
+    if (!normalizedPhone) return null;
+    return contactsState.contacts.find((c) => c.phone?.replace(/\D/g, "") === normalizedPhone) || null;
+  }, [contact?.id, normalizedPhone, contactsState.contacts]);
+
+  const effectiveContact = existingContact || contact;
+  const hasContactRecord = effectiveContact?.id != null;
 
   useEffect(() => {
     if (shouldStartChat) {
@@ -55,23 +73,23 @@ export default function ContactModal({
   }, [shouldStartChat, startChatByContactId, onClose, contact?.phone]);
 
   const handleStartConversation = () => {
-    if (!contact || !contact.id) return;
-    startChatByContactId(contact.id);
+    if (!hasContactRecord || !effectiveContact) return;
+    startChatByContactId(effectiveContact.id!);
     onClose();
   };
 
   const handleAddAndChat = async () => {
-    if (!contact) return;
+    if (!effectiveContact) return;
     setIsCreating(true);
     setShouldStartChat(true);
-    await createContact(contact.name, contact.phone);
+    await createContact(effectiveContact.name, normalizedPhone || effectiveContact.phone || "");
     setIsCreating(false);
   };
 
   const handleJustAdd = async () => {
-    if (!contact) return;
+    if (!effectiveContact) return;
     setIsCreating(true);
-    await createContact(contact.name, contact.phone);
+    await createContact(effectiveContact.name, normalizedPhone || effectiveContact.phone || "");
     setIsCreating(false);
     onClose();
   };
@@ -79,10 +97,17 @@ export default function ContactModal({
   const companyName = chat?.customer?.FANTASIA || chat?.customer?.RAZAO;
   const avatarUrl = chat?.avatarUrl;
   const activeChat = useMemo(() => {
-    if (!contact || !contact.id) return null;
+    if (!effectiveContact) return null;
     const allActiveChats = [...chats, ...monitorChats];
-    return allActiveChats.find((c) => c.contactId === contact.id);
-  }, [contact, chats, monitorChats]);
+    const idMatch = hasContactRecord
+      ? allActiveChats.find((c) => c.contactId === effectiveContact.id)
+      : null;
+    if (idMatch) return idMatch;
+    if (!normalizedPhone) return null;
+    return allActiveChats.find(
+      (c) => c.contact?.phone && c.contact.phone.replace(/\D/g, "") === normalizedPhone
+    );
+  }, [effectiveContact, hasContactRecord, normalizedPhone, chats, monitorChats]);
 
   const user = users.find((c) => c.CODIGO === activeChat?.userId);
 
@@ -142,7 +167,7 @@ export default function ContactModal({
             {avatarUrl ? (
               <Avatar
                 src={avatarUrl}
-                alt={contact.name || ""}
+                alt={effectiveContact?.name || ""}
                 sx={{
                   width: 72,
                   height: 72,
@@ -162,7 +187,7 @@ export default function ContactModal({
                   mb: 2,
                 }}
               >
-                {contact.name ? contact.name.charAt(0).toUpperCase() : <PersonIcon />}
+                {effectiveContact?.name ? effectiveContact.name.charAt(0).toUpperCase() : <PersonIcon />}
               </Avatar>
             )}
 
@@ -174,7 +199,7 @@ export default function ContactModal({
                 color: (theme) => theme.palette.text.primary,
               }}
             >
-              {contact.name}
+              {effectiveContact?.name}
             </Typography>
 
             <Box
@@ -187,7 +212,7 @@ export default function ContactModal({
             >
               <PhoneIphoneIcon sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }} />
               <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary }}>
-                {contact.phone ? Formatter.phone(contact.phone) : "Número indisponível"}
+                {effectiveContact?.phone ? Formatter.phone(effectiveContact.phone) : "Número indisponível"}
               </Typography>
             </Box>
 
@@ -278,7 +303,7 @@ export default function ContactModal({
               </strong>
             </Typography>
           </Box>
-        ) : contact?.id ? (
+        ) : hasContactRecord ? (
           <Button
             onClick={handleStartConversation}
             variant="contained"
@@ -289,7 +314,7 @@ export default function ContactModal({
               fontWeight: "bold",
               borderRadius: 2,
             }}
-            disabled={isLoading || !contact}
+            disabled={isLoading || !effectiveContact}
           >
             Iniciar Conversa
           </Button>
