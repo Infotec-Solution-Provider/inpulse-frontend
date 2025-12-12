@@ -14,7 +14,7 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
   const [inputValue, setInputValue] = useState(
     defaultValue?.RAZAO || defaultValue?.FANTASIA || "",
   );
-  const [filterBy, setFilterBy] = useState<"RAZAO" | "COD_ERP" | "CODIGO">("RAZAO");
+  const [filterBy, setFilterBy] = useState<"RAZAO" | "COD_ERP" | "CODIGO"|"CPF_CNPJ">("RAZAO");
   const [options, setOptions] = useState<Customer[]>(defaultValue ? [defaultValue] : []);
   const [loading, setLoading] = useState(false);
 
@@ -64,6 +64,8 @@ export default function SelectCustomerInput({ defaultValue, onChange }: Props) {
           <MenuItem value="RAZAO">Razão</MenuItem>
           <MenuItem value="COD_ERP">Cód. ERP</MenuItem>
           <MenuItem value="CODIGO">Código</MenuItem>
+          <MenuItem value="CPF_CNPJ">CPF/CNPJ</MenuItem>
+
         </TextField>
         <div className="flex-1">
           <Autocomplete
