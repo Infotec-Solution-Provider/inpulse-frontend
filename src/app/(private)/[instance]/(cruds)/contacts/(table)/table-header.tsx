@@ -27,7 +27,7 @@ const textFieldStlye: SxProps<Theme> = {
 type FilterKey = Exclude<keyof ContactsFilters, "page" | "perPage" | "sectorIds">;
 
 const isKeyOfContact = (key: string): key is FilterKey => {
-  const accepted: string[] = ["name", "phone", "customerName", "customerId"];
+  const accepted: string[] = ["id", "name", "phone", "customerName", "customerId"];
   return accepted.includes(key);
 };
 

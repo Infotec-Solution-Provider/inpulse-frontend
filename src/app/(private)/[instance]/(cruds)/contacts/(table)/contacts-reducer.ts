@@ -5,6 +5,7 @@ export type ContactWithSectors = WppContact & { sectors?: Array<{ sectorId: numb
 export interface ContactsFilters {
   page: string;
   perPage: string;
+  id?: string;
   name?: string;
   phone?: string;
   customerName?: string;
