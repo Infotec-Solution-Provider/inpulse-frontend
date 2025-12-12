@@ -45,7 +45,7 @@ export default function VCardMessage({ vCardString }: VCardMessageProps) {
     try {
       const contactToShow = state.contacts.find((c) => c.phone === phone.replace(/\D/g, ""));
       const contactW: WppContact = {
-        id: contactToShow ? contactToShow.id : 0,
+        id: contactToShow ? contactToShow.id : -1,
         name: contactToShow ? contactToShow.name : name,
         phone: contactToShow ? contactToShow.phone : phone,
         instance: instance || "",
