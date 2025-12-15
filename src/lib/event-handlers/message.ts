@@ -19,48 +19,6 @@ const types: Record<string, string> = {
   file: "Enviou um arquivo.",
 };
 
-// Sistema de debounce para notificações
-const notificationQueue: Map<number, { messages: WppMessage[]; timeout: NodeJS.Timeout }> = new Map();
-let lastSoundPlayedAt = 0;
-const SOUND_COOLDOWN = 2000; // 2 segundos entre sons
-const NOTIFICATION_DELAY = 2000; // Aguarda 2 segundos para agrupar mensagens
-
-function playNotificationSound() {
-  if (typeof window === "undefined") return;
-  
-  const now = Date.now();
-  if (now - lastSoundPlayedAt < SOUND_COOLDOWN) {
-    return; // Não toca o som se já tocou recentemente
-  }
-  
-  lastSoundPlayedAt = now;
-  const audio = new Audio("/notification-sound.mp3");
-  audio.volume = 0.5;
-  audio.play().catch((error) => {
-    console.log("Não foi possível tocar o som da notificação:", error);
-  });
-}
-
-function showGroupedNotification(contactId: number, messages: WppMessage[], contactName: string, phone: string) {
-  const messageCount = messages.length;
-  const lastMessage = messages[messages.length - 1];
-  
-  if (messageCount === 1) {
-    const isTextMsg = ["chat", "text"].includes(lastMessage.type);
-    safeNotification(contactName || Formatter.phone(phone), {
-      body: isTextMsg ? lastMessage.body : types[lastMessage.type] || "Enviou um arquivo",
-      icon: HorizontalLogo.src,
-    });
-  } else {
-    safeNotification(contactName || Formatter.phone(phone), {
-      body: `${messageCount} novas mensagens`,
-      icon: HorizontalLogo.src,
-    });
-  }
-  
-  playNotificationSound();
-}
-
 export default function ReceiveMessageHandler(
   api: WhatsappClient,
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
@@ -83,29 +41,21 @@ export default function ReceiveMessageHandler(
       }
       const phone = raw.split("@")[0].replace(/\D/g, "");
       const contactName = matchedChat?.contact?.name;
-      const contactId = message.contactId || 0;
 
-      // Limpar timeout anterior se existir
-      const existing = notificationQueue.get(contactId);
-      if (existing) {
-        clearTimeout(existing.timeout);
-        existing.messages.push(message);
-      } else {
-        notificationQueue.set(contactId, {
-          messages: [message],
-          timeout: null as any,
+      const isTextMsg = ["chat", "text"].includes(message.type);
+      safeNotification(contactName || Formatter.phone(phone), {
+        body: isTextMsg ? message.body : types[message.type] || "Enviou um arquivo",
+        icon: HorizontalLogo.src,
+      });
+
+      // Tocar som de notificação (client-side only)
+      if (typeof window !== "undefined") {
+        const audio = new Audio("/notification-sound.mp3");
+        audio.volume = 0.5;
+        audio.play().catch((error) => {
+          console.log("Não foi possível tocar o som da notificação:", error);
         });
       }
-
-      // Configurar novo timeout para mostrar notificação agrupada
-      const queueItem = notificationQueue.get(contactId)!;
-      queueItem.timeout = setTimeout(() => {
-        const item = notificationQueue.get(contactId);
-        if (item) {
-          showGroupedNotification(contactId, item.messages, contactName || "", phone);
-          notificationQueue.delete(contactId);
-        }
-      }, NOTIFICATION_DELAY);
     }
 
     setMessages((prev) => {
