@@ -2,7 +2,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { Box, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import { useState } from "react";
-import { WppClient } from "../../whatsapp-context";
+import { useWhatsappContext, WppClient } from "../../whatsapp-context";
 
 // Example channel data
 type ChannelType = "WWEBJS" | "WABA" | "GUPSHUP";
@@ -69,6 +69,8 @@ export default function ChannelSelect({
   onChange,
 }: ChannelSelectOptions) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const { parameters } = useWhatsappContext();
+  const isDisabled = parameters["disable_channel_switch"] === "true";
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -90,16 +92,18 @@ export default function ChannelSelect({
           display: "flex",
           alignItems: "center",
           borderRadius: 2,
-          transition: "background 0.2s",
-          cursor: "pointer",
+          transition: "background 0.2s, opacity 0.2s",
+          cursor: isDisabled ? "not-allowed" : "pointer",
           px: 0.5,
           py: 0.25,
+          opacity: isDisabled ? 0.5 : 1,
           "&:hover": {
-            background: "rgba(99,102,241,0.08)", // subtle indigo hover
+            background: isDisabled ? "transparent" : "rgba(99,102,241,0.08)", // subtle indigo hover
           },
         }}
-        onClick={handleOpen}
-        title={selectedChannel.name}
+        onClick={isDisabled ? undefined : handleOpen}
+        title={isDisabled ? "Troca de canal desabilitada" : selectedChannel.name}
+        
       >
         {getChannelVisual(selectedChannel, channels)}
         <ExpandMoreIcon sx={{ fontSize: 18, ml: 0.5, color: "text.secondary" }} />
