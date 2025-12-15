@@ -2,6 +2,7 @@
 
 import { FilterAlt, FilterAltOff, Search } from "@mui/icons-material";
 import {
+  Autocomplete,
   Chip,
   IconButton,
   SxProps,
@@ -13,8 +14,9 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useContactsContext } from "../contacts-context";
+import { useWhatsappContext } from "../../../whatsapp-context";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
-import { WppContact } from "@in.pulse-crm/sdk";
+import { ContactsFilters } from "./contacts-reducer";
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {
@@ -22,8 +24,10 @@ const textFieldStlye: SxProps<Theme> = {
   },
 };
 
-const isKeyOfContact = (key: string): key is keyof WppContact => {
-  const accepted: string[] = ["id", "name", "phone"];
+type FilterKey = Exclude<keyof ContactsFilters, "page" | "perPage" | "sectorIds">;
+
+const isKeyOfContact = (key: string): key is FilterKey => {
+  const accepted: string[] = ["id", "name", "phone", "customerName", "customerId"];
   return accepted.includes(key);
 };
 
@@ -31,11 +35,21 @@ const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 
 export default function ContactsTableHeader() {
   const { dispatch, state, loadContacts } = useContactsContext();
+  const { sectors = [] } = useWhatsappContext();
+
+  const selectedSectorOptions = sectors.filter((sector) =>
+    (state.filters.sectorIds || []).includes(sector.id),
+  );
 
   const activeFilters = Object.keys(state.filters).filter((k) => {
     const key = k as keyof typeof state.filters;
     const isPageFilter = key === "page" || key === "perPage";
+    const isSectorFilter = key === "sectorIds";
     const isFilterActive = state.filters[key] && state.filters[key] !== "none";
+
+    if (isSectorFilter) {
+      return (state.filters.sectorIds || []).length > 0;
+    }
 
     return !isPageFilter && isFilterActive;
   });
@@ -51,7 +65,7 @@ export default function ContactsTableHeader() {
     }
   };
 
-  const handleChangeFilter = (key: string) => {
+  const handleChangeFilter = (key: FilterKey) => {
     return (event: React.ChangeEvent<HTMLInputElement>) => {
       if (!isKeyOfContact(key)) return;
       const value = event.target.value || null;
@@ -162,7 +176,16 @@ export default function ContactsTableHeader() {
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
               {CONTACTS_TABLE_COLUMNS.CUSTOMER.label}
             </label>
-            <div className="h-[40px] rounded bg-slate-300 px-2 dark:bg-slate-600" />
+            <TextField
+              variant="outlined"
+              size="small"
+              placeholder={CONTACTS_TABLE_COLUMNS.CUSTOMER.placeholder}
+              value={state.filters.customerName || ""}
+              onChange={handleChangeFilter("customerName")}
+              onKeyDown={handleKeyPress}
+              className={textFieldClassName}
+              sx={textFieldStlye}
+            />
           </div>
         </TableCell>
         <TableCell
@@ -176,7 +199,26 @@ export default function ContactsTableHeader() {
             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
               {CONTACTS_TABLE_COLUMNS.SECTORS.label}
             </label>
-            <div className="h-[40px] rounded bg-slate-300 px-2 dark:bg-slate-600" />
+            <Autocomplete
+              multiple
+              size="small"
+              options={sectors}
+              getOptionLabel={(option) => option.name}
+              value={selectedSectorOptions}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              onChange={(_, values) =>
+                dispatch({ type: "set-sector-filter", sectorIds: values.map((v) => v.id) })
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={CONTACTS_TABLE_COLUMNS.SECTORS.placeholder}
+                  variant="outlined"
+                  className="bg-slate-200 dark:bg-slate-700"
+                  sx={textFieldStlye}
+                />
+              )}
+            />
           </div>
         </TableCell>
         <TableCell

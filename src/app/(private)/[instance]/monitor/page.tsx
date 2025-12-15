@@ -276,16 +276,14 @@ export default function MonitorPage() {
 
     if (chat.chatType === "wpp") {
       return async () => {
-        // Para chats finalizados, carrega as mensagens e passa diretamente para openChat
-        let loadedMessages: any[] = [];
-        if (chat.isFinished === true) {
+        let loadedMessages: any[] | undefined;
+        try {
           loadedMessages = await loadChatMessages(chat);
-          // Passa as mensagens pré-carregadas diretamente para evitar problema de sincronização
-          openChat(chat, loadedMessages);
-        } else {
-          // Para chats ativos, abre normalmente
-          openChat(chat);
+        } catch (error) {
+          console.error("Erro ao carregar mensagens do chat", chat.id, error);
         }
+
+        openChat(chat, loadedMessages);
 
         openModal(
           <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">

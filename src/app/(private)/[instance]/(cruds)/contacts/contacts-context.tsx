@@ -21,11 +21,13 @@ import ContactModal from "./(table)/(modal)/contact-modal";
 import DeleteContactModal from "./(table)/(modal)/delete-contact-modal";
 import contactsReducer, {
   ChangeContactsStateAction,
+  ContactWithSectors,
   ContactsContextState,
+  ContactsFilters,
   MultipleActions,
 } from "./(table)/contacts-reducer";
 
-interface ContactWithCustomer extends WppContact {
+interface ContactWithCustomer extends ContactWithSectors {
   customerId?: number;
   customer?: Customer;
 }
@@ -45,7 +47,12 @@ interface IContactsContext {
     customerId?: number,
   ) => Promise<void>;
   loadContacts: () => void;
-  createContact: (name: string, phone: string, sectorIds?: number[], customerId?: number) => void;
+  createContact: (
+    name: string,
+    phone: string,
+    sectorIds?: number[],
+    customerId?: number,
+  ) => Promise<WppContact | null>;
   openContactModal: (contact?: WppContact) => void;
   handleDeleteContact: (contact: WppContact) => void;
   phoneNameMap: Map<string, string>;
@@ -65,7 +72,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   const [state, dispatch] = useReducer(contactsReducer, {
     contacts: [],
     totalRows: 0,
-    filters: { page: "1", perPage: "10" },
+    filters: { page: "1", perPage: "10", sectorIds: [] as ContactsFilters["sectorIds"] },
     isLoading: false,
   });
   const [contactsWithCustomers, /* setContactsWithCustomers */] = useState<ContactWithCustomer[]>([]);
@@ -140,7 +147,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao atualizar cliente!");
       }
     },
-    [token, state],
+    [closeModal, token, wppApi],
   );
 
   const deleteContact = useCallback(
@@ -157,56 +164,74 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao deletar cliente!");
       }
     },
-    [token, state],
+    [token, wppApi],
   );
 
   const createContact = useCallback(
     async (name: string, phone: string, sectorIds?: number[], customerId?: number) => {
       try {
-        if (token) {
-          const newContact = await wppApi.current.createContact(
-            name,
-            phone.replace(/\D/g, ""),
-            customerId,
-            sectorIds,
-          );
+        if (!token) return null;
 
-          dispatch({ type: "add-contact", data: newContact });
-          toast.success("Contato criado com sucesso!");
-          closeModal();
-        }
+        const cleanedPhone = phone.replace(/\D/g, "");
+        const newContact = await wppApi.current.createContact(
+          name,
+          cleanedPhone,
+          customerId,
+          sectorIds,
+        );
+
+        dispatch({ type: "add-contact", data: newContact });
+        toast.success("Contato criado com sucesso!");
+        closeModal();
+        return newContact;
       } catch (err) {
         Logger.error("Error criar contact", err as Error);
         toast.error("Falha ao atualizar cliente!");
+        return null;
       }
     },
-    [token, state],
+    [closeModal, token, wppApi],
   );
 
   const openContactModal = useCallback(
     (contact?: WppContact) => {
       openModal(<ContactModal contact={contact} />);
     },
-    [createContact, updateContact],
+    [openModal],
   );
 
   const handleDeleteContact = useCallback(
     (contact: WppContact) => {
       openModal(<DeleteContactModal contact={contact} />);
     },
-    [deleteContact],
+    [deleteContact, openModal],
   );
 
   const loadContacts = useCallback(async () => {
     try {
       dispatch({ type: "change-loading", isLoading: true });
+      const phoneFilter = (state.filters.phone || "").replace(/\D/g, "");
+
       const response = await wppApi.current.getContactsWithCustomer({
-        name: state.filters.name,
-        phone: state.filters.phone,
+        name: state.filters.name || undefined,
+        phone: phoneFilter || undefined,
+        customerName: state.filters.customerName || undefined,
+        customerId: state.filters.customerId ? Number(state.filters.customerId) : undefined,
+        sectorIds:
+          state.filters.sectorIds && state.filters.sectorIds.length > 0
+            ? state.filters.sectorIds.join(",")
+            : undefined,
         page: state.filters.page ? Number(state.filters.page) : undefined,
         perPage: state.filters.perPage ? Number(state.filters.perPage) : undefined,
+      } as any);
+
+      const totalRows = response?.pagination?.total ?? (response?.data?.length || 0);
+
+      dispatch({
+        type: "load-contacts",
+        contacts: response.data as ContactWithCustomer[],
+        totalRows,
       });
-      dispatch({ type: "load-contacts", contacts: response.data as ContactWithCustomer[] });
     } catch (err) {
       Logger.error("Error loading contacts", err as Error);
       toast.error("Falha ao carregar clientes!");
@@ -218,7 +243,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   useEffect(() => {
     if (!token || !wppApi.current) return;
     wppApi.current.setAuth(token);
-  }, [token]);
+  }, [token, wppApi]);
 
   useEffect(() => {
     if (token) {

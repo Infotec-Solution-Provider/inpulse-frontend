@@ -2,7 +2,7 @@ import { WppContact } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import { Cancel, Delete, Edit, Save } from "@mui/icons-material";
 import { IconButton, TextField } from "@mui/material";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export default function ContactItem({
   contact,
@@ -31,7 +31,7 @@ export default function ContactItem({
   const onClickCancel = () => {
     setState({ ...state, isEditing: false });
   };
-  
+
   const onClickDelete = () => {
     handleDelete(contact.id);
   };
@@ -42,9 +42,18 @@ export default function ContactItem({
   }
 
   const handleChangePhone = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = event.target;
-    setState((prevState) => ({ ...prevState, phone: value }));
+    const digitsOnly = event.target.value.replace(/\D/g, "");
+    setState((prevState) => ({ ...prevState, phone: digitsOnly }));
   };
+
+  const formattedPhone = useMemo(() => {
+    if (!state.phone) return "";
+    try {
+      return Formatter.phone(state.phone);
+    } catch {
+      return state.phone;
+    }
+  }, [state.phone]);
 
   return (
     <li className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-600">
@@ -69,7 +78,7 @@ export default function ContactItem({
           }}
         />
         <TextField
-          value={state.isEditing ? state.phone : Formatter.phone(state.phone)}
+          value={state.isEditing ? state.phone : formattedPhone}
           variant="outlined"
           size="small"
           disabled={!state.isEditing}
@@ -88,7 +97,7 @@ export default function ContactItem({
           }}
         />
       </div>
-      
+
       <div className="flex items-center gap-1">
         {!state.isEditing ? (
           <>

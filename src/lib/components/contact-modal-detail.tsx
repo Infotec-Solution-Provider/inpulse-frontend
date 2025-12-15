@@ -24,6 +24,7 @@ import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context"
 import { useTheme } from "@mui/material/styles";
 import { useContactsContext } from "@/app/(private)/[instance]/(cruds)/contacts/contacts-context";
 import useInternalChatContext from "@/app/(private)/[instance]/internal-context";
+import { toast } from "react-toastify";
 
 interface ContactModalProps {
   open: boolean;
@@ -45,7 +46,6 @@ export default function ContactModal({
   const { users } = useInternalChatContext();
   const theme = useTheme();
   const [isCreating, setIsCreating] = useState(false);
-  const [shouldStartChat, setShouldStartChat] = useState(false);
 
   const normalizedPhone = useMemo(
     () => contact?.phone?.replace(/\D/g, "") || "",
@@ -63,33 +63,91 @@ export default function ContactModal({
   }, [contact?.id, normalizedPhone, contactsState.contacts]);
 
   const effectiveContact = existingContact || contact;
-  const hasContactRecord = effectiveContact?.id != null;
+  // Treat ids <= 0 as "no persisted record"
+  const hasContactRecord = typeof effectiveContact?.id === "number" && effectiveContact.id > 0;
 
-  useEffect(() => {
-    if (shouldStartChat) {
-      setShouldStartChat(false);
-      onClose();
+  const handleStartConversation = async () => {
+    if (!hasContactRecord || effectiveContact?.id === undefined || effectiveContact?.id === null) {
+      console.warn("[ContactModal] start chat blocked: no contact record", {
+        hasContactRecord,
+        effectiveContact,
+      });
+      // Try to create then start if we have name/phone
+      if (effectiveContact?.name && (normalizedPhone || effectiveContact.phone)) {
+        try {
+          console.info("[ContactModal] creating contact before start", {
+            name: effectiveContact.name,
+            phone: normalizedPhone || effectiveContact.phone,
+          });
+          const created = await createContact(
+            effectiveContact.name,
+            normalizedPhone || effectiveContact.phone || "",
+          );
+          if (created?.id) {
+            console.info("[ContactModal] start chat after create (fallback)", created.id);
+            const res = await startChatByContactId(created.id);
+            console.info("[ContactModal] start chat fallback result", res);
+            onClose();
+          }
+        } catch (err) {
+          console.error("Erro ao criar e iniciar conversa:", err);
+          toast.error("Não foi possível criar/iniciar a conversa.");
+        }
+      }
+      return;
     }
-  }, [shouldStartChat, startChatByContactId, onClose, contact?.phone]);
-
-  const handleStartConversation = () => {
-    if (!hasContactRecord || !effectiveContact) return;
-    startChatByContactId(effectiveContact.id!);
-    onClose();
+    try {
+      console.info("[ContactModal] start chat (existing)", {
+        contactId: effectiveContact.id,
+        phone: effectiveContact.phone,
+        normalizedPhone,
+      });
+      const res = await startChatByContactId(effectiveContact.id);
+      console.info("[ContactModal] start chat result", res);
+      onClose();
+    } catch (err) {
+      console.error("Erro ao iniciar conversa:", err);
+      toast.error("Falha ao iniciar conversa. Veja o console para detalhes.");
+    }
   };
 
   const handleAddAndChat = async () => {
     if (!effectiveContact) return;
     setIsCreating(true);
-    setShouldStartChat(true);
-    await createContact(effectiveContact.name, normalizedPhone || effectiveContact.phone || "");
+    const created = await createContact(
+      effectiveContact.name,
+      normalizedPhone || effectiveContact.phone || "",
+    );
+    if (created?.id) {
+      try {
+        console.info("[ContactModal] start chat after create", {
+          createdId: created.id,
+          createdPhone: created.phone,
+          normalizedPhone,
+        });
+        const res = await startChatByContactId(created.id);
+        console.info("[ContactModal] start chat after create result", res);
+        onClose();
+      } catch (err) {
+        console.error("Erro ao iniciar conversa após criar contato:", err);
+        toast.error("Contato criado, mas não foi possível iniciar a conversa.");
+      }
+    } else {
+      console.warn("[ContactModal] createContact did not return id", created);
+    }
     setIsCreating(false);
   };
 
   const handleJustAdd = async () => {
     if (!effectiveContact) return;
     setIsCreating(true);
-    await createContact(effectiveContact.name, normalizedPhone || effectiveContact.phone || "");
+    const created = await createContact(
+      effectiveContact.name,
+      normalizedPhone || effectiveContact.phone || "",
+    );
+    if (!created?.id) {
+      console.warn("[ContactModal] createContact (just add) returned no id", created);
+    }
     setIsCreating(false);
     onClose();
   };
@@ -108,6 +166,16 @@ export default function ContactModal({
       (c) => c.contact?.phone && c.contact.phone.replace(/\D/g, "") === normalizedPhone
     );
   }, [effectiveContact, hasContactRecord, normalizedPhone, chats, monitorChats]);
+
+  const phoneToShow = useMemo(() => {
+    const digits = normalizedPhone || effectiveContact?.phone?.replace(/\D/g, "") || "";
+    if (!digits) return "";
+    try {
+      return Formatter.phone(digits);
+    } catch (err) {
+      return digits;
+    }
+  }, [normalizedPhone, effectiveContact?.phone]);
 
   const user = users.find((c) => c.CODIGO === activeChat?.userId);
 
@@ -212,7 +280,7 @@ export default function ContactModal({
             >
               <PhoneIphoneIcon sx={{ mr: 1, color: (theme) => theme.palette.text.secondary }} />
               <Typography variant="body2" sx={{ color: (theme) => theme.palette.text.secondary }}>
-                {effectiveContact?.phone ? Formatter.phone(effectiveContact.phone) : "Número indisponível"}
+                {phoneToShow || "Número indisponível"}
               </Typography>
             </Box>
 

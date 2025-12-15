@@ -82,7 +82,7 @@ interface IWhatsappContext {
   getMonitorSchedules: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
   finishChat: (chatId: number, resultId: number, scheduleDate?: Date | null) => void;
-  startChatByContactId: (contactId: number, template?: SendTemplateData) => void;
+  startChatByContactId: (contactId: number, template?: SendTemplateData) => Promise<any>;
   updateChatContact: (contactId: number, newName: string, newCustomer: Customer | null) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
   monitorChats: DetailedChat[];
@@ -267,13 +267,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
         getChatsMonitor();
       });
-    },
-    [api, token],
-  );
-
-  const startChatByContactId = useCallback(
-    (contactId: number, template?: SendTemplateData) => {
-      api.current.startChatByContactId(contactId, template);
     },
     [api, token],
   );
@@ -480,6 +473,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setMessages({});
     }
   }, [token, api.current]);
+
+  const startChatByContactId = useCallback(
+    async (contactId: number, template?: SendTemplateData) => {
+      api.current.setAuth(token || "");
+      return api.current.startChatByContactId(contactId, template);
+    },
+    [api, token],
+  );
 
   useEffect(() => {
     if (token?.length && api.current && user) {

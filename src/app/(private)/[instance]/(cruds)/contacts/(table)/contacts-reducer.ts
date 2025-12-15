@@ -1,10 +1,23 @@
-import { RequestFilters, WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@in.pulse-crm/sdk";
+
+export type ContactWithSectors = WppContact & { sectors?: Array<{ sectorId: number }> };
+
+export interface ContactsFilters {
+  page: string;
+  perPage: string;
+  id?: string;
+  name?: string;
+  phone?: string;
+  customerName?: string;
+  customerId?: string;
+  sectorIds?: number[];
+}
 
 // State Type
 export interface ContactsContextState {
-  contacts: WppContact[];
+  contacts: ContactWithSectors[];
   totalRows: number;
-  filters: RequestFilters<WppContact>;
+  filters: ContactsFilters;
   isLoading: boolean;
 }
 
@@ -13,12 +26,18 @@ type ChangeLoadingAction = { type: "change-loading"; isLoading: boolean };
 type ChangePageAction = { type: "change-page"; page: number };
 type ChangePerPageAction = { type: "change-per-page"; perPage: number };
 type ChangeTotalRowsAction = { type: "change-total-rows"; totalRows: number };
-type ChangeFilterAction = { type: "change-filter"; key: keyof WppContact; value: string };
-type RemoveFilterAction = { type: "remove-filter"; key: keyof WppContact };
+type FilterKey = Exclude<keyof ContactsFilters, "page" | "perPage" | "sectorIds">;
+type ChangeFilterAction = { type: "change-filter"; key: FilterKey; value?: string };
+type RemoveFilterAction = { type: "remove-filter"; key: FilterKey };
 type ClearFiltersAction = { type: "clear-filters" };
-type LoadContactsAction = { type: "load-contacts"; contacts: WppContact[] };
+type SetSectorFilterAction = { type: "set-sector-filter"; sectorIds: number[] };
+type LoadContactsAction = {
+  type: "load-contacts";
+  contacts: ContactWithSectors[];
+  totalRows?: number;
+};
 type UpdateContactAction = { type: "update-contact"; id: number; name: string };
-type AddContactAction = { type: "add-contact"; data: WppContact };
+type AddContactAction = { type: "add-contact"; data: ContactWithSectors };
 type DeleteContactAction = { type: "delete-contact"; id: number };
 
 type PaginationActions = ChangePageAction | ChangePerPageAction | ChangeTotalRowsAction;
@@ -38,6 +57,7 @@ export type ChangeContactsStateAction =
   | PaginationActions
   | FilterActions
   | ContactActions
+  | SetSectorFilterAction
   | ChangeLoadingAction;
 
 // Reducer Function
@@ -45,39 +65,66 @@ export default function contactsReducer(
   prev: ContactsContextState,
   action: ChangeContactsStateAction | MultipleActions,
 ): ContactsContextState {
-  const next = { ...prev };
-
   switch (action.type) {
     case "change-loading":
-      return { ...next, isLoading: action.isLoading };
+      return { ...prev, isLoading: action.isLoading };
     case "change-page":
       // MUI uses 0-based pages, backend uses 1-based, so we add 1
-      return { ...next, filters: { ...next.filters, page: (action.page + 1).toString() } };
+      return { ...prev, filters: { ...prev.filters, page: (action.page + 1).toString() } };
     case "change-per-page":
       // Reset to page 1 when changing items per page
       return {
-        ...next,
-        filters: { ...next.filters, perPage: action.perPage.toString(), page: "1" },
+        ...prev,
+        filters: { ...prev.filters, perPage: action.perPage.toString(), page: "1" },
       };
     case "change-total-rows":
-      next.totalRows = action.totalRows;
-      return next;
+      return { ...prev, totalRows: action.totalRows };
     case "change-filter":
-      next.filters[action.key] = action.value;
-      return next;
+      return {
+        ...prev,
+        filters: {
+          ...prev.filters,
+          [action.key]: action.value || undefined,
+          page: "1",
+        },
+      };
     case "clear-filters":
-      next.filters = { page: prev.filters.page, perPage: prev.filters.perPage };
-      return next;
+      return {
+        ...prev,
+        filters: {
+          page: "1",
+          perPage: prev.filters.perPage,
+          sectorIds: [],
+        },
+      };
     case "remove-filter":
-      delete next.filters[action.key];
-      return next;
+      return {
+        ...prev,
+        filters: {
+          ...prev.filters,
+          [action.key]: undefined,
+          page: "1",
+        },
+      };
+    case "set-sector-filter":
+      return {
+        ...prev,
+        filters: {
+          ...prev.filters,
+          sectorIds: action.sectorIds,
+          page: "1",
+        },
+      };
     case "load-contacts":
-      next.contacts = action.contacts;
-      return next;
+      return {
+        ...prev,
+        contacts: action.contacts,
+        totalRows: typeof action.totalRows === "number" ? action.totalRows : prev.totalRows,
+      };
     case "update-contact":
       return {
-        ...next,
-        contacts: next.contacts.map((contact) => {
+        ...prev,
+        contacts: prev.contacts.map((contact) => {
           if (contact.id === action.id) {
             return { ...contact, name: action.name };
           }
@@ -85,11 +132,17 @@ export default function contactsReducer(
         }),
       };
     case "add-contact":
-      next.contacts.unshift(action.data);
-      return next;
+      return {
+        ...prev,
+        contacts: [action.data, ...prev.contacts],
+        totalRows: prev.totalRows + 1,
+      };
     case "delete-contact":
-      next.contacts = prev.contacts.filter((contact) => contact.id !== action.id);
-      return next;
+      return {
+        ...prev,
+        contacts: prev.contacts.filter((contact) => contact.id !== action.id),
+        totalRows: Math.max(0, prev.totalRows - 1),
+      };
     case "multiple":
       return action.actions.reduce((state, subAction) => contactsReducer(state, subAction), prev);
     default:

@@ -37,7 +37,7 @@ interface ICustomersContext {
   loadCustomers: () => void;
   searchCustomers: (
     term: string,
-    filterBy?: "RAZAO" | "COD_ERP" | "CODIGO"
+    filterBy?: "RAZAO" | "COD_ERP" | "CODIGO" | "CPF_CNPJ",
   ) => Promise<Customer[]>;
 }
 
@@ -119,7 +119,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   }, [state.filters, token]);
 
   const searchCustomers = useCallback(
-    async (term: string, filterBy: "RAZAO" | "COD_ERP" | "CODIGO" = "RAZAO") => {
+    async (term: string, filterBy: "RAZAO" | "COD_ERP" | "CODIGO" | "CPF_CNPJ" = "RAZAO") => {
       if (!token) return [];
 
       try {
@@ -137,6 +137,9 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
             filters.COD_ERP = trimmed;
           } else if (filterBy === "CODIGO") {
             filters.CODIGO = digitsOnly || trimmed;
+          }
+          else if (filterBy === "CPF_CNPJ") {
+            filters.CPF_CNPJ = digitsOnly || trimmed;
           }
         }
 
