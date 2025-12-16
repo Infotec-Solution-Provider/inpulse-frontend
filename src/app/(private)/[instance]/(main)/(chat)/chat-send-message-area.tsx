@@ -1,4 +1,6 @@
 import SendTemplateModal from "@/lib/components/send-template-modal";
+import { WppMessage } from "@in.pulse-crm/sdk";
+import { Logger } from "@in.pulse-crm/utils";
 import { Close } from "@mui/icons-material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
@@ -11,27 +13,21 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useAppContext } from "../../app-context";
-import useInternalChatContext, { DetailedInternalChat } from "../../internal-context";
-import { DetailedChat, useWhatsappContext, WppClient } from "../../whatsapp-context";
+import useInternalChatContext from "../../internal-context";
+import { useWhatsappContext, WppClient } from "../../whatsapp-context";
 import AudioRecorder from "./audio-recorder";
+import ChannelSelect from "./channels-select";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
-import ChannelSelect from "./channels-select";
-import { WppMessage } from "@in.pulse-crm/sdk";
 
-function getDefaultSelectedChannel(
-  currentChat: DetailedChat | DetailedInternalChat | null,
-  currentChatMessages: WppMessage[],
-  channels: WppClient[],
-  globalChannel: WppClient | null,
-) {
+function getDefaultSelectedChannel(currentChatMessages: WppMessage[], channels: WppClient[]) {
   const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
 
   if (lastMessage?.clientId) {
-    return channels.find((ch) => ch.id === lastMessage.clientId) || globalChannel;
+    return channels.find((ch) => ch.id === lastMessage.clientId) || null;
   }
 
-  return globalChannel;
+  return null;
 }
 
 export default function ChatSendMessageArea() {
@@ -40,11 +36,13 @@ export default function ChatSendMessageArea() {
     wppApi,
     parameters,
     globalChannel,
-    chatsChannels,
     channels,
     loaded,
     currentChatMessages,
+    selectedChannel,
+    setSelectedChannel,
   } = useWhatsappContext();
+
   const {
     sendMessage: sendMessageContext,
     state,
@@ -65,19 +63,14 @@ export default function ChatSendMessageArea() {
 
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
-  const [selectedChannel, setSelectedChannel] = useState(
-    getDefaultSelectedChannel(currentChat, currentChatMessages, channels, globalChannel.current),
-  );
 
   useEffect(() => {
-    setSelectedChannel(
-      getDefaultSelectedChannel(currentChat, currentChatMessages, channels, globalChannel.current),
-    );
-  }, [loaded, currentChat, currentChatMessages]);
-
-  useEffect(() => {
-    console.log("[ChatSendMessageArea] selectedChannel changed:", { selectedChannel });
-  }, [selectedChannel]);
+    const channel = getDefaultSelectedChannel(currentChatMessages, channels);
+    if (channel && selectedChannel?.id !== channel.id) {
+      Logger.debug(`[ChatSendMessageArea] Definindo canal selecionado padrão: ${channel.name}`);
+      setSelectedChannel(channel);
+    }
+  }, [loaded, currentChat, selectedChannel]);
 
   const {
     textWithNames,
@@ -95,18 +88,12 @@ export default function ChatSendMessageArea() {
     dispatch,
   });
 
-  const onChangeChannel = useCallback(
-    (selected: any) => {
-      setSelectedChannel(selected);
-      if (currentChat && currentChat.chatType === "wpp") {
-        chatsChannels.current.set(currentChat.contact?.id || 0, selected.id);
-      }
-    },
-    [currentChat],
-  );
+  const onChangeChannel = useCallback((s: any) => setSelectedChannel(s), [currentChat]);
 
   const openAttachFile = () => {
-    if (fileInputRef.current) fileInputRef.current.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   useEffect(() => {

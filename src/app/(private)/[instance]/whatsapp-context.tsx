@@ -100,6 +100,8 @@ interface IWhatsappContext {
   chatsChannels: React.RefObject<Map<number, number>>;
   channels: WppClient[];
   loaded: boolean;
+  selectedChannel: WppClient | null;
+  setSelectedChannel: Dispatch<SetStateAction<WppClient | null>>;
 }
 
 interface WhatsappProviderProps {
@@ -156,6 +158,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
+  const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
 
   const [loaded, setLoaded] = useState(false);
 
@@ -271,27 +274,21 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [api, token],
   );
 
-  const sendMessage = useCallback(async (to: string, data: SendMessageData) => {
-    try {
-      let channel = globalChannel.current;
+  const sendMessage = useCallback(
+    async (to: string, data: SendMessageData) => {
+      try {
+        if (!selectedChannel) {
+          toast.error("Nenhum canal selecionado para enviar a mensagem.");
+          return;
+        }
 
-      if (chatsChannels.current.has(data.contactId)) {
-        const chatChannelId = chatsChannels.current.get(data.contactId);
-        const channelFromMap = channels.find((ch) => ch.id === chatChannelId);
-        channel = channelFromMap || channel;
+        await api.current.sendMessage(String(selectedChannel.id), to, data);
+      } catch (err) {
+        toast.error(sanitizeErrorMessage(err));
       }
-
-      console.log("Enviando mensagem pelo canal", channel);
-
-      if (channel) {
-        await api.current.sendMessage(String(channel.id), to, data);
-      } else {
-        toast.error("Canal não encontrado para enviar a mensagem.");
-      }
-    } catch (err) {
-      toast.error(sanitizeErrorMessage(err));
-    }
-  }, [channels]);
+    },
+    [channels, selectedChannel],
+  );
 
   const editMessage = useCallback(
     async (messageId: string, newText: string, isInternal: boolean = false) => {
@@ -304,15 +301,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsMonitor().then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
-          chats,
-          messages,
-        );
+        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
         setMonitorChats(detailedChats);
         setMessages(chatsMessages);
-        for (const [chatId, channelId] of channelsIds.entries()) {
-          chatsChannels.current.set(chatId, channelId);
-        }
       });
     } else {
       setMonitorChats([]);
@@ -456,14 +447,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
-          chats,
-          messages,
-        );
-
-        for (const [chatId, channelId] of channelsIds.entries()) {
-          chatsChannels.current.set(chatId, channelId);
-        }
+        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
         setMessages(chatsMessages);
@@ -491,13 +475,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         const secs = res as SectorData[];
 
         api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-          const { chatsMessages, detailedChats, channelsIds } = processChatsAndMessages(
-            chats,
-            messages,
-          );
+          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
           setChats(detailedChats);
           setMessages(chatsMessages);
-          chatsChannels.current = channelsIds;
         });
 
         const sector = secs.find((s) => s.id === user.SETOR);
@@ -650,6 +630,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         globalChannel,
         chatsChannels,
         loaded,
+        selectedChannel,
+        setSelectedChannel,
       }}
     >
       {children}

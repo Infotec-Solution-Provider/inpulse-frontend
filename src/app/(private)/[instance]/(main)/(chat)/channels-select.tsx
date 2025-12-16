@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useWhatsappContext, WppClient } from "../../whatsapp-context";
 
 // Example channel data
-type ChannelType = "WWEBJS" | "WABA" | "GUPSHUP";
+type ChannelType = "WWEBJS" | "WABA" | "GUPSHUP" | "REMOTE";
 
 const whatsappIcon = <WhatsAppIcon sx={{ fontSize: 20 }} />;
 
@@ -25,11 +25,16 @@ const channelTypeColors: Record<ChannelType, string[]> = {
     "#4caf50", // green
     "#e91e63", // pink
   ],
+  REMOTE: [
+    "#607d8b", // blue grey
+    "#795548", // brown
+    "#3f51b5", // indigo
+  ],
 };
 
 interface ChannelSelectOptions {
   channels: WppClient[];
-  selectedChannel: WppClient;
+  selectedChannel: WppClient | null;
   onChange?: (value: WppClient) => void;
 }
 
@@ -45,12 +50,12 @@ const predefinedColors = [
 export function getChannelColor(channel: WppClient, channels: WppClient[]) {
   // Encontrar o índice do canal na lista geral
   const globalIndex = channels.findIndex((c) => c.id === channel.id);
-  
+
   // Se for um dos 3 primeiros canais, usar cor predefinida
   if (globalIndex >= 0 && globalIndex < 3) {
     return predefinedColors[globalIndex];
   }
-  
+
   // Para canais além dos 3 primeiros, usar cores baseadas no tipo
   const type = channel.type as ChannelType;
   const sameTypeChannels = channels.filter((c) => c.type === channel.type);
@@ -59,8 +64,8 @@ export function getChannelColor(channel: WppClient, channels: WppClient[]) {
   return colors[index % colors.length];
 }
 
-function getChannelVisual(channel: WppClient, channels: WppClient[]) {
-  const color = getChannelColor(channel, channels);
+function getChannelVisual(channel: WppClient | null, channels: WppClient[]) {
+  const color = channel ? getChannelColor(channel, channels) : "#ececec";
   return (
     <Box
       sx={{
@@ -121,7 +126,9 @@ export default function ChannelSelect({
           },
         }}
         onClick={isDisabled ? undefined : handleOpen}
-        title={isDisabled ? "Troca de canal desabilitada" : selectedChannel.name}
+        title={
+          isDisabled ? "Troca de canal desabilitada" : selectedChannel?.name || "Selecione um canal"
+        }
       >
         {getChannelVisual(selectedChannel, channels)}
         <ExpandMoreIcon sx={{ fontSize: 18, ml: 0.5, color: "text.secondary" }} />
