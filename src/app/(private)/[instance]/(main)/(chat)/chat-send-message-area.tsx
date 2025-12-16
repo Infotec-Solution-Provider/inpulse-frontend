@@ -21,15 +21,14 @@ import { WppMessage } from "@in.pulse-crm/sdk";
 
 function getDefaultSelectedChannel(
   currentChat: DetailedChat | DetailedInternalChat | null,
+  currentChatMessages: WppMessage[],
   channels: WppClient[],
   globalChannel: WppClient | null,
 ) {
-  if (currentChat && currentChat.chatType === "wpp") {
-    const channelId = currentChat.lastMessage?.clientId;
-    const channel = channels.find((ch) => ch.id === channelId);
-    if (channel) {
-      return channel;
-    }
+  const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
+
+  if (lastMessage.clientId) {
+    return channels.find((ch) => ch.id === lastMessage.clientId) || globalChannel;
   }
 
   return globalChannel;
@@ -67,12 +66,18 @@ export default function ChatSendMessageArea() {
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(
-    getDefaultSelectedChannel(currentChat, channels, globalChannel.current),
+    getDefaultSelectedChannel(currentChat, currentChatMessages, channels, globalChannel.current),
   );
 
   useEffect(() => {
-    setSelectedChannel(getDefaultSelectedChannel(currentChat, channels, globalChannel.current));
+    setSelectedChannel(
+      getDefaultSelectedChannel(currentChat, currentChatMessages, channels, globalChannel.current),
+    );
   }, [loaded, currentChat]);
+
+  useEffect(() => {
+    console.log("[ChatSendMessageArea] selectedChannel changed:", { selectedChannel });
+  }, [selectedChannel]);
 
   const {
     textWithNames,

@@ -124,6 +124,7 @@ export default function RenderWhatsappChatMessages({
               isForwarded={m.isForwarded}
               isForwardMode={isSelectionMode}
               isEdited={!!m.isEdited}
+              channelId={m.clientId}
               onEdit={
                 m.from.startsWith("me:") && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
                   ? () => handleEditMessage(m)

@@ -44,6 +44,7 @@ export interface MessageProps {
   isForwardMode?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
+  channelId?: number | null;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
@@ -91,6 +92,7 @@ export default function Message({
   isForwarded = false,
   isForwardMode = false,
   isSelected = false,
+  channelId,
   onSelect,
   onForward,
   onCopy,
@@ -98,7 +100,13 @@ export default function Message({
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-  const { parameters } = useWhatsappContext();
+  const { parameters, channels } = useWhatsappContext();
+
+  const channelName = useMemo(() => {
+    if (!channelId || channels.length <= 1) return null;
+    const channel = channels.find((c) => c.id === channelId);
+    return channel?.name || null;
+  }, [channelId, channels]);
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -228,6 +236,11 @@ export default function Message({
             )}
           </div>
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
+            {channelName && (
+              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                {channelName}
+              </span>
+            )}
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
             {style !== "system" && status && statusComponents[status]}
