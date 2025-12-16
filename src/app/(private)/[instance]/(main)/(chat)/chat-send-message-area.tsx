@@ -27,7 +27,7 @@ function getDefaultSelectedChannel(
 ) {
   const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
 
-  if (lastMessage.clientId) {
+  if (lastMessage?.clientId) {
     return channels.find((ch) => ch.id === lastMessage.clientId) || globalChannel;
   }
 
