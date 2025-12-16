@@ -73,7 +73,7 @@ export default function ChatSendMessageArea() {
     setSelectedChannel(
       getDefaultSelectedChannel(currentChat, currentChatMessages, channels, globalChannel.current),
     );
-  }, [loaded, currentChat]);
+  }, [loaded, currentChat, currentChatMessages]);
 
   useEffect(() => {
     console.log("[ChatSendMessageArea] selectedChannel changed:", { selectedChannel });

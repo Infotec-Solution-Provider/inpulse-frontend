@@ -35,7 +35,23 @@ interface ChannelSelectOptions {
 
 // Função para cor de fundo (pode ser fixa ou baseada em tipo)
 
-function getChannelColor(channel: WppClient, channels: WppClient[]) {
+// Cores predefinidas para os 3 primeiros canais
+const predefinedColors = [
+  "#19d380", // verde - primeiro canal
+  "#197bf4", // azul - segundo canal
+  "#ff9f1c", // laranja - terceiro canal
+];
+
+export function getChannelColor(channel: WppClient, channels: WppClient[]) {
+  // Encontrar o índice do canal na lista geral
+  const globalIndex = channels.findIndex((c) => c.id === channel.id);
+  
+  // Se for um dos 3 primeiros canais, usar cor predefinida
+  if (globalIndex >= 0 && globalIndex < 3) {
+    return predefinedColors[globalIndex];
+  }
+  
+  // Para canais além dos 3 primeiros, usar cores baseadas no tipo
   const type = channel.type as ChannelType;
   const sameTypeChannels = channels.filter((c) => c.type === channel.type);
   const index = sameTypeChannels.findIndex((c) => c.id === channel.id);
@@ -72,32 +88,18 @@ export default function ChannelSelect({
   const { parameters } = useWhatsappContext();
   const isDisabled = parameters["disable_channel_switch"] === "true";
 
-  console.log("[ChannelSelect] Render:", {
-    selectedChannel: selectedChannel.name,
-    channelsCount: channels.length,
-    isDisabled,
-    parameters,
-  });
-
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
-    console.log("[ChannelSelect] handleOpen:", { isDisabled });
     if (isDisabled) {
-      console.log("[ChannelSelect] Open bloqueado - canal desabilitado");
       return;
     }
     setAnchorEl(event.currentTarget);
   };
 
   const handleClose = () => {
-    console.log("[ChannelSelect] handleClose");
     setAnchorEl(null);
   };
 
   const handleSelect = (channel: WppClient) => {
-    console.log("[ChannelSelect] handleSelect:", { 
-      from: selectedChannel.name, 
-      to: channel.name 
-    });
     onChange?.(channel);
     handleClose();
   };

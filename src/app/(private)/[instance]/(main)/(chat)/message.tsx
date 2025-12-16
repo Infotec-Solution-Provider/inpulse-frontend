@@ -14,6 +14,7 @@ import ReplyIcon from "@mui/icons-material/Reply";
 import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
 import { useWhatsappContext } from "../../whatsapp-context";
+import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
 
@@ -106,6 +107,13 @@ export default function Message({
     if (!channelId || channels.length <= 1) return null;
     const channel = channels.find((c) => c.id === channelId);
     return channel?.name || null;
+  }, [channelId, channels]);
+
+  const channelColor = useMemo(() => {
+    if (!channelId || channels.length <= 1) return null;
+    const channel = channels.find((c) => c.id === channelId);
+    if (!channel) return null;
+    return getChannelColor(channel, channels);
   }, [channelId, channels]);
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -236,8 +244,8 @@ export default function Message({
             )}
           </div>
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
-            {channelName && (
-              <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+            {channelName && channelColor && (
+              <span className="font-semibold" style={{ color: channelColor }}>
                 {channelName}
               </span>
             )}
