@@ -17,29 +17,35 @@ import AudioRecorder from "./audio-recorder";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
 import ChannelSelect from "./channels-select";
+import { WppMessage } from "@in.pulse-crm/sdk";
 
 function getDefaultSelectedChannel(
   currentChat: DetailedChat | DetailedInternalChat | null,
   channels: WppClient[],
   globalChannel: WppClient | null,
-  chatsChannels: Map<number, number>,
 ) {
-  if (!currentChat || currentChat.chatType !== "wpp") {
-    return null;
-  }
-  const channelIdFromMap = chatsChannels.get(currentChat.contact?.id || 0);
-  const channelFromMap = channels.find((ch) => ch.id === channelIdFromMap);
-
-  if (channelFromMap) {
-    return channelFromMap;
+  if (currentChat && currentChat.chatType === "wpp") {
+    const channelId = currentChat.lastMessage?.clientId;
+    const channel = channels.find((ch) => ch.id === channelId);
+    if (channel) {
+      return channel;
+    }
   }
 
   return globalChannel;
 }
 
 export default function ChatSendMessageArea() {
-  const { currentChat, wppApi, parameters, globalChannel, chatsChannels, channels, loaded } =
-    useWhatsappContext();
+  const {
+    currentChat,
+    wppApi,
+    parameters,
+    globalChannel,
+    chatsChannels,
+    channels,
+    loaded,
+    currentChatMessages,
+  } = useWhatsappContext();
   const {
     sendMessage: sendMessageContext,
     state,
@@ -61,18 +67,11 @@ export default function ChatSendMessageArea() {
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(
-    getDefaultSelectedChannel(currentChat, channels, globalChannel.current, chatsChannels.current),
+    getDefaultSelectedChannel(currentChat, channels, globalChannel.current),
   );
 
   useEffect(() => {
-    setSelectedChannel(
-      getDefaultSelectedChannel(
-        currentChat,
-        channels,
-        globalChannel.current,
-        chatsChannels.current,
-      ),
-    );
+    setSelectedChannel(getDefaultSelectedChannel(currentChat, channels, globalChannel.current));
   }, [loaded, currentChat]);
 
   const {

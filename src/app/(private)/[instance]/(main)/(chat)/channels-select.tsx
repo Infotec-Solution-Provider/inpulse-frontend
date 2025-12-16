@@ -72,15 +72,32 @@ export default function ChannelSelect({
   const { parameters } = useWhatsappContext();
   const isDisabled = parameters["disable_channel_switch"] === "true";
 
+  console.log("[ChannelSelect] Render:", {
+    selectedChannel: selectedChannel.name,
+    channelsCount: channels.length,
+    isDisabled,
+    parameters,
+  });
+
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
+    console.log("[ChannelSelect] handleOpen:", { isDisabled });
+    if (isDisabled) {
+      console.log("[ChannelSelect] Open bloqueado - canal desabilitado");
+      return;
+    }
     setAnchorEl(event.currentTarget);
   };
 
   const handleClose = () => {
+    console.log("[ChannelSelect] handleClose");
     setAnchorEl(null);
   };
 
   const handleSelect = (channel: WppClient) => {
+    console.log("[ChannelSelect] handleSelect:", { 
+      from: selectedChannel.name, 
+      to: channel.name 
+    });
     onChange?.(channel);
     handleClose();
   };
@@ -103,7 +120,6 @@ export default function ChannelSelect({
         }}
         onClick={isDisabled ? undefined : handleOpen}
         title={isDisabled ? "Troca de canal desabilitada" : selectedChannel.name}
-        
       >
         {getChannelVisual(selectedChannel, channels)}
         <ExpandMoreIcon sx={{ fontSize: 18, ml: 0.5, color: "text.secondary" }} />
