@@ -118,6 +118,14 @@ export default function StartChatModalItem({
                   {formatCpfCnpj(customer.CPF_CNPJ)}
                 </span>
               </div>
+              {!!customer.COD_ERP && (
+                <div className="flex items-center gap-2">
+                  <BadgeIcon className="text-gray-500" sx={{ fontSize: 16 }} />
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    CÓDIGO ERP: {customer.COD_ERP}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center border-l-2 border-gray-200 pl-4 dark:border-gray-700">
