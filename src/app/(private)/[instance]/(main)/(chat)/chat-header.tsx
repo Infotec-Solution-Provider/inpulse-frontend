@@ -99,42 +99,44 @@ export default function ChatHeader({
           </div>
         )}
       </div>
-      {currentChat?.chatType === "wpp" && currentChat?.isFinished === false && (
-        <div className="flex items-center">
-          <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
-            <IconButton onClick={openEditContactModal}>
-              <EditIcon color="info" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={<h3 className="text-base dark:text-white">Transferir conversa</h3>}>
-            <IconButton onClick={openTransferChatModal}>
-              <SyncAltIcon color="secondary" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={<h3 className="text-base dark:text-white">Agendar retorno</h3>}>
-            <IconButton onClick={openScheduleChatModal}>
-              <ScheduleIcon color="warning" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
-            <IconButton onClick={openFinishChatModal}>
-              <AssignmentTurnedInIcon color="success" />
-            </IconButton>
-          </Tooltip>
-          {onClose && (
-            <IconButton
-              onClick={onClose}
-              className="mx-auto"
-              sx={{
-                color: "inherit",
-                "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.1)" },
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          )}
-        </div>
-      )}
+      <div className="flex items-center">
+        {currentChat?.chatType === "wpp" && currentChat?.isFinished === false && (
+          <>
+            <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
+              <IconButton onClick={openEditContactModal}>
+                <EditIcon color="info" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={<h3 className="text-base dark:text-white">Transferir conversa</h3>}>
+              <IconButton onClick={openTransferChatModal}>
+                <SyncAltIcon color="secondary" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={<h3 className="text-base dark:text-white">Agendar retorno</h3>}>
+              <IconButton onClick={openScheduleChatModal}>
+                <ScheduleIcon color="warning" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
+              <IconButton onClick={openFinishChatModal}>
+                <AssignmentTurnedInIcon color="success" />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+        {onClose && (
+          <IconButton
+            onClick={onClose}
+            className="mx-auto"
+            sx={{
+              color: "inherit",
+              "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.1)" },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        )}
+      </div>
     </div>
   );
 }
