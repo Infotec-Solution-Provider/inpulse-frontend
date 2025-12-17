@@ -25,7 +25,7 @@ import {
   WppMessage,
   WppSchedule,
 } from "@in.pulse-crm/sdk";
-import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import { Logger, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
   ActionDispatch,
   createContext,
@@ -447,6 +447,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
+        Logger.debug("Fetched chats ", { chats});
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
@@ -476,6 +477,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
           const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+          Logger.debug("Initial fetch of chats ", { detailedChats });
           setChats(detailedChats);
           setMessages(chatsMessages);
         });

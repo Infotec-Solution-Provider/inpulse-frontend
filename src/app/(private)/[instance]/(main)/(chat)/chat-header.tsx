@@ -1,5 +1,6 @@
 import { Formatter } from "@in.pulse-crm/utils";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
@@ -31,6 +32,7 @@ export interface ChatContactInfoProps {
   phone: string | null;
   avatarUrl?: string | null;
   chatType?: string | null;
+  onClose?: () => void;
 }
 
 export default function ChatHeader({
@@ -41,6 +43,7 @@ export default function ChatHeader({
   codErp,
   cpfCnpj,
   customerId,
+  onClose,
 }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
   const { currentChat } = useWhatsappContext();
@@ -118,6 +121,18 @@ export default function ChatHeader({
               <AssignmentTurnedInIcon color="success" />
             </IconButton>
           </Tooltip>
+          {onClose && (
+            <IconButton
+              onClick={onClose}
+              className="mx-auto"
+              sx={{
+                color: "inherit",
+                "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.1)" },
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          )}
         </div>
       )}
     </div>

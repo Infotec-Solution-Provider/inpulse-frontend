@@ -15,7 +15,8 @@ export default function Chat({
   cpfCnpj,
   customerId,
   startDate,
-}: ChatContactInfoProps) {
+  onClose,
+}: ChatContactInfoProps & { onClose?: () => void }) {
   const { state, dispatch } = useContext(ChatContext);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -46,16 +47,19 @@ export default function Chat({
   return (
     <div className="relative h-full overflow-hidden rounded-md bg-white text-black shadow-md dark:bg-slate-900 dark:text-white md:grid md:grid-rows-[auto_1fr_auto]">
       <div className="fixed inset-x-0 top-0 z-50 md:static">
-        <ChatHeader
-          avatarUrl={avatarUrl}
-          name={name}
-          customerName={customerName}
-          phone={phone}
-          codErp={codErp}
-          cpfCnpj={cpfCnpj}
-          customerId={customerId}
-          startDate={startDate}
-        />
+        <div className="relative">
+          <ChatHeader
+            avatarUrl={avatarUrl}
+            name={name}
+            customerName={customerName}
+            phone={phone}
+            codErp={codErp}
+            cpfCnpj={cpfCnpj}
+            customerId={customerId}
+            startDate={startDate}
+            onClose={onClose}
+          />
+        </div>
       </div>
 
       <div

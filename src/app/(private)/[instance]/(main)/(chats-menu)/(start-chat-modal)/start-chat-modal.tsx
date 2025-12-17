@@ -36,7 +36,13 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   const [contacts, setContacts] = useState<Array<WppContactWithCustomer>>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
-  const [searchField, setSearchField] = useState("codigo-erp");
+  const [searchField, setSearchField] = useState(() => {
+    // Load saved filter from localStorage, default to "codigo-erp"
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("startChatModalFilterType") || "codigo-erp";
+    }
+    return "codigo-erp";
+  });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -110,7 +116,12 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleChangeField: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (e) => {
-    setSearchField(e.target.value);
+    const newValue = e.target.value;
+    setSearchField(newValue);
+    // Save to localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem("startChatModalFilterType", newValue);
+    }
     // Ao mudar o filtro, limpa a pesquisa atual
     setAppliedSearchTerm("");
   };

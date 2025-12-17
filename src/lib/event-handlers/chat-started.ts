@@ -4,6 +4,7 @@ import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import { Logger } from "@in.pulse-crm/utils";
 
 interface HandleChatStartedCallbackProps {
   chatId: number;
@@ -20,6 +21,8 @@ export default function ChatStartedHandler(
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
     const res = await api.getChatById(chatId);
     const { messages, ...chat } = res;
+    Logger.debug("ChatStartedHandler: New chat started", { chat, messages });
+
     const isUnread = true;
 
     const lastMessage = messages?.reduce((prev, current) => {

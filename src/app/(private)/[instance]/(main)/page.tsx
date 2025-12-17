@@ -26,6 +26,10 @@ export default function Home() {
     }
   }, [currentChat, setCurrentChat]);
 
+  const handleCloseChat = () => {
+    setCurrentChat(null);
+  }
+
   return (
     <ChatProvider>
       <div
@@ -78,6 +82,7 @@ export default function Home() {
               startDate={
                 currentChat.startedAt ? new Date(currentChat.startedAt).toDateString() : null
               }
+              onClose={handleCloseChat}
             />
           )}
           {currentChat?.chatType === "wpp" && (
@@ -91,6 +96,7 @@ export default function Home() {
               cpfCnpj={currentChat?.customer?.CPF_CNPJ || null}
               customerId={currentChat?.customer?.CODIGO || null}
               startDate={new Date(currentChat?.startedAt).toDateString() || null}
+              onClose={handleCloseChat}
             />
           )}
         </div>
