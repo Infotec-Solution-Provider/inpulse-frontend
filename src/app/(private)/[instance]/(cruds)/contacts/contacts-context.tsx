@@ -124,8 +124,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     contactSectors.forEach((sectors) => {
       sectors.forEach((sector) => {
         if (sector.sectorId) {
-          // Aqui poderíamos ter o nome do setor se viesse da API
-          // Por enquanto, armazenaremos apenas o ID
+
           map.set(sector.sectorId, `Setor ${sector.sectorId}`);
         }
       });
@@ -156,7 +155,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         if (token) {
           await wppApi.current.deleteContact(id);
           dispatch({ type: "delete-contact", id });
-          /* loadContacts(); */
+
           toast.success("Contato deletado com sucesso!");
         }
       } catch (err) {
@@ -207,23 +206,83 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     [deleteContact, openModal],
   );
 
+  const getSearchValue = (value: string | undefined, key?: string) => {
+    if (!value) return "";
+    switch (key) {
+      case "nome":
+        return value.toLocaleLowerCase().trim().replace(/\s+/g, " ");
+      case "telefone":
+        return value.replace(/\D/g, "");
+      case "cpf-cnpj":
+        return value.replace(/\D/g, "");
+      case "razao-social":
+        return value.toLocaleLowerCase().replaceAll(" ", "");
+      case "codigo-erp":
+        return value;
+      default:
+        return "";
+    }
+  };
+
   const loadContacts = useCallback(async () => {
     try {
       dispatch({ type: "change-loading", isLoading: true });
-      const phoneFilter = (state.filters.phone || "").replace(/\D/g, "");
 
-      const response = await wppApi.current.getContactsWithCustomer({
-        name: state.filters.name || undefined,
-        phone: phoneFilter || undefined,
-        customerName: state.filters.customerName || undefined,
-        customerId: state.filters.customerId ? Number(state.filters.customerId) : undefined,
-        sectorIds:
-          state.filters.sectorIds && state.filters.sectorIds.length > 0
-            ? state.filters.sectorIds.join(",")
-            : undefined,
-        page: state.filters.page ? Number(state.filters.page) : undefined,
-        perPage: state.filters.perPage ? Number(state.filters.perPage) : undefined,
-      } as any);
+      const params: any = {};
+
+      if (state.filters.page) params.page = Number(state.filters.page);
+      if (state.filters.perPage) params.perPage = Number(state.filters.perPage);
+
+      if (state.filters.sectorIds && state.filters.sectorIds.length > 0) {
+        params.sectorIds = state.filters.sectorIds.join(",");
+      }
+
+      const sanitizedTerm = getSearchValue(state.filters.searchTerm, state.filters.searchField);
+
+      if (sanitizedTerm) {
+        switch (state.filters.searchField) {
+          case "nome":
+            params.name = sanitizedTerm;
+            break;
+          case "telefone":
+            params.phone = sanitizedTerm;
+            break;
+          case "codigo":
+            params.customerId = parseInt(sanitizedTerm) || undefined;
+            break;
+          case "codigo-erp":
+            params.customerErp = sanitizedTerm;
+            break;
+          case "cpf-cnpj":
+            params.customerCnpj = sanitizedTerm;
+            break;
+          case "razao-social":
+            params.customerName = sanitizedTerm;
+            break;
+          default:
+            break;
+        }
+      } else {
+        const phoneFilter = (state.filters.phone || "").replace(/\D/g, "");
+        if (state.filters.id) params.id = Number(state.filters.id);
+        if (state.filters.name) params.name = state.filters.name;
+        if (phoneFilter) params.phone = phoneFilter;
+        if (state.filters.customerName) params.customerName = state.filters.customerName;
+        if (state.filters.customerId) params.customerId = Number(state.filters.customerId);
+      }
+
+      let response: any;
+
+
+      if (params.id !== undefined) {
+        const entries = Object.entries(params).filter(([, v]) => v !== undefined);
+        const searchParams = new URLSearchParams(entries.map(([k, v]) => [k, String(v)]));
+        const url = `/api/whatsapp/contacts/customer${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+        const res = await wppApi.current.ax.get(url);
+        response = res.data;
+      } else {
+        response = await wppApi.current.getContactsWithCustomer(params as any);
+      }
 
       const totalRows = response?.pagination?.total ?? (response?.data?.length || 0);
 
@@ -238,7 +297,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     } finally {
       dispatch({ type: "change-loading", isLoading: false });
     }
-  }, [state.filters]);
+  }, [state.filters, wppApi]);
 
   useEffect(() => {
     if (!token || !wppApi.current) return;

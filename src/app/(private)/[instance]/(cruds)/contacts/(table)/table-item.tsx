@@ -24,7 +24,7 @@ export default function ContactsTableItem({
   openEditModalHandler,
   deleteContactHandler,
 }: ContactsTableItemProps) {
-  const { customerMap } = useContactsContext();
+  const { customerMap, customerObjectMap } = useContactsContext();
 
   const safeFormatPhone = (phone: string): string => {
     try {
@@ -34,8 +34,9 @@ export default function ContactsTableItem({
     }
   };
 
-  const customerId: number | null = contact.customerId || contact.CLIENTE_ID || null;
-  const customerName: string | undefined = customerId ? customerMap.get(customerId) : undefined;
+  const customerObj = (contact as any).customer || (contact.customerId ? customerObjectMap.get(contact.customerId) : undefined);
+  const customerId: number | null = contact.customerId || contact.CLIENTE_ID || customerObj?.CODIGO || null;
+  const customerName: string | undefined = customerObj?.RAZAO || (customerId ? customerMap.get(customerId) : undefined);
   const sectors = contact.sectors ?? [];
 
   return (
@@ -46,9 +47,12 @@ export default function ContactsTableItem({
         {safeFormatPhone(contact.phone)}
       </TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width }}>
-        <span className="text-slate-700 dark:text-slate-300">
-          {customerName || "—"}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-slate-700 dark:text-slate-300">{customerName || "—"}</span>
+          {customerObj?.CODIGO_ERP && (
+            <small className="text-slate-400 dark:text-slate-500">ERP: {customerObj.CODIGO_ERP}</small>
+          )}
+        </div>
       </TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.SECTORS.width }}>
         <div className="flex flex-wrap gap-1">

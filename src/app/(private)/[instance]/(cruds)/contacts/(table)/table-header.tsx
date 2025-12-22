@@ -5,6 +5,7 @@ import {
   Autocomplete,
   Chip,
   IconButton,
+  MenuItem,
   SxProps,
   TableCell,
   TableHead,
@@ -114,7 +115,6 @@ export default function ContactsTableHeader() {
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
-              disabled
             />
           </div>
         </TableCell>

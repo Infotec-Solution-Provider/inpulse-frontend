@@ -10,6 +10,8 @@ export interface ContactsFilters {
   phone?: string;
   customerName?: string;
   customerId?: string;
+  searchField?: string;
+  searchTerm?: string;
   sectorIds?: number[];
 }
 
