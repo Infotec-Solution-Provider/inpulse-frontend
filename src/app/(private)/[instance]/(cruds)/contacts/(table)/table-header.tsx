@@ -18,6 +18,7 @@ import { useContactsContext } from "../contacts-context";
 import { useWhatsappContext } from "../../../whatsapp-context";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
 import { ContactsFilters } from "./contacts-reducer";
+import React from "react";
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {
@@ -37,6 +38,13 @@ const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 export default function ContactsTableHeader() {
   const { dispatch, state, loadContacts } = useContactsContext();
   const { sectors = [] } = useWhatsappContext();
+  const [idInput, setIdInput] = React.useState<string>(state.filters.id || "");
+  const [nameInput, setNameInput] = React.useState<string>(state.filters.name || "");
+  const [phoneInput, setPhoneInput] = React.useState<string>(state.filters.phone || "");
+  const [customerNameInput, setCustomerNameInput] = React.useState<string>(state.filters.customerName || "");
+  const [selectedSectorOptionsLocal, setSelectedSectorOptionsLocal] = React.useState<
+    { id: number; name: string }[]
+  >(sectors.filter((s) => (state.filters.sectorIds || []).includes(s.id)));
 
   const selectedSectorOptions = sectors.filter((sector) =>
     (state.filters.sectorIds || []).includes(sector.id),
@@ -57,8 +65,35 @@ export default function ContactsTableHeader() {
 
   const activeFiltersCount = activeFilters.length;
 
-  const onClickSearch = () => loadContacts();
+  const onClickSearch = () => {
+    const actions = [] as any[];
+    if (idInput && idInput.trim() !== "") actions.push({ type: "change-filter", key: "id", value: idInput.trim() });
+    else actions.push({ type: "remove-filter", key: "id" });
+
+    if (nameInput && nameInput.trim() !== "") actions.push({ type: "change-filter", key: "name", value: nameInput.trim() });
+    else actions.push({ type: "remove-filter", key: "name" });
+
+    if (phoneInput && phoneInput.trim() !== "") actions.push({ type: "change-filter", key: "phone", value: phoneInput.trim() });
+    else actions.push({ type: "remove-filter", key: "phone" });
+
+    if (customerNameInput && customerNameInput.trim() !== "")
+      actions.push({ type: "change-filter", key: "customerName", value: customerNameInput.trim() });
+    else actions.push({ type: "remove-filter", key: "customerName" });
+
+    actions.push({ type: "set-sector-filter", sectorIds: selectedSectorOptionsLocal.map((s) => s.id) });
+
+    dispatch({ type: "multiple", actions });
+    loadContacts();
+  };
   const onClearFilters = () => dispatch({ type: "clear-filters" });
+
+  React.useEffect(() => {
+    setIdInput(state.filters.id || "");
+    setNameInput(state.filters.name || "");
+    setPhoneInput(state.filters.phone || "");
+    setCustomerNameInput(state.filters.customerName || "");
+    setSelectedSectorOptionsLocal(sectors.filter((s) => (state.filters.sectorIds || []).includes(s.id)));
+  }, [state.filters, sectors]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -66,16 +101,8 @@ export default function ContactsTableHeader() {
     }
   };
 
-  const handleChangeFilter = (key: FilterKey) => {
-    return (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!isKeyOfContact(key)) return;
-      const value = event.target.value || null;
-      if (value === null || value === "{{all}}") {
-        dispatch({ type: "remove-filter", key });
-      } else {
-        dispatch({ type: "change-filter", key, value });
-      }
-    };
+  const handleChangeFilter = (_: FilterKey) => {
+    return () => {};
   };
 
   return (
@@ -110,8 +137,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.ID.placeholder}
-              value={state.filters.id || ""}
-              onChange={handleChangeFilter("id")}
+              value={idInput}
+              onChange={(e) => setIdInput(e.target.value)}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -134,8 +161,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.NAME.placeholder}
-              value={state.filters.name || ""}
-              onChange={handleChangeFilter("name")}
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -157,8 +184,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.PHONE.placeholder}
-              value={state.filters.phone || ""}
-              onChange={handleChangeFilter("phone")}
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -180,8 +207,8 @@ export default function ContactsTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CONTACTS_TABLE_COLUMNS.CUSTOMER.placeholder}
-              value={state.filters.customerName || ""}
-              onChange={handleChangeFilter("customerName")}
+              value={customerNameInput}
+              onChange={(e) => setCustomerNameInput(e.target.value)}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
               sx={textFieldStlye}
@@ -204,11 +231,9 @@ export default function ContactsTableHeader() {
               size="small"
               options={sectors}
               getOptionLabel={(option) => option.name}
-              value={selectedSectorOptions}
+              value={selectedSectorOptionsLocal}
               isOptionEqualToValue={(option, value) => option.id === value.id}
-              onChange={(_, values) =>
-                dispatch({ type: "set-sector-filter", sectorIds: values.map((v) => v.id) })
-              }
+              onChange={(_, values) => setSelectedSectorOptionsLocal(values as any)}
               renderInput={(params) => (
                 <TextField
                   {...params}
