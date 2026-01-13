@@ -13,6 +13,7 @@ import { WppContactWithCustomer } from "@in.pulse-crm/sdk";
 import { WhatsappContext } from "../../../whatsapp-context";
 import StartChatModalItem from "./start-chat-modal-item";
 import { Button } from "@mui/material";
+import { Logger } from "@in.pulse-crm/utils";
 
 function getSearchValue(value: string, key: string) {
   switch (key) {
@@ -23,7 +24,7 @@ function getSearchValue(value: string, key: string) {
     case "cpf-cnpj":
       return value.replace(/\D/g, "");
     case "razao-social":
-      return value.toLocaleLowerCase().replaceAll(" ", "");
+      return value.toLocaleLowerCase();
     case "codigo-erp":
       return value;
     default:
@@ -87,6 +88,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         }
       }
 
+      Logger.debug("StartChatModal: buscando contatos com params:", params)
       wppApi.current
         .getContactsWithCustomer(params)
         .then((response: any) => {
