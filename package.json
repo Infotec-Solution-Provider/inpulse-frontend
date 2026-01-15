@@ -32,11 +32,12 @@
     "pretty-bytes": "^6.1.1",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.0",
     "react-file-icon": "^1.6.0",
     "react-hook-form": "^7.62.0",
     "react-toastify": "^11.0.5",
     "react-virtuoso": "^4.13.0",
+    "recharts": "^2.15.4",
     "sharp": "^0.34.3",
     "xlsx": "^0.18.5",
     "zod": "^4.1.5"

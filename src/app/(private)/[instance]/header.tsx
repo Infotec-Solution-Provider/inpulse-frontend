@@ -196,6 +196,7 @@ export default function Header() {
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
 
   const reportsRoutes = [
+    { title: "Relatórios", href: "/reports/dashboard" },
     { title: "Conversas", href: "/reports/chats" },
     ...(user?.NIVEL === UserRole.ADMIN
       ? [{ title: "Gerador de Relatório", href: "/reports/report-generator" }]
