@@ -50,6 +50,7 @@ interface InternalChatContextType {
   getInternalChatsMonitor: () => void;
   monitorMessages: Record<number, InternalMessage[]>;
   deleteInternalChat: (id: number) => Promise<void>;
+  finishInternalChat: (id: number) => Promise<void>;
   phoneNameMap: Map<string, string>;
 
   users: User[];
@@ -157,6 +158,29 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       } catch {
         toast.error("Erro ao deletar Chat");
       }
+    }
+  };
+  const finishInternalChat = async (id: number) => {
+    try {
+      if (!token) return;
+      api.current.setAuth(token);
+      await api.current.ax.post(`/api/internal/chats/${id}/finish`);
+
+      toast.success("Chat finalizado com sucesso!");
+
+      setMessages((prev) => {
+        if (prev[id]) {
+          delete prev[id];
+        }
+        return { ...prev };
+      });
+
+      if (currentChatRef.current?.chatType === "internal" && currentChatRef.current.id === id) {
+        setCurrentChat(null);
+        setCurrentChatMessages([]);
+      }
+    } catch {
+      toast.error("Erro ao finalizar chat interno");
     }
   };
   const sendInternalMessage = useCallback(
@@ -324,6 +348,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         getInternalChatsMonitor,
         monitorMessages,
         deleteInternalChat,
+        finishInternalChat,
         phoneNameMap,
       }}
     >
