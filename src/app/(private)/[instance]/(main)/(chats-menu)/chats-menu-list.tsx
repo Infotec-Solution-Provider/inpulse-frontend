@@ -200,6 +200,7 @@ export default function ChatsMenuList() {
             isOpen={currentChat?.id === chat.id && currentChat?.chatType === "wpp"}
             key={`chat:${chat.id}`}
             name={chat.contact?.name || "Contato excluído"}
+            customer={chat.customer?.RAZAO || chat.customer?.FANTASIA || undefined}
             avatar={chat.avatarUrl ?? undefined}
             message={
               chat.lastMessage
