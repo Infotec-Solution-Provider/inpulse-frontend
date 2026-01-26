@@ -1,7 +1,9 @@
 import { AuthContext } from "@/app/auth-context";
 import { ReadyMessage } from "@in.pulse-crm/sdk";
 import CloseIcon from "@mui/icons-material/Close";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -9,7 +11,9 @@ import {
   DialogTitle,
   IconButton,
   List,
+  ListItem,
   ListItemButton,
+  ListItemSecondaryAction,
   ListItemText,
   Typography,
 } from "@mui/material";
@@ -29,12 +33,16 @@ function isWhatsappChat(chat: any): chat is DetailedChat {
 }
 
 export const QuickMessage = ({ chat, onClose }: Props) => {
-  const { readyMessages, replaceVariables, fetchReadyMessages } = useReadyMessagesContext();
+  const { readyMessages, replaceVariables, fetchReadyMessages } =
+    useReadyMessagesContext();
   const { user } = useContext(AuthContext);
   const { sendMessage: sendWppMessage } = useContext(WhatsappContext);
   const { sendInternalMessage } = useContext(InternalChatContext);
 
-  const [selectedMessage, setSelectedMessage] = useState<ReadyMessage | null>(null);
+  const [selectedMessage, setSelectedMessage] =
+    useState<ReadyMessage | null>(null);
+  const [previewMessage, setPreviewMessage] =
+    useState<ReadyMessage | null>(null);
 
   const currentSaudation = () => {
     const hour = new Date().getHours();
@@ -71,6 +79,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
       ...chatValues,
     },
   });
+
   const handleSendMessage = async () => {
     if (!selectedMessage || !user) {
       toast.error("Falha ao enviar mensagem");
@@ -99,65 +108,138 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
       toast.error("Erro ao enviar mensagem");
     }
   };
+
   useEffect(() => {
     fetchReadyMessages();
   }, []);
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        Mensagens rápidas
-        <IconButton onClick={onClose}>
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent dividers>
-        {readyMessages && readyMessages.length ? (
-          <List>
-            {readyMessages?.map((msg) => (
-              <ListItemButton
-                key={msg.id}
-                selected={selectedMessage?.id === msg.id}
-                onClick={() => setSelectedMessage(msg)}
-                sx={{
-                  borderRadius: 2,
-                  mb: 1,
-                  border:
-                    selectedMessage?.id === msg.id ? "1px solid #1976d2" : "1px solid transparent",
-                  backgroundColor:
-                    selectedMessage?.id === msg.id ? "rgba(25, 118, 210, 0.1)" : "transparent",
-                  transition: "all 0.2s",
-                  "&:hover": {
-                    backgroundColor: "rgba(25, 118, 210, 0.08)",
-                  },
-                }}
-              >
-                <ListItemText
-                  primary={
-                    <Typography variant="body2" color="textPrimary" noWrap>
-                      {msg.message}
-                    </Typography>
-                  }
-                />
-              </ListItemButton>
-            ))}
-          </List>
-        ) : (
-          <Typography variant="body2" color="textSecondary">
-            Nenhuma mensagem cadastrada.
-          </Typography>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={handleSendMessage}
-          disabled={!selectedMessage}
-          variant="contained"
-          color="primary"
+    <>
+      {/* ===== MODAL PRINCIPAL ===== */}
+      <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          Enviar
-        </Button>
-      </DialogActions>
-    </Dialog>
+          Mensagens rápidas
+          <IconButton onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          {readyMessages?.length ? (
+            <List>
+              {readyMessages.map((msg) => (
+                <ListItem
+                  key={msg.id}
+                  disablePadding
+                  sx={{
+                    mb: 1,
+                    borderRadius: 2,
+                    border: "1px solid",
+                    borderColor:
+                      selectedMessage?.id === msg.id
+                        ? "primary.main"
+                        : "divider",
+                    backgroundColor:
+                      selectedMessage?.id === msg.id
+                        ? "action.selected"
+                        : "background.paper",
+                  }}
+                >
+                  <ListItemButton
+                    onClick={() => setSelectedMessage(msg)}
+                  >
+                    <ListItemText
+                      primary={
+                        <Typography
+                          variant="body2"
+                          fontWeight={500}
+                          color="text.primary"
+                          noWrap
+                        >
+                          {msg.title}
+                        </Typography>
+                      }
+                    />
+                  </ListItemButton>
+
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      size="small"
+                      onClick={() => setPreviewMessage(msg)}
+                      sx={{ color: "text.secondary" }}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body2" color="text.secondary">
+              Nenhuma mensagem cadastrada.
+            </Typography>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={handleSendMessage}
+            disabled={!selectedMessage}
+            variant="contained"
+          >
+            Enviar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ===== MODAL DE VISUALIZAÇÃO ===== */}
+      <Dialog
+        open={!!previewMessage}
+        onClose={() => setPreviewMessage(null)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          {previewMessage?.title}
+          <IconButton onClick={() => setPreviewMessage(null)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent dividers>
+          <Box
+            sx={{
+              whiteSpace: "pre-wrap",
+              fontSize: 14,
+              color: "text.primary",
+              backgroundColor: "background.default",
+              padding: 1.5,
+              borderRadius: 1,
+            }}
+          >
+            {replaceVariables({
+              message: previewMessage?.message || "",
+              values: {
+                ...baseValues,
+                ...chatValues,
+              },
+            })}
+          </Box>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
