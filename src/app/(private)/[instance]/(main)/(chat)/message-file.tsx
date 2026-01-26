@@ -161,6 +161,18 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
             src={url}
             alt={alt}
             draggable={false}
+            onClick={(e) => {
+              if (zoom !== 1 || !containerRef.current) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              const clickX = e.clientX - rect.left - rect.width / 2 - position.x;
+              const clickY = e.clientY - rect.top - rect.height / 2 - position.y;
+              const targetZoom = Math.min(1.5, MAX_ZOOM);
+              setPosition((pos) => ({
+                x: pos.x - clickX * (targetZoom / zoom - 1),
+                y: pos.y - clickY * (targetZoom / zoom - 1),
+              }));
+              setZoom(targetZoom);
+            }}
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
               transition: "transform 0.1s ease-out",
