@@ -1,4 +1,5 @@
 "use client";
+
 import { AuthContext } from "@/app/auth-context";
 import {
   CreateReadyMessageDto,
@@ -28,6 +29,7 @@ import readyMessagesReducer, {
 interface IReadyMessagesProviderProps {
   children: ReactNode;
 }
+
 interface ReplaceVariablesOptions {
   message: string;
   values: {
@@ -45,6 +47,7 @@ interface Variable {
   name: string;
   replaceFor: keyof ReplaceVariablesOptions["values"];
 }
+
 interface IReadyMessagesContext {
   state: ReadyMessagesContextState;
   dispatch: ActionDispatch<[action: ChangeReadyMessagesStateAction | MultipleActions]>;
@@ -64,19 +67,21 @@ interface IReadyMessagesContext {
 }
 
 const ReadyMessagesContext = createContext({} as IReadyMessagesContext);
+
 export const useReadyMessagesContext = () => {
-  const context = useContext(ReadyMessagesContext);
-  return context;
+  return useContext(ReadyMessagesContext);
 };
 
-const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
+const INTERNAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
 
 export default function ReadyMessagesProvider({ children }: IReadyMessagesProviderProps) {
   const { token } = useContext(AuthContext);
   const { wppApi } = useContext(WhatsappContext);
+
+  const api = useRef(new ReadyMessageClient(INTERNAL_BASE_URL));
+
   const [readyMessages, setReadyMessages] = useState<ReadyMessage[]>([]);
   const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
-  const api = useRef(new ReadyMessageClient(INTENAL_BASE_URL));
 
   const [state, dispatch] = useReducer(readyMessagesReducer, {
     readyMessages: [],
@@ -99,26 +104,44 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
   ];
 
   function replaceVariables({ message, values }: ReplaceVariablesOptions): string {
+    let replaced = message;
     variables.forEach((v) => {
-      message = message.replaceAll(v.name, values[v.replaceFor]);
+      replaced = replaced.replaceAll(v.name, values[v.replaceFor] ?? "");
     });
-
-    return message;
+    return replaced;
   }
 
   const updateReadyMessage = useCallback(
     async (id: number, data: UpdateReadyMessageDto, file?: File | null) => {
-      if (token) {
-        try {
-          if (!file) return;
+      if (!token) return;
+
+      try {
+        api.current.setAuth(token);
+
+        let fileId: number | null = null;
+
+        if (file) {
           const res = await api.current.updateReadyMessage(id, data, file);
-          dispatch({ type: "update-ready-message", id, data: { ...data, fileId: res.fileId } });
-          toast.success("Arquivo da Mensagem pronta atualizada com sucesso!");
-          loadReadyMessages();
-        } catch (error) {
-          console.error("Error updating readyMessage image", error);
-          toast.error("Erro ao atualizar Arquivo da Mensagem pronta");
+          fileId = res?.fileId ;
+        } else {
+          await api.current.updateReadyMessage(id, data);
         }
+
+        dispatch({
+          type: "update-ready-message",
+          id,
+          data: {
+            ...data,
+            ...(fileId ? { fileId } : {}),
+          },
+        });
+
+        toast.success("Mensagem pronta atualizada com sucesso!");
+        await loadReadyMessages();
+      } catch (error) {
+        console.error("Error updating readyMessage", error);
+        toast.error("Erro ao atualizar Mensagem pronta");
+        throw error;
       }
     },
     [token],
@@ -126,69 +149,78 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
 
   const createReadyMessage = useCallback(
     async (data: CreateReadyMessageDto, file?: File | null) => {
-      if (token) {
-        try {
-          const created = await api.current.createReadyMessage(data, file);
-          dispatch({ type: "add-ready-message", data: created });
-          toast.success("Mensagem pronta criada com sucesso!");
-          loadReadyMessages();
-        } catch (error) {
-          console.error("Error creating readyMessage", error);
-          toast.error("Erro ao criar Mensagem pronta");
-        }
+      if (!token) return;
+
+      try {
+        api.current.setAuth(token);
+        const created = await api.current.createReadyMessage(data, file);
+        dispatch({ type: "add-ready-message", data: created });
+        toast.success("Mensagem pronta criada com sucesso!");
+        await loadReadyMessages();
+      } catch (error) {
+        console.error("Error creating readyMessage", error);
+        toast.error("Erro ao criar Mensagem pronta");
       }
     },
     [token],
   );
+
 
   const deleteReadyMessage = useCallback(
     async (id: number) => {
-      if (token) {
-        try {
-          await api.current.deleteReadyMessage(id);
-          dispatch({ type: "delete-ready-message", id });
-          toast.success("Mensagem pronta deletada com sucesso!");
-        } catch {
-          toast.error("Erro ao deletar Mensagem pronta");
-        }
+      if (!token) return;
+
+      try {
+        api.current.setAuth(token);
+        await api.current.deleteReadyMessage(id);
+        dispatch({ type: "delete-ready-message", id });
+        toast.success("Mensagem pronta deletada com sucesso!");
+      } catch (error) {
+        console.error("Error deleting readyMessage", error);
+        toast.error("Erro ao deletar Mensagem pronta");
       }
     },
     [token],
   );
 
+
   const fetchReadyMessages = useCallback(async () => {
-    if (token && api.current) {
-      api.current.setAuth(token);
-      const msgs = await api.current.getReadyMessages();
-      setReadyMessages(msgs);
-    }
+    if (!token) return;
+
+    api.current.setAuth(token);
+    const msgs = await api.current.getReadyMessages();
+    setReadyMessages(msgs);
   }, [token]);
+
 
   const loadReadyMessages = useCallback(async () => {
     dispatch({ type: "change-loading", isLoading: true });
 
     try {
       if (!token) {
-        return dispatch({ type: "change-loading", isLoading: false });
+        dispatch({ type: "change-loading", isLoading: false });
+        return;
       }
+      api.current.setAuth(token);
       const msgs = await api.current.getReadyMessages();
-      // Assuming we have all messages without pagination for now
+
       dispatch({
         type: "multiple",
         actions: [
           { type: "load-ready-messages", readyMessages: msgs },
-          { type: "change-loading", isLoading: false },
           { type: "change-total-rows", totalRows: msgs.length || 0 },
+          { type: "change-loading", isLoading: false },
         ],
       });
-    } catch {
+    } catch (error) {
+      console.error("Error loading readyMessages", error);
       dispatch({ type: "change-loading", isLoading: false });
       toast.error("Falha ao carregar mensagens prontas!");
     }
   }, [token]);
 
   useEffect(() => {
-    if (token && api.current) {
+    if (token) {
       api.current.setAuth(token);
       loadReadyMessages();
     }
@@ -197,15 +229,13 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
   useEffect(() => {
     if (wppApi.current && token) {
       wppApi.current.setAuth(token);
-      wppApi.current.getSectors().then((data) => {
-        setSectors(data);
-      });
+      wppApi.current.getSectors().then(setSectors);
     }
   }, [wppApi, token]);
 
   useEffect(() => {
     loadReadyMessages();
-  }, [state.filters.perPage, state.filters.page]);
+  }, [state.filters.page, state.filters.perPage]);
 
   return (
     <ReadyMessagesContext.Provider

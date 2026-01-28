@@ -54,22 +54,33 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
     const src = URL.createObjectURL(file);
 
     if (file.type.includes("image")) {
-      return <img src={src} alt={file.name} className="max-h-[20rem] max-w-[40rem]" />;
+      return (
+        <div className="flex flex-col items-center gap-2">
+          <p className="truncate text-xs text-slate-700 dark:text-slate-300">{file.name}</p>
+          <img src={src} alt={file.name} className="max-h-[14rem] max-w-[28rem]" />
+        </div>
+      );
     }
 
     if (file.type.includes("video")) {
       return (
-        <video controls className="max-h-[15rem] max-w-[40rem] object-contain">
-          <source src={src} type={file.type} />
-        </video>
+        <div className="flex flex-col items-center gap-2">
+          <p className="truncate text-xs text-slate-700 dark:text-slate-300">{file.name}</p>
+          <video controls className="max-h-[12rem] max-w-[28rem] object-contain">
+            <source src={src} type={file.type} />
+          </video>
+        </div>
       );
     }
 
     if (file.type.includes("audio")) {
       return (
-        <audio controls className="max-h-[15rem] max-w-[40rem] object-contain">
-          <source src={src} type={file.type} />
-        </audio>
+        <div className="flex flex-col items-center gap-2">
+          <p className="truncate text-xs text-slate-700 dark:text-slate-300">{file.name}</p>
+          <audio controls className="max-w-[28rem]">
+            <source src={src} type={file.type} />
+          </audio>
+        </div>
       );
     }
 
@@ -77,6 +88,7 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
 
     return (
       <div className="flex flex-col items-center gap-2 rounded-md bg-slate-100 text-slate-800 px-8 py-4 dark:bg-slate-800 dark:text-slate-200">
+        <p className="truncate text-xs text-slate-600 dark:text-slate-300">{file.name}</p>
         <div className="h-32 w-32 p-8">
           <FileIcon {...(defaultStyles[ext as DefaultExtensionType] || {})} radius={1.25} />
         </div>

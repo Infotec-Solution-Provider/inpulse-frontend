@@ -12,6 +12,7 @@ interface Tag {
 
 interface ChatsMenuItemProps {
   name: string;
+  customer?: string;
   avatar?: string;
   message: ReactNode;
   messageDate: Date | null;
@@ -27,6 +28,7 @@ export default function ChatsMenuItem({
   message,
   messageDate,
   tags,
+  customer,
   isUnread,
   isOpen,
   onClick,
@@ -235,6 +237,11 @@ export default function ChatsMenuItem({
               )}
             </div>
           </div>
+          {customer && (
+            <p className="font-semibold truncate text-xs leading-none text-gray-900 dark:text-slate-100">
+              {customer}
+            </p>
+          )}
           <div className="font-emoji truncate text-xs text-gray-700 dark:text-slate-300">
             {message}
           </div>

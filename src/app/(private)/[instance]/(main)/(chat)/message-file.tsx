@@ -2,11 +2,13 @@ import filesService from "@/lib/services/files.service";
 import { useContext, useMemo, useRef, useState } from "react";
 import DownloadIcon from "@mui/icons-material/Download";
 import { AppContext } from "../../app-context";
-import { IconButton, Menu, MenuItem, Button } from "@mui/material";
+import { IconButton, Menu, MenuItem, Button, Tooltip } from "@mui/material";
 import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import ZoomOutIcon from "@mui/icons-material/ZoomOut";
 import CloseIcon from "@mui/icons-material/Close";
 import AspectRatioIcon from "@mui/icons-material/AspectRatio";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import DescriptionIcon from "@mui/icons-material/Description";
 
 interface MessageFileProps {
   fileName: string;
@@ -161,6 +163,18 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
             src={url}
             alt={alt}
             draggable={false}
+            onClick={(e) => {
+              if (zoom !== 1 || !containerRef.current) return;
+              const rect = containerRef.current.getBoundingClientRect();
+              const clickX = e.clientX - rect.left - rect.width / 2 - position.x;
+              const clickY = e.clientY - rect.top - rect.height / 2 - position.y;
+              const targetZoom = Math.min(1.5, MAX_ZOOM);
+              setPosition((pos) => ({
+                x: pos.x - clickX * (targetZoom / zoom - 1),
+                y: pos.y - clickY * (targetZoom / zoom - 1),
+              }));
+              setZoom(targetZoom);
+            }}
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
               transition: "transform 0.1s ease-out",
@@ -273,16 +287,28 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
       return `${(size / (1024 * 1024)).toFixed(2)} MB`;
     };
 
+    const ext = fileName.split(".").pop()?.toUpperCase() || "ARQUIVO";
+    const isPdf = fileType.includes("pdf") || ext === "PDF";
+    const fileLabel = `${ext} • ${fileSizeText()}`;
+
     return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className="flex h-16 w-52 items-center justify-center gap-2 hover:text-indigo-500"
-      >
-        <DownloadIcon />
-        <p> ({fileSizeText()})</p>
-      </a>
+      <Tooltip title={fileName} arrow>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="flex w-72 items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-slate-800 shadow-sm hover:border-indigo-300 hover:text-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded bg-slate-100 text-red-600 dark:bg-slate-700">
+            {isPdf ? <PictureAsPdfIcon /> : <DescriptionIcon />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{fileName}</p>
+            <p className="truncate text-xs text-slate-500 dark:text-slate-300">{fileLabel}</p>
+          </div>
+          <DownloadIcon />
+        </a>
+      </Tooltip>
     );
   }, [fileId, fileName, fileType, fileSize]);
 

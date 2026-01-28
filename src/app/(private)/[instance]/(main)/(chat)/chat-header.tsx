@@ -10,6 +10,7 @@ import { AppContext } from "../../app-context";
 import { useWhatsappContext } from "../../whatsapp-context";
 import EditContactModal from "./(actions)/edit-contact-modal";
 import FinishChatModal from "./(actions)/finish-chat-modal";
+import FinishInternalChatModal from "./(actions)/finish-internal-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 
@@ -50,6 +51,10 @@ export default function ChatHeader({
 
   const openFinishChatModal = () => {
     openModal(<FinishChatModal />);
+  };
+
+  const openFinishInternalChatModal = () => {
+    openModal(<FinishInternalChatModal />);
   };
 
   const openTransferChatModal = () => {
@@ -119,6 +124,17 @@ export default function ChatHeader({
             </Tooltip>
             <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
               <IconButton onClick={openFinishChatModal}>
+                <AssignmentTurnedInIcon color="success" />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+        {currentChat?.chatType === "internal" &&
+          currentChat?.isFinished === false &&
+          !currentChat?.isGroup && (
+          <>
+            <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
+              <IconButton onClick={openFinishInternalChatModal}>
                 <AssignmentTurnedInIcon color="success" />
               </IconButton>
             </Tooltip>
