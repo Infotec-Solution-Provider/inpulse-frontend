@@ -65,12 +65,15 @@ export default function ChatSendMessageArea() {
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
 
   useEffect(() => {
-    const channel = getDefaultSelectedChannel(currentChatMessages, channels);
-    if (channel && selectedChannel?.id !== channel.id) {
-      Logger.debug(`[ChatSendMessageArea] Definindo canal selecionado padrão: ${channel.name}`);
-      setSelectedChannel(channel);
+    // Only set default channel if no channel is selected (first load)
+    if (!selectedChannel && channels.length > 0) {
+      const channel = getDefaultSelectedChannel(currentChatMessages, channels);
+      if (channel) {
+        Logger.debug(`[ChatSendMessageArea] Definindo canal selecionado padrão: ${channel.name}`);
+        setSelectedChannel(channel);
+      }
     }
-  }, [loaded, currentChat, selectedChannel]);
+  }, [loaded, currentChat]);
 
   const {
     textWithNames,
