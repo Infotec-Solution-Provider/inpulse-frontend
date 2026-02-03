@@ -116,21 +116,6 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
 
   const handleSend = () => {
     if (onSendTemplate && selectedTemplate && templateText) {
-      if (contactKey) {
-        const now = Date.now();
-        const history = readHistory();
-        const pruned = (history[contactKey] || []).filter((ts) => now - ts < WINDOW_MS);
-
-        if (pruned.length >= TEMPLATE_LIMIT) {
-          toast.warn("Limite de 2 templates nas últimas 24h para este cliente.");
-          saveHistory({ ...history, [contactKey]: pruned });
-          return;
-        }
-
-        history[contactKey] = [...pruned, now];
-        saveHistory(history);
-      }
-
       onSendTemplate({
         template: selectedTemplate,
         components: Object.values(variables),
