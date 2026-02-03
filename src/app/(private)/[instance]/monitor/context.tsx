@@ -23,6 +23,7 @@ interface MonitorProviderProps {
 
 interface MonitorFiltersState {
   searchText: string;
+  searchColumn: "all" | "name" | "phone" | "customer" | "message";
   categories: {
     showCustomerChats: boolean;
     showInternalChats: boolean;
@@ -60,6 +61,7 @@ interface MonitorFiltersState {
 
 const initialFilters: MonitorFiltersState = {
   searchText: "",
+  searchColumn: "all",
   categories: {
     showCustomerChats: true,
     showInternalChats: true,

@@ -12,8 +12,9 @@ import {
   SelectChangeEvent,
   TextField,
   Chip,
+  Button,
 } from "@mui/material";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import useInternalChatContext from "../../internal-context";
 import useMonitorContext from "../context";
 
@@ -21,19 +22,8 @@ export default function MonitorFilters() {
   const { filters, setFilters, resetFilters } = useMonitorContext();
   const { users } = useInternalChatContext();
 
-  const [text, setText] = useState<string>("");
-
-  // Debounce da busca
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters({
-        ...filters,
-        searchText: text,
-      });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [text]);
+  const [text, setText] = useState<string>(filters.searchText);
+  const [searchColumn, setSearchColumn] = useState<string>(filters.searchColumn);
 
   // Contador de filtros ativos
   const activeFiltersCount =
@@ -101,12 +91,32 @@ export default function MonitorFilters() {
     });
   };
 
+  const handleSearch = () => {
+    setFilters({
+      ...filters,
+      searchText: text,
+      searchColumn: searchColumn as any,
+    });
+  };
+
   const handleClearSearch = () => {
     setText("");
+    setSearchColumn("all");
     setFilters({
       ...filters,
       searchText: "",
+      searchColumn: "all",
     });
+  };
+
+  const handleSearchColumnChange = (e: SelectChangeEvent) => {
+    setSearchColumn(e.target.value);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   const onChangeSortBy = (e: SelectChangeEvent) => {
@@ -162,28 +172,57 @@ export default function MonitorFilters() {
             <SearchIcon sx={{ fontSize: 14 }} />
             Pesquisar
           </h2>
-          <div className="flex items-center gap-2">
-            <TextField
-              placeholder="Digite para buscar..."
-              fullWidth
-              size="small"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: "8px",
-                },
-              }}
-            />
-            {text && (
-              <IconButton size="small" onClick={handleClearSearch} title="Limpar busca">
-                <ClearIcon />
-              </IconButton>
-            )}
+          <div className="flex flex-col gap-2">
+            <FormControl fullWidth size="small">
+              <InputLabel id="search-column-label">Buscar em</InputLabel>
+              <Select
+                labelId="search-column-label"
+                value={searchColumn}
+                label="Buscar em"
+                onChange={handleSearchColumnChange}
+              >
+                <MenuItem value="all">Todos os campos</MenuItem>
+                <MenuItem value="name">Nome</MenuItem>
+                <MenuItem value="phone">Telefone</MenuItem>
+                <MenuItem value="customer">Cliente</MenuItem>
+                <MenuItem value="message">Mensagem</MenuItem>
+              </Select>
+            </FormControl>
+            <div className="flex items-center gap-2">
+              <TextField
+                placeholder="Digite para buscar..."
+                fullWidth
+                size="small"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: "8px",
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleSearch}
+                sx={{
+                  minWidth: "auto",
+                  px: 2,
+                  py: 1,
+                  backgroundColor: "rgb(59, 130, 246)",
+                  "&:hover": {
+                    backgroundColor: "rgb(37, 99, 235)",
+                  },
+                }}
+              >
+                <SearchIcon sx={{ fontSize: 18 }} />
+              </Button>
+            </div>
           </div>
-          {text && (
+          {filters.searchText && (
             <Chip
-              label={`Buscando: "${text}"`}
+              label={`Buscando: "${filters.searchText}"${filters.searchColumn !== "all" ? ` em ${filters.searchColumn === "name" ? "Nome" : filters.searchColumn === "phone" ? "Telefone" : filters.searchColumn === "customer" ? "Cliente" : "Mensagem"}` : ""}`}
               size="small"
               onDelete={handleClearSearch}
               sx={{ mt: 1 }}
