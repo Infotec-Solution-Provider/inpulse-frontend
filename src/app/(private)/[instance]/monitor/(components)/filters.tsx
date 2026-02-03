@@ -14,16 +14,22 @@ import {
   Chip,
   Button,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useInternalChatContext from "../../internal-context";
 import useMonitorContext from "../context";
 
 export default function MonitorFilters() {
-  const { filters, setFilters, resetFilters } = useMonitorContext();
+  const { filters, setFilters, resetFilters, applyFilters } = useMonitorContext();
   const { users } = useInternalChatContext();
 
   const [text, setText] = useState<string>(filters.searchText);
   const [searchColumn, setSearchColumn] = useState<string>(filters.searchColumn);
+
+  // Sincronizar estados locais quando os filtros mudarem (ex: ao carregar do localStorage)
+  useEffect(() => {
+    setText(filters.searchText);
+    setSearchColumn(filters.searchColumn);
+  }, [filters.searchText, filters.searchColumn]);
 
   // Contador de filtros ativos
   const activeFiltersCount =
@@ -34,6 +40,19 @@ export default function MonitorFilters() {
     (filters.showOnlyScheduled ? 1 : 0) +
     (filters.showUnreadOnly ? 1 : 0) +
     (filters.showPendingResponseOnly ? 1 : 0);
+
+  const handleSearch = () => {
+    const newFilters = {
+      ...filters,
+      searchText: text,
+      searchColumn: searchColumn as any,
+    };
+    setFilters(newFilters);
+    // Usar setTimeout para garantir que o setFilters foi processado
+    setTimeout(() => {
+      applyFilters();
+    }, 0);
+  };
 
   const onChangeUser = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFilters({
@@ -91,22 +110,18 @@ export default function MonitorFilters() {
     });
   };
 
-  const handleSearch = () => {
-    setFilters({
-      ...filters,
-      searchText: text,
-      searchColumn: searchColumn as any,
-    });
-  };
-
   const handleClearSearch = () => {
     setText("");
     setSearchColumn("all");
-    setFilters({
+    const newFilters = {
       ...filters,
       searchText: "",
-      searchColumn: "all",
-    });
+      searchColumn: "all" as const,
+    };
+    setFilters(newFilters);
+    setTimeout(() => {
+      applyFilters();
+    }, 0);
   };
 
   const handleSearchColumnChange = (e: SelectChangeEvent) => {
