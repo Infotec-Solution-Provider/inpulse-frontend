@@ -48,10 +48,7 @@ export default function MonitorFilters() {
       searchColumn: searchColumn as any,
     };
     setFilters(newFilters);
-    // Usar setTimeout para garantir que o setFilters foi processado
-    setTimeout(() => {
-      applyFilters();
-    }, 0);
+    applyFilters(newFilters);
   };
 
   const onChangeUser = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,9 +116,7 @@ export default function MonitorFilters() {
       searchColumn: "all" as const,
     };
     setFilters(newFilters);
-    setTimeout(() => {
-      applyFilters();
-    }, 0);
+    applyFilters(newFilters);
   };
 
   const handleSearchColumnChange = (e: SelectChangeEvent) => {
@@ -400,8 +395,18 @@ export default function MonitorFilters() {
             >
               Apenas: Sem resposta
             </Checkbox>
-            <RangeDateField label="Data de Início" />
-            <RangeDateField label="Data de Finalização" />
+            <RangeDateField
+              label="Data de Início"
+              initialFrom={filters.startedAt.from ?? ""}
+              initialTo={filters.startedAt.to ?? ""}
+              onChange={(v) => setFilters({ ...filters, startedAt: v })}
+            />
+            <RangeDateField
+              label="Data de Finalização"
+              initialFrom={filters.finishedAt.from ?? ""}
+              initialTo={filters.finishedAt.to ?? ""}
+              onChange={(v) => setFilters({ ...filters, finishedAt: v })}
+            />
           </div>
         </section>
 
@@ -419,10 +424,14 @@ export default function MonitorFilters() {
             </Checkbox>
             <RangeDateField
               label="Agendado no dia"
+              initialFrom={filters.scheduledAt.from ?? ""}
+              initialTo={filters.scheduledAt.to ?? ""}
               onChange={(v) => setFilters({ ...filters, scheduledAt: v })}
             />
             <RangeDateField
               label="Agendado para o dia"
+              initialFrom={filters.scheduledTo.from ?? ""}
+              initialTo={filters.scheduledTo.to ?? ""}
               onChange={(v) => setFilters({ ...filters, scheduledTo: v })}
             />
             {/*           <div className="my-2">
@@ -448,7 +457,7 @@ export default function MonitorFilters() {
                 size="small"
                 label="Agendado para"
                 fullWidth
-                defaultValue="all"
+                value={filters.scheduledFor}
                 onChange={onChangeScheduledFor}
               >
                 <MenuItem value="all">Qualquer</MenuItem>

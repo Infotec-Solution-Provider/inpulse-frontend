@@ -8,7 +8,7 @@ interface MonitorContextProps {
   filters: MonitorFiltersState;
   setFilters: React.Dispatch<React.SetStateAction<MonitorFiltersState>>;
   resetFilters: () => void;
-  applyFilters: () => void;
+  applyFilters: (nextFilters?: MonitorFiltersState) => void;
   totalCount: number;
   page: number;
   pageSize: number;
@@ -147,9 +147,10 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
   // Filtros aplicados (usados para a consulta)
   const [appliedFilters, setAppliedFilters] = useState<MonitorFiltersState>(loadFiltersFromStorage);
   
-  const applyFilters = () => {
-    setAppliedFilters(filters);
-    saveFiltersToStorage(filters);
+  const applyFilters = (nextFilters?: MonitorFiltersState) => {
+    const resolved = nextFilters ?? filters;
+    setAppliedFilters(resolved);
+    saveFiltersToStorage(resolved);
     setPage(1);
   };
 

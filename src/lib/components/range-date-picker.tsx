@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TextField } from "@mui/material";
 
 export interface RangeDatePickerProps {
@@ -15,6 +15,14 @@ export default function RangeDatePicker({
 }: RangeDatePickerProps) {
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
+
+  useEffect(() => {
+    setFrom(initialFrom);
+  }, [initialFrom]);
+
+  useEffect(() => {
+    setTo(initialTo);
+  }, [initialTo]);
 
   const handleFromChange = (value: string) => {
     // Se "from" for maior que "to", ajusta "to" para ser igual a "from"
