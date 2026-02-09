@@ -41,6 +41,7 @@ export default function ChatSendMessageArea() {
     currentChatMessages,
     selectedChannel,
     setSelectedChannel,
+    chatsChannels,
   } = useWhatsappContext();
 
   const {
@@ -65,15 +66,25 @@ export default function ChatSendMessageArea() {
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
 
   useEffect(() => {
-    // Only set default channel if no channel is selected (first load)
-    if (!selectedChannel && channels.length > 0) {
+    if (currentChat && currentChat.chatType === "wpp" && channels.length > 0) {
+      // Check if there's a stored channel for this chat
+      const storedChannelId = chatsChannels.current.get(currentChat.id);
+      if (storedChannelId) {
+        const stored = channels.find((ch) => ch.id === storedChannelId);
+        if (stored) {
+          setSelectedChannel(stored);
+          return;
+        }
+      }
+      // Fall back to deriving from last message's clientId
       const channel = getDefaultSelectedChannel(currentChatMessages, channels);
       if (channel) {
         Logger.debug(`[ChatSendMessageArea] Definindo canal selecionado padrão: ${channel.name}`);
         setSelectedChannel(channel);
+        chatsChannels.current.set(currentChat.id, channel.id);
       }
     }
-  }, [loaded, currentChat]);
+  }, [currentChat, loaded]);
 
   const {
     textWithNames,
@@ -91,7 +102,15 @@ export default function ChatSendMessageArea() {
     dispatch,
   });
 
-  const onChangeChannel = useCallback((s: any) => setSelectedChannel(s), [currentChat]);
+  const onChangeChannel = useCallback(
+    (s: WppClient) => {
+      setSelectedChannel(s);
+      if (currentChat) {
+        chatsChannels.current.set(currentChat.id, s.id);
+      }
+    },
+    [currentChat, chatsChannels],
+  );
 
   const openAttachFile = () => {
     if (fileInputRef.current) {

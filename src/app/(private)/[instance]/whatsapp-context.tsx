@@ -562,16 +562,40 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setUniqueCurrentChatMessages,
         ),
       );
+      const handleMessage = ReceiveMessageHandler(
+        api.current,
+        setMessages,
+        setUniqueCurrentChatMessages,
+        setChats,
+        currentChatRef,
+        chats,
+      );
       socket.on(
         SocketEventType.WppMessage,
-        ReceiveMessageHandler(
-          api.current,
-          setMessages,
-          setUniqueCurrentChatMessages,
-          setChats,
-          currentChatRef,
-          chats,
-        ),
+        (data: { message: WppMessage }) => {
+          handleMessage(data);
+
+          // Auto-update per-chat channel based on incoming message
+          const { message } = data;
+          if (message.clientId) {
+            const matchedChat = chats.find((c) => c.contactId === message.contactId);
+            if (matchedChat) {
+              chatsChannels.current.set(matchedChat.id, message.clientId);
+            }
+
+            const current = currentChatRef.current;
+            if (
+              current &&
+              current.chatType === "wpp" &&
+              current.contactId === message.contactId
+            ) {
+              const channel = channels.find((ch) => ch.id === message.clientId);
+              if (channel) {
+                setSelectedChannel(channel);
+              }
+            }
+          }
+        },
       );
 
       socket.on(
