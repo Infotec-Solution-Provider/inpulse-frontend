@@ -52,7 +52,7 @@ export default function InternalReceiveMessageHandler(
     }
 
     if (message.from !== `user:${loggedUser.CODIGO}`) {
-      const author = getInternalMessageAuthor(message, phoneNameMap, users);
+      const author = getInternalMessageAuthor(message.from, phoneNameMap, users);
       const bodyFinal =
         message.type !== "chat"
           ? types[message.type] || "Enviou um arquivo"
