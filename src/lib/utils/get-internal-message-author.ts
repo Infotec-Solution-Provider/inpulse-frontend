@@ -2,34 +2,41 @@ import { InternalMessage, User } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
 
 function getInternalMessageAuthor(
-  message: InternalMessage,
+  messageFrom: string,
   phoneNameMap: Map<string, string>,
   users: User[],
+  shouldDebug = false,
 ): string {
   let authorName = null;
 
-  const startsWithUser = message?.from?.startsWith("user:");
-  const startsWithExternal = message?.from?.startsWith("external:");
-  const hasSpecialChar = ["@", "-"].some((char) => message.from.includes(char));
+  const startsWithUser = messageFrom.startsWith("user:");
+  const startsWithExternal = messageFrom.startsWith("external:");
+  const hasGUs = messageFrom.endsWith("@g.us");
+  const isPhoneGroup = messageFrom.includes("-") && !messageFrom.includes(" ");
 
-  Logger.debug("Getting author for message", { message, startsWithUser, startsWithExternal });
-  Logger.debug("Phone name map", phoneNameMap);
+
+  if (shouldDebug) {
+    Logger.debug("Getting author for message", { messageFrom, startsWithUser, startsWithExternal });
+    Logger.debug("Phone name map", phoneNameMap);
+  }
 
   if (startsWithUser) {
-    const userId = +message.from.split(":")[1];
+    shouldDebug && Logger.debug("Message is from a user, extracting user ID");
+    const userId = +messageFrom.split(":")[1];
     const user = users.find((u) => u.CODIGO === userId);
     authorName = user ? user.NOME : null;
   }
-  if (startsWithExternal && hasSpecialChar) {
-    const parts = message.from.split(":");
+  if (startsWithExternal && (hasGUs || isPhoneGroup)) {
+    shouldDebug && Logger.debug("Message is from an external contact, extracting phone and name");
+    const parts = messageFrom.split(":");
     const raw = parts.length === 3 ? parts[2] : parts[1];
     const phone = raw.split("@")[0].replace(/\D/g, "");
     const contactName = phoneNameMap.get(phone) || phone.replace(/\D/g, "");
 
     authorName = contactName;
-  }
-  if (startsWithExternal && !hasSpecialChar) {
-    const splittedFrom = message.from.split(":");
+  } else if (startsWithExternal) {
+    shouldDebug && Logger.debug("Message is from an external contact without special char, extracting phone and name");
+    const splittedFrom = messageFrom.split(":");
     const phone = splittedFrom[1];
     const name = splittedFrom[2];
 
@@ -40,6 +47,8 @@ function getInternalMessageAuthor(
 
     authorName = contactName;
   }
+
+  shouldDebug && Logger.debug("Determined author name", { authorName });
 
   return authorName || "Sistema";
 }

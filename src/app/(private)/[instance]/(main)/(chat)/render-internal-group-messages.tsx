@@ -87,7 +87,7 @@ export default function RenderInternalGroupMessages({
 
           const prev = i > 0 ? arr[i - 1] : null;
           const groupFirst = !prev || prev.from !== m.from;
-          const senderName = getInternalMessageAuthor(m, phoneNameMap, users);
+          const senderName = getInternalMessageAuthor(m.from, phoneNameMap, users, m.id === 43810);
           const isMine = user?.CODIGO != null && m.from === `user:${user.CODIGO}`;
 
           return (
