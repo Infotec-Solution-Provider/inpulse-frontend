@@ -50,7 +50,7 @@ export default function ReceiveMessageHandler(
 
       // Tocar som de notificação (client-side only)
       if (typeof window !== "undefined") {
-        const audio = new Audio("/notification-sound.mp3");
+        const audio = new Audio("/notification-sound.wav");
         audio.volume = 0.5;
         audio.play().catch((error) => {
           console.log("Não foi possível tocar o som da notificação:", error);
