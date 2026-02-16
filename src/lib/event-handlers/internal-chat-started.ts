@@ -19,6 +19,7 @@ export default function InternalChatStartedHandler(
   setMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
   user: User,
   openChat: (chat: DetailedInternalChat) => void,
+  userInitiatedInternalChat: React.RefObject<boolean>,
 ) {
   return async ({ chat }: HandleChatStartedCallbackProps) => {
     socket.joinRoom(`internal-chat:${chat.id}`);
@@ -51,8 +52,10 @@ export default function InternalChatStartedHandler(
       };
     });
 
-    if (user.CODIGO === chat.creatorId) {
+    // Se o usuário iniciou este chat manualmente, seleciona automaticamente
+    if (userInitiatedInternalChat.current) {
       openChat(detailedChat);
+      userInitiatedInternalChat.current = false; // Limpa a flag
     }
   };
 }

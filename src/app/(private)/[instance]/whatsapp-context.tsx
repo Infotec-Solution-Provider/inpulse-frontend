@@ -145,6 +145,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [channels, setChannels] = useState<WppClient[]>([]);
   const globalChannel = useRef<WppClient | null>(null);
   const chatsChannels = useRef(new Map<number, number>());
+  const userInitiatedChatContactId = useRef<number | null>(null);
   const [chats, setChats] = useState<DetailedChat[]>([]);
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
@@ -462,6 +463,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const startChatByContactId = useCallback(
     async (contactId: number, template?: SendTemplateData) => {
       api.current.setAuth(token || "");
+      // Marca que o usuário iniciou este chat manualmente
+      userInitiatedChatContactId.current = contactId;
       return api.current.startChatByContactId(contactId, template);
     },
     [api, token],
@@ -534,6 +537,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setChats,
           setCurrentChat,
           setUniqueCurrentChatMessages,
+          userInitiatedChatContactId,
         ),
       );
       socket.on(

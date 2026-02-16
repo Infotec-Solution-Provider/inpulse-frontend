@@ -106,6 +106,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
+  const userInitiatedInternalChat = useRef<boolean>(false);
   const { token, user } = useContext(AuthContext);
 
   useEffect(() => {
@@ -241,6 +242,8 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const startDirectChat = useCallback(
     (userId: number) => {
       if (!token || !user) return;
+      // Marca que o usuário iniciou este chat manualmente
+      userInitiatedInternalChat.current = true;
       api.current.createInternalChat([userId, user!.CODIGO], false, "");
     },
     [api, token, user],
@@ -279,6 +282,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           setMessages,
           user,
           openInternalChat,
+          userInitiatedInternalChat,
         ),
       );
 

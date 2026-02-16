@@ -17,6 +17,7 @@ export default function ChatStartedHandler(
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
+  userInitiatedChatContactId: React.RefObject<number | null>,
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
     const res = await api.getChatById(chatId);
@@ -59,9 +60,11 @@ export default function ChatStartedHandler(
       return [parsedChat, ...prev];
     });
 
-    if (chat.type === WppChatType.RECEPTIVE) {
+    // Se o usuário iniciou este chat manualmente, seleciona automaticamente
+    if (userInitiatedChatContactId.current === chat.contactId) {
       setCurrentChat(parsedChat);
       setCurrentChatMessages(messages);
+      userInitiatedChatContactId.current = null; // Limpa a flag
     }
   };
 }
