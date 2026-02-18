@@ -130,7 +130,7 @@ function getChatImage(
   return "";
 }
 
-function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedule): string {
+function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedule, users: User[]): string {
   if (!("chatType" in chat)) {
     return chat.contact?.name || "Contato excluído";
   }
@@ -141,7 +141,7 @@ function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedu
     return chat.groupName || "Grupo Interno";
   }
   if (chat.chatType === "internal" && !chat.isGroup) {
-    const internalUsers = getInternalUsers(chat, []);
+    const internalUsers = getInternalUsers(chat, users);
     return internalUsers.map((u) => u.NOME).join(" e ") || "Usuário Desconhecido";
   }
   return "Chat sem título";
@@ -471,7 +471,7 @@ export default function MonitorPage() {
                     userName={getChatUser(chat, users)}
                     sectorName={getChatSector(chat, sectors, users)}
                     imageUrl={getChatImage(chat, users)}
-                    chatTitle={getChatTitle(chat)}
+                    chatTitle={getChatTitle(chat, users)}
                     customerName={getChatCustomerName(chat)}
                     contactNumber={getChatContactNumber(chat)}
                     customerDocument={getChatCustomerDocument(chat)}
@@ -497,7 +497,7 @@ export default function MonitorPage() {
                   userName={getScheduledForUser(chat, users)}
                   sectorName={getChatSector(chat, sectors, users)}
                   imageUrl={getChatImage(chat, users)}
-                  chatTitle={getChatTitle(chat)}
+                  chatTitle={getChatTitle(chat, users)}
                   customerName={getChatCustomerName(chat)}
                   contactNumber={getChatContactNumber(chat)}
                   customerDocument={getChatCustomerDocument(chat)}
