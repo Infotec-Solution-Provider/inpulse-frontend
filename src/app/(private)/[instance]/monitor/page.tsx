@@ -67,7 +67,7 @@ function getChatUser(chat: DetailedInternalChat | DetailedChat, users: User[]): 
     return u.CODIGO === chat.creatorId;
   });
 
-  return user ? user.NOME : "BOT";
+  return user ? user.NOME : "Supervisão";
 }
 
 function getInternalUsers(chat: DetailedInternalChat, users: User[]) {
