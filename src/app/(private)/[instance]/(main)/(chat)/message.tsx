@@ -151,6 +151,15 @@ export default function Message({
     return date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
   }, [date]);
 
+  const isMessageFromToday = useMemo(() => {
+    const now = new Date();
+    return (
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate()
+    );
+  }, [date]);
+
   const isOfficial = parameters["is_official"] === "true";
 
   return (
@@ -211,6 +220,7 @@ export default function Message({
                 fileName={quotedMessage.fileName || ""}
                 fileType={quotedMessage.fileType || ""}
                 fileSize={fileSize || ""}
+                showMediaByDefault={isMessageFromToday}
               />
             )}
           </div>
@@ -230,6 +240,7 @@ export default function Message({
               fileName={fileName || ""}
               fileType={fileType || ""}
               fileSize={fileSize || ""}
+              showMediaByDefault={isMessageFromToday}
             />
           )}
           <div className="w-full text-slate-900 dark:text-slate-200">

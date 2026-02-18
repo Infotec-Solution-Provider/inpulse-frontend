@@ -246,8 +246,7 @@ function getScheduledForUser(schedule: DetailedSchedule, users: User[]) {
 }
 
 export default function MonitorPage() {
-  const { chats, filters, page, setPage, pageSize, totalCount, isLoading, refetch } =
-    useMonitorContext();
+  const { chats, page, setPage, pageSize, totalCount, isLoading, refetch } = useMonitorContext();
   const { sectors = [] } = useWhatsappContext();
   const { users = [] } = useInternalChatContext();
   const { setCurrentChat, openChat, loadChatMessages } = useWhatsappContext();

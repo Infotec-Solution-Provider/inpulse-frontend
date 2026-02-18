@@ -1,5 +1,5 @@
 import filesService from "@/lib/services/files.service";
-import { useContext, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import DownloadIcon from "@mui/icons-material/Download";
 import { AppContext } from "../../app-context";
 import { IconButton, Menu, MenuItem, Button, Tooltip } from "@mui/material";
@@ -15,12 +15,24 @@ interface MessageFileProps {
   fileType: string;
   fileSize: string;
   fileId: number;
+  showMediaByDefault?: boolean;
 }
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150, 200, 300];
 
-export default function MessageFile({ fileName, fileType, fileSize, fileId }: MessageFileProps) {
+export default function MessageFile({
+  fileName,
+  fileType,
+  fileSize,
+  fileId,
+  showMediaByDefault = true,
+}: MessageFileProps) {
   const { closeModal, openModal } = useContext(AppContext);
+  const [shouldRenderMedia, setShouldRenderMedia] = useState(showMediaByDefault);
+
+  useEffect(() => {
+    setShouldRenderMedia(showMediaByDefault);
+  }, [showMediaByDefault, fileId]);
 
   const handleClickImage = () => {
     const url = filesService.getFileDownloadUrl(fileId);
@@ -248,9 +260,24 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
   }
 
   const fileComponent = useMemo(() => {
-    const url = filesService.getFileDownloadUrl(fileId);
+    const isImage = fileType.includes("image");
+    const isVideo = fileType.includes("video");
 
-    if (fileType.includes("image")) {
+    if ((isImage || isVideo) && !shouldRenderMedia) {
+      return (
+        <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white/80 px-3 py-2 dark:border-slate-700 dark:bg-slate-800/80">
+          <span className="max-w-[14rem] truncate text-xs text-slate-700 dark:text-slate-300">
+            {fileName}
+          </span>
+          <Button size="small" variant="outlined" onClick={() => setShouldRenderMedia(true)}>
+            Exibir
+          </Button>
+        </div>
+      );
+    }
+
+    if (isImage) {
+      const url = filesService.getFileDownloadUrl(fileId);
       return (
         <img
           src={url}
@@ -261,7 +288,8 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
       );
     }
 
-    if (fileType.includes("video")) {
+    if (isVideo) {
+      const url = filesService.getFileDownloadUrl(fileId);
       return (
         <video
           controls
@@ -273,6 +301,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
     }
 
     if (fileType.includes("audio")) {
+      const url = filesService.getFileDownloadUrl(fileId);
       return (
         <audio controls>
           <source src={url} type={fileType} />
@@ -290,6 +319,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
     const ext = fileName.split(".").pop()?.toUpperCase() || "ARQUIVO";
     const isPdf = fileType.includes("pdf") || ext === "PDF";
     const fileLabel = `${ext} • ${fileSizeText()}`;
+    const url = filesService.getFileDownloadUrl(fileId);
 
     return (
       <Tooltip title={fileName} arrow>
@@ -310,7 +340,7 @@ export default function MessageFile({ fileName, fileType, fileSize, fileId }: Me
         </a>
       </Tooltip>
     );
-  }, [fileId, fileName, fileType, fileSize]);
+  }, [fileId, fileName, fileType, fileSize, shouldRenderMedia]);
 
   return <div>{fileComponent}</div>;
 }
