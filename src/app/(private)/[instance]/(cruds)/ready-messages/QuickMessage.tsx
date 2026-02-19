@@ -33,16 +33,13 @@ function isWhatsappChat(chat: any): chat is DetailedChat {
 }
 
 export const QuickMessage = ({ chat, onClose }: Props) => {
-  const { readyMessages, replaceVariables, fetchReadyMessages } =
-    useReadyMessagesContext();
+  const { readyMessages, replaceVariables, fetchReadyMessages } = useReadyMessagesContext();
   const { user } = useContext(AuthContext);
   const { sendMessage: sendWppMessage } = useContext(WhatsappContext);
   const { sendInternalMessage } = useContext(InternalChatContext);
 
-  const [selectedMessage, setSelectedMessage] =
-    useState<ReadyMessage | null>(null);
-  const [previewMessage, setPreviewMessage] =
-    useState<ReadyMessage | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<ReadyMessage | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<ReadyMessage | null>(null);
 
   const currentSaudation = () => {
     const hour = new Date().getHours();
@@ -92,7 +89,11 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
           chatId: chat.id,
           contactId: chat.contactId ?? 0,
           text,
-          fileId: selectedMessage.fileId || undefined,
+          ...(selectedMessage.fileId
+            ? {
+                fileId: selectedMessage.fileId,
+              }
+            : {}),
         });
       } else {
         await sendInternalMessage({
@@ -141,27 +142,15 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
                     mb: 1,
                     borderRadius: 2,
                     border: "1px solid",
-                    borderColor:
-                      selectedMessage?.id === msg.id
-                        ? "primary.main"
-                        : "divider",
+                    borderColor: selectedMessage?.id === msg.id ? "primary.main" : "divider",
                     backgroundColor:
-                      selectedMessage?.id === msg.id
-                        ? "action.selected"
-                        : "background.paper",
+                      selectedMessage?.id === msg.id ? "action.selected" : "background.paper",
                   }}
                 >
-                  <ListItemButton
-                    onClick={() => setSelectedMessage(msg)}
-                  >
+                  <ListItemButton onClick={() => setSelectedMessage(msg)}>
                     <ListItemText
                       primary={
-                        <Typography
-                          variant="body2"
-                          fontWeight={500}
-                          color="text.primary"
-                          noWrap
-                        >
+                        <Typography variant="body2" fontWeight={500} color="text.primary" noWrap>
                           {msg.title}
                         </Typography>
                       }
@@ -189,11 +178,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
         </DialogContent>
 
         <DialogActions>
-          <Button
-            onClick={handleSendMessage}
-            disabled={!selectedMessage}
-            variant="contained"
-          >
+          <Button onClick={handleSendMessage} disabled={!selectedMessage} variant="contained">
             Enviar
           </Button>
         </DialogActions>

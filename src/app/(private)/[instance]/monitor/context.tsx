@@ -100,28 +100,10 @@ const initialFilters: MonitorFiltersState = {
 
 const STORAGE_KEY = "monitor_filters";
 
-// Função para carregar filtros do localStorage
-const loadFiltersFromStorage = (): MonitorFiltersState => {
-  if (typeof window === "undefined") return initialFilters;
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      // Mesclar com valores padrão para garantir que novos campos existam
-      return { ...initialFilters, ...parsed };
-    }
-  } catch (error) {
-    console.error("Erro ao carregar filtros do localStorage:", error);
-  }
-  
-  return initialFilters;
-};
-
 // Função para salvar filtros no localStorage
 const saveFiltersToStorage = (filters: MonitorFiltersState) => {
   if (typeof window === "undefined") return;
-  
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
   } catch (error) {
@@ -137,34 +119,26 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [chats, setChats] = useState<(DetailedInternalChat | DetailedChat | DetailedSchedule)[]>([]);
+  const [chats, setChats] = useState<(DetailedInternalChat | DetailedChat | DetailedSchedule)[]>(
+    [],
+  );
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Filtros em edição (não dispara consulta)
-  const [filters, setFilters] = useState<MonitorFiltersState>(loadFiltersFromStorage);
-  
-  // Filtros aplicados (usados para a consulta)
-  const [appliedFilters, setAppliedFilters] = useState<MonitorFiltersState>(loadFiltersFromStorage);
-  
+
+  const [filters, setFilters] = useState<MonitorFiltersState>(initialFilters);
+  const [appliedFilters, setAppliedFilters] = useState<MonitorFiltersState>(initialFilters);
+
   const applyFilters = (nextFilters?: MonitorFiltersState) => {
     const resolved = nextFilters ?? filters;
     setAppliedFilters(resolved);
-    saveFiltersToStorage(resolved);
     setPage(1);
   };
 
   const resetFilters = () => {
     setFilters(initialFilters);
     setAppliedFilters(initialFilters);
-    saveFiltersToStorage(initialFilters);
     setPage(1);
   };
-
-  // Apenas atualizar localStorage quando filtros são aplicados
-  useEffect(() => {
-    saveFiltersToStorage(appliedFilters);
-  }, [appliedFilters]);
 
   const fetchData = useCallback(async () => {
     if (!token || !wppApi.current) {

@@ -15,6 +15,7 @@ import chatsFilterReducer, {
 import {
   AppNotification,
   Customer,
+  FileDirType,
   ForwardMessagesData,
   SendMessageData,
   SocketEventType,
@@ -42,6 +43,8 @@ import {
 import { toast } from "react-toastify";
 import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
+import filesService from "../../../lib/services/files.service";
+import getFileSHA256 from "../../../lib/utils/get-file-sha256";
 
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -61,6 +64,18 @@ interface GetNotificationsResponse {
   notifications: AppNotification[];
   totalCount: number;
 }
+
+interface SendMessageOptions {
+  sendAsChatOwner?: boolean;
+  contactId: number;
+  text: string;
+  quotedId?: number | null;
+  chatId?: number | null;
+  file?: File;
+  sendAsDocument?: boolean;
+  sendAsAudio?: boolean;
+}
+
 interface IWhatsappContext {
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
@@ -73,7 +88,7 @@ interface IWhatsappContext {
   openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[]) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
-  sendMessage: (to: string, data: SendMessageData) => Promise<void>;
+  sendMessage: (to: string, data: SendMessageOptions) => Promise<void>;
   editMessage: (messageId: string, newText: string, isInternal?: boolean) => Promise<void>;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
   transferAttendance: (chatId: number, userId: number) => Promise<void>;
@@ -276,15 +291,116 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const sendMessage = useCallback(
-    async (to: string, data: SendMessageData) => {
+    async (to: string, data: SendMessageOptions) => {
       try {
+        Logger.debug("sendMessage called", {
+          to,
+          hasFile: !!data.file,
+          contactId: data.contactId,
+          chatId: data.chatId,
+          selectedChannelId: selectedChannel?.id,
+          instance,
+        });
+
+        if (!instance) {
+          Logger.debug("sendMessage aborted: instance not found");
+          toast.error("Instância não encontrada. Recarregue a página e tente novamente.");
+          return;
+        }
         if (!selectedChannel) {
+          Logger.debug("sendMessage aborted: selected channel not found");
           toast.error("Nenhum canal selecionado para enviar a mensagem.");
           return;
         }
 
-        await api.current.sendMessage(String(selectedChannel.id), to, data);
+        if (!data.file) {
+          Logger.debug("sendMessage without file", {
+            channelId: selectedChannel.id,
+            to,
+          });
+          await api.current.sendMessage(String(selectedChannel.id), to, data);
+          Logger.debug("sendMessage without file completed", {
+            channelId: selectedChannel.id,
+            to,
+          });
+          return;
+        }
+
+        Logger.debug("sendMessage with file: generating sha256", {
+          fileName: data.file.name,
+          fileType: data.file.type,
+          fileSize: data.file.size,
+        });
+        const sha256 = await getFileSHA256(data.file);
+        Logger.debug("sendMessage file hash generated", { sha256 });
+
+        const res = await filesService.getFileByHash(instance, sha256);
+        Logger.debug("sendMessage file lookup result", res);
+
+        if (!!res.file) {
+          const sendFileData = {
+            contactId: data.contactId,
+            text: data.text,
+            chatId: data.chatId,
+            fileId: res.file.id,
+            quotedId: data.quotedId,
+            sendAsAudio: !data.sendAsAudio,
+            sendAsChatOwner: !data.sendAsChatOwner,
+            sendAsDocument: !data.sendAsDocument,
+          };
+          Logger.debug("sendMessage using existing uploaded file", {
+            channelId: selectedChannel.id,
+            to,
+            fileId: res.file.id,
+          });
+          await api.current.sendMessage(String(selectedChannel.id), to, sendFileData);
+          Logger.debug("sendMessage with existing file completed", {
+            channelId: selectedChannel.id,
+            to,
+            fileId: res.file.id,
+          });
+
+          return;
+        }
+
+        Logger.debug("sendMessage uploading new file", {
+          fileName: data.file.name,
+          fileType: data.file.type,
+          fileSize: data.file.size,
+        });
+        const uploadedFile = await filesService.uploadFile({
+          buffer: Buffer.from(await data.file.arrayBuffer()),
+          fileName: data.file.name,
+          mimeType: data.file.type,
+          instance: instance,
+          dirType: FileDirType.PUBLIC,
+        });
+        Logger.debug("sendMessage file uploaded", {
+          uploadedFileId: uploadedFile.id,
+        });
+
+        await api.current.sendMessage(String(selectedChannel.id), to, {
+          contactId: data.contactId,
+          text: data.text,
+          chatId: data.chatId,
+          fileId: uploadedFile.id,
+          quotedId: data.quotedId,
+          sendAsAudio: !data.sendAsAudio,
+          sendAsChatOwner: !data.sendAsChatOwner,
+          sendAsDocument: !data.sendAsDocument,
+        });
+        Logger.debug("sendMessage with uploaded file completed", {
+          channelId: selectedChannel.id,
+          to,
+          uploadedFileId: uploadedFile.id,
+        });
       } catch (err) {
+        Logger.debug("sendMessage failed", {
+          error: sanitizeErrorMessage(err),
+          to,
+          selectedChannelId: selectedChannel?.id,
+          instance,
+        });
         toast.error(sanitizeErrorMessage(err));
       }
     },
@@ -448,7 +564,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        Logger.debug("Fetched chats ", { chats});
+        Logger.debug("Fetched chats ", { chats });
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
@@ -574,33 +690,26 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         currentChatRef,
         chats,
       );
-      socket.on(
-        SocketEventType.WppMessage,
-        (data: { message: WppMessage }) => {
-          handleMessage(data);
+      socket.on(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
+        handleMessage(data);
 
-          // Auto-update per-chat channel based on incoming message
-          const { message } = data;
-          if (message.clientId) {
-            const matchedChat = chats.find((c) => c.contactId === message.contactId);
-            if (matchedChat) {
-              chatsChannels.current.set(matchedChat.id, message.clientId);
-            }
+        // Auto-update per-chat channel based on incoming message
+        const { message } = data;
+        if (message.clientId) {
+          const matchedChat = chats.find((c) => c.contactId === message.contactId);
+          if (matchedChat) {
+            chatsChannels.current.set(matchedChat.id, message.clientId);
+          }
 
-            const current = currentChatRef.current;
-            if (
-              current &&
-              current.chatType === "wpp" &&
-              current.contactId === message.contactId
-            ) {
-              const channel = channels.find((ch) => ch.id === message.clientId);
-              if (channel) {
-                setSelectedChannel(channel);
-              }
+          const current = currentChatRef.current;
+          if (current && current.chatType === "wpp" && current.contactId === message.contactId) {
+            const channel = channels.find((ch) => ch.id === message.clientId);
+            if (channel) {
+              setSelectedChannel(channel);
             }
           }
-        },
-      );
+        }
+      });
 
       socket.on(
         SocketEventType.WppMessageEdit,
