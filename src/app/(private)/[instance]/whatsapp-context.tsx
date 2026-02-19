@@ -150,6 +150,7 @@ interface SectorData {
 }
 
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
+export const FILES_BASE_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "http://localhost:8003";
 export const NOTIFICATIONS_PER_PAGE = 15;
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
@@ -368,13 +369,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           fileType: data.file.type,
           fileSize: data.file.size,
         });
-        const uploadedFile = await filesService.uploadFile({
-          buffer: Buffer.from(await data.file.arrayBuffer()),
-          fileName: data.file.name,
-          mimeType: data.file.type,
-          instance: instance,
-          dirType: FileDirType.PUBLIC,
+
+        const uploadFormData = new FormData();
+        uploadFormData.append("instance", instance);
+        uploadFormData.append("dirType", FileDirType.PUBLIC);
+        uploadFormData.append("file", data.file, data.file.name);
+
+        const { data: uploadResponse } = await api.current.ax.post(`${FILES_BASE_URL}/api/files`, uploadFormData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         });
+
+        const uploadedFile = uploadResponse.data;
         Logger.debug("sendMessage file uploaded", {
           uploadedFileId: uploadedFile.id,
         });
