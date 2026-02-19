@@ -1,7 +1,7 @@
 import MicIcon from "@mui/icons-material/Mic";
 import StopIcon from "@mui/icons-material/Stop";
 import { IconButton } from "@mui/material";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface AudioRecorderProps {
   onAudioRecorded?: (file: File) => void;
@@ -16,13 +16,35 @@ const formatTime = (time: number) => {
 export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [recordingTime, setRecordingTime] = useState(0); // Tempo de gravação em segundos
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const stopStream = () => {
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimer();
+      stopStream();
+    };
+  }, []);
 
   const startRecording = async () => {
     try {
+      clearTimer();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
@@ -31,6 +53,8 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
       };
 
       mediaRecorder.onstop = () => {
+        clearTimer();
+        stopStream();
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/mpeg" });
         audioChunksRef.current = [];
 
@@ -54,6 +78,7 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
   };
 
   const stopRecording = () => {
+    clearTimer();
     mediaRecorderRef.current?.stop();
     setIsRecording(false);
   };
