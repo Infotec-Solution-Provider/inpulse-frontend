@@ -647,6 +647,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   useEffect(() => {
     if (socket) {
+      Logger.debug("[WPP_SOCKET] binding handlers", {
+        chatsCountInEffect: chats.length,
+        currentChatType: currentChat?.chatType,
+        currentChatContactId: currentChat?.chatType === "wpp" ? currentChat.contactId : null,
+      });
+
       socket.on(
         SocketEventType.WppContactMessagesRead,
         ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages),
@@ -698,12 +704,32 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         chats,
       );
       socket.on(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
+        Logger.debug("[WPP_SOCKET] WppMessage event", {
+          messageId: data.message.id,
+          contactId: data.message.contactId,
+          chatsCountInEffect: chats.length,
+          currentChatType: currentChatRef.current?.chatType,
+          currentChatContactId:
+            currentChatRef.current?.chatType === "wpp" ? currentChatRef.current.contactId : null,
+        });
+
         handleMessage(data);
+
+        Logger.debug("[WPP_SOCKET] WppMessage handled", {
+          messageId: data.message.id,
+          contactId: data.message.contactId,
+        });
 
         // Auto-update per-chat channel based on incoming message
         const { message } = data;
         if (message.clientId) {
           const matchedChat = chats.find((c) => c.contactId === message.contactId);
+          Logger.debug("[WPP_SOCKET] channel sync check", {
+            messageId: message.id,
+            contactId: message.contactId,
+            clientId: message.clientId,
+            matchedChatId: matchedChat?.id,
+          });
           if (matchedChat) {
             chatsChannels.current.set(matchedChat.id, message.clientId);
           }
@@ -728,6 +754,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
       );
       return () => {
+        Logger.debug("[WPP_SOCKET] unbinding handlers", {
+          chatsCountInEffect: chats.length,
+          currentChatType: currentChat?.chatType,
+          currentChatContactId: currentChat?.chatType === "wpp" ? currentChat.contactId : null,
+        });
         socket.off(SocketEventType.WppMessage);
         socket.off(SocketEventType.WppChatStarted);
         socket.off(SocketEventType.WppContactMessagesRead);
