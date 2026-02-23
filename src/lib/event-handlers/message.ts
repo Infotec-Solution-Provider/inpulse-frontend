@@ -110,7 +110,7 @@ export default function ReceiveMessageHandler(
       currentChatType: x?.chatType,
       currentContactId: x?.chatType === "wpp" ? x.contactId : null,
       willUpdateCurrentChatMessages:
-        Boolean(x) && x.chatType === "wpp" && x.contactId === message.contactId,
+        x !== null && x.chatType === "wpp" && x.contactId === message.contactId,
     });
 
     setChats((prev) =>
@@ -169,12 +169,9 @@ export default function ReceiveMessageHandler(
             });
           })
           .catch((error) => {
-            Logger.error("[WPP_MESSAGE] markContactMessagesAsRead error", error, {
-              messageId: message.id,
-              contactId: message.contactId,
-            });
+            Logger.error(`[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`, error);
           });
       }
-    }
-  };
+    };
+  }
 }
