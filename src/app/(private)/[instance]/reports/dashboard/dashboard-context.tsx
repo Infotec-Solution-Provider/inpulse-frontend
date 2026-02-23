@@ -16,6 +16,8 @@ export type ReportKey =
   | "satisfactionSurvey";
 
 const REPORTS_URL = process.env["NEXT_PUBLIC_REPORTS_URL"] || "http://localhost:8006";
+const ALL_TIME_START = "2000-01-01";
+const ALL_TIME_END = "2099-12-31";
 
 export interface DashboardFilters {
   startDate: string;
@@ -170,16 +172,17 @@ export default function DashboardProvider({
     setLoading(true);
     try {
       const effectiveFilters = overrideFilters || filters;
-      const dateFilter =
-        effectiveFilters.startDate && effectiveFilters.endDate
-          ? `${effectiveFilters.startDate}_${effectiveFilters.endDate}`
-          : null;
+      const periodStart = effectiveFilters.startDate || ALL_TIME_START;
+      const periodEnd = effectiveFilters.endDate || ALL_TIME_END;
+      const dateFilter = `${periodStart}_${periodEnd}`;
+      const minDate = effectiveFilters.minDate || ALL_TIME_START;
+      const maxDate = effectiveFilters.maxDate || ALL_TIME_END;
       const target = report || selectedReport;
 
       if (target === "messagesPerUser") {
         const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/messages-per-user`, {
           headers,
-          params: dateFilter ? { date: dateFilter } : undefined,
+          params: { date: dateFilter },
         });
         setMessagesPerUser(res.data?.data?.messagesPerUser || []);
       }
@@ -188,7 +191,7 @@ export default function DashboardProvider({
         const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/messages-per-contact`, {
           headers,
           params: {
-            ...(dateFilter ? { date: dateFilter } : {}),
+            date: dateFilter,
             ...(effectiveFilters.userId ? { user: effectiveFilters.userId } : {}),
           },
         });
@@ -201,8 +204,8 @@ export default function DashboardProvider({
           params: {
             SETORES: effectiveFilters.sectors || "*",
             OPERADORES: effectiveFilters.operators || "*",
-            ...(effectiveFilters.minDate ? { MIN_DATE: effectiveFilters.minDate } : {}),
-            ...(effectiveFilters.maxDate ? { MAX_DATE: effectiveFilters.maxDate } : {}),
+            MIN_DATE: minDate,
+            MAX_DATE: maxDate,
           },
         });
         setMessagesPerHourDay(res.data?.data?.messagesPerHourDay || []);
@@ -222,8 +225,8 @@ export default function DashboardProvider({
         const res = await axios.get(`${REPORTS_URL}/api/reports/satisfaction-survey`, {
           headers,
           params: {
-            ...(effectiveFilters.startDate ? { startDate: effectiveFilters.startDate } : {}),
-            ...(effectiveFilters.endDate ? { endDate: effectiveFilters.endDate } : {}),
+            startDate: periodStart,
+            endDate: periodEnd,
             ...(effectiveFilters.operators && effectiveFilters.operators !== "*"
               ? { operators: effectiveFilters.operators }
               : {}),

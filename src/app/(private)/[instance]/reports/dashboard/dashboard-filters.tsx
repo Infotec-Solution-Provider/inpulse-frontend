@@ -149,6 +149,7 @@ export default function DashboardFilters() {
             label="Setores"
             size="small"
             value={selectedSectorIds}
+            InputLabelProps={{ shrink: true }}
             onChange={(e) => {
               const value = e.target.value;
               handleSectorsChange(Array.isArray(value) ? value : [value]);
@@ -179,6 +180,7 @@ export default function DashboardFilters() {
             label="Operadores"
             size="small"
             value={selectedOperatorIds}
+            InputLabelProps={{ shrink: true }}
             onChange={(e) => {
               const value = e.target.value;
               handleOperatorsChange(Array.isArray(value) ? value : [value]);
@@ -231,6 +233,7 @@ export default function DashboardFilters() {
           label="Operadores"
           size="small"
           value={selectedOperatorIds}
+          InputLabelProps={{ shrink: true }}
           onChange={(e) => {
             const value = e.target.value;
             handleOperatorsChange(Array.isArray(value) ? value : [value]);
