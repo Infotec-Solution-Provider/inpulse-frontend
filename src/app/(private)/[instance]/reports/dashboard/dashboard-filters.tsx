@@ -3,6 +3,7 @@
 import ArrowRightAltIcon from "@mui/icons-material/ArrowRightAlt";
 import { Button, MenuItem, TextField } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
+import { AuthContext } from "@/app/auth-context";
 import useInternalChatContext from "../../internal-context";
 import { DashboardContext } from "./dashboard-context";
 import { useWhatsappContext } from "../../whatsapp-context";
@@ -29,7 +30,10 @@ function parseSectors(value: string): string[] {
 
 export default function DashboardFilters() {
   const { filters, setFilters, loadReport, loading, selectedReport } = useContext(DashboardContext);
+  const { instance } = useContext(AuthContext);
   const [local, setLocal] = useState(filters);
+
+  const isExatronInstance = instance === "exatron";
 
   const { users } = useInternalChatContext();
   const { sectors } = useWhatsappContext();
@@ -227,7 +231,7 @@ export default function DashboardFilters() {
         </>
       )}
 
-      {selectedReport === "satisfactionSurvey" && (
+      {selectedReport === "satisfactionSurvey" && isExatronInstance && (
         <TextField
           select
           label="Operadores"

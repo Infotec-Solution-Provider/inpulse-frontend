@@ -1,6 +1,7 @@
 "use client";
 
 import { useContext, useMemo } from "react";
+import { AuthContext } from "@/app/auth-context";
 import {
   AwaitingReturnRow,
   DashboardContext,
@@ -238,6 +239,9 @@ export default function DashboardReports() {
     }));
   }, [satisfactionSurveySynthetic]);
 
+  const { instance } = useContext(AuthContext);
+  const isExatronInstance = instance === "exatron";
+
   const exportToCsv = (filename: string, rows: Record<string, any>[]) => {
     if (!rows.length) {
       toast.info("Sem dados para exportar.");
@@ -288,7 +292,7 @@ export default function DashboardReports() {
           <MenuItem value="messagesPerContact">Mensagens por Contato</MenuItem>
           <MenuItem value="messagesPerHourDay">Mensagens por Hora e Dia</MenuItem>
           <MenuItem value="contactsAwaitingReturn">Contatos aguardando retorno</MenuItem>
-          <MenuItem value="satisfactionSurvey">Pesquisa de Satisfação (Exatron)</MenuItem>
+          {isExatronInstance && <MenuItem value="satisfactionSurvey">Pesquisa de Satisfação (Exatron)</MenuItem>}
         </TextField>
       </div>
 

@@ -2,19 +2,25 @@ import DashboardProvider from "./dashboard-context";
 import DashboardFilters from "./dashboard-filters";
 import DashboardReports from "./dashboard-reports";
 
-const allowedReports = new Set([
-  "contactsAwaitingReturn",
-  "messagesPerUser",
-  "messagesPerContact",
-  "messagesPerHourDay",
-  "satisfactionSurvey",
-]);
-
 export default async function DashboardReportsPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ instance: string }>;
   searchParams?: { report?: string } | Promise<{ report?: string }>;
 }) {
+  const resolvedParams = await Promise.resolve(params);
+  const instance = resolvedParams.instance;
+  
+  // Apenas adicionar satisfactionSurvey se for a instância exatron
+  const allowedReports = new Set<string>([
+    "contactsAwaitingReturn",
+    "messagesPerUser",
+    "messagesPerContact",
+    "messagesPerHourDay",
+    ...(instance === "exatron" ? ["satisfactionSurvey"] : []),
+  ]);
+
   const resolvedSearchParams = await Promise.resolve(searchParams);
 
   const initialSelectedReport =
