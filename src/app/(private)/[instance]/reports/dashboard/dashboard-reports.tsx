@@ -262,6 +262,8 @@ export default function DashboardReports() {
     window.URL.revokeObjectURL(url);
   };
 
+  const chartHeight = 410;
+
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center gap-3">
@@ -300,7 +302,7 @@ export default function DashboardReports() {
           onChartTypeChange={(type) => setChartType("messagesPerUser", type)}
           chart={
             messagesPerUserChartData.length ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={chartHeight}>
                 {chartTypes.messagesPerUser === "pie" ? (
                   <PieChart>
                     <Pie data={messagesPerUserChartData} dataKey="messages" nameKey="name" outerRadius={90}>
@@ -349,7 +351,7 @@ export default function DashboardReports() {
           onChartTypeChange={(type) => setChartType("messagesPerContact", type)}
           chart={
             topContacts.length ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={chartHeight}>
                 {chartTypes.messagesPerContact === "pie" ? (
                   <PieChart>
                     <Pie data={topContacts} dataKey="messagesCount" nameKey="contactName" outerRadius={90}>
@@ -395,7 +397,7 @@ export default function DashboardReports() {
           onChartTypeChange={(type) => setChartType("messagesPerHourDay", type)}
           chart={
             hourAggregation.length ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={chartHeight}>
                 {chartTypes.messagesPerHourDay === "pie" ? (
                   <PieChart>
                     <Pie data={hourAggregation} dataKey="messages" nameKey="hour" outerRadius={90}>
@@ -445,7 +447,7 @@ export default function DashboardReports() {
           onChartTypeChange={(type) => setChartType("contactsAwaitingReturn", type)}
           chart={
             awaitingBySector.length ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={chartHeight}>
                 {chartTypes.contactsAwaitingReturn === "bar" ? (
                   <BarChart data={awaitingBySector}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -511,7 +513,7 @@ export default function DashboardReports() {
           onChartTypeChange={(type) => setChartType("satisfactionSurvey", type)}
           chart={
             satisfactionByQuestion.length ? (
-              <ResponsiveContainer width="100%" height={260}>
+              <ResponsiveContainer width="100%" height={chartHeight}>
                 {chartTypes.satisfactionSurvey === "pie" ? (
                   <PieChart>
                     <Pie data={satisfactionByQuestion} dataKey="average" nameKey="name" outerRadius={90}>

@@ -26,11 +26,11 @@ export default function DashboardReportCard({
   onExport
 }: DashboardReportCardProps) {
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400">{description}</p>
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {isLoading && (
@@ -59,11 +59,11 @@ export default function DashboardReportCard({
           </TextField>
         </div>
       </header>
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div className="min-h-[260px] rounded-md bg-slate-50 p-3 dark:bg-slate-800/40">
+      <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+        <div className="min-h-[430px] rounded-md bg-slate-50 p-4 dark:bg-slate-800/40">
           {chart}
         </div>
-        <div className="max-h-[320px] overflow-y-auto rounded-md border border-slate-100 bg-white p-3 text-xs shadow-inner dark:border-slate-700 dark:bg-slate-900">
+        <div className="max-h-[430px] overflow-y-auto rounded-md border border-slate-100 bg-white p-4 text-xs shadow-inner dark:border-slate-700 dark:bg-slate-900">
           {table}
         </div>
       </div>
