@@ -197,6 +197,9 @@ export default function Header() {
 
   const reportsRoutes = [
     { title: "Relatórios", href: "/reports/dashboard" },
+    ...(isUserAdmin && instance === "exatron"
+      ? [{ title: "Pesquisa de Satisfação", href: "/reports/dashboard?report=satisfactionSurvey" }]
+      : []),
     { title: "Conversas", href: "/reports/chats" },
     ...(user?.NIVEL === UserRole.ADMIN
       ? [{ title: "Gerador de Relatório", href: "/reports/report-generator" }]

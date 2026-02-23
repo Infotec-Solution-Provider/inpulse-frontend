@@ -7,6 +7,7 @@ import {
   MessagesPerContactRow,
   MessagesPerHourDayRow,
   MessagesPerUserRow,
+  SatisfactionSurveyAnalyticalRow,
 } from "./dashboard-context";
 import DashboardReportCard from "./dashboard-report-card";
 import { MenuItem, TextField } from "@mui/material";
@@ -146,6 +147,38 @@ function AwaitingReturnTable({ data }: { data: AwaitingReturnRow[] }) {
   );
 }
 
+function SatisfactionSurveyAnalyticalTable({ data }: { data: SatisfactionSurveyAnalyticalRow[] }) {
+  if (!data.length) return <EmptyState />;
+  return (
+    <table className="w-full text-left text-xs">
+      <thead>
+        <tr className="text-slate-500">
+          <th className="py-1">Chat</th>
+          <th className="py-1">Operador</th>
+          <th className="py-1">Cliente</th>
+          <th className="py-1">Q1</th>
+          <th className="py-1">Q2</th>
+          <th className="py-1">Q3</th>
+          <th className="py-1">Q4</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((row) => (
+          <tr key={row.chatId} className="border-t border-slate-100 dark:border-slate-800">
+            <td className="py-1 pr-2 font-medium text-slate-700 dark:text-slate-200">{row.chatId}</td>
+            <td className="py-1 pr-2">{row.operatorName || row.operatorId || "-"}</td>
+            <td className="py-1 pr-2">{row.customerName || row.contactName || "-"}</td>
+            <td className="py-1">{row.answers.q1?.rating ?? "-"}</td>
+            <td className="py-1">{row.answers.q2?.rating ?? "-"}</td>
+            <td className="py-1">{row.answers.q3?.rating ?? "-"}</td>
+            <td className="py-1">{row.answers.q4?.rating ?? "-"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export default function DashboardReports() {
   const {
     chartTypes,
@@ -157,6 +190,8 @@ export default function DashboardReports() {
     messagesPerUser,
     messagesPerContact,
     messagesPerHourDay,
+    satisfactionSurveyAnalytical,
+    satisfactionSurveySynthetic,
   } = useContext(DashboardContext);
 
   const messagesPerUserChartData = useMemo(() => {
@@ -194,6 +229,14 @@ export default function DashboardReports() {
     });
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
   }, [contactsAwaitingReturn]);
+
+  const satisfactionByQuestion = useMemo(() => {
+    return satisfactionSurveySynthetic.map((row) => ({
+      name: row.questionLabel,
+      average: row.averageScore || 0,
+      total: row.totalAnswers,
+    }));
+  }, [satisfactionSurveySynthetic]);
 
   const exportToCsv = (filename: string, rows: Record<string, any>[]) => {
     if (!rows.length) {
@@ -233,7 +276,8 @@ export default function DashboardReports() {
                 | "messagesPerUser"
                 | "messagesPerContact"
                 | "messagesPerHourDay"
-                | "contactsAwaitingReturn",
+                | "contactsAwaitingReturn"
+                | "satisfactionSurvey",
             )
           }
           className="min-w-[240px]"
@@ -242,6 +286,7 @@ export default function DashboardReports() {
           <MenuItem value="messagesPerContact">Mensagens por Contato</MenuItem>
           <MenuItem value="messagesPerHourDay">Mensagens por Hora e Dia</MenuItem>
           <MenuItem value="contactsAwaitingReturn">Contatos aguardando retorno</MenuItem>
+          <MenuItem value="satisfactionSurvey">Pesquisa de Satisfação (Exatron)</MenuItem>
         </TextField>
       </div>
 
@@ -433,6 +478,74 @@ export default function DashboardReports() {
           )
           }
           table={<AwaitingReturnTable data={contactsAwaitingReturn.slice(0, 20)} />}
+        />
+      )}
+
+      {selectedReport === "satisfactionSurvey" && (
+        <DashboardReportCard
+          title="Pesquisa de Satisfação (Exatron)"
+          description="Visão sintética por pergunta e visão analítica por pesquisa."
+          isLoading={loading}
+          onExport={() =>
+            exportToCsv(
+              "pesquisa-satisfacao-analitico.csv",
+              satisfactionSurveyAnalytical.map((row) => ({
+                chatId: row.chatId,
+                operatorId: row.operatorId,
+                operatorName: row.operatorName,
+                contactName: row.contactName,
+                contactPhone: row.contactPhone,
+                customerId: row.customerId,
+                customerName: row.customerName,
+                customerCnpj: row.customerCnpj,
+                startedAt: row.startedAt,
+                finishedAt: row.finishedAt,
+                q1: row.answers.q1?.rating,
+                q2: row.answers.q2?.rating,
+                q3: row.answers.q3?.rating,
+                q4: row.answers.q4?.rating,
+              })),
+            )
+          }
+          chartType={chartTypes.satisfactionSurvey}
+          onChartTypeChange={(type) => setChartType("satisfactionSurvey", type)}
+          chart={
+            satisfactionByQuestion.length ? (
+              <ResponsiveContainer width="100%" height={260}>
+                {chartTypes.satisfactionSurvey === "pie" ? (
+                  <PieChart>
+                    <Pie data={satisfactionByQuestion} dataKey="average" nameKey="name" outerRadius={90}>
+                      {satisfactionByQuestion.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => [value, "Média"]} />
+                  </PieChart>
+                ) : chartTypes.satisfactionSurvey === "line" ? (
+                  <LineChart data={satisfactionByQuestion}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 10]} />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="average" stroke="#6366f1" name="Média da nota" />
+                  </LineChart>
+                ) : (
+                  <BarChart data={satisfactionByQuestion}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 10]} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="average" fill="#6366f1" name="Média da nota" />
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            ) : (
+              <EmptyState />
+            )
+          }
+          table={<SatisfactionSurveyAnalyticalTable data={satisfactionSurveyAnalytical.slice(0, 50)} />}
         />
       )}
     </div>

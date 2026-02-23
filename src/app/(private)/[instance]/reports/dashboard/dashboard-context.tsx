@@ -12,7 +12,10 @@ export type ReportKey =
   | "contactsAwaitingReturn"
   | "messagesPerUser"
   | "messagesPerContact"
-  | "messagesPerHourDay";
+  | "messagesPerHourDay"
+  | "satisfactionSurvey";
+
+const REPORTS_URL = process.env["NEXT_PUBLIC_REPORTS_URL"] || "http://localhost:8006";
 
 export interface DashboardFilters {
   startDate: string;
@@ -68,6 +71,32 @@ export interface MessagesPerHourDayRow {
   receivedMessagesCount: number;
 }
 
+export interface SatisfactionSurveyAnalyticalRow {
+  chatId: number;
+  operatorId: number | null;
+  operatorName: string | null;
+  contactId: number | null;
+  contactName: string | null;
+  contactPhone: string | null;
+  customerId: number | null;
+  customerName: string | null;
+  customerCnpj: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  answers: Record<
+    "q1" | "q2" | "q3" | "q4",
+    { question: string; rating: number | null; answerText: string | null }
+  >;
+}
+
+export interface SatisfactionSurveySyntheticRow {
+  questionKey: "q1" | "q2" | "q3" | "q4";
+  questionLabel: string;
+  averageScore: number | null;
+  totalAnswers: number;
+  distribution: Array<{ score: number; count: number }>;
+}
+
 interface DashboardContextType {
   filters: DashboardFilters;
   setFilters: (filters: DashboardFilters) => void;
@@ -80,6 +109,8 @@ interface DashboardContextType {
   messagesPerUser: MessagesPerUserRow[];
   messagesPerContact: MessagesPerContactRow[];
   messagesPerHourDay: MessagesPerHourDayRow[];
+  satisfactionSurveyAnalytical: SatisfactionSurveyAnalyticalRow[];
+  satisfactionSurveySynthetic: SatisfactionSurveySyntheticRow[];
   loadReport: (report?: ReportKey) => Promise<void>;
 }
 
@@ -88,6 +119,7 @@ const defaultChartTypes: Record<ReportKey, ChartType> = {
   messagesPerUser: "bar",
   messagesPerContact: "bar",
   messagesPerHourDay: "line",
+  satisfactionSurvey: "bar",
 };
 
 const defaultFilters: DashboardFilters = {
@@ -102,17 +134,27 @@ const defaultFilters: DashboardFilters = {
 
 export const DashboardContext = createContext({} as DashboardContextType);
 
-export default function DashboardProvider({ children }: { children: ReactNode }) {
+export default function DashboardProvider({
+  children,
+  initialSelectedReport,
+}: {
+  children: ReactNode;
+  initialSelectedReport?: ReportKey;
+}) {
   const { token } = useContext(AuthContext);
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
   const [chartTypes, setChartTypes] = useState<Record<ReportKey, ChartType>>(defaultChartTypes);
   const [loading, setLoading] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ReportKey>("messagesPerUser");
+  const [selectedReport, setSelectedReport] = useState<ReportKey>(initialSelectedReport || "messagesPerUser");
 
   const [contactsAwaitingReturn, setContactsAwaitingReturn] = useState<AwaitingReturnRow[]>([]);
   const [messagesPerUser, setMessagesPerUser] = useState<MessagesPerUserRow[]>([]);
   const [messagesPerContact, setMessagesPerContact] = useState<MessagesPerContactRow[]>([]);
   const [messagesPerHourDay, setMessagesPerHourDay] = useState<MessagesPerHourDayRow[]>([]);
+  const [satisfactionSurveyAnalytical, setSatisfactionSurveyAnalytical] = useState<SatisfactionSurveyAnalyticalRow[]>(
+    [],
+  );
+  const [satisfactionSurveySynthetic, setSatisfactionSurveySynthetic] = useState<SatisfactionSurveySyntheticRow[]>([]);
 
   const setChartType = useCallback((key: ReportKey, type: ChartType) => {
     setChartTypes((prev) => ({ ...prev, [key]: type }));
@@ -174,6 +216,20 @@ export default function DashboardProvider({ children }: { children: ReactNode })
         );
         setContactsAwaitingReturn(res.data?.data || []);
       }
+
+      if (target === "satisfactionSurvey") {
+        const res = await axios.get(`${REPORTS_URL}/api/satisfaction-survey`, {
+          headers,
+          params: {
+            ...(filters.startDate ? { startDate: filters.startDate } : {}),
+            ...(filters.endDate ? { endDate: filters.endDate } : {}),
+            ...(filters.operators && filters.operators !== "*" ? { operators: filters.operators } : {}),
+          },
+        });
+
+        setSatisfactionSurveyAnalytical(res.data?.data?.analytical || []);
+        setSatisfactionSurveySynthetic(res.data?.data?.synthetic || []);
+      }
     } catch (err) {
       toast.error("Falha ao carregar relatórios!\n" + sanitizeErrorMessage(err));
     } finally {
@@ -201,6 +257,8 @@ export default function DashboardProvider({ children }: { children: ReactNode })
         messagesPerUser,
         messagesPerContact,
         messagesPerHourDay,
+        satisfactionSurveyAnalytical,
+        satisfactionSurveySynthetic,
         loadReport,
       }}
     >
