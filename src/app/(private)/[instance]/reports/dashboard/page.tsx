@@ -10,14 +10,16 @@ const allowedReports = new Set([
   "satisfactionSurvey",
 ]);
 
-export default function DashboardReportsPage({
+export default async function DashboardReportsPage({
   searchParams,
 }: {
-  searchParams?: { report?: string };
+  searchParams?: { report?: string } | Promise<{ report?: string }>;
 }) {
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+
   const initialSelectedReport =
-    searchParams?.report && allowedReports.has(searchParams.report)
-      ? (searchParams.report as
+    resolvedSearchParams?.report && allowedReports.has(resolvedSearchParams.report)
+      ? (resolvedSearchParams.report as
           | "contactsAwaitingReturn"
           | "messagesPerUser"
           | "messagesPerContact"

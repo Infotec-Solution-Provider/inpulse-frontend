@@ -218,7 +218,7 @@ export default function DashboardProvider({
       }
 
       if (target === "satisfactionSurvey") {
-        const res = await axios.get(`${REPORTS_URL}/api/satisfaction-survey`, {
+        const res = await axios.get(`${REPORTS_URL}/api/reports/satisfaction-survey`, {
           headers,
           params: {
             ...(filters.startDate ? { startDate: filters.startDate } : {}),
@@ -236,6 +236,12 @@ export default function DashboardProvider({
       setLoading(false);
     }
   }, [filters, headers, selectedReport]);
+
+  useEffect(() => {
+    if (initialSelectedReport) {
+      setSelectedReport(initialSelectedReport);
+    }
+  }, [initialSelectedReport]);
 
   useEffect(() => {
     if (token) {
