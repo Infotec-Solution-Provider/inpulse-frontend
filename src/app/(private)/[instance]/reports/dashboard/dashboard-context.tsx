@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 
 export type ChartType = "bar" | "pie" | "line";
+export type SatisfactionViewMode = "analytical" | "synthetic";
 export type ReportKey =
   | "contactsAwaitingReturn"
   | "messagesPerUser"
@@ -113,6 +114,12 @@ interface DashboardContextType {
   messagesPerHourDay: MessagesPerHourDayRow[];
   satisfactionSurveyAnalytical: SatisfactionSurveyAnalyticalRow[];
   satisfactionSurveySynthetic: SatisfactionSurveySyntheticRow[];
+  satisfactionViewMode: SatisfactionViewMode;
+  setSatisfactionViewMode: (mode: SatisfactionViewMode) => void;
+  satisfactionPage: number;
+  setSatisfactionPage: (page: number) => void;
+  satisfactionPageSize: number;
+  setSatisfactionPageSize: (size: number) => void;
   loadReport: (report?: ReportKey, overrideFilters?: DashboardFilters) => Promise<void>;
 }
 
@@ -157,6 +164,9 @@ export default function DashboardProvider({
     [],
   );
   const [satisfactionSurveySynthetic, setSatisfactionSurveySynthetic] = useState<SatisfactionSurveySyntheticRow[]>([]);
+  const [satisfactionViewMode, setSatisfactionViewMode] = useState<SatisfactionViewMode>("analytical");
+  const [satisfactionPage, setSatisfactionPage] = useState(1);
+  const [satisfactionPageSize, setSatisfactionPageSize] = useState(20);
 
   const setChartType = useCallback((key: ReportKey, type: ChartType) => {
     setChartTypes((prev) => ({ ...prev, [key]: type }));
@@ -271,6 +281,12 @@ export default function DashboardProvider({
         messagesPerHourDay,
         satisfactionSurveyAnalytical,
         satisfactionSurveySynthetic,
+        satisfactionViewMode,
+        setSatisfactionViewMode,
+        satisfactionPage,
+        setSatisfactionPage,
+        satisfactionPageSize,
+        setSatisfactionPageSize,
         loadReport,
       }}
     >
