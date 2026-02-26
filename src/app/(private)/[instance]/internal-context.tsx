@@ -218,7 +218,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     if (token && user && usersLoaded && users.length > 0) {
       api.current.setAuth(token);
       wppApi.current.getContacts().then((res) => {
-        console.log("Contacts loaded:", res);
         setContacts(res);
       });
       api.current.getInternalChatsBySession().then(({ chats, messages }) => {

@@ -28,17 +28,6 @@ export default function ReceiveMessageHandler(
   chats: DetailedChat[],
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
-    Logger.debug("[WPP_MESSAGE] received", {
-      messageId: message.id,
-      contactId: message.contactId,
-      from: message.from,
-      to: message.to,
-      type: message.type,
-      status: message.status,
-      chatsInClosure: chats.length,
-      timestamp: message.timestamp,
-    });
-
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
       const matchedChat = chats.find((chat) => {
         return chat.contactId === message.contactId;
@@ -57,13 +46,6 @@ export default function ReceiveMessageHandler(
       safeNotification(contactName || Formatter.phone(phone), {
         body: isTextMsg ? message.body : types[message.type] || "Enviou um arquivo",
         icon: HorizontalLogo.src,
-      });
-
-      Logger.debug("[WPP_MESSAGE] notification emitted", {
-        messageId: message.id,
-        contactId: message.contactId,
-        hasMatchedChat: Boolean(matchedChat),
-        contactName,
       });
 
       // Tocar som de notificação (client-side only)
@@ -92,26 +74,10 @@ export default function ReceiveMessageHandler(
         newMessages[contactId][findIndex] = message;
       }
 
-      Logger.debug("[WPP_MESSAGE] setMessages applied", {
-        messageId: message.id,
-        contactId,
-        operation: findIndex === -1 ? "push" : "replace",
-        previousLength,
-        newLength: newMessages[contactId].length,
-      });
-
       return newMessages;
     });
 
     const x = chatRef.current;
-    Logger.debug("[WPP_MESSAGE] current chat snapshot", {
-      messageId: message.id,
-      messageContactId: message.contactId,
-      currentChatType: x?.chatType,
-      currentContactId: x?.chatType === "wpp" ? x.contactId : null,
-      willUpdateCurrentChatMessages:
-        x !== null && x.chatType === "wpp" && x.contactId === message.contactId,
-    });
 
     setChats((prev) =>
       prev
@@ -142,32 +108,13 @@ export default function ReceiveMessageHandler(
           newMessages[i] = message;
         }
 
-        Logger.debug("[WPP_MESSAGE] setCurrentChatMessages applied", {
-          messageId: message.id,
-          contactId: message.contactId,
-          operation: i === -1 ? "push" : "replace",
-          previousLength,
-          newLength: newMessages.length,
-        });
-
         return newMessages;
       });
 
       // TODO: Change the logic to only update the received message;
       if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        Logger.debug("[WPP_MESSAGE] markContactMessagesAsRead start", {
-          messageId: message.id,
-          contactId: message.contactId,
-          status: message.status,
-        });
         api
           .markContactMessagesAsRead(message.contactId || 0)
-          .then(() => {
-            Logger.debug("[WPP_MESSAGE] markContactMessagesAsRead success", {
-              messageId: message.id,
-              contactId: message.contactId,
-            });
-          })
           .catch((error) => {
             Logger.error(`[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`, error);
           });

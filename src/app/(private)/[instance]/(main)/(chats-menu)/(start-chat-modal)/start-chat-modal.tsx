@@ -88,7 +88,6 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         }
       }
 
-      Logger.debug("StartChatModal: buscando contatos com params:", params)
       wppApi.current
         .getContactsWithCustomer(params)
         .then((response: any) => {

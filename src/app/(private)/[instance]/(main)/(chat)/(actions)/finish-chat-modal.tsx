@@ -27,12 +27,6 @@ export default function FinishChatModal() {
         alert("Por favor, selecione uma data de agendamento!");
         return;
       }
-
-      console.log("Finalizing chat with:", {
-        chatId: currentChat.id,
-        resultId,
-        scheduleDate,
-      });
       finishChat(currentChat.id, resultId, scheduleDate ? new Date(scheduleDate) : null);
       closeModal();
     }

@@ -22,7 +22,6 @@ export default function ChatStartedHandler(
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
     const res = await api.getChatById(chatId);
     const { messages, ...chat } = res;
-    Logger.debug("ChatStartedHandler: New chat started", { chat, messages });
 
     const isUnread = true;
 

@@ -68,6 +68,8 @@ export default function ChatProvider({ children }: ChatProviderProps) {
           contactId: currentChat.contact.id,
           chatId: currentChat.id,
           ...(state.file ? { file: state.file } : {}),
+          sendAsDocument: state.sendAsDocument,
+          sendAsAudio: state.sendAsAudio,
         });
       } catch (err) {
         toast.error("Falha inesperada ao enviar mensagem.\nRecarregue a página e tente novamente.");

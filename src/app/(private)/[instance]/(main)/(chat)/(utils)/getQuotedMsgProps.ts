@@ -5,15 +5,7 @@ import { QuotedMessageProps } from "../message";
 import getInternalMessageAuthor from "../../../../../../lib/utils/get-internal-message-author";
 
 
-function debug(
-  quotedMsg: InternalMessage | WppMessage | null,
-  message: string,
-  data?: any
-) {
-  if (quotedMsg?.id === 43691) {
-    console.log(`[getQuotedMsgProps] ${message}`, data);
-  }
-}
+
 
 export default function getQuotedMsgProps(
   quotedMsg: InternalMessage | WppMessage | null,
@@ -24,7 +16,6 @@ export default function getQuotedMsgProps(
 ): QuotedMessageProps | null {
 
   if (!quotedMsg) {
-    debug(quotedMsg, "quotedMsg é nulo, retornando null");
     return null;
   }
 

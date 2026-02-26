@@ -72,8 +72,8 @@ interface SendMessageOptions {
   quotedId?: number | null;
   chatId?: number | null;
   file?: File;
-  sendAsDocument?: boolean;
-  sendAsAudio?: boolean;
+  sendAsDocument: boolean;
+  sendAsAudio: boolean;
 }
 
 interface IWhatsappContext {
@@ -272,8 +272,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const finishChat = useCallback(
     (chatId: number, resultId: number, scheduleDate?: Date | null) => {
       api.current.setAuth(token || "");
-
-      console.log("scheduleDate", scheduleDate);
       api.current.finishChatById(chatId, resultId, scheduleDate);
       setMonitorChats((prev) => prev.filter((c) => c.id !== chatId));
     },
@@ -294,49 +292,23 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions) => {
       try {
-        Logger.debug("sendMessage called", {
-          to,
-          hasFile: !!data.file,
-          contactId: data.contactId,
-          chatId: data.chatId,
-          selectedChannelId: selectedChannel?.id,
-          instance,
-        });
-
+        Logger.debug("Attempting to send message", { to, data });
         if (!instance) {
-          Logger.debug("sendMessage aborted: instance not found");
           toast.error("Instância não encontrada. Recarregue a página e tente novamente.");
           return;
         }
         if (!selectedChannel) {
-          Logger.debug("sendMessage aborted: selected channel not found");
           toast.error("Nenhum canal selecionado para enviar a mensagem.");
           return;
         }
 
         if (!data.file) {
-          Logger.debug("sendMessage without file", {
-            channelId: selectedChannel.id,
-            to,
-          });
           await api.current.sendMessage(String(selectedChannel.id), to, data);
-          Logger.debug("sendMessage without file completed", {
-            channelId: selectedChannel.id,
-            to,
-          });
           return;
         }
 
-        Logger.debug("sendMessage with file: generating sha256", {
-          fileName: data.file.name,
-          fileType: data.file.type,
-          fileSize: data.file.size,
-        });
         const sha256 = await getFileSHA256(data.file);
-        Logger.debug("sendMessage file hash generated", { sha256 });
-
         const res = await filesService.getFileByHash(instance, sha256);
-        Logger.debug("sendMessage file lookup result", res);
 
         if (!!res.file) {
           const sendFileData = {
@@ -349,26 +321,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             sendAsChatOwner: !data.sendAsChatOwner,
             sendAsDocument: !data.sendAsDocument,
           };
-          Logger.debug("sendMessage using existing uploaded file", {
-            channelId: selectedChannel.id,
-            to,
-            fileId: res.file.id,
-          });
           await api.current.sendMessage(String(selectedChannel.id), to, sendFileData);
-          Logger.debug("sendMessage with existing file completed", {
-            channelId: selectedChannel.id,
-            to,
-            fileId: res.file.id,
-          });
 
           return;
         }
-
-        Logger.debug("sendMessage uploading new file", {
-          fileName: data.file.name,
-          fileType: data.file.type,
-          fileSize: data.file.size,
-        });
 
         const uploadFormData = new FormData();
         uploadFormData.append("instance", instance);
@@ -382,9 +338,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
 
         const uploadedFile = uploadResponse.data;
-        Logger.debug("sendMessage file uploaded", {
-          uploadedFileId: uploadedFile.id,
-        });
 
         await api.current.sendMessage(String(selectedChannel.id), to, {
           contactId: data.contactId,
@@ -396,18 +349,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           sendAsChatOwner: !data.sendAsChatOwner,
           sendAsDocument: !data.sendAsDocument,
         });
-        Logger.debug("sendMessage with uploaded file completed", {
-          channelId: selectedChannel.id,
-          to,
-          uploadedFileId: uploadedFile.id,
-        });
+
       } catch (err) {
-        Logger.debug("sendMessage failed", {
-          error: sanitizeErrorMessage(err),
-          to,
-          selectedChannelId: selectedChannel?.id,
-          instance,
-        });
         toast.error(sanitizeErrorMessage(err));
       }
     },
@@ -571,7 +514,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
       api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        Logger.debug("Fetched chats ", { chats });
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
@@ -603,7 +545,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
           const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-          Logger.debug("Initial fetch of chats ", { detailedChats });
           setChats(detailedChats);
           setMessages(chatsMessages);
         });
@@ -647,12 +588,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   useEffect(() => {
     if (socket) {
-      Logger.debug("[WPP_SOCKET] binding handlers", {
-        chatsCountInEffect: chats.length,
-        currentChatType: currentChat?.chatType,
-        currentChatContactId: currentChat?.chatType === "wpp" ? currentChat.contactId : null,
-      });
-
       socket.on(
         SocketEventType.WppContactMessagesRead,
         ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages),
@@ -704,32 +639,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         chats,
       );
       socket.on(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
-        Logger.debug("[WPP_SOCKET] WppMessage event", {
-          messageId: data.message.id,
-          contactId: data.message.contactId,
-          chatsCountInEffect: chats.length,
-          currentChatType: currentChatRef.current?.chatType,
-          currentChatContactId:
-            currentChatRef.current?.chatType === "wpp" ? currentChatRef.current.contactId : null,
-        });
-
         handleMessage(data);
-
-        Logger.debug("[WPP_SOCKET] WppMessage handled", {
-          messageId: data.message.id,
-          contactId: data.message.contactId,
-        });
-
         // Auto-update per-chat channel based on incoming message
         const { message } = data;
         if (message.clientId) {
           const matchedChat = chats.find((c) => c.contactId === message.contactId);
-          Logger.debug("[WPP_SOCKET] channel sync check", {
-            messageId: message.id,
-            contactId: message.contactId,
-            clientId: message.clientId,
-            matchedChatId: matchedChat?.id,
-          });
           if (matchedChat) {
             chatsChannels.current.set(matchedChat.id, message.clientId);
           }
@@ -754,11 +668,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
       );
       return () => {
-        Logger.debug("[WPP_SOCKET] unbinding handlers", {
-          chatsCountInEffect: chats.length,
-          currentChatType: currentChat?.chatType,
-          currentChatContactId: currentChat?.chatType === "wpp" ? currentChat.contactId : null,
-        });
         socket.off(SocketEventType.WppMessage);
         socket.off(SocketEventType.WppChatStarted);
         socket.off(SocketEventType.WppContactMessagesRead);

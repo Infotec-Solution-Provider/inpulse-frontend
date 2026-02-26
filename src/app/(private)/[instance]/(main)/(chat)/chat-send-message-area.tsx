@@ -79,7 +79,6 @@ export default function ChatSendMessageArea() {
       // Fall back to deriving from last message's clientId
       const channel = getDefaultSelectedChannel(currentChatMessages, channels);
       if (channel) {
-        Logger.debug(`[ChatSendMessageArea] Definindo canal selecionado padrão: ${channel.name}`);
         setSelectedChannel(channel);
         chatsChannels.current.set(currentChat.id, channel.id);
       }

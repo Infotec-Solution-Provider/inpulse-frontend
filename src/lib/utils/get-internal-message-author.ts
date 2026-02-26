@@ -14,20 +14,12 @@ function getInternalMessageAuthor(
   const hasGUs = messageFrom.endsWith("@g.us");
   const isPhoneGroup = messageFrom.includes("-") && !messageFrom.includes(" ");
 
-
-  if (shouldDebug) {
-    Logger.debug("Getting author for message", { messageFrom, startsWithUser, startsWithExternal });
-    Logger.debug("Phone name map", phoneNameMap);
-  }
-
   if (startsWithUser) {
-    shouldDebug && Logger.debug("Message is from a user, extracting user ID");
     const userId = +messageFrom.split(":")[1];
     const user = users.find((u) => u.CODIGO === userId);
     authorName = user ? user.NOME : null;
   }
   if (startsWithExternal && (hasGUs || isPhoneGroup)) {
-    shouldDebug && Logger.debug("Message is from an external contact, extracting phone and name");
     const parts = messageFrom.split(":");
     const raw = parts.length === 3 ? parts[2] : parts[1];
     const phone = raw.split("@")[0].replace(/\D/g, "");
@@ -35,7 +27,6 @@ function getInternalMessageAuthor(
 
     authorName = contactName;
   } else if (startsWithExternal) {
-    shouldDebug && Logger.debug("Message is from an external contact without special char, extracting phone and name");
     const splittedFrom = messageFrom.split(":");
     const phone = splittedFrom[1];
     const name = splittedFrom[2];
@@ -47,9 +38,7 @@ function getInternalMessageAuthor(
 
     authorName = contactName;
   }
-
-  shouldDebug && Logger.debug("Determined author name", { authorName });
-
+  
   return authorName || "Sistema";
 }
 
