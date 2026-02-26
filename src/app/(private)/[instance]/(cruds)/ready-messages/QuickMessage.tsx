@@ -94,6 +94,8 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
                 fileId: selectedMessage.fileId,
               }
             : {}),
+            sendAsAudio: false,
+            sendAsDocument: false
         });
       } else {
         await sendInternalMessage({
