@@ -241,7 +241,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const updateChatContact = useCallback(
-    (contactId: number, newName: string, newCustomer: Customer | null) => {
+    (contactId: number, newName: string, newCustomer: Customer | null, newPhone?: string) => {
       setChats((prev) =>
         prev.map((chat) => {
           if (chat.contact && chat.contactId === contactId) {
@@ -250,6 +250,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               contact: {
                 ...chat.contact,
                 name: newName,
+                ...(newPhone ? { phone: newPhone } : {}),
               },
               customer: newCustomer,
             };
