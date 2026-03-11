@@ -82,10 +82,13 @@ export default function ReceiveMessageHandler(
     setChats((prev) =>
       prev
         .map((chat) => {
-          if (chat.contactId === message.contactId && x) {
+          if (chat.contactId === message.contactId) {
+            const isCurrentWppChat =
+              x?.chatType === "wpp" && x.contactId === message.contactId;
+
             return {
               ...chat,
-              isUnread: x.chatType === "wpp" && x.contactId !== message.contactId,
+              isUnread: !isCurrentWppChat,
               lastMessage: message,
             };
           }
