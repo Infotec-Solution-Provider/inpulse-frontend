@@ -38,7 +38,7 @@ interface IUsersContext {
   loadUsers: () => void;
 }
 
-const USERS_URL = process.env["NEXT_PUBLIC_USERS_URL"] || "http://localhost:8001";
+const USERS_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
 export const UsersContext = createContext<IUsersContext>({} as IUsersContext);
 
 export const useUsersContext = () => {

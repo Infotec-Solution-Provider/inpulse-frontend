@@ -3,6 +3,7 @@ import { useAuthContext } from "@/app/auth-context";
 import AvatarInput from "@/lib/components/avatar-input";
 import filesService from "@/lib/services/files.service";
 import { CreateUserDTO, FileDirType, User, UserRole } from "@in.pulse-crm/sdk";
+import axios from "axios";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import Visibility from "@mui/icons-material/Visibility";
@@ -10,6 +11,8 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { Button, Dialog, IconButton, InputAdornment, MenuItem, TextField } from "@mui/material";
 import { useState } from "react";
 import { useUsersContext } from "../users-context";
+
+const FILES_BASE_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "http://localhost:8003";
 
 interface UserModalProps {
   user?: User;
@@ -47,19 +50,18 @@ export default function UserModal({ user }: UserModalProps) {
       let AVATAR_ID: number | null = user?.AVATAR_ID ?? null;
 
       if (avatar) {
-        const arrayBuffer = await avatar.arrayBuffer();
-        const buffer =
-          typeof Buffer !== "undefined" ? Buffer.from(arrayBuffer) : new Uint8Array(arrayBuffer);
+        const uploadFormData = new FormData();
+        uploadFormData.append("instance", instance);
+        uploadFormData.append("dirType", FileDirType.PUBLIC);
+        uploadFormData.append("file", avatar, avatar.name);
 
-        const uploaded = await filesService.uploadFile({
-          buffer: buffer as any,
-          fileName: avatar.name,
-          dirType: FileDirType.PUBLIC,
-          instance: instance,
-          mimeType: avatar.type,
+        const { data: uploadResponse } = await axios.post(`${FILES_BASE_URL}/api/files`, uploadFormData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         });
 
-        AVATAR_ID = uploaded.id;
+        AVATAR_ID = uploadResponse.data.id;
       }
 
       if (isEdit) {
