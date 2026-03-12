@@ -26,9 +26,7 @@ interface IInternalGroupsProviderProps {
 }
 
 export interface IWppGroup {
-  id: {
-    user: string;
-  };
+  id: string;
   name: string;
 }
 

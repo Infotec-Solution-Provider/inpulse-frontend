@@ -15,7 +15,7 @@ import { InternalChatContext } from "../../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
 import ImageIcon from "@mui/icons-material/Image";
-import { useInternalGroupsContext } from "../../internal-groups-context";
+import { IWppGroup, useInternalGroupsContext } from "../../internal-groups-context";
 
 type UnifiedContact = {
   name: string;
@@ -43,7 +43,7 @@ export default function CreateInternalGroupModal() {
   const [name, setName] = useState("");
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<{ id: { user: string }; name: string } | null>(
+  const [selectedGroup, setSelectedGroup] = useState<IWppGroup | null>(
     null,
   );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -82,7 +82,7 @@ export default function CreateInternalGroupModal() {
     await createInternalGroup({
       name,
       participants: participants.map((p) => p.userId ?? 0),
-      groupId: selectedGroup?.id.user || null,
+      groupId: selectedGroup?.id || null,
       groupImage: groupImageRef.current,
     });
 
@@ -199,7 +199,7 @@ export default function CreateInternalGroupModal() {
               <Autocomplete
                 options={availableWppGroups}
                 getOptionLabel={(option) => option.name}
-                getOptionKey={(option) => option.id.user}
+                getOptionKey={(option) => option.id}
                 renderInput={(params) => (
                   <TextField
                     {...params}

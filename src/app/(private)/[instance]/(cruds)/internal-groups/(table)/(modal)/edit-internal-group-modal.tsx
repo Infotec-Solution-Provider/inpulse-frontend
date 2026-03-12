@@ -63,9 +63,14 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
 
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<{ id: { user: string }; name: string } | null>(
-    availableWppGroups.find((g) => g.id.user === group.wppGroupId) || null,
-  );
+  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
+
+  useEffect(() => {
+    if (availableWppGroups.length > 0 && group.wppGroupId) {
+      const match = availableWppGroups.find((g) => g.id === group.wppGroupId) || null;
+      setSelectedGroup(match);
+    }
+  }, [availableWppGroups, group.wppGroupId]);
 
   const mergedContacts: UnifiedContact[] = useMemo(() => {
     const map = new Map<string, UnifiedContact>();
@@ -134,7 +139,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
     await updateInternalGroup(group.id, {
       name,
       participants: participantIds,
-      wppGroupId: selectedGroup?.id.user || null,
+      wppGroupId: selectedGroup?.id || null,
     });
 
     if (groupImageRef.current) {
@@ -262,7 +267,8 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
               <Autocomplete
                 options={availableWppGroups}
                 getOptionLabel={(option) => option.name}
-                getOptionKey={option => option.id.user}
+                getOptionKey={option => option.id}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
                 renderInput={(params) => (
                   <TextField
                     {...params}
