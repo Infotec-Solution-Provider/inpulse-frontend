@@ -253,7 +253,7 @@ export default function StartChatModalItem({
                   }}
                 />
               </Tooltip>
-              {shouldShowViewOnly && (
+              {shouldShowViewOnly && user?.NIVEL === "ADMIN" && (
                 <Tooltip title="Visualizar conversa" arrow>
                   <IconButton
                     onClick={handleClickViewOnly}
