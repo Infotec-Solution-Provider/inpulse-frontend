@@ -17,10 +17,11 @@ export default function Chat({
   startDate,
   onClose,
 }: ChatContactInfoProps & { onClose?: () => void }) {
-  const { state, dispatch } = useContext(ChatContext);
+  const { state, dispatch, isReadOnlyMode } = useContext(ChatContext);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (isReadOnlyMode) return;
     const file = e.dataTransfer.files?.[0];
     if (file) {
       dispatch({ type: "attach-file", file });
@@ -32,6 +33,7 @@ export default function Chat({
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (isReadOnlyMode) return;
     const items = e.clipboardData.items;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -59,6 +61,11 @@ export default function Chat({
             startDate={startDate}
             onClose={onClose}
           />
+          {isReadOnlyMode && (
+            <div className="border-y border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300">
+              Modo somente leitura: esta conversa foi aberta apenas para visualizacao.
+            </div>
+          )}
         </div>
       </div>
 
@@ -69,9 +76,11 @@ export default function Chat({
         onPaste={handlePaste}
       >
         <ChatMessagesList />
-        {state?.file && !state.sendAsAudio && <ChatAttachmentPreview file={state.file} />}
+        {!isReadOnlyMode && state?.file && !state.sendAsAudio && (
+          <ChatAttachmentPreview file={state.file} />
+        )}
       </div>
-      {(!state?.file || state.sendAsAudio) && (
+      {!isReadOnlyMode && (!state?.file || state.sendAsAudio) && (
         <>
           <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
             <ChatSendMessageArea />

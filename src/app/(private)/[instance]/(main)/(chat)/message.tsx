@@ -43,6 +43,7 @@ export interface MessageProps {
   onQuote?: () => void;
   isForwarded?: boolean;
   isForwardMode?: boolean;
+  isReadOnly?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
   channelId?: number | null;
@@ -92,6 +93,7 @@ export default function Message({
   isEdited = false,
   isForwarded = false,
   isForwardMode = false,
+  isReadOnly = false,
   isSelected = false,
   channelId,
   onSelect,
@@ -169,7 +171,7 @@ export default function Message({
       onClick={isForwardMode ? () => onSelect?.(id) : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
-        if (!isForwardMode) handleMenuClick(e);
+        if (!isForwardMode && !isReadOnly) handleMenuClick(e);
       }}
     >
       {isForwardMode && style !== "system" && (
@@ -267,7 +269,7 @@ export default function Message({
         </div>
       </div>
 
-      {style !== "system" && !isForwardMode && (
+      {style !== "system" && !isForwardMode && !isReadOnly && (
         <>
           <IconButton
             className="invisible group-hover:visible"

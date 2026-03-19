@@ -29,6 +29,7 @@ interface MessageProps {
   mentionNameMap?: Map<string, string>;
   isForwarded?: boolean;
   isForwardMode?: boolean;
+  isReadOnly?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
   onSelect?: (id: number | string) => void;
@@ -56,6 +57,7 @@ export default function GroupMessage({
   isForwarded = false,
   mentionNameMap,
   isForwardMode,
+  isReadOnly = false,
   isSelected,
   isEdited,
   onSelect,
@@ -123,7 +125,7 @@ export default function GroupMessage({
       onClick={isForwardMode ? () => onSelect?.(id) : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
-        if (!isForwardMode) handleMenuClick(e);
+        if (!isForwardMode && !isReadOnly) handleMenuClick(e);
       }}
       style={styleWrapper}
     >
@@ -200,7 +202,7 @@ export default function GroupMessage({
         </div>
       </div>
 
-      {style !== "system" && !isForwardMode && (
+      {style !== "system" && !isForwardMode && !isReadOnly && (
         <>
           <IconButton
             className="invisible group-hover:visible"

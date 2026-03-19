@@ -20,6 +20,7 @@ interface IChatContext {
   state: SendMessageDataState;
   dispatch: React.Dispatch<ChangeMessageDataAction>;
   sendMessage: () => void;
+  isReadOnlyMode: boolean;
   getMessageById: (
     chatId: number,
     id: number,
@@ -54,6 +55,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     currentChat,
     messages: whatsappMsgs,
     editMessage,
+    isReadOnlyMode,
   } = useContext(WhatsappContext);
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
   const [state, dispatch] = useReducer(ChatReducer, initialState);
@@ -61,6 +63,11 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const [editingMessage, setEditingMessage] = useState<WppMessage | InternalMessage | null>(null);
 
   const handleSendMessage = () => {
+    if (isReadOnlyMode) {
+      toast.info("Esta conversa esta em modo somente leitura.");
+      return;
+    }
+
     if (currentChat && currentChat.chatType === "wpp" && currentChat.contact && !editingMessage) {
       try {
         sendMessage(currentChat.contact.phone, {
@@ -124,10 +131,11 @@ export default function ChatProvider({ children }: ChatProviderProps) {
 
   const handleQuoteMessage = useCallback(
     (message: WppMessage | InternalMessage) => {
+      if (isReadOnlyMode) return;
       setQuotedMessage(message);
       dispatch({ type: "quote-message", id: message.id });
     },
-    [dispatch],
+    [dispatch, isReadOnlyMode],
   );
 
   const handleQuoteMessageRemove = useCallback(() => {
@@ -137,10 +145,11 @@ export default function ChatProvider({ children }: ChatProviderProps) {
 
   const handleEditMessage = useCallback(
     (message: WppMessage | InternalMessage) => {
+      if (isReadOnlyMode) return;
       setQuotedMessage(null);
       setEditingMessage(message);
     },
-    [editingMessage],
+    [isReadOnlyMode],
   );
 
   const handleStopEditMessage = useCallback(() => {
@@ -161,6 +170,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
         state,
         quotedMessage,
         dispatch,
+        isReadOnlyMode,
         sendMessage: handleSendMessage,
         getMessageById,
         handleQuoteMessage,

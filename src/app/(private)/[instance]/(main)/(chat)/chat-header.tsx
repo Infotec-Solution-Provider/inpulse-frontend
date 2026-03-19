@@ -8,6 +8,7 @@ import { Avatar, IconButton, Tooltip } from "@mui/material";
 import { useContext } from "react";
 import { AppContext } from "../../app-context";
 import { useWhatsappContext } from "../../whatsapp-context";
+import { ChatContext } from "./chat-context";
 import EditContactModal from "./(actions)/edit-contact-modal";
 import FinishChatModal from "./(actions)/finish-chat-modal";
 import FinishInternalChatModal from "./(actions)/finish-internal-chat-modal";
@@ -48,6 +49,8 @@ export default function ChatHeader({
 }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
   const { currentChat } = useWhatsappContext();
+  const { isReadOnlyMode } = useContext(ChatContext);
+  const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
 
   const openFinishChatModal = () => {
     openModal(<FinishChatModal />);
@@ -105,7 +108,7 @@ export default function ChatHeader({
         )}
       </div>
       <div className="flex items-center">
-        {currentChat?.chatType === "wpp" && currentChat?.isFinished === false && (
+        {currentChat?.chatType === "wpp" && canInteract && (
           <>
             <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
               <IconButton onClick={openEditContactModal}>
@@ -130,7 +133,7 @@ export default function ChatHeader({
           </>
         )}
         {currentChat?.chatType === "internal" &&
-          currentChat?.isFinished === false &&
+          canInteract &&
           !currentChat?.isGroup && (
           <>
             <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>

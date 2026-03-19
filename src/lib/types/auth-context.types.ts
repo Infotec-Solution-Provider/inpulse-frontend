@@ -12,4 +12,5 @@ export interface AuthContextProps {
     signOut: () => void;
     token: string | null;
     instance: string;
+    pathname: string;
 }

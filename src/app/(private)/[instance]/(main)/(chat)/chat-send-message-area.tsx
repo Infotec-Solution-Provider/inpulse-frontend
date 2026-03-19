@@ -52,6 +52,7 @@ export default function ChatSendMessageArea() {
     handleQuoteMessageRemove,
     handleStopEditMessage,
     editingMessage,
+    isReadOnlyMode,
   } = useContext(ChatContext);
 
   const { users } = useInternalChatContext();
@@ -60,7 +61,7 @@ export default function ChatSendMessageArea() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const isDisabled = !currentChat;
+  const isDisabled = !currentChat || isReadOnlyMode;
 
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
@@ -112,6 +113,7 @@ export default function ChatSendMessageArea() {
   );
 
   const openAttachFile = () => {
+    if (isDisabled) return;
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -128,17 +130,18 @@ export default function ChatSendMessageArea() {
         const item = items[i];
         if (item.kind === "file") {
           const file = item.getAsFile();
-          if (file) dispatch({ type: "attach-file", file });
+          if (file && !isDisabled) dispatch({ type: "attach-file", file });
         }
       }
     };
 
     textarea.addEventListener("paste", handlePaste);
     return () => textarea.removeEventListener("paste", handlePaste);
-  }, []);
+  }, [isDisabled]);
 
   const openQuickMessages = () => setQuickMessageOpen(true);
   const openQuickTemplate = () => {
+    if (isDisabled) return;
     if (currentChat && currentChat.chatType === "wpp") {
       openModal(
         <SendTemplateModal
@@ -160,6 +163,7 @@ export default function ChatSendMessageArea() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isDisabled) return;
     const file = e.target.files?.[0];
     if (file) dispatch({ type: "attach-file", file });
   };
@@ -169,11 +173,19 @@ export default function ChatSendMessageArea() {
     [dispatch],
   );
 
-  const handleAudioRecord = (file: File) => dispatch({ type: "set-audio", file });
+  const handleAudioRecord = (file: File) => {
+    if (isDisabled) return;
+    dispatch({ type: "set-audio", file });
+  };
 
-  const toggleEmojiPicker = () => dispatch({ type: "toggle-emoji-menu" });
+  const toggleEmojiPicker = () => {
+    if (isDisabled) return;
+    dispatch({ type: "toggle-emoji-menu" });
+  };
 
   function sendMessages() {
+    if (isDisabled) return;
+
     const hasFile = !!state.file;
     const hasText = !!state.text?.trim();
 
@@ -206,7 +218,7 @@ export default function ChatSendMessageArea() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isDisabled, state.text, state.file]);
 
-  const refMessage = quotedMessage || editingMessage || null;
+  const refMessage = isReadOnlyMode ? null : quotedMessage || editingMessage || null;
 
   useEffect(() => {
     if (editingMessage) {
@@ -227,6 +239,7 @@ export default function ChatSendMessageArea() {
             onClick={openQuickTemplate}
             color="success"
             title="Enviar template"
+            disabled={isDisabled}
           >
             <TryIcon />
           </IconButton>
@@ -236,10 +249,17 @@ export default function ChatSendMessageArea() {
           onClick={openQuickMessages}
           color="info"
           title="Enviar mensagem rápida"
+          disabled={isDisabled}
         >
           <ChatBubbleIcon />
         </IconButton>
-        <IconButton size="small" onClick={openAttachFile} color="secondary" title="Anexar arquivo">
+        <IconButton
+          size="small"
+          onClick={openAttachFile}
+          color="secondary"
+          title="Anexar arquivo"
+          disabled={isDisabled}
+        >
           <AttachFileIcon />
         </IconButton>
         <div className="relative hidden md:block">
@@ -247,6 +267,7 @@ export default function ChatSendMessageArea() {
             size="small"
             className="bg-white/20 dark:text-indigo-400"
             onClick={toggleEmojiPicker}
+            disabled={isDisabled}
           >
             <EmojiEmotionsOutlinedIcon />
           </IconButton>
@@ -319,6 +340,7 @@ export default function ChatSendMessageArea() {
               placeholder="Mensagem"
               value={textWithNames}
               onChange={(e) => handleTextChange(e.target.value)}
+              disabled={isDisabled}
               inputRef={(ref) => {
                 textareaRef.current = ref;
               }}
@@ -383,12 +405,14 @@ export default function ChatSendMessageArea() {
 
       <div
         className="aria-hidden:hidden"
-        aria-hidden={textWithNames.length > 0 || state.sendAsAudio || !!editingMessage}
+        aria-hidden={
+          isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage
+        }
       >
         <AudioRecorder onAudioRecorded={handleAudioRecord} />
       </div>
 
-      {quickMessageOpen && (
+      {quickMessageOpen && !isDisabled && (
         <Modal open onClose={() => setQuickMessageOpen(false)}>
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             {currentChat && (
@@ -397,7 +421,7 @@ export default function ChatSendMessageArea() {
           </div>
         </Modal>
       )}
-      {quickTemplateOpen && (
+      {quickTemplateOpen && !isDisabled && (
         <Modal open onClose={() => setQuickTemplateOpen(false)}>
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" />
         </Modal>

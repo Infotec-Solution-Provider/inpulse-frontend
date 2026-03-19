@@ -17,6 +17,7 @@ interface RenderWhatsappChatMessagesProps {
   isSelectionMode: boolean;
   toggleSelectMessage: (id: string | number) => void;
   openManualForward: (msg: WppMessage) => void;
+  isReadOnlyMode: boolean;
 }
 
 function getWppMessageStyle(msg: WppMessage) {
@@ -37,6 +38,7 @@ export default function RenderWhatsappChatMessages({
   isSelectionMode,
   toggleSelectMessage,
   openManualForward,
+  isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
   const { currentChatMessages } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
@@ -116,17 +118,20 @@ export default function RenderWhatsappChatMessages({
               fileType={m.fileType}
               fileSize={m.fileSize}
               quotedMessage={quotedMsgProps}
-              onQuote={() => handleQuoteMessage(m)}
+              onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               isSelected={selectedMessageIds.has(m.id)}
-              onSelect={toggleSelectMessage}
-              onForward={() => openManualForward(m)}
+              onSelect={isReadOnlyMode ? undefined : toggleSelectMessage}
+              onForward={isReadOnlyMode ? undefined : () => openManualForward(m)}
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
               isForwarded={m.isForwarded}
               isForwardMode={isSelectionMode}
               isEdited={!!m.isEdited}
               channelId={m.clientId}
+              isReadOnly={isReadOnlyMode}
               onEdit={
-                m.from.startsWith("me:") && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
+                !isReadOnlyMode &&
+                m.from.startsWith("me:") &&
+                !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
                   ? () => handleEditMessage(m)
                   : undefined
               }

@@ -11,10 +11,12 @@ import ForwardMessagesModal, {
 import RenderInternalChatMessages from "./render-internal-chat-messages";
 import RenderInternalGroupMessages from "./render-internal-group-messages";
 import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
+import { ChatContext } from "./chat-context";
 
 export default function ChatMessagesList() {
   const { currentChat, currentChatMessages, chats, forwardMessages } = useContext(WhatsappContext);
   const { users, internalChats, currentInternalChatMessages } = useContext(InternalChatContext);
+  const { isReadOnlyMode } = useContext(ChatContext);
 
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string | number>>(new Set());
   const [manualForwardMessages, setManualForwardMessages] = useState<ForwardableMessage[] | null>(
@@ -25,7 +27,7 @@ export default function ChatMessagesList() {
   const isWhatsappChat = currentChat?.chatType === "wpp";
   const isInternalChat = currentChat?.chatType === "internal" && !currentChat.isGroup;
   const isInternalGroup = currentChat?.chatType === "internal" && currentChat.isGroup;
-  const isSelectionMode = selectedMessageIds.size > 0;
+  const isSelectionMode = !isReadOnlyMode && selectedMessageIds.size > 0;
 
   const selectedMessages = useMemo((): ForwardableMessage[] => {
     const activeMessages = isWhatsappChat ? currentChatMessages : currentInternalChatMessages;
@@ -65,14 +67,16 @@ export default function ChatMessagesList() {
   }, [chats, users, internalChats]);
 
   const toggleSelectMessage = useCallback((id: string | number) => {
+    if (isReadOnlyMode) return;
     setSelectedMessageIds((prev) => {
       const newSet = new Set(prev);
       newSet.has(id) ? newSet.delete(id) : newSet.add(id);
       return newSet;
     });
-  }, []);
+  }, [isReadOnlyMode]);
   const clearSelection = () => setSelectedMessageIds(new Set());
   const openManualForward = (msg: ForwardableMessage) => {
+    if (isReadOnlyMode) return;
     setManualForwardMessages([msg]);
     setForwardModalOpen(true);
   };
@@ -84,6 +88,8 @@ export default function ChatMessagesList() {
   };
 
   const handleConfirmForward = async (selectedTargetIds: Set<string>) => {
+    if (isReadOnlyMode) return;
+
     const msgs = messagesToForward;
     if (msgs.length === 0 || selectedTargetIds.size === 0) return;
 
@@ -143,6 +149,7 @@ export default function ChatMessagesList() {
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
             openManualForward={openManualForward}
+            isReadOnlyMode={isReadOnlyMode}
           />
         )}
         {isInternalChat && (
@@ -151,6 +158,7 @@ export default function ChatMessagesList() {
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
             openManualForward={openManualForward}
+            isReadOnlyMode={isReadOnlyMode}
           />
         )}
         {isInternalGroup && (
@@ -159,6 +167,7 @@ export default function ChatMessagesList() {
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
             openManualForward={openManualForward}
+            isReadOnlyMode={isReadOnlyMode}
           />
         )}
       </div>

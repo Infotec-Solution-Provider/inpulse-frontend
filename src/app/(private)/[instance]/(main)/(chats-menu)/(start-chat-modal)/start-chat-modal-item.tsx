@@ -1,8 +1,8 @@
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppChatPriority, WppChatType, WppContact, WppMessage } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import { IconButton, Avatar, Tooltip, Chip } from "@mui/material";
-import { useContext } from "react";
-import { WhatsappContext } from "../../../whatsapp-context";
+import { useContext, useMemo } from "react";
+import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
 import { useAppContext } from "../../../app-context";
 import SendTemplateModal from "@/lib/components/send-template-modal";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
@@ -11,6 +11,10 @@ import PersonIcon from "@mui/icons-material/Person";
 import BusinessIcon from "@mui/icons-material/Business";
 import PhoneIcon from "@mui/icons-material/Phone";
 import BadgeIcon from "@mui/icons-material/Badge";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { toast } from "react-toastify";
+import { useUsersContext } from "../../../(cruds)/users/users-context";
+import { useAuthContext } from "../../../../../auth-context";
 
 interface StartChatModalItemProps {
   contact: WppContact;
@@ -25,16 +29,35 @@ export default function StartChatModalItem({
   chatingWith = null,
   onSelect,
 }: StartChatModalItemProps) {
-  const { startChatByContactId, parameters } = useContext(WhatsappContext);
+  const {
+    startChatByContactId,
+    parameters,
+    chats,
+    monitorChats,
+    openChat,
+    loadChatMessages,
+    prepareReadOnlyOpen,
+    wppApi,
+  } = useContext(WhatsappContext);
   const { openModal, closeModal } = useAppContext();
+  const { pathname, instance, user } = useAuthContext()
+
+  const shouldShowViewOnly = useMemo(() => {
+    if (instance === "karsten") return true;
+    if (user?.LOGIN === "infotec") return true;
+    return false;
+  }, [instance, user]);
 
   const handleClickStart = () => {
+    prepareReadOnlyOpen(false);
+
     if (parameters["is_official"] === "true") {
       setTimeout(() => {
         openModal(
           <SendTemplateModal
             onClose={closeModal}
             onSendTemplate={(data) => {
+              prepareReadOnlyOpen(false);
               startChatByContactId(contact.id, data);
               closeModal();
             }}
@@ -46,6 +69,79 @@ export default function StartChatModalItem({
     } else {
       startChatByContactId(contact.id);
       onSelect();
+    }
+  };
+
+  const handleClickViewOnly = async () => {
+    const normalizedPhone = contact.phone?.replace(/\D/g, "") || "";
+    const allChats = [...chats, ...monitorChats];
+    const targetChat =
+      allChats.find((chat) => chat.contactId === contact.id) ||
+      allChats.find((chat) => {
+        if (!normalizedPhone || !chat.contact?.phone) return false;
+        return chat.contact.phone.replace(/\D/g, "") === normalizedPhone;
+      });
+
+    try {
+      prepareReadOnlyOpen(true);
+      if (targetChat) {
+        const loadedMessages = await loadChatMessages(targetChat);
+        openChat(targetChat, loadedMessages);
+        onSelect();
+        return;
+      }
+
+      const response = await wppApi.current.ax.get("/api/whatsapp/messages", {
+        params: {
+          contactId: contact.id,
+        },
+      });
+
+      const loadedMessages = (response.data?.data || []) as WppMessage[];
+
+      if (!loadedMessages.length) {
+        prepareReadOnlyOpen(false);
+        toast.info("Nao existe historico de conversa para este contato.");
+        return;
+      }
+
+      const sortedMessages = [...loadedMessages].sort((a, b) => {
+        const first = new Date(a.sentAt || a.timestamp || 0).getTime();
+        const second = new Date(b.sentAt || b.timestamp || 0).getTime();
+        return first - second;
+      });
+
+      const readOnlyChat: DetailedChat = {
+        id: -contact.id,
+        instance: contact.instance,
+        contactId: contact.id,
+        userId: undefined,
+        walletId: undefined,
+        botId: undefined,
+        resultId: undefined,
+        sectorId: undefined,
+        type: WppChatType.ACTIVE,
+        priority: WppChatPriority.NORMAL,
+        avatarUrl: contact.avatarUrl,
+        isFinished: true,
+        startedAt: new Date(sortedMessages[0]?.sentAt || Date.now()),
+        finishedAt: null,
+        finishedBy: null,
+        isSchedule: false,
+        contact,
+        customer,
+        schedule: null,
+        isUnread: false,
+        lastMessage: sortedMessages[sortedMessages.length - 1] || null,
+        chatType: "wpp",
+      };
+
+      openChat(readOnlyChat, sortedMessages);
+      onSelect();
+    } catch (error) {
+      prepareReadOnlyOpen(false);
+      toast.error("Nao foi possivel abrir a conversa para visualizacao.");
+      console.error("Erro ao abrir conversa em modo somente leitura", error);
     }
   };
 
@@ -143,36 +239,73 @@ export default function StartChatModalItem({
         </div>
 
         {/* Ação */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {chatingWith ? (
-            <Tooltip title={`Em conversa com ${chatingWith}`} arrow>
-              <Chip
-                label={chatingWith}
-                color="error"
-                size="small"
-                sx={{
-                  fontWeight: 600,
-                  animation: "pulse-slow 2s ease-in-out infinite",
-                }}
-              />
-            </Tooltip>
+            <>
+              <Tooltip title={`Em conversa com ${chatingWith}`} arrow>
+                <Chip
+                  label={chatingWith}
+                  color="error"
+                  size="small"
+                  sx={{
+                    fontWeight: 600,
+                    animation: "pulse-slow 2s ease-in-out infinite",
+                  }}
+                />
+              </Tooltip>
+              {shouldShowViewOnly && (
+                <Tooltip title="Visualizar conversa" arrow>
+                  <IconButton
+                    onClick={handleClickViewOnly}
+                    sx={{
+                      background: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)",
+                      color: "white",
+                      transition: "all 0.3s",
+                      "&:hover": {
+                        background: "linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)",
+                        transform: "scale(1.08)",
+                      },
+                    }}
+                  >
+                    <VisibilityIcon />
+                  </IconButton>
+                </Tooltip>)}
+            </>
           ) : (
-            <Tooltip title="Iniciar conversa" arrow>
-              <IconButton
-                onClick={handleClickStart}
-                sx={{
-                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
-                  transition: "all 0.3s",
-                  "&:hover": {
-                    background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",
-                    transform: "scale(1.1) rotate(5deg)",
-                  },
-                }}
-              >
-                <ChatBubbleIcon />
-              </IconButton>
-            </Tooltip>
+            <>
+              {shouldShowViewOnly && (<Tooltip title="Visualizar conversa" arrow>
+                <IconButton
+                  onClick={handleClickViewOnly}
+                  sx={{
+                    background: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)",
+                    color: "white",
+                    transition: "all 0.3s",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%)",
+                      transform: "scale(1.08)",
+                    },
+                  }}
+                >
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>)}
+              <Tooltip title="Iniciar conversa" arrow>
+                <IconButton
+                  onClick={handleClickStart}
+                  sx={{
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                    transition: "all 0.3s",
+                    "&:hover": {
+                      background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",
+                      transform: "scale(1.1) rotate(5deg)",
+                    },
+                  }}
+                >
+                  <ChatBubbleIcon />
+                </IconButton>
+              </Tooltip>
+            </>
           )}
         </div>
       </div>

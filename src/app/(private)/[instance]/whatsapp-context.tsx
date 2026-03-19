@@ -117,6 +117,8 @@ interface IWhatsappContext {
   loaded: boolean;
   selectedChannel: WppClient | null;
   setSelectedChannel: Dispatch<SetStateAction<WppClient | null>>;
+  isReadOnlyMode: boolean;
+  prepareReadOnlyOpen: (enabled: boolean) => void;
 }
 
 interface WhatsappProviderProps {
@@ -176,8 +178,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
+  const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
+  const pendingReadOnlyOpenRef = useRef(false);
 
   const [loaded, setLoaded] = useState(false);
+
+  const prepareReadOnlyOpen = useCallback((enabled: boolean) => {
+    pendingReadOnlyOpenRef.current = enabled;
+  }, []);
 
   function setUniqueCurrentChatMessages(update: SetStateAction<WppMessage[]>) {
     setCurrentChatMessages((prev) => {
@@ -529,12 +537,24 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const startChatByContactId = useCallback(
     async (contactId: number, template?: SendTemplateData) => {
       api.current.setAuth(token || "");
+      pendingReadOnlyOpenRef.current = false;
       // Marca que o usuário iniciou este chat manualmente
       userInitiatedChatContactId.current = contactId;
       return api.current.startChatByContactId(contactId, template);
     },
     [api, token],
   );
+
+  useEffect(() => {
+    if (!currentChat) {
+      setIsReadOnlyMode(false);
+      pendingReadOnlyOpenRef.current = false;
+      return;
+    }
+
+    setIsReadOnlyMode(pendingReadOnlyOpenRef.current);
+    pendingReadOnlyOpenRef.current = false;
+  }, [currentChat]);
 
   useEffect(() => {
     if (token?.length && api.current && user) {
@@ -719,6 +739,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         loaded,
         selectedChannel,
         setSelectedChannel,
+        isReadOnlyMode,
+        prepareReadOnlyOpen,
       }}
     >
       {children}

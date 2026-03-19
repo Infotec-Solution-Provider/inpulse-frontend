@@ -23,6 +23,7 @@ interface RenderInternalGroupMessagesProps {
   isSelectionMode: boolean;
   toggleSelectMessage: (id: string | number) => void;
   openManualForward: (msg: InternalMessage) => void;
+  isReadOnlyMode: boolean;
 }
 
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
@@ -32,6 +33,7 @@ export default function RenderInternalGroupMessages({
   isSelectionMode,
   toggleSelectMessage,
   openManualForward,
+  isReadOnlyMode,
 }: RenderInternalGroupMessagesProps) {
   const { currentInternalChatMessages, users, phoneNameMap } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
@@ -107,16 +109,17 @@ export default function RenderInternalGroupMessages({
               fileSize={m.fileSize}
               quotedMessage={quotedMsg}
               isForwarded={m.isForwarded}
-              onQuote={() => handleQuoteMessage(m)}
+              onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
               isForwardMode={isSelectionMode}
               isSelected={selectedMessageIds.has(m.id)}
               isEdited={m.isEdited}
-              onSelect={() => toggleSelectMessage(m.id)}
-              onForward={() => openManualForward(m)}
+              onSelect={isReadOnlyMode ? undefined : () => toggleSelectMessage(m.id)}
+              onForward={isReadOnlyMode ? undefined : () => openManualForward(m)}
+              isReadOnly={isReadOnlyMode}
               mentionNameMap={phoneNameMap}
               onEdit={
-                isMine && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
+                !isReadOnlyMode && isMine && !CANT_EDIT_MESSAGE_TYPES.includes(m.type)
                   ? () => handleEditMessage(m)
                   : undefined
               }
