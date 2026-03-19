@@ -102,6 +102,7 @@ export default function AuthProvider({ children }: ProviderProps) {
         signIn,
         signOut,
         instance: instanceRef.current,
+        pathname: pathname,
       }}
     >
       {children}
