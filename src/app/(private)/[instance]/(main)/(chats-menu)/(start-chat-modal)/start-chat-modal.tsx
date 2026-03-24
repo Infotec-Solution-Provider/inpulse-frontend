@@ -1,4 +1,4 @@
-import { IconButton, MenuItem, TextField, CircularProgress, Fade, Chip } from "@mui/material";
+import { IconButton, MenuItem, TextField, CircularProgress, Fade, Chip, Skeleton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
@@ -134,7 +134,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="mx-3 my-4 flex max-h-[90vh] w-full max-w-[48rem] flex-col overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto">
+    <div className="mx-3 my-4 flex h-[85vh] min-h-[38rem] max-h-[90vh] w-[60rem] flex-col overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto">
       {/* Header com gradiente */}
       <header className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white shadow-lg">
         <div className="flex items-center gap-3">
@@ -159,7 +159,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
       </header>
 
       {/* Conteúdo principal */}
-      <div className="flex flex-1 flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
         {/* Área de busca melhorada */}
         <div className="mb-6 space-y-4">
           <div className="flex items-center gap-3">
@@ -318,15 +318,29 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Lista de contatos com scroll suave */}
-        <div className="mb-6 flex flex-1 flex-col overflow-hidden rounded-xl bg-white p-2 shadow-inner dark:bg-slate-800/50">
-          <ul className="scrollbar-whatsapp flex flex-1 flex-col gap-2 overflow-y-auto px-2 pb-24">
+        <div className="mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-2 shadow-inner dark:bg-slate-800/50">
+          <ul className="scrollbar-whatsapp flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-24">
             {loading ? (
-              <li className="flex min-h-[14rem] flex-col items-center justify-center gap-4 py-8 text-gray-500 dark:text-gray-400">
-                <CircularProgress size={48} sx={{ color: "indigo" }} />
-                <div className="text-center">
-                  <p className="text-lg font-medium">Carregando contatos...</p>
-                  <p className="text-sm">Aguarde um momento</p>
-                </div>
+              <li className="space-y-3 px-1 py-2" aria-label="Carregando contatos">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={`skeleton-contact-${index}`}
+                    className="flex items-center gap-4 rounded-xl border border-slate-200/70 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                  >
+                    <Skeleton variant="circular" width={56} height={56} />
+                    <div className="grid flex-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Skeleton variant="text" width="70%" height={24} />
+                        <Skeleton variant="text" width="55%" height={20} />
+                      </div>
+                      <div className="space-y-2 border-l-2 border-slate-200 pl-4 dark:border-slate-700">
+                        <Skeleton variant="text" width="75%" height={22} />
+                        <Skeleton variant="text" width="60%" height={20} />
+                      </div>
+                    </div>
+                    <Skeleton variant="circular" width={40} height={40} />
+                  </div>
+                ))}
               </li>
             ) : (
               <>
