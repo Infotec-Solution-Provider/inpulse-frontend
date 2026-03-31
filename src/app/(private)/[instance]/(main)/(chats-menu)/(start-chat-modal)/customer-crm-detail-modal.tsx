@@ -3,10 +3,13 @@
 import customersService from "@/lib/services/customers.service";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { Customer } from "@in.pulse-crm/sdk";
+import AddIcon from "@mui/icons-material/Add";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import CloseIcon from "@mui/icons-material/Close";
 import ContactsIcon from "@mui/icons-material/Contacts";
+import DeleteIcon from "@mui/icons-material/Delete";
 import DoneIcon from "@mui/icons-material/Done";
+import EditIcon from "@mui/icons-material/Edit";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import HomeIcon from "@mui/icons-material/Home";
 import NoteAltIcon from "@mui/icons-material/NoteAlt";
@@ -15,6 +18,7 @@ import PhoneIcon from "@mui/icons-material/Phone";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import ReplayIcon from "@mui/icons-material/Replay";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
   Alert,
   Autocomplete,
@@ -24,6 +28,7 @@ import {
   Divider,
   IconButton,
   MenuItem,
+  Pagination,
   Tooltip,
   Tab,
   Tabs,
@@ -35,6 +40,7 @@ import { toast } from "react-toastify";
 import { useAuthContext } from "../../../../../auth-context";
 import {
   CustomerCallHistoryDetail,
+  CustomerContactDetail,
   CustomerFullDetail,
   CustomerPurchaseDetail,
   CustomerScheduleDetail,
@@ -121,6 +127,12 @@ function parseCampaignName(name?: string | null): { base: string; type: string }
   };
 }
 
+function getUniqueOptions(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean))
+  ).sort((left, right) => left.localeCompare(right, "pt-BR"));
+}
+
 export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }: CustomerCrmDetailModalProps) {
   const { token } = useAuthContext();
   const [tab, setTab] = useState<TabValue>("main");
@@ -132,6 +144,34 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
   const [addressDraft, setAddressDraft] = useState<Partial<Customer>>({});
   const [observationsDraft, setObservationsDraft] = useState<Partial<Customer>>({});
   const [phonesDraft, setPhonesDraft] = useState<Partial<Customer>>({});
+  const [originDraft, setOriginDraft] = useState<Partial<Customer>>({});
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [contactEditDraft, setContactEditDraft] = useState<Partial<CustomerContactDetail>>({});
+  const [showNewContact, setShowNewContact] = useState(false);
+  const [newContactDraft, setNewContactDraft] = useState<Partial<CustomerContactDetail>>({});
+  const [savingContact, setSavingContact] = useState(false);
+  const [callsChannelFilter, setCallsChannelFilter] = useState<"all" | "call" | "whatsapp">("all");
+  const [callsResultFilter, setCallsResultFilter] = useState("");
+  const [callsOperatorFilter, setCallsOperatorFilter] = useState("");
+  const [callsPhoneFilter, setCallsPhoneFilter] = useState("");
+  const [callsObservationFilter, setCallsObservationFilter] = useState("");
+  const [callsChatFilter, setCallsChatFilter] = useState("");
+  const [callsPage, setCallsPage] = useState(1);
+  const [callsPerPage, setCallsPerPage] = useState(10);
+  const [agendaCampaignFilter, setAgendaCampaignFilter] = useState("");
+  const [agendaOperatorFilter, setAgendaOperatorFilter] = useState("");
+  const [agendaLinkedOperatorFilter, setAgendaLinkedOperatorFilter] = useState("");
+  const [agendaPhoneFilter, setAgendaPhoneFilter] = useState("");
+  const [agendaConcludedFilter, setAgendaConcludedFilter] = useState<"all" | "SIM" | "NAO">("all");
+  const [agendaPage, setAgendaPage] = useState(1);
+  const [agendaPerPage, setAgendaPerPage] = useState(10);
+  const [purchaseTypeFilter, setPurchaseTypeFilter] = useState("");
+  const [purchasePaymentFilter, setPurchasePaymentFilter] = useState("");
+  const [purchaseSituationFilter, setPurchaseSituationFilter] = useState<"all" | "F" | "C">("all");
+  const [purchaseDescriptionFilter, setPurchaseDescriptionFilter] = useState("");
+  const [purchaseItemsFilter, setPurchaseItemsFilter] = useState<"all" | "with-items" | "without-items">("all");
+  const [purchasePage, setPurchasePage] = useState(1);
+  const [purchasePerPage, setPurchasePerPage] = useState(10);
   const [stateCities, setStateCities] = useState<string[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
 
@@ -182,6 +222,13 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         AREAFAX: payload.customer.AREAFAX,
         FAX: payload.customer.FAX,
         DESCFAX: payload.customer.DESCFAX,
+      });
+      setOriginDraft({
+        EMAIL: payload.customer.EMAIL,
+        EMAIL2: payload.customer.EMAIL2,
+        CONTATO_MAIL: payload.customer.CONTATO_MAIL,
+        WEBSITE: payload.customer.WEBSITE,
+        NR_FUNCIONARIOS: payload.customer.NR_FUNCIONARIOS,
       });
     } catch (error) {
       toast.error("Não foi possível carregar os detalhes do cliente.");
@@ -298,6 +345,17 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
     });
   };
 
+  const resetOriginDraft = () => {
+    if (!detail) return;
+    setOriginDraft({
+      EMAIL: detail.customer.EMAIL,
+      EMAIL2: detail.customer.EMAIL2,
+      CONTATO_MAIL: detail.customer.CONTATO_MAIL,
+      WEBSITE: detail.customer.WEBSITE,
+      NR_FUNCIONARIOS: detail.customer.NR_FUNCIONARIOS,
+    });
+  };
+
   const hasDraftChanges = <T extends Partial<Customer>>(draft: T, base: T) =>
     JSON.stringify(draft) !== JSON.stringify(base);
 
@@ -353,6 +411,17 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
     [detail]
   );
 
+  const baseOriginDraft = useMemo(
+    () => ({
+      EMAIL: detail?.customer.EMAIL,
+      EMAIL2: detail?.customer.EMAIL2,
+      CONTATO_MAIL: detail?.customer.CONTATO_MAIL,
+      WEBSITE: detail?.customer.WEBSITE,
+      NR_FUNCIONARIOS: detail?.customer.NR_FUNCIONARIOS,
+    }),
+    [detail]
+  );
+
   const hasMainChanges = useMemo(
     () => hasDraftChanges(mainDraft, baseMainDraft),
     [mainDraft, baseMainDraft]
@@ -368,6 +437,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
   const hasPhonesChanges = useMemo(
     () => hasDraftChanges(phonesDraft, basePhonesDraft),
     [phonesDraft, basePhonesDraft]
+  );
+  const hasOriginChanges = useMemo(
+    () => hasDraftChanges(originDraft, baseOriginDraft),
+    [originDraft, baseOriginDraft]
   );
 
   const renderEditActions = (
@@ -400,6 +473,8 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
     );
   };
 
+  const canEditOrigin = canEdit;
+
   const savePatch = async (payload: Partial<Customer>, successMessage: string) => {
     if (!token) return;
 
@@ -416,6 +491,161 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
       setSaving(false);
     }
   };
+
+  const saveEditContact = async () => {
+    if (!token || !editingContactId) return;
+    setSavingContact(true);
+    try {
+      customersService.setAuth(token);
+      await customersService.ax.patch(
+        `/api/customers/${customerId}/contacts/${editingContactId}`,
+        contactEditDraft
+      );
+      toast.success("Contato atualizado com sucesso.");
+      setEditingContactId(null);
+      await loadDetail();
+    } catch (error) {
+      toast.error("Não foi possível atualizar o contato.");
+      console.error(error);
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const saveNewContact = async () => {
+    if (!token) return;
+    if (!newContactDraft.NOME?.trim()) {
+      toast.error("Nome do contato é obrigatório.");
+      return;
+    }
+    setSavingContact(true);
+    try {
+      customersService.setAuth(token);
+      await customersService.ax.post(`/api/customers/${customerId}/contacts`, newContactDraft);
+      toast.success("Contato adicionado com sucesso.");
+      setShowNewContact(false);
+      setNewContactDraft({});
+      await loadDetail();
+    } catch (error) {
+      toast.error("Não foi possível adicionar o contato.");
+      console.error(error);
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!token) return;
+    setSavingContact(true);
+    try {
+      customersService.setAuth(token);
+      await customersService.ax.delete(`/api/customers/${customerId}/contacts/${contactId}`);
+      toast.success("Contato removido com sucesso.");
+      await loadDetail();
+    } catch (error) {
+      toast.error("Não foi possível remover o contato.");
+      console.error(error);
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const renderContactForm = (
+    draft: Partial<CustomerContactDetail>,
+    onChange: (patch: Partial<CustomerContactDetail>) => void,
+    onSave: () => void,
+    onCancel: () => void
+  ) => (
+    <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2">
+      <TextField
+        label="Nome *"
+        value={draft.NOME ?? ""}
+        onChange={(e) => onChange({ NOME: e.target.value })}
+      />
+      <TextField
+        label="Tratamento"
+        value={draft.TRATAMENTO ?? ""}
+        onChange={(e) => onChange({ TRATAMENTO: e.target.value })}
+      />
+      <TextField
+        label="Email"
+        value={draft.EMAIL ?? ""}
+        onChange={(e) => onChange({ EMAIL: e.target.value })}
+      />
+      <TextField
+        label="Cargo"
+        type="number"
+        value={draft.CARGO ?? ""}
+        onChange={(e) =>
+          onChange({ CARGO: e.target.value === "" ? null : Number(e.target.value) })
+        }
+      />
+      <TextField
+        label="Área (direto)"
+        value={draft.AREA_DIRETO ?? ""}
+        onChange={(e) => onChange({ AREA_DIRETO: e.target.value })}
+      />
+      <TextField
+        label="Fone direto"
+        value={draft.FONE_DIRETO ?? ""}
+        onChange={(e) => onChange({ FONE_DIRETO: e.target.value })}
+      />
+      <TextField
+        label="Área (cel)"
+        value={draft.AREA_CEL ?? ""}
+        onChange={(e) => onChange({ AREA_CEL: e.target.value })}
+      />
+      <TextField
+        label="Celular"
+        value={draft.CELULAR ?? ""}
+        onChange={(e) => onChange({ CELULAR: e.target.value })}
+      />
+      <TextField
+        label="Área (resi)"
+        value={draft.AREA_RESI ?? ""}
+        onChange={(e) => onChange({ AREA_RESI: e.target.value })}
+      />
+      <TextField
+        label="Fone residencial"
+        value={draft.FONE_RESIDENCIAL ?? ""}
+        onChange={(e) => onChange({ FONE_RESIDENCIAL: e.target.value })}
+      />
+      <TextField
+        select
+        label="Sexo"
+        value={draft.SEXO ?? ""}
+        onChange={(e) =>
+          onChange({ SEXO: (e.target.value as "M" | "F") || null })
+        }
+      >
+        <MenuItem value="">-</MenuItem>
+        <MenuItem value="M">Masculino</MenuItem>
+        <MenuItem value="F">Feminino</MenuItem>
+      </TextField>
+      <TextField
+        label="Filhos"
+        type="number"
+        value={draft.FILHOS ?? ""}
+        onChange={(e) => onChange({ FILHOS: e.target.value === "" ? 0 : Number(e.target.value) })}
+      />
+      <Box className="md:col-span-2 flex justify-end gap-1">
+        <Tooltip title="Cancelar">
+          <span>
+            <IconButton onClick={onCancel} disabled={savingContact} color="default">
+              <ReplayIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Salvar">
+          <span>
+            <IconButton onClick={onSave} disabled={savingContact} color="primary">
+              <DoneIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
+    </div>
+  );
 
   const campaignLookupByCode = useMemo(() => {
     return new Map((detail?.campaigns ?? []).map((campaign) => [campaign.code, campaign]));
@@ -469,6 +699,271 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
     return ["INAT_A", "INAT_R", "PROSPE", "ATIVOS"].filter((type) => typeMap.has(type));
   }, [groupedCampaigns, selectedCampaignParsed.base]);
+
+  const callsResultOptions = useMemo(
+    () => getUniqueOptions((detail?.callHistory ?? []).map((call) => call.RESULTADO_NOME ?? String(call.RESULTADO ?? ""))),
+    [detail?.callHistory]
+  );
+
+  const callsOperatorOptions = useMemo(
+    () => getUniqueOptions((detail?.callHistory ?? []).map((call) => String(call.OPERADOR ?? ""))),
+    [detail?.callHistory]
+  );
+
+  const filteredCallHistory = useMemo(() => {
+    const history = detail?.callHistory ?? [];
+    const normalizedResult = callsResultFilter.trim().toLocaleLowerCase("pt-BR");
+    const normalizedOperator = callsOperatorFilter.trim().toLocaleLowerCase("pt-BR");
+    const normalizedPhone = callsPhoneFilter.trim().toLocaleLowerCase("pt-BR");
+    const normalizedObservation = callsObservationFilter.trim().toLocaleLowerCase("pt-BR");
+    const normalizedChat = callsChatFilter.trim().toLocaleLowerCase("pt-BR");
+
+    return history.filter((call) => {
+      const isWhatsapp = call.CANAL_ATENDIMENTO === "WhatsApp";
+
+      if (callsChannelFilter === "whatsapp" && !isWhatsapp) {
+        return false;
+      }
+
+      if (callsChannelFilter === "call" && isWhatsapp) {
+        return false;
+      }
+
+      if (normalizedResult) {
+        const resultField = `${call.RESULTADO_NOME ?? ""} ${String(call.RESULTADO ?? "")}`
+          .toLocaleLowerCase("pt-BR");
+
+        if (!resultField.includes(normalizedResult)) {
+          return false;
+        }
+      }
+
+      if (normalizedOperator) {
+        const operatorField = String(call.OPERADOR ?? "").toLocaleLowerCase("pt-BR");
+
+        if (!operatorField.includes(normalizedOperator)) {
+          return false;
+        }
+      }
+
+      if (normalizedPhone) {
+        const phoneField = `${call.FONE_RECEPTIVO ?? ""} ${call.WHATSAPP_CONTATO_FONE ?? ""}`
+          .toLocaleLowerCase("pt-BR");
+
+        if (!phoneField.includes(normalizedPhone)) {
+          return false;
+        }
+      }
+
+      if (normalizedObservation) {
+        const observationField = String(call.OBS ?? "").toLocaleLowerCase("pt-BR");
+
+        if (!observationField.includes(normalizedObservation)) {
+          return false;
+        }
+      }
+
+      if (normalizedChat) {
+        const chatField = `${String(call.WHATSAPP_CHAT_ID ?? "")} ${call.WHATSAPP_CONTATO_NOME ?? ""}`
+          .toLocaleLowerCase("pt-BR");
+
+        if (!chatField.includes(normalizedChat)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [
+    callsChannelFilter,
+    callsChatFilter,
+    callsObservationFilter,
+    callsOperatorFilter,
+    callsPhoneFilter,
+    callsResultFilter,
+    detail?.callHistory,
+  ]);
+
+  const paginatedCallHistory = useMemo(() => {
+    const startIndex = (callsPage - 1) * callsPerPage;
+    return filteredCallHistory.slice(startIndex, startIndex + callsPerPage);
+  }, [callsPage, callsPerPage, filteredCallHistory]);
+
+  const callPageCount = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredCallHistory.length / callsPerPage));
+  }, [callsPerPage, filteredCallHistory.length]);
+
+  const agendaCampaignOptions = useMemo(
+    () => getUniqueOptions((detail?.schedules ?? []).map((schedule) => schedule.CAMPANHA_NOME ?? String(schedule.CAMPANHA ?? ""))),
+    [detail?.schedules]
+  );
+
+  const agendaOperatorOptions = useMemo(
+    () => getUniqueOptions((detail?.schedules ?? []).map((schedule) => schedule.OPERADOR_NOME ?? String(schedule.OPERADOR ?? ""))),
+    [detail?.schedules]
+  );
+
+  const agendaLinkedOperatorOptions = useMemo(
+    () => getUniqueOptions((detail?.schedules ?? []).map((schedule) => schedule.OPERADOR_LIGACAO_NOME ?? String(schedule.OPERADOR_LIGACAO ?? ""))),
+    [detail?.schedules]
+  );
+
+  const filteredAgenda = useMemo(() => {
+    return (detail?.schedules ?? []).filter((schedule) => {
+      const campaignField = `${schedule.CAMPANHA_NOME ?? ""} ${String(schedule.CAMPANHA ?? "")}`.toLocaleLowerCase("pt-BR");
+      const operatorField = `${schedule.OPERADOR_NOME ?? ""} ${String(schedule.OPERADOR ?? "")}`.toLocaleLowerCase("pt-BR");
+      const linkedOperatorField = `${schedule.OPERADOR_LIGACAO_NOME ?? ""} ${String(schedule.OPERADOR_LIGACAO ?? "")}`.toLocaleLowerCase("pt-BR");
+      const phoneField = `${schedule.FONE1 ?? ""} ${schedule.FONE2 ?? ""} ${schedule.FONE3 ?? ""} ${schedule.TELEFONE_LIGADO ?? ""}`.toLocaleLowerCase("pt-BR");
+
+      if (agendaCampaignFilter && !campaignField.includes(agendaCampaignFilter.trim().toLocaleLowerCase("pt-BR"))) {
+        return false;
+      }
+
+      if (agendaOperatorFilter && !operatorField.includes(agendaOperatorFilter.trim().toLocaleLowerCase("pt-BR"))) {
+        return false;
+      }
+
+      if (agendaLinkedOperatorFilter && !linkedOperatorField.includes(agendaLinkedOperatorFilter.trim().toLocaleLowerCase("pt-BR"))) {
+        return false;
+      }
+
+      if (agendaPhoneFilter && !phoneField.includes(agendaPhoneFilter.trim().toLocaleLowerCase("pt-BR"))) {
+        return false;
+      }
+
+      if (agendaConcludedFilter !== "all" && schedule.CONCLUIDO !== agendaConcludedFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    agendaCampaignFilter,
+    agendaConcludedFilter,
+    agendaLinkedOperatorFilter,
+    agendaOperatorFilter,
+    agendaPhoneFilter,
+    detail?.schedules,
+  ]);
+
+  const paginatedAgenda = useMemo(() => {
+    const startIndex = (agendaPage - 1) * agendaPerPage;
+    return filteredAgenda.slice(startIndex, startIndex + agendaPerPage);
+  }, [agendaPage, agendaPerPage, filteredAgenda]);
+
+  const agendaPageCount = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredAgenda.length / agendaPerPage));
+  }, [agendaPerPage, filteredAgenda.length]);
+
+  const purchaseTypeOptions = useMemo(
+    () => getUniqueOptions((detail?.purchases ?? []).map((purchase) => purchase.TIPO)),
+    [detail?.purchases]
+  );
+
+  const purchasePaymentOptions = useMemo(
+    () => getUniqueOptions((detail?.purchases ?? []).map((purchase) => purchase.FORMA_PGTO)),
+    [detail?.purchases]
+  );
+
+  const filteredPurchases = useMemo(() => {
+    return (detail?.purchases ?? []).filter((purchase) => {
+      const descriptionField = String(purchase.DESCRICAO ?? "").toLocaleLowerCase("pt-BR");
+
+      if (purchaseTypeFilter && String(purchase.TIPO ?? "").toLocaleLowerCase("pt-BR") !== purchaseTypeFilter.trim().toLocaleLowerCase("pt-BR")) {
+        return false;
+      }
+
+      if (purchasePaymentFilter && String(purchase.FORMA_PGTO ?? "").toLocaleLowerCase("pt-BR") !== purchasePaymentFilter.trim().toLocaleLowerCase("pt-BR")) {
+        return false;
+      }
+
+      if (purchaseSituationFilter !== "all" && purchase.SITUACAO !== purchaseSituationFilter) {
+        return false;
+      }
+
+      if (purchaseDescriptionFilter && !descriptionField.includes(purchaseDescriptionFilter.trim().toLocaleLowerCase("pt-BR"))) {
+        return false;
+      }
+
+      if (purchaseItemsFilter === "with-items" && purchase.items.length === 0) {
+        return false;
+      }
+
+      if (purchaseItemsFilter === "without-items" && purchase.items.length > 0) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    detail?.purchases,
+    purchaseDescriptionFilter,
+    purchaseItemsFilter,
+    purchasePaymentFilter,
+    purchaseSituationFilter,
+    purchaseTypeFilter,
+  ]);
+
+  const paginatedPurchases = useMemo(() => {
+    const startIndex = (purchasePage - 1) * purchasePerPage;
+    return filteredPurchases.slice(startIndex, startIndex + purchasePerPage);
+  }, [purchasePage, purchasePerPage, filteredPurchases]);
+
+  const purchasePageCount = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredPurchases.length / purchasePerPage));
+  }, [purchasePerPage, filteredPurchases.length]);
+
+  useEffect(() => {
+    setCallsPage(1);
+  }, [
+    callsChannelFilter,
+    callsChatFilter,
+    callsObservationFilter,
+    callsOperatorFilter,
+    callsPerPage,
+    callsPhoneFilter,
+    callsResultFilter,
+  ]);
+
+  useEffect(() => {
+    setAgendaPage(1);
+  }, [
+    agendaCampaignFilter,
+    agendaConcludedFilter,
+    agendaLinkedOperatorFilter,
+    agendaOperatorFilter,
+    agendaPerPage,
+    agendaPhoneFilter,
+  ]);
+
+  useEffect(() => {
+    if (agendaPage > agendaPageCount) {
+      setAgendaPage(agendaPageCount);
+    }
+  }, [agendaPage, agendaPageCount]);
+
+  useEffect(() => {
+    setPurchasePage(1);
+  }, [
+    purchaseDescriptionFilter,
+    purchaseItemsFilter,
+    purchasePaymentFilter,
+    purchasePerPage,
+    purchaseSituationFilter,
+    purchaseTypeFilter,
+  ]);
+
+  useEffect(() => {
+    if (purchasePage > purchasePageCount) {
+      setPurchasePage(purchasePageCount);
+    }
+  }, [purchasePage, purchasePageCount]);
+
+  useEffect(() => {
+    if (callsPage > callPageCount) {
+      setCallsPage(callPageCount);
+    }
+  }, [callPageCount, callsPage]);
 
   const handleCampaignBaseChange = (baseName: string) => {
     const typeMap = groupedCampaigns.get(baseName);
@@ -679,18 +1174,56 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         <TextField label="Grupo" value={detail.group.description ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Origem" value={detail.origin.description ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Mídia" value={detail.media.name ?? "-"} InputProps={{ readOnly: true }} />
-        <TextField label="Email" value={detail.customer.EMAIL ?? "-"} InputProps={{ readOnly: true }} />
-        <TextField label="Email 2" value={detail.customer.EMAIL2 ?? "-"} InputProps={{ readOnly: true }} />
-        <TextField label="Website" value={detail.customer.WEBSITE ?? "-"} InputProps={{ readOnly: true }} />
-        <TextField label="Contato E-mail" value={detail.customer.CONTATO_MAIL ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Operador" value={detail.operator.name ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Segmento" value={detail.segment.name ?? "-"} InputProps={{ readOnly: true }} />
-        <TextField label="Funcionários" value={detail.customer.NR_FUNCIONARIOS ?? "-"} InputProps={{ readOnly: true }} />
+        <TextField
+          label="Funcionários"
+          type="number"
+          value={originDraft.NR_FUNCIONARIOS ?? ""}
+          onChange={(e) =>
+            setOriginDraft((prev) => ({
+              ...prev,
+              NR_FUNCIONARIOS: e.target.value === "" ? null : Number(e.target.value),
+            }))
+          }
+          InputProps={{ readOnly: !canEditOrigin }}
+        />
+        <TextField
+          label="Email"
+          value={originDraft.EMAIL ?? ""}
+          onChange={(e) => setOriginDraft((prev) => ({ ...prev, EMAIL: e.target.value }))}
+          InputProps={{ readOnly: !canEditOrigin }}
+        />
+        <TextField
+          label="Email 2"
+          value={originDraft.EMAIL2 ?? ""}
+          onChange={(e) => setOriginDraft((prev) => ({ ...prev, EMAIL2: e.target.value }))}
+          InputProps={{ readOnly: !canEditOrigin }}
+        />
+        <TextField
+          label="Contato E-mail"
+          value={originDraft.CONTATO_MAIL ?? ""}
+          onChange={(e) => setOriginDraft((prev) => ({ ...prev, CONTATO_MAIL: e.target.value }))}
+          InputProps={{ readOnly: !canEditOrigin }}
+        />
+        <TextField
+          label="Website"
+          value={originDraft.WEBSITE ?? ""}
+          onChange={(e) => setOriginDraft((prev) => ({ ...prev, WEBSITE: e.target.value }))}
+          InputProps={{ readOnly: !canEditOrigin }}
+        />
         <TextField
           label="Nome customizável"
           value={detail.metadata.customNameFieldMapped ? "Mapeado" : "Não mapeado no CRM"}
           InputProps={{ readOnly: true }}
         />
+
+        {renderEditActions(
+          canEditOrigin,
+          hasOriginChanges,
+          () => savePatch(originDraft, "Origem atualizada com sucesso."),
+          resetOriginDraft
+        )}
       </div>
     );
   };
@@ -698,33 +1231,159 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
   const renderContacts = () => {
     if (!detail) return null;
 
-    if (!detail.contacts.length) {
-      return <Alert severity="info">Nenhum contato encontrado para este cliente.</Alert>;
-    }
+    const canEditContacts = canEdit;
 
     return (
       <div className="space-y-3">
-        {detail.contacts.map((contact) => (
-          <Box key={contact.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 dark:bg-slate-800">
-              <ContactsIcon fontSize="small" className="text-slate-500" />
-              <Typography fontWeight={700}>{contact.NOME}</Typography>
-              {contact.CARGO ? <Chip label={String(contact.CARGO)} size="small" variant="outlined" /> : null}
+        {canEditContacts && (
+          <Box className="flex justify-end">
+            <Tooltip title="Adicionar contato">
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={() => {
+                    setShowNewContact(true);
+                    setNewContactDraft({});
+                  }}
+                  disabled={savingContact || showNewContact}
+                >
+                  <AddIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
+        )}
+
+        {showNewContact && (
+          <Box className="rounded-lg border border-blue-300 dark:border-blue-700 overflow-hidden">
+            <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 dark:bg-blue-900/30">
+              <AddIcon fontSize="small" className="text-blue-500" />
+              <Typography fontWeight={700}>Novo contato</Typography>
             </div>
             <Divider />
-            <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
-              <Typography variant="body2"><span className="font-medium text-slate-500">Tratamento:</span> {contact.TRATAMENTO ?? "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Email:</span> {contact.EMAIL ?? "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Fone direto:</span> ({contact.AREA_DIRETO ?? "-"}) {contact.FONE_DIRETO ?? "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Celular:</span> ({contact.AREA_CEL ?? "-"}) {contact.CELULAR ?? "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Residencial:</span> ({contact.AREA_RESI ?? "-"}) {contact.FONE_RESIDENCIAL ?? "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Aniversário:</span> {formatDate(contact.ANIVERSARIO)}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Sexo:</span> {contact.SEXO ?? "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Filhos:</span> {String(contact.FILHOS ?? 0)}</Typography>
-            </div>
+            {renderContactForm(
+              newContactDraft,
+              (patch) => setNewContactDraft((prev) => ({ ...prev, ...patch })),
+              saveNewContact,
+              () => {
+                setShowNewContact(false);
+                setNewContactDraft({});
+              }
+            )}
           </Box>
-        ))}
-        {/* <Alert severity="warning">Edição de contatos será concluída no próximo incremento.</Alert> */}
+        )}
+
+        {!detail.contacts.length && !showNewContact && (
+          <Alert severity="info">Nenhum contato encontrado para este cliente.</Alert>
+        )}
+
+        {detail.contacts.map((contact) => {
+          const isEditing = editingContactId === contact.CODIGO;
+
+          return (
+            <Box
+              key={contact.CODIGO}
+              className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
+            >
+              <div className="flex items-center justify-between bg-slate-50 px-4 py-2 dark:bg-slate-800">
+                <div className="flex items-center gap-2">
+                  <ContactsIcon fontSize="small" className="text-slate-500" />
+                  <Typography fontWeight={700}>{contact.NOME}</Typography>
+                  {contact.CARGO ? (
+                    <Chip label={String(contact.CARGO)} size="small" variant="outlined" />
+                  ) : null}
+                </div>
+                {canEditContacts && !isEditing && (
+                  <Box className="flex gap-0.5">
+                    <Tooltip title="Editar contato">
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={savingContact}
+                          onClick={() => {
+                            setEditingContactId(contact.CODIGO);
+                            setContactEditDraft({
+                              NOME: contact.NOME,
+                              EMAIL: contact.EMAIL,
+                              TRATAMENTO: contact.TRATAMENTO,
+                              CARGO: contact.CARGO,
+                              AREA_DIRETO: contact.AREA_DIRETO,
+                              FONE_DIRETO: contact.FONE_DIRETO,
+                              AREA_CEL: contact.AREA_CEL,
+                              CELULAR: contact.CELULAR,
+                              AREA_RESI: contact.AREA_RESI,
+                              FONE_RESIDENCIAL: contact.FONE_RESIDENCIAL,
+                              SEXO: contact.SEXO,
+                              FILHOS: contact.FILHOS,
+                            });
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="Remover contato">
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          disabled={savingContact}
+                          onClick={() => handleDeleteContact(contact.CODIGO)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Box>
+                )}
+              </div>
+              <Divider />
+              {isEditing ? (
+                renderContactForm(
+                  contactEditDraft,
+                  (patch) => setContactEditDraft((prev) => ({ ...prev, ...patch })),
+                  saveEditContact,
+                  () => setEditingContactId(null)
+                )
+              ) : (
+                <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Tratamento:</span>{" "}
+                    {contact.TRATAMENTO ?? "-"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Email:</span>{" "}
+                    {contact.EMAIL ?? "-"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Fone direto:</span> (
+                    {contact.AREA_DIRETO ?? "-"}) {contact.FONE_DIRETO ?? "-"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Celular:</span> (
+                    {contact.AREA_CEL ?? "-"}) {contact.CELULAR ?? "-"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Residencial:</span> (
+                    {contact.AREA_RESI ?? "-"}) {contact.FONE_RESIDENCIAL ?? "-"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Aniversário:</span>{" "}
+                    {formatDate(contact.ANIVERSARIO)}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Sexo:</span>{" "}
+                    {contact.SEXO ?? "-"}
+                  </Typography>
+                  <Typography variant="body2">
+                    <span className="font-medium text-slate-500">Filhos:</span>{" "}
+                    {String(contact.FILHOS ?? 0)}
+                  </Typography>
+                </div>
+              )}
+            </Box>
+          );
+        })}
       </div>
     );
   };
@@ -770,29 +1429,134 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
     return (
       <div className="space-y-3">
-        {detail.callHistory.map((call: CustomerCallHistoryDetail) => (
-          <Box key={call.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 dark:bg-slate-800">
-              <HeadsetMicIcon fontSize="small" className="text-slate-500" />
-              <Typography fontWeight={600}>{call.TIPO_ACAO || "Ligação"}</Typography>
-              {(call.RESULTADO_NOME || call.RESULTADO != null) ? (
-                <Chip
-                  label={call.RESULTADO_NOME ?? String(call.RESULTADO)}
-                  size="small"
-                  color="default"
-                  variant="outlined"
-                />
-              ) : null}
-            </div>
-            <Divider />
-            <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
-              <Typography variant="body2"><span className="font-medium text-slate-500">Operador:</span> {String(call.OPERADOR ?? "-")}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Telefone:</span> {call.FONE_RECEPTIVO || "-"}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Início:</span> {formatDate(call.LIGACAO_RECEBIDA)}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Fim:</span> {formatDate(call.LIGACAO_FINALIZADA)}</Typography>
-            </div>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={callsResultOptions}
+            value={callsResultFilter}
+            onInputChange={(_, value) => setCallsResultFilter(value)}
+            onChange={(_, value) => setCallsResultFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Resultado" />}
+          />
+          <TextField
+            select
+            size="small"
+            label="Canal"
+            value={callsChannelFilter}
+            onChange={(e) => setCallsChannelFilter(e.target.value as "all" | "call" | "whatsapp")}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="call">Ligação</MenuItem>
+            <MenuItem value="whatsapp">WhatsApp</MenuItem>
+          </TextField>
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={callsOperatorOptions}
+            value={callsOperatorFilter}
+            onInputChange={(_, value) => setCallsOperatorFilter(value)}
+            onChange={(_, value) => setCallsOperatorFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Operador" />}
+          />
+          <TextField size="small" label="Telefone" value={callsPhoneFilter} onChange={(e) => setCallsPhoneFilter(e.target.value)} />
+          <TextField size="small" label="Observação" value={callsObservationFilter} onChange={(e) => setCallsObservationFilter(e.target.value)} />
+          <TextField size="small" label="Chat/Contato Wpp" value={callsChatFilter} onChange={(e) => setCallsChatFilter(e.target.value)} />
+          <TextField select size="small" label="Por página" value={String(callsPerPage)} onChange={(e) => setCallsPerPage(Number(e.target.value))}>
+            <MenuItem value="10">10</MenuItem>
+            <MenuItem value="20">20</MenuItem>
+            <MenuItem value="50">50</MenuItem>
+          </TextField>
+        </div>
+
+        <Box className="flex justify-end">
+          <Tooltip title="Limpar filtros do histórico">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setCallsChannelFilter("all");
+                  setCallsResultFilter("");
+                  setCallsOperatorFilter("");
+                  setCallsPhoneFilter("");
+                  setCallsObservationFilter("");
+                  setCallsChatFilter("");
+                  setCallsPerPage(10);
+                }}
+              >
+                <ReplayIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+
+        {!filteredCallHistory.length ? (
+          <Alert severity="info">Nenhum registro encontrado com os filtros atuais.</Alert>
+        ) : null}
+
+        {paginatedCallHistory.map((call: CustomerCallHistoryDetail) => {
+          const isWhatsapp = call.CANAL_ATENDIMENTO === "WhatsApp";
+          const startedAt = call.WHATSAPP_CHAT_INICIADO_EM ?? call.LIGACAO_RECEBIDA;
+          const finishedAt = call.WHATSAPP_CHAT_FINALIZADO_EM ?? call.LIGACAO_FINALIZADA;
+          const phone = call.WHATSAPP_CONTATO_FONE ?? call.FONE_RECEPTIVO;
+          const title = isWhatsapp ? "Atendimento via WhatsApp" : call.TIPO_ACAO || "Ligação";
+
+          return (
+            <Box key={call.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 dark:bg-slate-800">
+                <HeadsetMicIcon fontSize="small" className="text-slate-500" />
+                <Typography fontWeight={600}>{title}</Typography>
+                <Tooltip title={isWhatsapp ? "WhatsApp" : "Ligação"}>
+                  <span className="inline-flex items-center">
+                    {isWhatsapp ? (
+                      <WhatsAppIcon fontSize="small" className="text-green-600" />
+                    ) : (
+                      <PhoneIcon fontSize="small" className="text-slate-500" />
+                    )}
+                  </span>
+                </Tooltip>
+                {(call.RESULTADO_NOME || call.RESULTADO != null) ? (
+                  <Chip
+                    label={call.RESULTADO_NOME ?? String(call.RESULTADO)}
+                    size="small"
+                    color="default"
+                    variant="outlined"
+                  />
+                ) : null}
+              </div>
+              <Divider />
+              <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
+                <Typography variant="body2"><span className="font-medium text-slate-500">Operador:</span> {String(call.OPERADOR ?? "-")}</Typography>
+                <Typography variant="body2"><span className="font-medium text-slate-500">Telefone:</span> {phone || "-"}</Typography>
+                <Typography variant="body2"><span className="font-medium text-slate-500">Início:</span> {formatDate(startedAt)}</Typography>
+                <Typography variant="body2"><span className="font-medium text-slate-500">Fim:</span> {formatDate(finishedAt)}</Typography>
+                {isWhatsapp ? (
+                  <Typography variant="body2"><span className="font-medium text-slate-500">Contato WhatsApp:</span> {call.WHATSAPP_CONTATO_NOME ?? "-"}</Typography>
+                ) : null}
+                {isWhatsapp ? (
+                  <Typography variant="body2"><span className="font-medium text-slate-500">Chat WhatsApp:</span> #{call.WHATSAPP_CHAT_ID ?? "-"}</Typography>
+                ) : null}
+                <Typography variant="body2" className="md:col-span-2"><span className="font-medium text-slate-500">Observação:</span> {call.OBS ?? "-"}</Typography>
+              </div>
+            </Box>
+          );
+        })}
+
+        {filteredCallHistory.length > 0 ? (
+          <Box className="flex flex-col items-center justify-between gap-3 pt-2 md:flex-row">
+            <Typography variant="body2" color="text.secondary">
+              Exibindo {paginatedCallHistory.length} de {filteredCallHistory.length} registro(s)
+            </Typography>
+            <Pagination
+              page={callsPage}
+              count={callPageCount}
+              color="primary"
+              onChange={(_, page) => setCallsPage(page)}
+              showFirstButton
+              showLastButton
+            />
           </Box>
-        ))}
+        ) : null}
       </div>
     );
   };
@@ -895,13 +1659,97 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
     return (
       <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={purchaseTypeOptions}
+            value={purchaseTypeFilter}
+            onInputChange={(_, value) => setPurchaseTypeFilter(value)}
+            onChange={(_, value) => setPurchaseTypeFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Tipo" />}
+          />
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={purchasePaymentOptions}
+            value={purchasePaymentFilter}
+            onInputChange={(_, value) => setPurchasePaymentFilter(value)}
+            onChange={(_, value) => setPurchasePaymentFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Pagamento" />}
+          />
+          <TextField
+            select
+            size="small"
+            label="Situação"
+            value={purchaseSituationFilter}
+            onChange={(e) => setPurchaseSituationFilter(e.target.value as "all" | "F" | "C")}
+          >
+            <MenuItem value="all">Todas</MenuItem>
+            <MenuItem value="F">Fechada</MenuItem>
+            <MenuItem value="C">Cancelada</MenuItem>
+          </TextField>
+          <TextField
+            size="small"
+            label="Descrição"
+            value={purchaseDescriptionFilter}
+            onChange={(e) => setPurchaseDescriptionFilter(e.target.value)}
+          />
+          <TextField
+            select
+            size="small"
+            label="Itens"
+            value={purchaseItemsFilter}
+            onChange={(e) => setPurchaseItemsFilter(e.target.value as "all" | "with-items" | "without-items")}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="with-items">Com itens</MenuItem>
+            <MenuItem value="without-items">Sem itens</MenuItem>
+          </TextField>
+          <TextField
+            select
+            size="small"
+            label="Por página"
+            value={String(purchasePerPage)}
+            onChange={(e) => setPurchasePerPage(Number(e.target.value))}
+          >
+            <MenuItem value="10">10</MenuItem>
+            <MenuItem value="20">20</MenuItem>
+            <MenuItem value="50">50</MenuItem>
+          </TextField>
+        </div>
+
+        <Box className="flex justify-end">
+          <Tooltip title="Limpar filtros de compras">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setPurchaseTypeFilter("");
+                  setPurchasePaymentFilter("");
+                  setPurchaseSituationFilter("all");
+                  setPurchaseDescriptionFilter("");
+                  setPurchaseItemsFilter("all");
+                  setPurchasePerPage(10);
+                }}
+              >
+                <ReplayIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+
+        {!filteredPurchases.length ? (
+          <Alert severity="info">Nenhuma compra encontrada com os filtros atuais.</Alert>
+        ) : null}
+
         {!detail.metadata.purchaseItems.mapped && (
           <Alert severity="warning">
             Itens de compra ainda não mapeados automaticamente no CRM desta instância.
           </Alert>
         )}
 
-        {detail.purchases.map((purchase: CustomerPurchaseDetail) => (
+        {paginatedPurchases.map((purchase: CustomerPurchaseDetail) => (
           <Box key={purchase.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="flex items-center justify-between bg-slate-50 px-4 py-2 dark:bg-slate-800">
               <div className="flex items-center gap-2">
@@ -938,6 +1786,22 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
             )}
           </Box>
         ))}
+
+        {filteredPurchases.length > 0 ? (
+          <Box className="flex flex-col items-center justify-between gap-3 pt-2 md:flex-row">
+            <Typography variant="body2" color="text.secondary">
+              Exibindo {paginatedPurchases.length} de {filteredPurchases.length} compra(s)
+            </Typography>
+            <Pagination
+              page={purchasePage}
+              count={purchasePageCount}
+              color="primary"
+              onChange={(_, page) => setPurchasePage(page)}
+              showFirstButton
+              showLastButton
+            />
+          </Box>
+        ) : null}
       </div>
     );
   };
@@ -951,7 +1815,89 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
     return (
       <div className="space-y-3">
-        {detail.schedules.map((schedule: CustomerScheduleDetail) => (
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={agendaCampaignOptions}
+            value={agendaCampaignFilter}
+            onInputChange={(_, value) => setAgendaCampaignFilter(value)}
+            onChange={(_, value) => setAgendaCampaignFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Campanha" />}
+          />
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={agendaOperatorOptions}
+            value={agendaOperatorFilter}
+            onInputChange={(_, value) => setAgendaOperatorFilter(value)}
+            onChange={(_, value) => setAgendaOperatorFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Operador" />}
+          />
+          <Autocomplete
+            size="small"
+            freeSolo
+            options={agendaLinkedOperatorOptions}
+            value={agendaLinkedOperatorFilter}
+            onInputChange={(_, value) => setAgendaLinkedOperatorFilter(value)}
+            onChange={(_, value) => setAgendaLinkedOperatorFilter(value ?? "")}
+            renderInput={(params) => <TextField {...params} label="Operador lig." />}
+          />
+          <TextField
+            size="small"
+            label="Telefone"
+            value={agendaPhoneFilter}
+            onChange={(e) => setAgendaPhoneFilter(e.target.value)}
+          />
+          <TextField
+            select
+            size="small"
+            label="Concluído"
+            value={agendaConcludedFilter}
+            onChange={(e) => setAgendaConcludedFilter(e.target.value as "all" | "SIM" | "NAO")}
+          >
+            <MenuItem value="all">Todos</MenuItem>
+            <MenuItem value="SIM">Sim</MenuItem>
+            <MenuItem value="NAO">Não</MenuItem>
+          </TextField>
+          <TextField
+            select
+            size="small"
+            label="Por página"
+            value={String(agendaPerPage)}
+            onChange={(e) => setAgendaPerPage(Number(e.target.value))}
+          >
+            <MenuItem value="10">10</MenuItem>
+            <MenuItem value="20">20</MenuItem>
+            <MenuItem value="50">50</MenuItem>
+          </TextField>
+        </div>
+
+        <Box className="flex justify-end">
+          <Tooltip title="Limpar filtros da agenda">
+            <span>
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setAgendaCampaignFilter("");
+                  setAgendaOperatorFilter("");
+                  setAgendaLinkedOperatorFilter("");
+                  setAgendaPhoneFilter("");
+                  setAgendaConcludedFilter("all");
+                  setAgendaPerPage(10);
+                }}
+              >
+                <ReplayIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+
+        {!filteredAgenda.length ? (
+          <Alert severity="info">Nenhum registro de agenda encontrado com os filtros atuais.</Alert>
+        ) : null}
+
+        {paginatedAgenda.map((schedule: CustomerScheduleDetail) => (
           <Box key={schedule.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 dark:bg-slate-800">
               <CalendarMonthIcon fontSize="small" className="text-slate-500" />
@@ -971,6 +1917,22 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
             </div>
           </Box>
         ))}
+
+        {filteredAgenda.length > 0 ? (
+          <Box className="flex flex-col items-center justify-between gap-3 pt-2 md:flex-row">
+            <Typography variant="body2" color="text.secondary">
+              Exibindo {paginatedAgenda.length} de {filteredAgenda.length} registro(s)
+            </Typography>
+            <Pagination
+              page={agendaPage}
+              count={agendaPageCount}
+              color="primary"
+              onChange={(_, page) => setAgendaPage(page)}
+              showFirstButton
+              showLastButton
+            />
+          </Box>
+        ) : null}
       </div>
     );
   };
@@ -1025,7 +1987,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
           <Tabs
             value={tab}
             onChange={(_, value) => setTab(value)}
-            variant="standard"
+            variant="scrollable"
             scrollButtons="auto"
             className="mb-3"
           >
@@ -1034,7 +1996,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
             <Tab value="origin" label="Origem" icon={<TravelExploreIcon fontSize="small" />} iconPosition="start" />
             <Tab value="contacts" label="Contatos" icon={<ContactsIcon fontSize="small" />} iconPosition="start" />
             <Tab value="observations" label="Observações" icon={<NoteAltIcon fontSize="small" />} iconPosition="start" />
-            <Tab value="calls" label="Ligações" icon={<HeadsetMicIcon fontSize="small" />} iconPosition="start" />
+            <Tab value="calls" label="Histórico" icon={<HeadsetMicIcon fontSize="small" />} iconPosition="start" />
             <Tab value="phones" label="Telefones" icon={<PhoneIcon fontSize="small" />} iconPosition="start" />
             <Tab value="purchases" label="Compras" icon={<ReceiptLongIcon fontSize="small" />} iconPosition="start" />
             <Tab value="agenda" label="Agenda" icon={<CalendarMonthIcon fontSize="small" />} iconPosition="start" />

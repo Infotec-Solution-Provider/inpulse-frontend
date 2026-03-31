@@ -21,7 +21,7 @@ export interface CustomerContactDetail {
 
 export interface CustomerCallHistoryDetail {
   CODIGO: number;
-  OPERADOR: number;
+  OPERADOR: number | string;
   CLIENTE: number;
   RESULTADO: number;
   RESULTADO_NOME?: string | null;
@@ -32,6 +32,14 @@ export interface CustomerCallHistoryDetail {
   LIGACAO_FINALIZADA: string;
   TIPO_ACAO: string;
   OBS: string | null;
+  CANAL_ATENDIMENTO?: "Ligacao" | "WhatsApp";
+  WHATSAPP_CHAT_ID?: number | null;
+  WHATSAPP_CHAT_TIPO?: string | null;
+  WHATSAPP_CHAT_INICIADO_EM?: string | null;
+  WHATSAPP_CHAT_FINALIZADO_EM?: string | null;
+  WHATSAPP_CHAT_FINALIZADO?: boolean | null;
+  WHATSAPP_CONTATO_NOME?: string | null;
+  WHATSAPP_CONTATO_FONE?: string | null;
 }
 
 export interface CustomerPurchaseDetail {
