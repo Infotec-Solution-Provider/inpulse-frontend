@@ -1,7 +1,7 @@
 import { Customer, WppChatPriority, WppChatType, WppContact, WppMessage } from "@in.pulse-crm/sdk";
 import { Formatter } from "@in.pulse-crm/utils";
 import { IconButton, Avatar, Tooltip, Chip } from "@mui/material";
-import { useContext, useMemo } from "react";
+import { useCallback, useContext, useMemo } from "react";
 import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
 import { useAppContext } from "../../../app-context";
 import SendTemplateModal from "@/lib/components/send-template-modal";
@@ -12,10 +12,11 @@ import BusinessIcon from "@mui/icons-material/Business";
 import PhoneIcon from "@mui/icons-material/Phone";
 import BadgeIcon from "@mui/icons-material/Badge";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { toast } from "react-toastify";
-import { useUsersContext } from "../../../(cruds)/users/users-context";
 import { useAuthContext } from "../../../../../auth-context";
 import { getShortenedName } from "../../../../../../lib/utils/shorten-name";
+import CustomerCrmDetailModal from "./customer-crm-detail-modal";
 
 interface StartChatModalItemProps {
   contact: WppContact;
@@ -49,7 +50,10 @@ export default function StartChatModalItem({
     return false;
   }, [instance, user]);
 
-  const handleClickStart = () => {
+  const isCustomerDetailEnabled = parameters["customer_detail_modal_enabled"] === "true";
+
+
+  const handleClickStart = useCallback(() => {
     prepareReadOnlyOpen(false);
 
     if (parameters["is_official"] === "true") {
@@ -71,7 +75,7 @@ export default function StartChatModalItem({
       startChatByContactId(contact.id);
       onSelect();
     }
-  };
+  }, [contact.id, customer, onSelect, parameters, prepareReadOnlyOpen, startChatByContactId, openModal, closeModal]);
 
   const handleClickViewOnly = async () => {
     const normalizedPhone = contact.phone?.replace(/\D/g, "") || "";
@@ -145,6 +149,25 @@ export default function StartChatModalItem({
       console.error("Erro ao abrir conversa em modo somente leitura", error);
     }
   };
+
+  const handleOpenCustomerDetail = useCallback(() => {
+    if (!customer?.CODIGO) {
+      toast.info("Este contato não possui cliente vinculado.");
+      return;
+    }
+
+    console.log("Parameters:", parameters);
+
+    const canEditCustomerDetail = parameters["customer_detail_edit_enabled"] === "true";
+
+    openModal(
+      <CustomerCrmDetailModal
+        customerId={customer.CODIGO}
+        onClose={closeModal}
+        canEdit={canEditCustomerDetail}
+      />
+    );
+  }, [customer, openModal, closeModal, parameters]);
 
   const formatPhoneSafe = (phone: string) => {
     const digits = phone?.replace(/\D/g, "") ?? "";
@@ -242,6 +265,25 @@ export default function StartChatModalItem({
 
         {/* Ação */}
         <div className="flex shrink-0 items-center justify-end gap-2 sm:min-w-[120px]">
+          {customer && (
+            <Tooltip title="Detalhes do cliente" arrow>
+              <IconButton
+                onClick={handleOpenCustomerDetail}
+                sx={{
+                  background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                  color: "white",
+                  transition: "all 0.3s",
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #047857 0%, #065f46 100%)",
+                    transform: "scale(1.08)",
+                  },
+                }}
+              >
+                <InfoOutlinedIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+
           {shouldShowViewOnly && user?.NIVEL === "ADMIN" && (
             <Tooltip title="Visualizar conversa" arrow>
               <IconButton

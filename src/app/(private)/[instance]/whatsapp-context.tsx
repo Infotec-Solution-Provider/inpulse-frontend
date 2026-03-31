@@ -586,6 +586,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               setTemplates(templatesResponse.data.templates);
             }
             setParameters(parameters);
+            console.log("Loaded parameters:", parameters);
           });
 
           setChannels(res.data.data);
