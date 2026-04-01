@@ -14,6 +14,7 @@ export default async function DashboardReportsPage({
   
   // Apenas adicionar satisfactionSurvey se for a instância exatron
   const allowedReports = new Set<string>([
+    "operatorPerformance",
     "contactsAwaitingReturn",
     "messagesPerUser",
     "messagesPerContact",
@@ -26,6 +27,7 @@ export default async function DashboardReportsPage({
   const initialSelectedReport =
     resolvedSearchParams?.report && allowedReports.has(resolvedSearchParams.report)
       ? (resolvedSearchParams.report as
+          | "operatorPerformance"
           | "contactsAwaitingReturn"
           | "messagesPerUser"
           | "messagesPerContact"

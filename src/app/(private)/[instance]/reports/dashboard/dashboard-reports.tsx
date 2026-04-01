@@ -1,6 +1,7 @@
 "use client";
 
 import { useContext, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { AuthContext } from "@/app/auth-context";
 import {
   AwaitingReturnRow,
@@ -11,6 +12,7 @@ import {
   SatisfactionSurveyAnalyticalRow,
   SatisfactionSurveySyntheticRow,
 } from "./dashboard-context";
+import DashboardLoadingIndicator from "./dashboard-loading-indicator";
 import DashboardReportCard from "./dashboard-report-card";
 import { MenuItem, TextField } from "@mui/material";
 import { toast } from "react-toastify";
@@ -29,6 +31,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+const GeneralPerformanceReport = dynamic(() => import("./general-performance-report"), {
+  ssr: false,
+});
+
+const OperatorPerformanceReport = dynamic(() => import("./operator-performance-report"), {
+  ssr: false,
+});
 
 const CHART_COLORS = ["#6366f1", "#06b6d4", "#f97316", "#10b981", "#f43f5e", "#a855f7"];
 
@@ -406,6 +416,10 @@ export default function DashboardReports() {
     messagesPerUser,
     messagesPerContact,
     messagesPerHourDay,
+    operatorPerformanceSummary,
+    operatorPerformancePreviousSummary,
+    operatorPerformance,
+    operatorPerformanceDailySeries,
     satisfactionSurveyAnalytical,
     satisfactionSurveySynthetic,
     satisfactionViewMode,
@@ -492,6 +506,8 @@ export default function DashboardReports() {
           onChange={(e) =>
             setSelectedReport(
               e.target.value as
+                | "generalPerformance"
+                | "operatorPerformance"
                 | "messagesPerUser"
                 | "messagesPerContact"
                 | "messagesPerHourDay"
@@ -501,6 +517,8 @@ export default function DashboardReports() {
           }
           className="min-w-[240px]"
         >
+          <MenuItem value="generalPerformance">Performance Geral</MenuItem>
+          <MenuItem value="operatorPerformance">Performance por Operador</MenuItem>
           <MenuItem value="messagesPerUser">Mensagens por Operador</MenuItem>
           <MenuItem value="messagesPerContact">Mensagens por Contato</MenuItem>
           <MenuItem value="messagesPerHourDay">Mensagens por Hora e Dia</MenuItem>
@@ -508,6 +526,28 @@ export default function DashboardReports() {
           {isExatronInstance && <MenuItem value="satisfactionSurvey">Pesquisa de Satisfação (Exatron)</MenuItem>}
         </TextField>
       </div>
+
+      {loading ? <DashboardLoadingIndicator label="Atualizando dados do dashboard" /> : null}
+
+      {selectedReport === "generalPerformance" && (
+        <GeneralPerformanceReport
+          summary={operatorPerformanceSummary}
+          previousSummary={operatorPerformancePreviousSummary}
+          operators={operatorPerformance}
+          dailySeries={operatorPerformanceDailySeries}
+          isLoading={loading}
+        />
+      )}
+
+      {selectedReport === "operatorPerformance" && (
+        <OperatorPerformanceReport
+          summary={operatorPerformanceSummary}
+          previousSummary={operatorPerformancePreviousSummary}
+          data={operatorPerformance}
+          dailySeries={operatorPerformanceDailySeries}
+          isLoading={loading}
+        />
+      )}
 
       {selectedReport === "messagesPerUser" && (
         <DashboardReportCard
@@ -714,9 +754,7 @@ export default function DashboardReports() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {loading && (
-                <span className="text-xs text-slate-500">Carregando...</span>
-              )}
+              {loading ? <DashboardLoadingIndicator label="Atualizando pesquisa de satisfação" /> : null}
               {satisfactionViewMode === "analytical" && (
                 <button
                   type="button"

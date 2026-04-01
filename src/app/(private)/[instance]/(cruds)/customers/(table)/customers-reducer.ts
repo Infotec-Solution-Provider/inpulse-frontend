@@ -1,9 +1,14 @@
 import { Customer, RequestFilters, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
+import { CustomerProfileSummaryFilters } from "@/lib/types/customer-profile-summary";
+
+export type CustomerListFilters = RequestFilters<Customer> & CustomerProfileSummaryFilters;
+export type CustomerListFilterKey = keyof Customer | keyof CustomerProfileSummaryFilters;
+
 // State Type
 export interface CustomersContextState {
   customers: Customer[];
   totalRows: number;
-  filters: RequestFilters<Customer>;
+  filters: CustomerListFilters;
   isLoading: boolean;
 }
 
@@ -12,8 +17,8 @@ type ChanngeLoadingAction = { type: "change-loading"; isLoading: boolean };
 type ChangePageAction = { type: "change-page"; page: number };
 type ChangePerPageAction = { type: "change-per-page"; perPage: number };
 type ChangeTotalRowsAction = { type: "change-total-rows"; totalRows: number };
-type ChangeFilterAction = { type: "change-filter"; key: keyof Customer; value: string };
-type RemoveFilterAction = { type: "remove-filter"; key: keyof Customer };
+type ChangeFilterAction = { type: "change-filter"; key: CustomerListFilterKey; value: string };
+type RemoveFilterAction = { type: "remove-filter"; key: CustomerListFilterKey };
 type ClearFiltersAction = { type: "clear-filters" };
 type LoadCustomersAction = { type: "load-customers"; customers: Customer[] };
 type UpdateCustomerAction = { type: "update-customer"; id: number; data: UpdateCustomerDTO };
@@ -56,7 +61,10 @@ export default function customersReducer(
       next.totalRows = action.totalRows;
       return { ...next, totalRows: action.totalRows };
     case "change-filter":
-      next.filters[action.key] = action.value;
+      next.filters = {
+        ...next.filters,
+        [action.key]: action.value,
+      } as CustomerListFilters;
       return next;
     case "clear-filters":
       next.filters = { page: prev.filters.page, perPage: prev.filters.perPage };

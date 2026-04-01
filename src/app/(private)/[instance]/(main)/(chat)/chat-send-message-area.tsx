@@ -139,6 +139,27 @@ export default function ChatSendMessageArea() {
     return () => textarea.removeEventListener("paste", handlePaste);
   }, [isDisabled]);
 
+  useEffect(() => {
+    const handleFocusComposer = () => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        textarea.focus();
+        const nextLength = textarea.value.length;
+        textarea.setSelectionRange(nextLength, nextLength);
+      });
+    };
+
+    window.addEventListener("chat:focus-composer", handleFocusComposer);
+
+    return () => {
+      window.removeEventListener("chat:focus-composer", handleFocusComposer);
+    };
+  }, []);
+
   const openQuickMessages = () => setQuickMessageOpen(true);
   const openQuickTemplate = () => {
     if (isDisabled) return;

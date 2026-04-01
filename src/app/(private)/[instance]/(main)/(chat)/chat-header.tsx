@@ -1,11 +1,16 @@
+import AIPrototypeModal, { AIPrototypeMode } from "@/lib/components/ai-prototype-modal";
+import { AI_PRESENTATION_MODE } from "@/lib/ai-prototype/config";
 import { Formatter } from "@in.pulse-crm/utils";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
+import InsightsIcon from "@mui/icons-material/Insights";
 import ScheduleIcon from "@mui/icons-material/Schedule";
+import SummarizeIcon from "@mui/icons-material/Summarize";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import { Avatar, IconButton, Tooltip } from "@mui/material";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { AppContext } from "../../app-context";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
@@ -48,9 +53,15 @@ export default function ChatHeader({
   onClose,
 }: ChatContactInfoProps) {
   const { openModal } = useContext(AppContext);
-  const { currentChat } = useWhatsappContext();
-  const { isReadOnlyMode } = useContext(ChatContext);
+  const { currentChat, currentChatMessages } = useWhatsappContext();
+  const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
   const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
+  const canOpenAIActions = AI_PRESENTATION_MODE && currentChat?.chatType === "wpp";
+
+  const lastMessageBody = useMemo(() => {
+    const lastMessage = [...currentChatMessages].reverse().find((message) => message.body?.trim());
+    return lastMessage?.body || null;
+  }, [currentChatMessages]);
 
   const openFinishChatModal = () => {
     openModal(<FinishChatModal />);
@@ -70,6 +81,24 @@ export default function ChatHeader({
 
   const openEditContactModal = () => {
     openModal(<EditContactModal />);
+  };
+
+  const openAIPrototypeModal = (mode: AIPrototypeMode) => {
+    openModal(
+      <AIPrototypeModal
+        mode={mode}
+        onApplySuggestion={mode === "suggest-response" ? applySuggestedText : undefined}
+        context={{
+          contactName: name,
+          customerName,
+          customerId,
+          phone,
+          startedAt: currentChat?.startedAt ? String(currentChat.startedAt) : null,
+          messageCount: currentChatMessages.length,
+          lastMessage: lastMessageBody,
+        }}
+      />
+    );
   };
 
   return (
@@ -108,6 +137,25 @@ export default function ChatHeader({
         )}
       </div>
       <div className="flex items-center">
+        {canOpenAIActions && (
+          <>
+            <Tooltip title={<h3 className="text-base dark:text-white">Sugerir resposta</h3>}>
+              <IconButton onClick={() => openAIPrototypeModal("suggest-response")}>
+                <AutoAwesomeIcon sx={{ color: "#06b6d4" }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={<h3 className="text-base dark:text-white">Resumir conversa</h3>}>
+              <IconButton onClick={() => openAIPrototypeModal("summarize-chat")}>
+                <SummarizeIcon sx={{ color: "#8b5cf6" }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={<h3 className="text-base dark:text-white">Analisar cliente</h3>}>
+              <IconButton onClick={() => openAIPrototypeModal("analyze-customer")}>
+                <InsightsIcon sx={{ color: "#f59e0b" }} />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
         {currentChat?.chatType === "wpp" && canInteract && (
           <>
             <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>

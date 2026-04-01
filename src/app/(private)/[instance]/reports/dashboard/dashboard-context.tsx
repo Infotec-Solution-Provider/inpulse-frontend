@@ -10,6 +10,8 @@ import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 export type ChartType = "bar" | "pie" | "line";
 export type SatisfactionViewMode = "analytical" | "synthetic";
 export type ReportKey =
+  | "generalPerformance"
+  | "operatorPerformance"
   | "contactsAwaitingReturn"
   | "messagesPerUser"
   | "messagesPerContact"
@@ -100,6 +102,70 @@ export interface SatisfactionSurveySyntheticRow {
   distribution: Array<{ score: number; count: number }>;
 }
 
+export interface OperatorPerformanceSummary {
+  periodStart: string | null;
+  periodEnd: string | null;
+  operatorsCount: number;
+  messagesCount: number;
+  sentMessagesCount: number;
+  receivedMessagesCount: number;
+  contactsCount: number;
+  chatsHandledCount: number;
+  chatsFinishedCount: number;
+  pendingReturnsCount: number;
+  transfersSentCount: number;
+  transfersReceivedCount: number;
+  averageFirstResponseSeconds: number | null;
+  averageHandlingSeconds: number | null;
+}
+
+export interface OperatorPerformanceDailySeriesRow {
+  date: string;
+  label: string;
+  previousDate: string | null;
+  messagesCount: number;
+  chatsFinishedCount: number;
+  pendingReturnsCount: number;
+  transfersSentCount: number;
+  transfersReceivedCount: number;
+  averageFirstResponseSeconds: number | null;
+  averageHandlingSeconds: number | null;
+  previousMessagesCount: number;
+  previousChatsFinishedCount: number;
+  previousPendingReturnsCount: number;
+  previousTransfersSentCount: number;
+  previousTransfersReceivedCount: number;
+  previousAverageFirstResponseSeconds: number | null;
+  previousAverageHandlingSeconds: number | null;
+}
+
+export interface OperatorPerformanceRow {
+  userId: number;
+  userName: string;
+  userActive: string | number | null;
+  userType: string | number | null;
+  userSector: string | null;
+  messagesCount: number;
+  sentMessagesCount: number;
+  receivedMessagesCount: number;
+  contactsCount: number;
+  chatsHandledCount: number;
+  chatsFinishedCount: number;
+  respondedChatsCount: number;
+  pendingReturnsCount: number;
+  transfersSentCount: number;
+  transfersReceivedCount: number;
+  averageFirstResponseSeconds: number | null;
+  averageHandlingSeconds: number | null;
+  previousMessagesCount: number;
+  previousChatsFinishedCount: number;
+  previousPendingReturnsCount: number;
+  previousTransfersSentCount: number;
+  previousTransfersReceivedCount: number;
+  previousAverageFirstResponseSeconds: number | null;
+  previousAverageHandlingSeconds: number | null;
+}
+
 interface DashboardContextType {
   filters: DashboardFilters;
   setFilters: (filters: DashboardFilters) => void;
@@ -112,6 +178,10 @@ interface DashboardContextType {
   messagesPerUser: MessagesPerUserRow[];
   messagesPerContact: MessagesPerContactRow[];
   messagesPerHourDay: MessagesPerHourDayRow[];
+  operatorPerformanceSummary: OperatorPerformanceSummary | null;
+  operatorPerformancePreviousSummary: OperatorPerformanceSummary | null;
+  operatorPerformance: OperatorPerformanceRow[];
+  operatorPerformanceDailySeries: OperatorPerformanceDailySeriesRow[];
   satisfactionSurveyAnalytical: SatisfactionSurveyAnalyticalRow[];
   satisfactionSurveySynthetic: SatisfactionSurveySyntheticRow[];
   satisfactionViewMode: SatisfactionViewMode;
@@ -124,6 +194,8 @@ interface DashboardContextType {
 }
 
 const defaultChartTypes: Record<ReportKey, ChartType> = {
+  generalPerformance: "bar",
+  operatorPerformance: "bar",
   contactsAwaitingReturn: "pie",
   messagesPerUser: "bar",
   messagesPerContact: "bar",
@@ -131,15 +203,27 @@ const defaultChartTypes: Record<ReportKey, ChartType> = {
   satisfactionSurvey: "bar",
 };
 
-const defaultFilters: DashboardFilters = {
-  startDate: "",
-  endDate: "",
-  userId: "",
-  sectors: "*",
-  operators: "*",
-  minDate: "",
-  maxDate: "",
-};
+function formatDateInputValue(date: Date) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function createDefaultFilters(): DashboardFilters {
+  const today = formatDateInputValue(new Date());
+
+  return {
+    startDate: today,
+    endDate: today,
+    userId: "",
+    sectors: "*",
+    operators: "*",
+    minDate: today,
+    maxDate: today,
+  };
+}
 
 export const DashboardContext = createContext({} as DashboardContextType);
 
@@ -151,7 +235,7 @@ export default function DashboardProvider({
   initialSelectedReport?: ReportKey;
 }) {
   const { token } = useContext(AuthContext);
-  const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
+  const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultFilters());
   const [chartTypes, setChartTypes] = useState<Record<ReportKey, ChartType>>(defaultChartTypes);
   const [loading, setLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReportKey>(initialSelectedReport || "messagesPerUser");
@@ -160,6 +244,13 @@ export default function DashboardProvider({
   const [messagesPerUser, setMessagesPerUser] = useState<MessagesPerUserRow[]>([]);
   const [messagesPerContact, setMessagesPerContact] = useState<MessagesPerContactRow[]>([]);
   const [messagesPerHourDay, setMessagesPerHourDay] = useState<MessagesPerHourDayRow[]>([]);
+  const [operatorPerformanceSummary, setOperatorPerformanceSummary] =
+    useState<OperatorPerformanceSummary | null>(null);
+  const [operatorPerformancePreviousSummary, setOperatorPerformancePreviousSummary] =
+    useState<OperatorPerformanceSummary | null>(null);
+  const [operatorPerformance, setOperatorPerformance] = useState<OperatorPerformanceRow[]>([]);
+  const [operatorPerformanceDailySeries, setOperatorPerformanceDailySeries] =
+    useState<OperatorPerformanceDailySeriesRow[]>([]);
   const [satisfactionSurveyAnalytical, setSatisfactionSurveyAnalytical] = useState<SatisfactionSurveyAnalyticalRow[]>(
     [],
   );
@@ -195,6 +286,23 @@ export default function DashboardProvider({
           params: { date: dateFilter },
         });
         setMessagesPerUser(res.data?.data?.messagesPerUser || []);
+      }
+
+      if (target === "operatorPerformance" || target === "generalPerformance") {
+        const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/operator-performance`, {
+          headers,
+          params: {
+            startDate: periodStart,
+            endDate: periodEnd,
+            SETORES: effectiveFilters.sectors || "*",
+            OPERADORES: effectiveFilters.operators || "*",
+          },
+        });
+
+        setOperatorPerformanceSummary(res.data?.data?.summary || null);
+        setOperatorPerformancePreviousSummary(res.data?.data?.previousSummary || null);
+        setOperatorPerformance(res.data?.data?.operatorPerformance || []);
+        setOperatorPerformanceDailySeries(res.data?.data?.dailySeries || []);
       }
 
       if (target === "messagesPerContact") {
@@ -279,6 +387,10 @@ export default function DashboardProvider({
         messagesPerUser,
         messagesPerContact,
         messagesPerHourDay,
+        operatorPerformanceSummary,
+        operatorPerformancePreviousSummary,
+        operatorPerformance,
+        operatorPerformanceDailySeries,
         satisfactionSurveyAnalytical,
         satisfactionSurveySynthetic,
         satisfactionViewMode,

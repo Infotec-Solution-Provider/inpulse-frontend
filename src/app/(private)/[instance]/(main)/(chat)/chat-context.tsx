@@ -20,6 +20,7 @@ interface IChatContext {
   state: SendMessageDataState;
   dispatch: React.Dispatch<ChangeMessageDataAction>;
   sendMessage: () => void;
+  applySuggestedText: (text: string) => void;
   isReadOnlyMode: boolean;
   getMessageById: (
     chatId: number,
@@ -61,6 +62,24 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const [state, dispatch] = useReducer(ChatReducer, initialState);
   const [quotedMessage, setQuotedMessage] = useState<WppMessage | InternalMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<WppMessage | InternalMessage | null>(null);
+
+  const applySuggestedText = useCallback(
+    (text: string) => {
+      if (isReadOnlyMode) {
+        toast.info("Esta conversa esta em modo somente leitura.");
+        return;
+      }
+
+      setEditingMessage(null);
+      dispatch({ type: "set-mentions", mentions: [] });
+      dispatch({ type: "change-text", text });
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("chat:focus-composer"));
+      }
+    },
+    [dispatch, isReadOnlyMode],
+  );
 
   const handleSendMessage = () => {
     if (isReadOnlyMode) {
@@ -172,6 +191,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
         dispatch,
         isReadOnlyMode,
         sendMessage: handleSendMessage,
+        applySuggestedText,
         getMessageById,
         handleQuoteMessage,
         handleQuoteMessageRemove,

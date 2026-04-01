@@ -10,6 +10,10 @@ import { useWhatsappContext } from "../../whatsapp-context";
 
 const ALL_OPTION_VALUE = "__ALL__";
 
+function dedupeOptions<T extends { id: string; name: string }>(options: T[]) {
+  return Array.from(new Map(options.map((option) => [option.id, option])).values());
+}
+
 function parseOperators(value: string): string[] {
   if (!value || value === "*") return [];
 
@@ -40,23 +44,27 @@ export default function DashboardFilters() {
 
   const operatorOptions = useMemo(
     () =>
-      users
-        .filter((user) => Number.isFinite(Number(user.CODIGO)))
-        .map((user) => ({
-          id: String(user.CODIGO),
-          name: user.NOME || user.LOGIN || `#${user.CODIGO}`,
-        })),
+      dedupeOptions(
+        users
+          .filter((user) => Number.isFinite(Number(user.CODIGO)))
+          .map((user) => ({
+            id: String(user.CODIGO),
+            name: user.NOME || user.LOGIN || `#${user.CODIGO}`,
+          })),
+      ),
     [users],
   );
 
   const sectorOptions = useMemo(
     () =>
-      sectors
-        .filter((sector) => Number.isFinite(Number(sector.id)))
-        .map((sector) => ({
-          id: String(sector.id),
-          name: sector.name || `#${sector.id}`,
-        })),
+      dedupeOptions(
+        sectors
+          .filter((sector) => Number.isFinite(Number(sector.id)))
+          .map((sector) => ({
+            id: String(sector.id),
+            name: sector.name || `#${sector.id}`,
+          })),
+      ),
     [sectors],
   );
 
@@ -104,6 +112,8 @@ export default function DashboardFilters() {
       }}
     >
       {(selectedReport === "messagesPerUser" ||
+        selectedReport === "generalPerformance" ||
+        selectedReport === "operatorPerformance" ||
         selectedReport === "messagesPerContact" ||
         selectedReport === "satisfactionSurvey") && (
         <>
@@ -144,6 +154,73 @@ export default function DashboardFilters() {
             </MenuItem>
           ))}
         </TextField>
+      )}
+
+      {(selectedReport === "operatorPerformance" || selectedReport === "generalPerformance") && (
+        <>
+          <TextField
+            select
+            label="Setores"
+            size="small"
+            value={selectedSectorIds}
+            InputLabelProps={{ shrink: true }}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleSectorsChange(Array.isArray(value) ? value : [value]);
+            }}
+            className="w-64"
+            SelectProps={{
+              multiple: true,
+              displayEmpty: true,
+              renderValue: (selected) => {
+                const selectedIds = selected as string[];
+                if (!selectedIds.length) return "Todos";
+
+                return selectedIds
+                  .map((id) => sectorOptions.find((option) => option.id === id)?.name || `#${id}`)
+                  .join(", ");
+              },
+            }}
+          >
+            <MenuItem value={ALL_OPTION_VALUE}>Todos</MenuItem>
+            {sectorOptions.map((sector) => (
+              <MenuItem key={sector.id} value={sector.id}>
+                {sector.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Operadores"
+            size="small"
+            value={selectedOperatorIds}
+            InputLabelProps={{ shrink: true }}
+            onChange={(e) => {
+              const value = e.target.value;
+              handleOperatorsChange(Array.isArray(value) ? value : [value]);
+            }}
+            className="w-64"
+            SelectProps={{
+              multiple: true,
+              displayEmpty: true,
+              renderValue: (selected) => {
+                const selectedIds = selected as string[];
+                if (!selectedIds.length) return "Todos";
+
+                return selectedIds
+                  .map((id) => operatorOptions.find((option) => option.id === id)?.name || `#${id}`)
+                  .join(", ");
+              },
+            }}
+          >
+            <MenuItem value={ALL_OPTION_VALUE}>Todos</MenuItem>
+            {operatorOptions.map((operator) => (
+              <MenuItem key={operator.id} value={operator.id}>
+                {operator.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </>
       )}
 
       {selectedReport === "messagesPerHourDay" && (

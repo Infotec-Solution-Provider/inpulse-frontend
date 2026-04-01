@@ -17,11 +17,14 @@ import { toast } from "react-toastify";
 import { useAuthContext } from "../../../../../auth-context";
 import { getShortenedName } from "../../../../../../lib/utils/shorten-name";
 import CustomerCrmDetailModal from "./customer-crm-detail-modal";
+import type { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";
 
 interface StartChatModalItemProps {
   contact: WppContact;
   customer?: Customer | null;
   chatingWith?: string | null;
+  profileSummary?: CustomerProfileSummaryPayload | null;
+  isProfileLoading?: boolean;
   onSelect: () => void;
 }
 
@@ -29,6 +32,8 @@ export default function StartChatModalItem({
   contact,
   customer = null,
   chatingWith = null,
+  profileSummary = null,
+  isProfileLoading = false,
   onSelect,
 }: StartChatModalItemProps) {
   const {
@@ -181,6 +186,40 @@ export default function StartChatModalItem({
     }
   };
 
+  const qualificationChips = useMemo(() => {
+    if (!profileSummary) {
+      return [];
+    }
+
+    return [
+      {
+        key: "summary",
+        label: profileSummary.label,
+        color: profileSummary.color,
+      },
+      {
+		key: "purchase-interest",
+		label: profileSummary.purchaseInterest.label,
+		color: profileSummary.purchaseInterest.color,
+	  },
+      {
+        key: "interaction",
+        label: profileSummary.tags.interaction.label,
+        color: profileSummary.tags.interaction.color,
+      },
+      {
+        key: "purchase",
+        label: profileSummary.tags.purchase.label,
+        color: profileSummary.tags.purchase.color,
+      },
+      {
+        key: "age",
+        label: profileSummary.tags.age.label,
+        color: profileSummary.tags.age.color,
+      },
+    ];
+  }, [profileSummary]);
+
   return (
     <div
       key={contact.id}
@@ -247,6 +286,35 @@ export default function StartChatModalItem({
                   </span>
                 </div>
               )}
+
+              {isProfileLoading ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Chip
+                    size="small"
+                    label="Qualificando..."
+                    sx={{ height: 20, fontSize: "0.68rem", fontWeight: 600, "& .MuiChip-label": { px: 0.75 } }}
+                  />
+                </div>
+              ) : qualificationChips.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {qualificationChips.map((chip, index) => (
+                    <Chip
+                      key={chip.key}
+                      size="small"
+                      label={chip.label}
+                      sx={{
+                        height: 20,
+                        fontSize: "0.68rem",
+                        fontWeight: index === 0 ? 700 : 600,
+                        color: chip.color,
+                        border: `1px solid ${chip.color}`,
+                        backgroundColor: `${chip.color}14`,
+                        "& .MuiChip-label": { px: 0.75 },
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="flex h-full min-h-[64px] items-center border-l-2 border-gray-200 pl-4 dark:border-gray-700">

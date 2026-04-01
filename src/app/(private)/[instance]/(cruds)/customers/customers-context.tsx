@@ -21,6 +21,7 @@ import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import customersReducer, {
   ChangeCustomersStateAction,
+  CustomerListFilters,
   CustomersContextState,
   MultipleActions,
 } from "./(table)/customers-reducer";
@@ -102,7 +103,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       if (!token) {
         return dispatch({ type: "change-loading", isLoading: false });
       }
-      const res = await api.current.getCustomers(state.filters);
+      const res = await api.current.getCustomers(state.filters as unknown as CustomerListFilters);
       dispatch({
         type: "multiple",
         actions: [

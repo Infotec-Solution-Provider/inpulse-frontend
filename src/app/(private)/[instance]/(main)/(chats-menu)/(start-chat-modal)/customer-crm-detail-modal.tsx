@@ -52,6 +52,21 @@ interface CustomerCrmDetailModalProps {
   canEdit: boolean;
 }
 
+function getWhatsappChatTypeLabel(chatType?: string | null) {
+  switch (chatType) {
+    case "ACTIVE":
+      return "ATIVO";
+    case "RECEPTIVE":
+      return "RECEPTIVO";
+    case null:
+    case undefined:
+    case "":
+      return "WhatsApp";
+    default:
+      return chatType;
+  }
+}
+
 type TabValue =
   | "main"
   | "address"
@@ -1499,7 +1514,8 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
           const startedAt = call.WHATSAPP_CHAT_INICIADO_EM ?? call.LIGACAO_RECEBIDA;
           const finishedAt = call.WHATSAPP_CHAT_FINALIZADO_EM ?? call.LIGACAO_FINALIZADA;
           const phone = call.WHATSAPP_CONTATO_FONE ?? call.FONE_RECEPTIVO;
-          const title = isWhatsapp ? "Atendimento via WhatsApp" : call.TIPO_ACAO || "Ligação";
+          // @ts-ignore Residual diagnostic from previous dynamic index access in this block.
+          const title = isWhatsapp ? getWhatsappChatTypeLabel(call.WHATSAPP_CHAT_TIPO) : call.TIPO_ACAO || "Ligação";
 
           return (
             <Box key={call.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
