@@ -1,6 +1,9 @@
 "use client";
 
+import { useAuthContext } from "@/app/auth-context";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
+import customersService from "@/lib/services/customers.service";
+import type { CustomerFullDetail, CustomerPurchaseDetail } from "@/app/(private)/[instance]/(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal.types";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
@@ -8,6 +11,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -16,6 +20,15 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { toast } from "react-toastify";
 
 export type AIPrototypeMode = "suggest-response" | "summarize-chat" | "analyze-customer";
@@ -45,6 +58,170 @@ interface AIPrototypeContent {
   primaryActionType: "copy" | "close";
   primaryActionLabel: string;
   primaryActionText?: string;
+}
+
+interface PurchaseTimelinePoint {
+  dateLabel: string;
+  fullDateLabel: string;
+  value: number;
+  purchaseCode: number;
+}
+
+interface PurchaseAnalytics {
+  chartData: PurchaseTimelinePoint[];
+  totalPurchases: number;
+  totalRevenue: number;
+  averageTicket: number;
+  averageRepurchaseDays: number | null;
+  daysSinceLastPurchase: number | null;
+  nextRepurchaseDate: Date | null;
+  proximityRatio: number | null;
+  semaphoreStatus: "green" | "yellow" | "red" | "neutral";
+  overdueDays: number | null;
+}
+
+function formatCurrency(value?: number | null) {
+  if (value == null) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+function formatShortDate(date: Date) {
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
+function calculatePurchaseAnalytics(purchases: CustomerPurchaseDetail[]): PurchaseAnalytics {
+  const parsedPurchases = purchases
+    .map((purchase) => {
+      const purchaseDate = new Date(purchase.DATA);
+
+      if (Number.isNaN(purchaseDate.getTime())) {
+        return null;
+      }
+
+      return {
+        ...purchase,
+        purchaseDate,
+      };
+    })
+    .filter((purchase): purchase is CustomerPurchaseDetail & { purchaseDate: Date } => purchase !== null)
+    .sort((left, right) => left.purchaseDate.getTime() - right.purchaseDate.getTime());
+
+  const chartData = parsedPurchases.map((purchase) => ({
+    dateLabel: formatShortDate(purchase.purchaseDate),
+    fullDateLabel: purchase.purchaseDate.toLocaleDateString("pt-BR"),
+    value: purchase.VALOR,
+    purchaseCode: purchase.CODIGO,
+  }));
+
+  const totalRevenue = parsedPurchases.reduce((sum, purchase) => sum + purchase.VALOR, 0);
+  const totalPurchases = parsedPurchases.length;
+  const averageTicket = totalPurchases ? totalRevenue / totalPurchases : 0;
+
+  const repurchaseIntervals: number[] = [];
+  for (let index = 1; index < parsedPurchases.length; index += 1) {
+    const currentPurchase = parsedPurchases[index];
+    const previousPurchase = parsedPurchases[index - 1];
+
+    if (!currentPurchase || !previousPurchase) {
+      continue;
+    }
+
+    const intervalInDays = Math.max(
+      1,
+      Math.round((currentPurchase.purchaseDate.getTime() - previousPurchase.purchaseDate.getTime()) / 86400000),
+    );
+
+    repurchaseIntervals.push(intervalInDays);
+  }
+
+  const averageRepurchaseDays = repurchaseIntervals.length
+    ? repurchaseIntervals.reduce((sum, interval) => sum + interval, 0) / repurchaseIntervals.length
+    : null;
+
+  const lastPurchase = parsedPurchases.at(-1) ?? null;
+  const now = new Date();
+  const daysSinceLastPurchase = lastPurchase
+    ? Math.max(0, Math.round((now.getTime() - lastPurchase.purchaseDate.getTime()) / 86400000))
+    : null;
+
+  const nextRepurchaseDate =
+    lastPurchase && averageRepurchaseDays
+      ? new Date(lastPurchase.purchaseDate.getTime() + averageRepurchaseDays * 86400000)
+      : null;
+
+  const proximityRatio = averageRepurchaseDays && daysSinceLastPurchase != null
+    ? daysSinceLastPurchase / averageRepurchaseDays
+    : null;
+
+  let semaphoreStatus: PurchaseAnalytics["semaphoreStatus"] = "neutral";
+
+  if (proximityRatio != null) {
+    if (proximityRatio < 0.75) {
+      semaphoreStatus = "green";
+    } else if (proximityRatio <= 1) {
+      semaphoreStatus = "yellow";
+    } else {
+      semaphoreStatus = "red";
+    }
+  }
+
+  const overdueDays = nextRepurchaseDate
+    ? Math.max(0, Math.round((now.getTime() - nextRepurchaseDate.getTime()) / 86400000))
+    : null;
+
+  return {
+    chartData,
+    totalPurchases,
+    totalRevenue,
+    averageTicket,
+    averageRepurchaseDays,
+    daysSinceLastPurchase,
+    nextRepurchaseDate,
+    proximityRatio,
+    semaphoreStatus,
+    overdueDays,
+  };
+}
+
+function getSemaphoreAccent(status: PurchaseAnalytics["semaphoreStatus"]) {
+  if (status === "green") {
+    return {
+      label: "Dentro da janela",
+      tone: "text-emerald-700 dark:text-emerald-300",
+      marker: "#10b981",
+    };
+  }
+
+  if (status === "yellow") {
+    return {
+      label: "Próximo da recompra",
+      tone: "text-amber-700 dark:text-amber-300",
+      marker: "#f59e0b",
+    };
+  }
+
+  if (status === "red") {
+    return {
+      label: "Janela vencida",
+      tone: "text-rose-700 dark:text-rose-300",
+      marker: "#ef4444",
+    };
+  }
+
+  return {
+    label: "Dados insuficientes",
+    tone: "text-slate-600 dark:text-slate-300",
+    marker: "#94a3b8",
+  };
 }
 
 function getLastMessageExcerpt(lastMessage?: string | null) {
@@ -145,8 +322,12 @@ function getModeIcon(mode: AIPrototypeMode) {
 
 export default function AIPrototypeModal({ mode, onApplySuggestion, context }: AIPrototypeModalProps) {
   const { closeModal } = useAppContext();
+  const { token } = useAuthContext();
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [purchaseHistory, setPurchaseHistory] = useState<CustomerPurchaseDetail[]>([]);
+  const [isPurchaseHistoryLoading, setIsPurchaseHistoryLoading] = useState(false);
+  const [purchaseHistoryError, setPurchaseHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -164,6 +345,57 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
     setSelectedSuggestionIndex(0);
   }, [mode, context]);
 
+  useEffect(() => {
+    if (mode !== "analyze-customer" || !context.customerId || !token) {
+      setPurchaseHistory([]);
+      setPurchaseHistoryError(null);
+      setIsPurchaseHistoryLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsPurchaseHistoryLoading(true);
+    setPurchaseHistoryError(null);
+
+    customersService.setAuth(token);
+    customersService.ax
+      .get<{ message: string; data: CustomerFullDetail }>(`/api/customers/${context.customerId}/full`)
+      .then((response) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setPurchaseHistory(response.data.data.purchases ?? []);
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar histórico de compras para análise do cliente:", error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setPurchaseHistory([]);
+        setPurchaseHistoryError("Não foi possível carregar o histórico de compras deste cliente.");
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsPurchaseHistoryLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [context.customerId, mode, token]);
+
+  const purchaseAnalytics = useMemo(() => calculatePurchaseAnalytics(purchaseHistory), [purchaseHistory]);
+  const semaphoreAccent = useMemo(
+    () => getSemaphoreAccent(purchaseAnalytics.semaphoreStatus),
+    [purchaseAnalytics.semaphoreStatus],
+  );
+  const isAnalysisMode = mode === "analyze-customer";
+  const shouldShowPurchasePanel = isAnalysisMode && Boolean(context.customerId);
+
   const handlePrimaryAction = async () => {
     if (content.primaryActionType === "close") {
       closeModal();
@@ -177,7 +409,6 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
 
     if (onApplySuggestion) {
       onApplySuggestion(selectedSuggestion);
-      toast.success("Sugestão inserida no campo de mensagem.");
       closeModal();
       return;
     }
@@ -247,6 +478,170 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
                 {content.insightText}
               </p>
             </div>
+
+            {shouldShowPurchasePanel ? (
+              <div className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+                <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                      Ritmo de compras
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
+                      Histórico e proximidade da próxima recompra
+                    </h2>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-sm">
+                    <Chip label={`${purchaseAnalytics.totalPurchases} compra(s)`} size="small" />
+                    <Chip label={`Ticket médio ${formatCurrency(purchaseAnalytics.averageTicket)}`} size="small" />
+                  </div>
+                </div>
+
+                {isPurchaseHistoryLoading ? (
+                  <div className="flex min-h-[18rem] items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800/60">
+                    <CircularProgress size={28} />
+                  </div>
+                ) : purchaseHistoryError ? (
+                  <Alert severity="warning">{purchaseHistoryError}</Alert>
+                ) : purchaseAnalytics.totalPurchases === 0 ? (
+                  <Alert severity="info">Este cliente ainda não possui compras registradas para análise.</Alert>
+                ) : (
+                  <>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                          Total comprado
+                        </p>
+                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                          {formatCurrency(purchaseAnalytics.totalRevenue)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                          Média entre recompras
+                        </p>
+                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                          {purchaseAnalytics.averageRepurchaseDays != null
+                            ? `${Math.round(purchaseAnalytics.averageRepurchaseDays)} dias`
+                            : "Sem base suficiente"}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                          Última compra
+                        </p>
+                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                          {purchaseAnalytics.daysSinceLastPurchase != null
+                            ? `${purchaseAnalytics.daysSinceLastPurchase} dias atrás`
+                            : "Sem registro"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            Linha do tempo de compras
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Pontos representam compras e o eixo Y mostra o valor faturado.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={purchaseAnalytics.chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
+                            <XAxis dataKey="dateLabel" stroke="#94a3b8" fontSize={12} />
+                            <YAxis
+                              stroke="#94a3b8"
+                              fontSize={12}
+                              tickFormatter={(value) => formatCurrency(Number(value))}
+                              width={88}
+                            />
+                            <RechartsTooltip
+                              formatter={(value: number) => [formatCurrency(Number(value)), "Valor"]}
+                              labelFormatter={(_, payload) => {
+                                const item = payload?.[0]?.payload as PurchaseTimelinePoint | undefined;
+                                return item ? `Compra #${item.purchaseCode} em ${item.fullDateLabel}` : "Compra";
+                              }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#06b6d4"
+                              strokeWidth={3}
+                              dot={{ r: 4, strokeWidth: 2, fill: "#ffffff" }}
+                              activeDot={{ r: 6 }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            Semáforo de recompra
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Baseado na média atual entre compras e no tempo desde a última compra.
+                          </p>
+                        </div>
+                        <span className={`text-sm font-semibold ${semaphoreAccent.tone}`}>{semaphoreAccent.label}</span>
+                      </div>
+
+                      {purchaseAnalytics.averageRepurchaseDays == null || purchaseAnalytics.daysSinceLastPurchase == null ? (
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          São necessárias pelo menos duas compras válidas para estimar o próximo período de recompra.
+                        </Alert>
+                      ) : (
+                        <div className="mt-4 space-y-4">
+                          <div className="relative overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
+                            <div className="grid h-5 grid-cols-3">
+                              <div className="bg-emerald-500/85" />
+                              <div className="bg-amber-400/90" />
+                              <div className="bg-rose-500/85" />
+                            </div>
+                            <div
+                              className="absolute top-1/2 h-7 w-1 -translate-y-1/2 rounded-full bg-slate-900 shadow-[0_0_0_2px_rgba(255,255,255,0.95)] dark:bg-white"
+                              style={{
+                                left: `${Math.min(100, Math.max(0, (purchaseAnalytics.proximityRatio ?? 0) * 100))}%`,
+                                borderColor: semaphoreAccent.marker,
+                              }}
+                            />
+                          </div>
+
+                          <div className="grid gap-3 text-sm md:grid-cols-3">
+                            <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Última compra</p>
+                              <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                                {purchaseAnalytics.daysSinceLastPurchase} dias atrás
+                              </p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Próxima janela</p>
+                              <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                                {purchaseAnalytics.nextRepurchaseDate?.toLocaleDateString("pt-BR") ?? "-"}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Situação</p>
+                              <p className={`mt-1 font-semibold ${semaphoreAccent.tone}`}>
+                                {purchaseAnalytics.overdueDays
+                                  ? `${purchaseAnalytics.overdueDays} dia(s) de atraso`
+                                  : "Dentro do intervalo esperado"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : null}
 
             {content.suggestions?.length ? (
               <div className="space-y-2">
