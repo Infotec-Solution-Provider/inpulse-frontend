@@ -1519,15 +1519,15 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
           return (
             <Box key={call.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 dark:bg-slate-800">
-                <HeadsetMicIcon fontSize="small" className="text-slate-500" />
-                <Typography fontWeight={600}>{title}</Typography>
+              <div className="flex items-center gap-2 bg-slate-100 px-4 py-2 dark:bg-slate-800">
+                <HeadsetMicIcon fontSize="small" className="text-slate-700 dark:text-slate-300" />
+                <Typography fontWeight={600} sx={{ color: "rgb(15 23 42)" }} className="dark:!text-slate-100">{title}</Typography>
                 <Tooltip title={isWhatsapp ? "WhatsApp" : "Ligação"}>
                   <span className="inline-flex items-center">
                     {isWhatsapp ? (
                       <WhatsAppIcon fontSize="small" className="text-green-600" />
                     ) : (
-                      <PhoneIcon fontSize="small" className="text-slate-500" />
+                      <PhoneIcon fontSize="small" className="text-slate-700 dark:text-slate-300" />
                     )}
                   </span>
                 </Tooltip>
@@ -1542,17 +1542,17 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
               </div>
               <Divider />
               <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
-                <Typography variant="body2"><span className="font-medium text-slate-500">Operador:</span> {String(call.OPERADOR ?? "-")}</Typography>
-                <Typography variant="body2"><span className="font-medium text-slate-500">Telefone:</span> {phone || "-"}</Typography>
-                <Typography variant="body2"><span className="font-medium text-slate-500">Início:</span> {formatDate(startedAt)}</Typography>
-                <Typography variant="body2"><span className="font-medium text-slate-500">Fim:</span> {formatDate(finishedAt)}</Typography>
+                <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Operador:</span> {String(call.OPERADOR ?? "-")}</Typography>
+                <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Telefone:</span> {phone || "-"}</Typography>
+                <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Início:</span> {formatDate(startedAt)}</Typography>
+                <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Fim:</span> {formatDate(finishedAt)}</Typography>
                 {isWhatsapp ? (
-                  <Typography variant="body2"><span className="font-medium text-slate-500">Contato WhatsApp:</span> {call.WHATSAPP_CONTATO_NOME ?? "-"}</Typography>
+                  <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Contato WhatsApp:</span> {call.WHATSAPP_CONTATO_NOME ?? "-"}</Typography>
                 ) : null}
                 {isWhatsapp ? (
-                  <Typography variant="body2"><span className="font-medium text-slate-500">Chat WhatsApp:</span> #{call.WHATSAPP_CHAT_ID ?? "-"}</Typography>
+                  <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Chat WhatsApp:</span> #{call.WHATSAPP_CHAT_ID ?? "-"}</Typography>
                 ) : null}
-                <Typography variant="body2" className="md:col-span-2"><span className="font-medium text-slate-500">Observação:</span> {call.OBS ?? "-"}</Typography>
+                <Typography variant="body2" className="md:col-span-2 dark:!text-slate-200" sx={{ color: "rgb(30 41 59)" }}><span className="font-medium text-slate-700 dark:text-slate-400">Observação:</span> {call.OBS ?? "-"}</Typography>
               </div>
             </Box>
           );
@@ -1560,7 +1560,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
         {filteredCallHistory.length > 0 ? (
           <Box className="flex flex-col items-center justify-between gap-3 pt-2 md:flex-row">
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: "rgb(71 85 105)" }} className="dark:!text-slate-400">
               Exibindo {paginatedCallHistory.length} de {filteredCallHistory.length} registro(s)
             </Typography>
             <Pagination
@@ -1767,19 +1767,19 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
         {paginatedPurchases.map((purchase: CustomerPurchaseDetail) => (
           <Box key={purchase.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="flex items-center justify-between bg-slate-50 px-4 py-2 dark:bg-slate-800">
+            <div className="flex items-center justify-between bg-slate-100 px-4 py-2 dark:bg-slate-800">
               <div className="flex items-center gap-2">
-                <ReceiptLongIcon fontSize="small" className="text-slate-500" />
-                <Typography fontWeight={700}>Compra #{purchase.CODIGO}</Typography>
+                <ReceiptLongIcon fontSize="small" className="text-slate-700 dark:text-slate-300" />
+                <Typography fontWeight={700} sx={{ color: "rgb(15 23 42)" }} className="dark:!text-slate-100">Compra #{purchase.CODIGO}</Typography>
                 {purchase.TIPO ? <Chip label={purchase.TIPO} size="small" variant="outlined" /> : null}
               </div>
               <Typography fontWeight={600} color="success.main">{formatCurrency(purchase.VALOR)}</Typography>
             </div>
             <Divider />
             <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
-              <Typography variant="body2"><span className="font-medium text-slate-500">Data:</span> {formatDate(purchase.DATA)}</Typography>
-              <Typography variant="body2"><span className="font-medium text-slate-500">Pagamento:</span> {purchase.FORMA_PGTO ?? "-"}</Typography>
-              <Typography variant="body2" className="md:col-span-2"><span className="font-medium text-slate-500">Descrição:</span> {purchase.DESCRICAO ?? "-"}</Typography>
+              <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Data:</span> {formatDate(purchase.DATA)}</Typography>
+              <Typography variant="body2" sx={{ color: "rgb(30 41 59)" }} className="dark:!text-slate-200"><span className="font-medium text-slate-700 dark:text-slate-400">Pagamento:</span> {purchase.FORMA_PGTO ?? "-"}</Typography>
+              <Typography variant="body2" className="md:col-span-2 dark:!text-slate-200" sx={{ color: "rgb(30 41 59)" }}><span className="font-medium text-slate-700 dark:text-slate-400">Descrição:</span> {purchase.DESCRICAO ?? "-"}</Typography>
             </div>
 
             {purchase.items.length > 0 ? (
@@ -1787,8 +1787,8 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
                 <Divider />
                 <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {purchase.items.map((item, index) => (
-                    <div key={`${purchase.CODIGO}-${index}`} className="grid grid-cols-2 gap-x-4 px-3 py-1.5 text-sm md:grid-cols-4">
-                      <span><span className="text-slate-500">Produto:</span> {item.productCode ?? "-"}</span>
+                    <div key={`${purchase.CODIGO}-${index}`} className="grid grid-cols-2 gap-x-4 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-200 md:grid-cols-4">
+                      <span><span className="text-slate-700 dark:text-slate-400">Produto:</span> {item.productCode ?? "-"}</span>
                       <span className="md:col-span-2 truncate">{item.description ?? "-"}</span>
                       <span className="text-right">{String(item.quantity ?? "-")} {item.unit ?? ""} × {formatCurrency(item.unitValue)}</span>
                     </div>
@@ -1796,7 +1796,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
                 </div>
               </>
             ) : (
-              <Typography variant="body2" className="px-3 py-2 text-slate-400">
+              <Typography variant="body2" className="px-3 py-2 text-slate-600 dark:text-slate-400">
                 Sem itens para esta compra.
               </Typography>
             )}
@@ -1805,7 +1805,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
         {filteredPurchases.length > 0 ? (
           <Box className="flex flex-col items-center justify-between gap-3 pt-2 md:flex-row">
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: "rgb(71 85 105)" }} className="dark:!text-slate-400">
               Exibindo {paginatedPurchases.length} de {filteredPurchases.length} compra(s)
             </Typography>
             <Pagination
@@ -1982,10 +1982,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
     <aside className="mx-2 my-4 flex h-[90vh] w-[95vw] max-w-6xl flex-col rounded-xl bg-white p-4 shadow-xl dark:bg-slate-900">
       <header className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
         <div>
-          <Typography variant="h6" fontWeight={700}>
+          <Typography variant="h6" fontWeight={700} sx={{ color: "rgb(15 23 42)" }} className="dark:!text-slate-100">
             Detalhes do cliente
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: "rgb(71 85 105)" }} className="dark:!text-slate-400">
             Código: {customerId}
           </Typography>
         </div>

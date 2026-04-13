@@ -20,7 +20,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [modal, setModal] = useState<ReactNode>(null);
 
   return (
-    <div className="box-border h-auto w-full overflow-hidden md:h-screen md:w-screen">
+    <div className="box-border h-screen w-full overflow-hidden md:w-screen">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
@@ -30,9 +30,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <ReadyMessagesProvider>
                     <CustomersProvider>
                       <ThemeProvider>
-                        <div className="grid h-auto w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:h-screen md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
+                        <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
                           <Header />
-                          {children}
+                          <main className="min-h-0 overflow-y-auto">{children}</main>
                           <Modal
                             open={!!modal}
                             onClose={(_, r) => {

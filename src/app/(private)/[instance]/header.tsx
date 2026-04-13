@@ -8,6 +8,8 @@ import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import LogoutIcon from "@mui/icons-material/Logout";
+import CampaignIcon from "@mui/icons-material/Campaign";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import MenuIcon from "@mui/icons-material/Menu";
 import MonitorIcon from "@mui/icons-material/Monitor";
 import NotificationsIcon from "@mui/icons-material/Notifications";
@@ -30,7 +32,10 @@ import HeaderNavItem from "./header-nav-item";
 import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
 
 const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
-  const arr = [{ title: "Clientes", href: "/customers" }];
+  const arr = [
+    { title: "Clientes", href: "/customers" },
+    { title: "Pipelines", href: "/funnel" },
+  ];
 
   if (isAdmin) {
     arr.push({ title: "Usuários", href: "/users" });
@@ -145,6 +150,11 @@ const MobileMenu = ({
           {isUserAdmin && (
             <>
               <ListItem>
+                <ListItemText primary="Disparos" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
+              </ListItem>
+              {renderMenuItems([{ title: "Mensagens em massa", href: "/tools/mass-messages" }])}
+
+              <ListItem>
                 <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
               </ListItem>
               {renderMenuItems(reportsRoutes)}
@@ -202,7 +212,10 @@ export default function Header() {
       : []),
     { title: "Conversas", href: "/reports/chats" },
     ...(user?.NIVEL === UserRole.ADMIN
-      ? [{ title: "Gerador de Relatório", href: "/reports/report-generator" }]
+      ? [
+          { title: "Dashboard Financeiro", href: "/reports/financial" },
+          { title: "Gerador de Relatório", href: "/reports/report-generator" },
+        ]
       : []),
   ];
 
@@ -239,6 +252,14 @@ export default function Header() {
                 <HeaderNavItem title="Cadastros" routes={crudsRoutes(parameters, isUserAdmin)}>
                   <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
+                <HeaderNavItem title="Pipelines" href="/funnel">
+                  <FilterAltIcon className="text-gray-900 dark:text-slate-200" />
+                </HeaderNavItem>
+                {isUserAdmin && (
+                  <HeaderNavItem title="Disparos" href="/tools/mass-messages">
+                    <CampaignIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
                 {isUserAdmin && (
                   <HeaderNavItem title="Relatórios" routes={reportsRoutes}>
                     <BarChartIcon className="text-gray-900 dark:text-slate-200" />

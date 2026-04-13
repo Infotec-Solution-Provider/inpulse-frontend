@@ -5,12 +5,14 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import { Avatar, IconButton, Tooltip } from "@mui/material";
 import { useContext, useMemo } from "react";
+import { toast } from "react-toastify";
 import { AppContext } from "../../app-context";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { ChatContext } from "./chat-context";
@@ -19,6 +21,7 @@ import FinishChatModal from "./(actions)/finish-chat-modal";
 import FinishInternalChatModal from "./(actions)/finish-internal-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
+import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 
 const safeFormatPhone = (phone: string | null): string => {
   try {
@@ -52,11 +55,12 @@ export default function ChatHeader({
   customerId,
   onClose,
 }: ChatContactInfoProps) {
-  const { openModal } = useContext(AppContext);
-  const { currentChat, currentChatMessages } = useWhatsappContext();
+  const { openModal, closeModal } = useContext(AppContext);
+  const { currentChat, currentChatMessages, parameters } = useWhatsappContext();
   const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
   const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
   const canOpenAIActions = AI_PRESENTATION_MODE && currentChat?.chatType === "wpp";
+  const canOpenCustomerDetail = currentChat?.chatType === "wpp" && !!customerId;
 
   const lastMessageBody = useMemo(() => {
     const lastMessage = [...currentChatMessages].reverse().find((message) => message.body?.trim());
@@ -81,6 +85,21 @@ export default function ChatHeader({
 
   const openEditContactModal = () => {
     openModal(<EditContactModal />);
+  };
+
+  const openCustomerDetailModal = () => {
+    if (!customerId) {
+      toast.info("Este contato não possui cliente vinculado.");
+      return;
+    }
+
+    openModal(
+      <CustomerCrmDetailModal
+        customerId={customerId}
+        onClose={closeModal}
+        canEdit={parameters["customer_detail_edit_enabled"] === "true"}
+      />,
+    );
   };
 
   const openAIPrototypeModal = (mode: AIPrototypeMode) => {
@@ -155,6 +174,24 @@ export default function ChatHeader({
               </IconButton>
             </Tooltip>
           </>
+        )}
+        {canOpenCustomerDetail && (
+          <Tooltip title={<h3 className="text-base dark:text-white">Detalhes do cliente</h3>}>
+            <IconButton
+              onClick={openCustomerDetailModal}
+              sx={{
+                background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                color: "white",
+                transition: "all 0.3s",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #047857 0%, #065f46 100%)",
+                  transform: "scale(1.08)",
+                },
+              }}
+            >
+              <InfoOutlinedIcon />
+            </IconButton>
+          </Tooltip>
         )}
         {currentChat?.chatType === "wpp" && canInteract && (
           <>
