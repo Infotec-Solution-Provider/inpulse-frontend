@@ -14,8 +14,9 @@ import FunnelProvider, { useFunnelContext } from "./funnel-context";
 import FunnelBoard from "@/lib/components/funnel/FunnelBoard";
 
 function FunnelPageContent() {
-  const { funnelName, loadBoard, loading, hasSnapshot, snapshotStatus, lastComputedAt, triggerRefresh } =
+  const { funnelName, funnelType, loadBoard, loading, hasSnapshot, snapshotStatus, lastComputedAt, triggerRefresh } =
     useFunnelContext();
+  const isManual = funnelType === "MANUAL";
   const router = useRouter();
   const params = useParams<{ instance: string; funnelId: string }>();
 
@@ -46,14 +47,16 @@ function FunnelPageContent() {
               {funnelName || "Pipeline"}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {isProcessing
-                ? "Gerando snapshot… isso pode levar alguns minutos."
-                : lastComputedAt
-                  ? `Atualizado ${new Date(lastComputedAt).toLocaleString("pt-BR", {
-                      day: "2-digit", month: "2-digit", year: "2-digit",
-                      hour: "2-digit", minute: "2-digit",
-                    })}`
-                  : "Nenhum snapshot gerado ainda."}
+              {isManual
+                ? "Pipeline manual — adicione e mova clientes arrastando entre etapas."
+                : isProcessing
+                  ? "Gerando snapshot… isso pode levar alguns minutos."
+                  : lastComputedAt
+                    ? `Atualizado ${new Date(lastComputedAt).toLocaleString("pt-BR", {
+                        day: "2-digit", month: "2-digit", year: "2-digit",
+                        hour: "2-digit", minute: "2-digit",
+                      })}`
+                    : "Nenhum snapshot gerado ainda."}
             </p>
           </div>
         </div>
@@ -67,24 +70,26 @@ function FunnelPageContent() {
               <SettingsIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={
-              isProcessing
-                ? <CircularProgress size={14} color="inherit" />
-                : <AutorenewIcon />
-            }
-            disabled={isProcessing || loading}
-            onClick={triggerRefresh}
-          >
-            {isProcessing ? "Processando…" : "Atualizar"}
-          </Button>
+          {!isManual && (
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={
+                isProcessing
+                  ? <CircularProgress size={14} color="inherit" />
+                  : <AutorenewIcon />
+              }
+              disabled={isProcessing || loading}
+              onClick={triggerRefresh}
+            >
+              {isProcessing ? "Processando…" : "Atualizar"}
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Processing banner */}
-      {isProcessing && (
+      {/* Processing banner (automatic only) */}
+      {!isManual && isProcessing && (
         <div className="flex shrink-0 items-center gap-2 bg-blue-50 px-4 py-2 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
           <CircularProgress size={14} color="inherit" />
           <span>Classificando clientes nos estágios... o board será atualizado automaticamente.</span>
@@ -92,7 +97,7 @@ function FunnelPageContent() {
       )}
 
       {/* Board or empty state */}
-      {!hasSnapshot && !loading ? (
+      {!isManual && !hasSnapshot && !loading ? (
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-center text-slate-500 dark:text-slate-400">
             <AutorenewIcon sx={{ fontSize: 40, opacity: 0.4 }} />

@@ -992,6 +992,7 @@ export default function FunnelConfigPage() {
   const funnelId = parseInt(params.funnelId, 10);
 
   const [funnelName, setFunnelName] = useState("");
+  const [funnelType, setFunnelType] = useState<"AUTOMATIC" | "MANUAL">("AUTOMATIC");
   const [stages, setStages] = useState<FunnelStageWithConditions[]>([]);
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [templates, setTemplates] = useState<ConditionTemplate[]>([]);
@@ -1017,6 +1018,7 @@ export default function FunnelConfigPage() {
         funnelId,
       );
       setFunnelName(funnel.name);
+      setFunnelType(funnel.type);
       setStages(funnel.stages as FunnelStageWithConditions[]);
       setResultados(res);
       setTemplates(tpls);
@@ -1217,7 +1219,7 @@ export default function FunnelConfigPage() {
       </div>
 
       {/* ── Conditions per stage ───────────────────────────────────────────────────────────────────── */}
-      {stages.length > 0 && (
+      {funnelType !== "MANUAL" && stages.length > 0 && (
         <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -1302,6 +1304,7 @@ export default function FunnelConfigPage() {
       )}
 
       {/* ── Template library ───────────────────────────────────────────────────────────────────────────── */}
+      {funnelType !== "MANUAL" && (
       <TemplateLibrary
         templates={templates}
         resultados={resultados}
@@ -1317,6 +1320,7 @@ export default function FunnelConfigPage() {
         }
         onTemplateDeleted={(id) => setTemplates((prev) => prev.filter((t) => t.id !== id))}
       />
+      )}
     </div>
   );
 }

@@ -108,6 +108,7 @@ export default function ChatHeader({
         mode={mode}
         onApplySuggestion={mode === "suggest-response" ? applySuggestedText : undefined}
         context={{
+          chatId: currentChat?.id ?? null,
           contactName: name,
           customerName,
           customerId,

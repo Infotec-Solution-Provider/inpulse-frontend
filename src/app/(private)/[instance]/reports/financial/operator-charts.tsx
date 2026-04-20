@@ -14,6 +14,36 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+
+type ClickableTickProps = {
+	x?: number;
+	y?: number;
+	payload?: { value: string };
+	fill?: string;
+	hiddenOps: Set<string>;
+	onToggle: (name: string) => void;
+};
+
+function ClickableYAxisTick({ x = 0, y = 0, payload, fill, hiddenOps, onToggle }: ClickableTickProps) {
+	const name = payload?.value ?? "";
+	const isHidden = hiddenOps.has(name);
+	const label = name.length > 15 ? name.substring(0, 14) + "…" : name;
+	return (
+		<g transform={`translate(${x},${y})`} style={{ cursor: "pointer", userSelect: "none" }} onClick={() => onToggle(name)}>
+			<text
+				x={0}
+				y={0}
+				dy={4}
+				textAnchor="end"
+				fontSize={11}
+				fill={isHidden ? "#94a3b8" : (fill ?? "#475569")}
+				textDecoration={isHidden ? "line-through" : undefined}
+			>
+				{label}
+			</text>
+		</g>
+	);
+}
 import type { LegendProps } from "recharts";
 import { useTheme } from "@mui/material/styles";
 import { useFinancialContext } from "./financial-context";
@@ -42,6 +72,16 @@ export default function OperatorCharts() {
 	const theme = useTheme();
 	const tickColor = theme.palette.text.secondary;
 	const [hiddenOps, setHiddenOps] = useState<Set<string>>(new Set());
+	const [hiddenBarOps, setHiddenBarOps] = useState<Set<string>>(new Set());
+
+	const toggleBarOp = useCallback((name: string) => {
+		setHiddenBarOps((prev) => {
+			const next = new Set(prev);
+			if (next.has(name)) next.delete(name);
+			else next.add(name);
+			return next;
+		});
+	}, []);
 
 	const toggleOp = useCallback((name: string) => {
 		setHiddenOps((prev) => {
@@ -69,11 +109,17 @@ export default function OperatorCharts() {
 		}
 
 		return data.byOperator.slice(0, 12).map((op) => ({
-			name: op.operadorNome ?? `#${op.operadorId}` ?? "Sem op",
+			name: op.operadorNome ?? (op.operadorId !== null ? `#${op.operadorId}` : "Outros"),
 			Faturamento: op.totalFaturamento,
 			Meta: op.operadorId !== null ? (goalMap.get(op.operadorId) ?? 0) : 0,
+			Propostas: op.propostasConvertidas,
 		}));
 	}, [data]);
+
+	const filteredBarData = useMemo(
+		() => barData.filter((d) => !hiddenBarOps.has(d.name)),
+		[barData, hiddenBarOps],
+	);
 
 	// ── Line chart: Evolução de faturamento por operador ──
 	const { lineData, topOperators } = useMemo(() => {
@@ -113,6 +159,7 @@ export default function OperatorCharts() {
 	}, [data]);
 
 	const isEmpty = !isLoading && barData.length === 0;
+	const barChartHeight = Math.max(220, filteredBarData.length * 44);
 
 	return (
 		<div className="grid gap-6 lg:grid-cols-2">
@@ -128,24 +175,44 @@ export default function OperatorCharts() {
 						Sem dados para o período selecionado
 					</div>
 				) : (
-					<ResponsiveContainer width="100%" height={280}>
-						<BarChart data={barData} layout="vertical">
+					<ResponsiveContainer width="100%" height={barChartHeight}>
+						<BarChart data={filteredBarData} layout="vertical">
 							<CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={false} />
 							<XAxis
+								xAxisId="money"
 								type="number"
 								tickFormatter={(v) => BRL.format(v as number)}
+								tick={{ fontSize: 10, fill: tickColor }}
+							/>
+							<XAxis
+								xAxisId="count"
+								type="number"
+								orientation="top"
+								tickFormatter={(v) => String(v)}
 								tick={{ fontSize: 10, fill: tickColor }}
 							/>
 							<YAxis
 								type="category"
 								dataKey="name"
 								width={110}
-								tick={{ fontSize: 11, fill: tickColor }}
+								tick={(props) => (
+									<ClickableYAxisTick
+										{...props}
+										fill={tickColor}
+										hiddenOps={hiddenBarOps}
+										onToggle={toggleBarOp}
+									/>
+								)}
 							/>
-							<Tooltip formatter={(v) => BRL.format(v as number)} />
+							<Tooltip
+								formatter={(v, name) =>
+									name === "Propostas" ? [`${v} proposta(s)`, name] : [BRL.format(v as number), name]
+								}
+							/>
 							<Legend />
-							<Bar dataKey="Faturamento" fill="#10b981" radius={[0, 3, 3, 0]} />
-							<Bar dataKey="Meta" fill="#94a3b8" radius={[0, 3, 3, 0]} />
+							<Bar xAxisId="money" dataKey="Faturamento" fill="#10b981" radius={[0, 3, 3, 0]} />
+							<Bar xAxisId="money" dataKey="Meta" fill="#94a3b8" radius={[0, 3, 3, 0]} />
+							<Bar xAxisId="count" dataKey="Propostas" fill="#6366f1" radius={[0, 3, 3, 0]} />
 						</BarChart>
 					</ResponsiveContainer>
 				)}

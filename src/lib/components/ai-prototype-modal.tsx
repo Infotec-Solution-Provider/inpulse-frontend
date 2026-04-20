@@ -3,6 +3,7 @@
 import { useAuthContext } from "@/app/auth-context";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import customersService from "@/lib/services/customers.service";
+import aiService from "@/lib/services/ai.service";
 import type { CustomerFullDetail, CustomerPurchaseDetail } from "@/app/(private)/[instance]/(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal.types";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -37,6 +38,7 @@ interface AIPrototypeModalProps {
   mode: AIPrototypeMode;
   onApplySuggestion?: (suggestion: string) => void;
   context: {
+    chatId?: number | null;
     contactName: string;
     customerName?: string | null;
     customerId?: number | null;
@@ -320,26 +322,142 @@ function getModeIcon(mode: AIPrototypeMode) {
   return <InsightsIcon sx={{ fontSize: 20 }} />;
 }
 
+function renderMarkdown(text: string): React.ReactNode {
+  const result: React.ReactNode[] = [];
+  let listItems: React.ReactNode[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let key = 0;
+
+  const flush = () => {
+    if (!listItems.length) return;
+    if (listType === "ol") {
+      result.push(<ol key={key++} className="my-1 ml-5 list-decimal space-y-0.5">{listItems}</ol>);
+    } else {
+      result.push(<ul key={key++} className="my-1 ml-5 list-disc space-y-0.5">{listItems}</ul>);
+    }
+    listItems = [];
+    listType = null;
+  };
+
+  const inline = (str: string): React.ReactNode[] =>
+    str.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) return <strong key={i}>{part.slice(2, -2)}</strong>;
+      if (part.startsWith("*") && part.endsWith("*")) return <em key={i}>{part.slice(1, -1)}</em>;
+      return part;
+    });
+
+  for (const line of text.split("\n")) {
+    const t = line.trim();
+    if (!t) { flush(); continue; }
+    if (t.startsWith("### ")) {
+      flush();
+      result.push(<h3 key={key++} className="mt-3 mb-0.5 text-sm font-bold text-slate-800 dark:text-slate-100">{inline(t.slice(4))}</h3>);
+    } else if (t.startsWith("## ")) {
+      flush();
+      result.push(<h2 key={key++} className="mt-3 mb-0.5 text-[0.95rem] font-bold text-slate-800 dark:text-slate-100">{inline(t.slice(3))}</h2>);
+    } else if (t.startsWith("# ")) {
+      flush();
+      result.push(<h1 key={key++} className="mt-3 mb-0.5 text-base font-bold text-slate-800 dark:text-slate-100">{inline(t.slice(2))}</h1>);
+    } else if (t.startsWith("- ") || t.startsWith("* ")) {
+      if (listType === "ol") flush();
+      listType = "ul";
+      listItems.push(<li key={key++}>{inline(t.slice(2))}</li>);
+    } else if (/^\d+\.\s/.test(t)) {
+      if (listType === "ul") flush();
+      listType = "ol";
+      listItems.push(<li key={key++}>{inline(t.replace(/^\d+\.\s/, ""))}</li>);
+    } else {
+      flush();
+      result.push(<p key={key++} className="leading-7">{inline(t)}</p>);
+    }
+  }
+  flush();
+  return result;
+}
+
 export default function AIPrototypeModal({ mode, onApplySuggestion, context }: AIPrototypeModalProps) {
   const { closeModal } = useAppContext();
   const { token } = useAuthContext();
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(mode !== "analyze-customer");
+  const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const [aiAnalysisRequested, setAiAnalysisRequested] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiInsightError, setAiInsightError] = useState<string | null>(null);
+  const [aiInsightText, setAiInsightText] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<string[] | null>(null);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [purchaseHistory, setPurchaseHistory] = useState<CustomerPurchaseDetail[]>([]);
   const [isPurchaseHistoryLoading, setIsPurchaseHistoryLoading] = useState(false);
   const [purchaseHistoryError, setPurchaseHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setIsLoading(false);
-    }, 900);
+    if (mode === "analyze-customer" && !aiAnalysisRequested) return;
 
-    return () => window.clearTimeout(timeout);
-  }, []);
+    if (!token) {
+      setAiError("Sessão inválida. Faça login novamente.");
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    if (mode === "analyze-customer") {
+      setIsInsightLoading(true);
+      setAiInsightError(null);
+    } else {
+      setIsLoading(true);
+    }
+    setAiError(null);
+    setAiInsightText(null);
+    setAiSuggestions(null);
+
+    const run = async () => {
+      try {
+        if (mode === "suggest-response") {
+          if (!context.chatId) {
+            setAiError("Chat não identificado para esta sugestão.");
+            return;
+          }
+          const res = await aiService.suggestResponse({ chatId: context.chatId }, token);
+          if (isMounted) setAiSuggestions(res.suggestions);
+        } else if (mode === "summarize-chat") {
+          if (!context.chatId) {
+            setAiError("Chat não identificado para este resumo.");
+            return;
+          }
+          const res = await aiService.summarizeChat({ chatId: context.chatId }, token);
+          if (isMounted) setAiInsightText(res.summary);
+        } else if (mode === "analyze-customer") {
+          if (!context.customerId) {
+            if (isMounted) setAiInsightError("Nenhum cliente vinculado para análise.");
+            return;
+          }
+          const res = await aiService.analyzeCustomer({ customerId: context.customerId }, token);
+          if (isMounted) setAiInsightText(res.analysis);
+        }
+      } catch {
+        if (isMounted) {
+          if (mode === "analyze-customer") {
+            setAiInsightError("Não foi possível obter resposta da IA. Tente novamente.");
+          } else {
+            setAiError("Não foi possível obter resposta da IA. Tente novamente.");
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+          setIsInsightLoading(false);
+        }
+      }
+    };
+
+    run();
+    return () => { isMounted = false; };
+  }, [mode, context.chatId, context.customerId, token, aiAnalysisRequested]);
 
   const content = useMemo(() => buildPrototypeContent(mode, context), [mode, context]);
   const shouldRenderSecondaryCloseButton = content.primaryActionType !== "close";
-  const selectedSuggestion = content.suggestions?.[selectedSuggestionIndex] ?? content.primaryActionText;
+  const activeSuggestions = aiSuggestions ?? content.suggestions;
+  const selectedSuggestion = activeSuggestions?.[selectedSuggestionIndex] ?? content.primaryActionText;
 
   useEffect(() => {
     setSelectedSuggestionIndex(0);
@@ -450,6 +568,10 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
               </p>
             </div>
           </div>
+        ) : aiError ? (
+          <div className="flex min-h-[min(22rem,50vh)] flex-col items-center justify-center gap-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
+            <Alert severity="error" sx={{ width: "100%", maxWidth: 420 }}>{aiError}</Alert>
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -474,9 +596,33 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
                 {content.insightTitle}
               </p>
-              <p className="mt-2 text-[0.98rem] leading-7 text-slate-700 dark:text-slate-200">
-                {content.insightText}
-              </p>
+              {isInsightLoading ? (
+                <div className="mt-3 flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                  <CircularProgress size={14} />
+                  <span className="text-sm">Gerando análise com IA...</span>
+                </div>
+              ) : aiInsightError ? (
+                <Alert severity="error" sx={{ mt: 1.5 }}>{aiInsightError}</Alert>
+              ) : aiInsightText ? (
+                <div className="mt-2 text-[0.98rem] text-slate-700 dark:text-slate-200">
+                  {renderMarkdown(aiInsightText)}
+                </div>
+              ) : mode === "analyze-customer" && !aiAnalysisRequested ? (
+                <div className="mt-3">
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<AutoAwesomeIcon fontSize="small" />}
+                    onClick={() => setAiAnalysisRequested(true)}
+                  >
+                    Analisar com IA
+                  </Button>
+                </div>
+              ) : (
+                <p className="mt-2 text-[0.98rem] leading-7 text-slate-700 dark:text-slate-200">
+                  {content.insightText}
+                </p>
+              )}
             </div>
 
             {shouldShowPurchasePanel ? (
@@ -643,10 +789,10 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
               </div>
             ) : null}
 
-            {content.suggestions?.length ? (
+            {activeSuggestions?.length ? (
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Respostas sugeridas</p>
-                {content.suggestions.map((suggestion, index) => (
+                {activeSuggestions.map((suggestion, index) => (
                   <button
                     key={`${suggestion}-${index}`}
                     type="button"

@@ -37,10 +37,12 @@ function exportCsv(rows: ReturnType<typeof useRows>) {
 
 function useRows() {
 	const { data } = useFinancialContext();
-	return useMemo(
-		() => [...(data?.byOperator ?? [])].sort((a, b) => b.totalFaturamento - a.totalFaturamento),
-		[data],
-	);
+	return useMemo(() => {
+		const all = [...(data?.byOperator ?? [])].sort((a, b) => b.totalFaturamento - a.totalFaturamento);
+		const named = all.filter((r) => r.operadorId !== null);
+		const others = all.filter((r) => r.operadorId === null);
+		return [...named, ...others];
+	}, [data]);
 }
 
 export default function ByOperatorTable() {
@@ -102,21 +104,29 @@ export default function ByOperatorTable() {
 									</tr>
 								))
 							: rows.map((row, idx) => {
-									const goal = row.operadorId !== null
-										? operatorGoals.get(row.operadorId)
-										: undefined;
+									const isOthers = row.operadorId === null;
+									const isFirstOthers = isOthers && (idx === 0 || rows[idx - 1]?.operadorId !== null);
+
+									const goal = !isOthers ? operatorGoals.get(row.operadorId!) : undefined;
 									const pct =
 										goal?.targetRevenue && goal.targetRevenue > 0
-											? Math.min(100, (row.totalFaturamento / goal.targetRevenue) * 100)
+											? (row.totalFaturamento / goal.targetRevenue) * 100
 											: null;
 									const convPct = row.totalCompras > 0
 										? (row.propostasConvertidas / row.totalCompras) * 100
 										: 0;
 
-									const isOthers = row.operadorId === null;
 									const medal = !isOthers && (idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null);
 
 									return (
+										<>
+											{isFirstOthers && (
+												<tr key="outros-separator">
+													<td colSpan={8} className="pt-1 pb-0 px-0">
+														<div className="border-t-2 border-dashed border-slate-300 dark:border-slate-600" />
+													</td>
+												</tr>
+											)}
 										<tr
 											key={row.operadorId ?? "sem-op"}
 											className="border-b border-slate-100 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/30"
@@ -146,12 +156,12 @@ export default function ByOperatorTable() {
 												{pct !== null ? (
 													<div className="flex flex-col gap-1">
 														<div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-															<span>{pct.toFixed(1)}%</span>
+															<span className={pct >= 100 ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}>{pct.toFixed(1)}%</span>
 															<span>{BRL.format(goal!.targetRevenue!)}</span>
 														</div>
 														<LinearProgress
 															variant="determinate"
-															value={pct}
+															value={Math.min(100, pct)}
 															color={pct >= 100 ? "success" : pct >= 70 ? "warning" : "error"}
 															className="rounded-full"
 														/>
@@ -171,6 +181,7 @@ export default function ByOperatorTable() {
 												</Tooltip>
 											</td>
 										</tr>
+										</>
 									);
 								})}
 

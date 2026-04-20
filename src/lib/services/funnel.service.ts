@@ -2,11 +2,13 @@ import axios from "axios";
 import type {
   ConditionTemplate,
   FunnelBoard,
+  FunnelCard,
   FunnelClientsResponse,
   FunnelConfigResult,
   FunnelDef,
   FunnelSnapshotStatusResponse,
   FunnelStageDef,
+  FunnelType,
   StageCondition,
   StageConditionType,
 } from "../types/funnel.types";
@@ -26,10 +28,10 @@ async function listFunnels(token: string): Promise<FunnelDef[]> {
   return res.data.data;
 }
 
-async function createFunnel(token: string, name: string): Promise<FunnelDef> {
+async function createFunnel(token: string, name: string, type: FunnelType = "AUTOMATIC"): Promise<FunnelDef> {
   const res = await axios.post<{ data: FunnelDef }>(
     `${base}/api/marketing/funnels`,
-    { name },
+    { name, type },
     { headers: authHeader(token) },
   );
   return res.data.data;
@@ -194,6 +196,58 @@ async function getSnapshotStatus(
   return res.data.data;
 }
 
+// ── Manual entries ────────────────────────────────────────────────────────────
+
+async function searchCustomers(
+  token: string,
+  funnelId: number,
+  q: string,
+): Promise<FunnelCard[]> {
+  const res = await axios.get<{ data: FunnelCard[] }>(
+    `${base}/api/marketing/funnels/${funnelId}/search-customers`,
+    { params: { q }, headers: authHeader(token) },
+  );
+  return res.data.data;
+}
+
+async function addManualEntry(
+  token: string,
+  funnelId: number,
+  stageId: number,
+  ccId: number,
+): Promise<FunnelCard & { entryId: number }> {
+  const res = await axios.post<{ data: FunnelCard & { entryId: number } }>(
+    `${base}/api/marketing/funnels/${funnelId}/manual-entries`,
+    { stageId, ccId },
+    { headers: authHeader(token) },
+  );
+  return res.data.data;
+}
+
+async function removeManualEntry(
+  token: string,
+  funnelId: number,
+  entryId: number,
+): Promise<void> {
+  await axios.delete(
+    `${base}/api/marketing/funnels/${funnelId}/manual-entries/${entryId}`,
+    { headers: authHeader(token) },
+  );
+}
+
+async function moveManualEntry(
+  token: string,
+  funnelId: number,
+  entryId: number,
+  stageId: number,
+): Promise<void> {
+  await axios.patch(
+    `${base}/api/marketing/funnels/${funnelId}/manual-entries/${entryId}`,
+    { stageId },
+    { headers: authHeader(token) },
+  );
+}
+
 const funnelApiService = {
   listFunnels,
   createFunnel,
@@ -211,6 +265,10 @@ const funnelApiService = {
   getClientsByStage,
   triggerSnapshot,
   getSnapshotStatus,
+  searchCustomers,
+  addManualEntry,
+  removeManualEntry,
+  moveManualEntry,
 };
 
 export default funnelApiService;

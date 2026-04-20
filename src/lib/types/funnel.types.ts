@@ -1,6 +1,8 @@
 export type FunnelSnapshotStatus = "idle" | "processing" | "done" | "failed";
+export type FunnelType = "AUTOMATIC" | "MANUAL";
 
 export interface FunnelCard {
+  entryId?: number; // only present for manual funnel cards
   ccId: number;
   clienteId: number;
   nome: string;
@@ -16,6 +18,7 @@ export interface FunnelDef {
   id: number;
   instance: string;
   name: string;
+  type: FunnelType;
   createdAt: string;
 }
 
@@ -130,6 +133,7 @@ export interface FunnelConfigResult {
   funnel: {
     id: number;
     name: string;
+    type: FunnelType;
     stages: FunnelStageWithConditions[];
   };
   resultados: { id: number; nome: string }[];

@@ -3,4 +3,4 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
-  '@in.pulse-crm/sdk': link:../inpulse-libs/sdk
+  '@in.pulse-crm/sdk': file:./lib/sdk-dist

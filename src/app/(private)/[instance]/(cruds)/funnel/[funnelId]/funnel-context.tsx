@@ -16,6 +16,7 @@ import type {
   FunnelBoardColumn,
   FunnelCard,
   FunnelSnapshotStatus,
+  FunnelType,
 } from "@/lib/types/funnel.types";
 
 interface StagePageState {
@@ -25,7 +26,9 @@ interface StagePageState {
 }
 
 interface FunnelContextValue {
+  funnelId: number;
   funnelName: string;
+  funnelType: FunnelType;
   columns: FunnelBoardColumn[];
   loading: boolean;
   hasSnapshot: boolean;
@@ -36,6 +39,10 @@ interface FunnelContextValue {
   loadMoreClients: (stageId: number) => Promise<void>;
   hasMore: (stageId: number) => boolean;
   loadingMore: Record<number, boolean>;
+  // Manual funnel handlers
+  addManualEntry: (stageId: number, ccId: number) => Promise<void>;
+  removeManualEntry: (entryId: number, stageId: number) => Promise<void>;
+  moveCard: (entryId: number, fromStageId: number, toStageId: number) => Promise<void>;
 }
 
 export const FunnelContext = createContext<FunnelContextValue>({} as FunnelContextValue);
@@ -58,6 +65,7 @@ export default function FunnelProvider({ funnelId, children }: Props) {
   const { token } = useContext(AuthContext);
 
   const [funnelName, setFunnelName] = useState("");
+  const [funnelType, setFunnelType] = useState<FunnelType>("AUTOMATIC");
   const [columns, setColumns] = useState<FunnelBoardColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -112,7 +120,10 @@ export default function FunnelProvider({ funnelId, children }: Props) {
       .listFunnels(token)
       .then((list) => {
         const found = list.find((f) => f.id === funnelId);
-        if (found) setFunnelName(found.name);
+        if (found) {
+          setFunnelName(found.name);
+          setFunnelType(found.type);
+        }
       })
       .catch(() => {/* non-fatal */});
     loadBoard();
@@ -195,10 +206,86 @@ export default function FunnelProvider({ funnelId, children }: Props) {
     [pageState, hasMore, token, funnelId],
   );
 
+  const addManualEntry = useCallback(
+    async (stageId: number, ccId: number) => {
+      if (!token) return;
+      const card = await funnelApiService.addManualEntry(token, funnelId, stageId, ccId);
+      setColumns((prev) =>
+        prev.map((col) => {
+          if (col.stageId !== stageId) return col;
+          return { ...col, clients: [card, ...col.clients], total: col.total + 1 };
+        }),
+      );
+    },
+    [token, funnelId],
+  );
+
+  const removeManualEntry = useCallback(
+    async (entryId: number, stageId: number) => {
+      if (!token) return;
+      // Optimistic update
+      setColumns((prev) =>
+        prev.map((col) => {
+          if (col.stageId !== stageId) return col;
+          return {
+            ...col,
+            clients: col.clients.filter((c) => c.entryId !== entryId),
+            total: Math.max(0, col.total - 1),
+          };
+        }),
+      );
+      try {
+        await funnelApiService.removeManualEntry(token, funnelId, entryId);
+      } catch {
+        toast.error("Erro ao remover cliente. Recarregando...");
+        await loadBoard();
+      }
+    },
+    [token, funnelId, loadBoard],
+  );
+
+  const moveCard = useCallback(
+    async (entryId: number, fromStageId: number, toStageId: number) => {
+      if (!token || fromStageId === toStageId) return;
+      // Optimistic update: move card between columns
+      let movedCard: FunnelCard | undefined;
+      setColumns((prev) => {
+        let card: FunnelCard | undefined;
+        const next = prev.map((col) => {
+          if (col.stageId === fromStageId) {
+            card = col.clients.find((c) => c.entryId === entryId);
+            return {
+              ...col,
+              clients: col.clients.filter((c) => c.entryId !== entryId),
+              total: Math.max(0, col.total - 1),
+            };
+          }
+          return col;
+        });
+        movedCard = card;
+        if (!card) return prev;
+        return next.map((col) => {
+          if (col.stageId !== toStageId) return col;
+          return { ...col, clients: [card!, ...col.clients], total: col.total + 1 };
+        });
+      });
+      void movedCard;
+      try {
+        await funnelApiService.moveManualEntry(token, funnelId, entryId, toStageId);
+      } catch {
+        toast.error("Erro ao mover cliente. Recarregando...");
+        await loadBoard();
+      }
+    },
+    [token, funnelId, loadBoard],
+  );
+
   return (
     <FunnelContext.Provider
       value={{
+        funnelId,
         funnelName,
+        funnelType,
         columns,
         loading,
         hasSnapshot,
@@ -209,6 +296,9 @@ export default function FunnelProvider({ funnelId, children }: Props) {
         loadMoreClients,
         hasMore,
         loadingMore,
+        addManualEntry,
+        removeManualEntry,
+        moveCard,
       }}
     >
       {children}

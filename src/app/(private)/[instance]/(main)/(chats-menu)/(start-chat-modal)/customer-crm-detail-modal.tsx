@@ -244,6 +244,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         CONTATO_MAIL: payload.customer.CONTATO_MAIL,
         WEBSITE: payload.customer.WEBSITE,
         NR_FUNCIONARIOS: payload.customer.NR_FUNCIONARIOS,
+        OBS_CLIENTES: payload.customer.OBS_CLIENTES,
       });
     } catch (error) {
       toast.error("Não foi possível carregar os detalhes do cliente.");
@@ -368,6 +369,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
       CONTATO_MAIL: detail.customer.CONTATO_MAIL,
       WEBSITE: detail.customer.WEBSITE,
       NR_FUNCIONARIOS: detail.customer.NR_FUNCIONARIOS,
+      OBS_CLIENTES: detail.customer.OBS_CLIENTES,
     });
   };
 
@@ -433,6 +435,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
       CONTATO_MAIL: detail?.customer.CONTATO_MAIL,
       WEBSITE: detail?.customer.WEBSITE,
       NR_FUNCIONARIOS: detail?.customer.NR_FUNCIONARIOS,
+      OBS_CLIENTES: detail?.customer.OBS_CLIENTES,
     }),
     [detail]
   );
@@ -1228,9 +1231,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
           InputProps={{ readOnly: !canEditOrigin }}
         />
         <TextField
-          label="Nome customizável"
-          value={detail.metadata.customNameFieldMapped ? "Mapeado" : "Não mapeado no CRM"}
-          InputProps={{ readOnly: true }}
+          label="Nome customizável (OBS_CLIENTES)"
+          value={originDraft.OBS_CLIENTES ?? ""}
+          onChange={(e) => setOriginDraft((prev) => ({ ...prev, OBS_CLIENTES: e.target.value || null }))}
+          InputProps={{ readOnly: !canEditOrigin }}
         />
 
         {renderEditActions(
@@ -1300,10 +1304,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
               key={contact.CODIGO}
               className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
             >
-              <div className="flex items-center justify-between bg-slate-50 px-4 py-2 dark:bg-slate-800">
+              <div className="flex items-center justify-between bg-slate-100 px-4 py-2 dark:bg-slate-800">
                 <div className="flex items-center gap-2">
                   <ContactsIcon fontSize="small" className="text-slate-500" />
-                  <Typography fontWeight={700}>{contact.NOME}</Typography>
+                  <Typography fontWeight={700} className="text-slate-900 dark:text-slate-100">{contact.NOME}</Typography>
                   {contact.CARGO ? (
                     <Chip label={String(contact.CARGO)} size="small" variant="outlined" />
                   ) : null}
@@ -1362,36 +1366,36 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
                 )
               ) : (
                 <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Tratamento:</span>{" "}
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Tratamento:</span>{" "}
                     {contact.TRATAMENTO ?? "-"}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Email:</span>{" "}
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Email:</span>{" "}
                     {contact.EMAIL ?? "-"}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Fone direto:</span> (
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Fone direto:</span> (
                     {contact.AREA_DIRETO ?? "-"}) {contact.FONE_DIRETO ?? "-"}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Celular:</span> (
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Celular:</span> (
                     {contact.AREA_CEL ?? "-"}) {contact.CELULAR ?? "-"}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Residencial:</span> (
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Residencial:</span> (
                     {contact.AREA_RESI ?? "-"}) {contact.FONE_RESIDENCIAL ?? "-"}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Aniversário:</span>{" "}
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Aniversário:</span>{" "}
                     {formatDate(contact.ANIVERSARIO)}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Sexo:</span>{" "}
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Sexo:</span>{" "}
                     {contact.SEXO ?? "-"}
                   </Typography>
-                  <Typography variant="body2">
-                    <span className="font-medium text-slate-500">Filhos:</span>{" "}
+                  <Typography variant="body2" className="text-slate-800 dark:text-slate-200">
+                    <span className="font-medium text-slate-600 dark:text-slate-400">Filhos:</span>{" "}
                     {String(contact.FILHOS ?? 0)}
                   </Typography>
                 </div>
