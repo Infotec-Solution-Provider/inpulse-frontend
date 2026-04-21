@@ -1,11 +1,8 @@
 import { CustomersClient } from "@in.pulse-crm/sdk";
 
-const NEXT_PUBLIC_CUSTOMERS_URL = process.env.NEXT_PUBLIC_CUSTOMERS_URL || "http://localhost:8002";
+import type { CustomerLookupOption } from "@/lib/types/sdk-local.types";
 
-export interface CustomerCampaignOption {
-	CODIGO: number;
-	NOME: string | null;
-}
+const NEXT_PUBLIC_CUSTOMERS_URL = process.env.NEXT_PUBLIC_CUSTOMERS_URL || "http://localhost:8002";
 
 interface FinishTelephonySchedulePayload {
 	resultId: number;
@@ -31,8 +28,26 @@ class FrontendCustomersService extends CustomersClient {
 	public async getCampaigns() {
 		const response = await this.ax.get<{
 			message: string;
-			data: CustomerCampaignOption[];
+			data: CustomerLookupOption[];
 		}>(`/api/customers/campaigns`);
+
+		return response.data.data;
+	}
+
+	public async getSegments() {
+		const response = await this.ax.get<{
+			message: string;
+			data: CustomerLookupOption[];
+		}>(`/api/customers/segments`);
+
+		return response.data.data;
+	}
+
+	public async getOperators() {
+		const response = await this.ax.get<{
+			message: string;
+			data: CustomerLookupOption[];
+		}>(`/api/customers/operators`);
 
 		return response.data.data;
 	}

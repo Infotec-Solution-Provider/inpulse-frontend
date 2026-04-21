@@ -368,9 +368,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const editMessage = useCallback(
     async (messageId: string, newText: string, isInternal: boolean = false) => {
-      api.current.editMessage(String(globalChannel.current!.id), messageId, newText, isInternal);
+      const channelId = selectedChannel?.id ?? globalChannel.current?.id;
+
+      if (!channelId) {
+        toast.error("Nenhum canal WhatsApp disponível para editar a mensagem.");
+        return;
+      }
+
+      api.current.editMessage(String(channelId), messageId, newText, isInternal);
     },
-    [],
+    [selectedChannel],
   );
 
   const getChatsMonitor = useCallback(() => {
@@ -508,7 +515,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     async (data: ForwardMessagesData) => {
       try {
         api.current.setAuth(token || "");
-        await api.current.forwardMessages(String(globalChannel.current!.id), data);
+        const channelId = selectedChannel?.id ?? globalChannel.current?.id;
+
+        if (!channelId) {
+          toast.error("Nenhum canal WhatsApp disponível para encaminhar mensagens.");
+          return;
+        }
+
+        await api.current.forwardMessages(String(channelId), data);
         toast.success("Mensagens encaminhadas com sucesso!");
       } catch (err) {
         const errorMessage = sanitizeErrorMessage(err);
@@ -516,7 +530,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         console.error("Falha ao encaminhar mensagens", err);
       }
     },
-    [token],
+    [selectedChannel, token],
   );
 
   const getChats = useCallback(() => {
@@ -575,15 +589,20 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then((res) => {
           const channelsData: WppClient[] = res.data.data;
           const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
-          globalChannel.current = defaultChannel || channelsData[0] || null;
+          const activeChannel = defaultChannel || channelsData[0] || null;
+
+          globalChannel.current = activeChannel;
+          setSelectedChannel((current) => current ?? activeChannel);
 
           api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
             const parameters: Record<string, string> = res.data["parameters"];
-            if (parameters["is_official"] === "true") {
+            if (parameters["is_official"] === "true" && activeChannel?.id) {
               const templatesResponse = await api.current.ax.get(
-                `/api/whatsapp/${globalChannel.current?.id}/templates`,
+                `/api/whatsapp/${activeChannel.id}/templates`,
               );
               setTemplates(templatesResponse.data.templates);
+            } else {
+              setTemplates([]);
             }
             setParameters(parameters);
             console.log("Loaded parameters:", parameters);

@@ -5,7 +5,7 @@
   "scripts": {
     "f": "next build --no-lint",
     "u": "npm i @in.pulse-crm/sdk@latest",
-    "u:sdk": "rm -rf lib/sdk-dist && mkdir -p lib/sdk-dist && cp -r ../inpulse-libs/sdk/dist/. lib/sdk-dist/ && node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('lib/sdk-dist/package.json','utf8'));const fix=s=>s.replace('./dist/','./');p.main=fix(p.main);p.types=fix(p.types);p.module=fix(p.module);Object.keys(p.exports).forEach(k=>{const e=p.exports[k];Object.keys(e).forEach(f=>{e[f]=fix(e[f]);});});fs.writeFileSync('lib/sdk-dist/package.json',JSON.stringify(p,null,'\\t'));\" && pnpm install",
+    "u:sdk": "rm -rf lib/sdk-dist && mkdir -p lib/sdk-dist && cp -r ../inpulse-libs/sdk/dist/. lib/sdk-dist/ && cp ../inpulse-libs/sdk/package.json lib/sdk-dist/package.json && node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('lib/sdk-dist/package.json','utf8'));const fix=s=>s.replace('./dist/','./');p.main=fix(p.main);p.types=fix(p.types);p.module=fix(p.module);Object.keys(p.exports).forEach(k=>{const e=p.exports[k];Object.keys(e).forEach(f=>{e[f]=fix(e[f]);});});fs.writeFileSync('lib/sdk-dist/package.json',JSON.stringify(p,null,'\\t'));\" && pnpm install",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

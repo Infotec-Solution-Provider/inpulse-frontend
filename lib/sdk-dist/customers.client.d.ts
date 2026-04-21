@@ -1,6 +1,6 @@
 import ApiClient from "./api-client";
 import { MessageResponse, PaginatedResponse, RequestFilters } from "./types";
-import { CreateCustomerDTO, Customer, CustomerFullDetail, FinishTelephonyScheduleDTO, CustomerTelephonySchedule, UpdateCustomerDTO } from "./types/customers.types";
+import { CreateCustomerDTO, Customer, CustomerFullDetail, CustomerLookupOption, FinishTelephonyScheduleDTO, CustomerTelephonySchedule, UpdateCustomerDTO } from "./types/customers.types";
 declare class CustomersClient extends ApiClient {
     /**
      * Cria um novo cliente.
@@ -38,6 +38,9 @@ declare class CustomersClient extends ApiClient {
      * @returns Uma Promise que resolve para uma lista de clientes.
      */
     getCustomers(filters?: RequestFilters<Customer>): Promise<PaginatedResponse<Customer>>;
+    getCampaigns(): Promise<CustomerLookupOption[]>;
+    getSegments(): Promise<CustomerLookupOption[]>;
+    getOperators(): Promise<CustomerLookupOption[]>;
     getTelephonySchedules(filters?: RequestFilters<CustomerTelephonySchedule>): Promise<PaginatedResponse<CustomerTelephonySchedule>>;
     finishTelephonySchedule(scheduleId: number, data: FinishTelephonyScheduleDTO): Promise<MessageResponse>;
     /**

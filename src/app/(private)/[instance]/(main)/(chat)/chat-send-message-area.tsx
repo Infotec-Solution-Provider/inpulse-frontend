@@ -10,6 +10,7 @@ import TryIcon from "@mui/icons-material/Try";
 import { IconButton, Modal, TextField } from "@mui/material";
 import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useAppContext } from "../../app-context";
@@ -167,8 +168,15 @@ export default function ChatSendMessageArea() {
       openModal(
         <SendTemplateModal
           onClose={closeModal}
-          onSendTemplate={(data) => {
-            wppApi.current.ax.post(`/api/whatsapp/${globalChannel.current?.id}/templates/send`, {
+          onSendTemplate={async (data) => {
+            const channelId = selectedChannel?.id ?? globalChannel.current?.id;
+
+            if (!channelId) {
+              toast.error("Nenhum canal WhatsApp disponível para enviar template.");
+              return;
+            }
+
+            await wppApi.current.ax.post(`/api/whatsapp/${channelId}/templates/send`, {
               to: currentChat.contact?.phone,
               chatId: currentChat.id,
               contactId: currentChat.contactId,

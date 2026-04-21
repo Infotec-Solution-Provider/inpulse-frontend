@@ -11,7 +11,8 @@ import ErrorIcon from "@mui/icons-material/Error";
 import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
-import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { getChannelColor } from "./channels-select";
@@ -47,6 +48,7 @@ export interface MessageProps {
   isSelected?: boolean;
   isEdited?: boolean;
   channelId?: number | null;
+  agentId?: number | null;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
@@ -96,6 +98,7 @@ export default function Message({
   isReadOnly = false,
   isSelected = false,
   channelId,
+  agentId,
   onSelect,
   onForward,
   onCopy,
@@ -264,6 +267,11 @@ export default function Message({
             )}
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
+            {agentId && (
+              <Tooltip title="Mensagem gerada por Agente de IA">
+                <SmartToyIcon sx={{ fontSize: "0.85rem", color: "#8b5cf6" }} />
+              </Tooltip>
+            )}
             {style !== "system" && status && statusComponents[status]}
           </div>
         </div>

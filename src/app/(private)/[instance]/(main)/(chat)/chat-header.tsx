@@ -7,11 +7,12 @@ import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import { Avatar, IconButton, Tooltip } from "@mui/material";
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { AppContext } from "../../app-context";
 import { useWhatsappContext } from "../../whatsapp-context";
@@ -22,6 +23,7 @@ import FinishInternalChatModal from "./(actions)/finish-internal-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
+import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
 
 const safeFormatPhone = (phone: string | null): string => {
   try {
@@ -61,6 +63,9 @@ export default function ChatHeader({
   const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
   const canOpenAIActions = AI_PRESENTATION_MODE && currentChat?.chatType === "wpp";
   const canOpenCustomerDetail = currentChat?.chatType === "wpp" && !!customerId;
+  const hasAiAgent = currentChat?.chatType === "wpp" && !!(currentChat as { agentId?: number | null }).agentId;
+
+  const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
 
   const lastMessageBody = useMemo(() => {
     const lastMessage = [...currentChatMessages].reverse().find((message) => message.body?.trim());
@@ -122,6 +127,7 @@ export default function ChatHeader({
   };
 
   return (
+    <>
     <div className="flex items-center justify-between gap-4 border-b bg-slate-200 px-4 py-2 pt-10 dark:border-none dark:bg-slate-800 md:pt-2">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 rounded-md bg-slate-300 px-2 py-1 dark:bg-slate-700">
@@ -157,6 +163,13 @@ export default function ChatHeader({
         )}
       </div>
       <div className="flex items-center">
+        {hasAiAgent && (
+          <Tooltip title={<h3 className="text-base dark:text-white">Logs do Agente de IA</h3>}>
+            <IconButton onClick={() => setAuditDrawerOpen(true)}>
+              <ManageAccountsIcon sx={{ color: "#8b5cf6" }} />
+            </IconButton>
+          </Tooltip>
+        )}
         {canOpenAIActions && (
           <>
             <Tooltip title={<h3 className="text-base dark:text-white">Sugerir resposta</h3>}>
@@ -243,5 +256,12 @@ export default function ChatHeader({
         )}
       </div>
     </div>
+    {auditDrawerOpen && currentChat?.id && (
+      <AgentAuditDrawer
+        chatId={currentChat.id}
+        onClose={() => setAuditDrawerOpen(false)}
+      />
+    )}
+    </>
   );
 }

@@ -129,6 +129,13 @@ export interface CustomerProfileSummaryFilters {
     purchaseLevel?: CustomerPurchaseLevel;
     ageLevel?: CustomerAgeLevel;
     purchaseInterestLevel?: CustomerPurchaseInterestLevel;
+    state?: string;
+    city?: string;
+    activeCustomer?: "SIM" | "NAO";
+    searchTerm?: string;
+    segmentIds?: number[];
+    campaignIds?: number[];
+    operatorIds?: number[];
 }
 export interface CustomerProfileSummaryBatchRequest {
     customerIds: number[];
@@ -158,6 +165,7 @@ export interface WppMessage {
     wwebjsIdStanza: string | null;
     sentAt: Date;
     userId: number | null;
+    agentId: number | null;
     billingCategory: string | null;
     clientId: number | null;
 }
@@ -180,6 +188,7 @@ export interface WppChat {
     userName?: string;
     walletId?: number;
     botId?: number;
+    agentId?: number | null;
     resultId?: number;
     sectorId?: number;
     type: WppChatType;

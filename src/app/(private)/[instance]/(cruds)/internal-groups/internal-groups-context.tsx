@@ -198,9 +198,16 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     internalApi.current.setAuth(token);
     loadInternalGroups({});
 
+    const channelId = globalChannel.current?.id;
+
+    if (!channelId) {
+      setWppGroups([]);
+      return;
+    }
+
     // Load WhatsApp groups
     axios
-      .get(WPP_BASE_URL + `/api/whatsapp/${globalChannel.current!.id}/groups`, {
+      .get(WPP_BASE_URL + `/api/whatsapp/${channelId}/groups`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

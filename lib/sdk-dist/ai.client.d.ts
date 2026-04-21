@@ -1,5 +1,5 @@
 import ApiClient from "./api-client";
-import type { AiAgentConfig, AiTenantConfig, AnalyzeCustomerRequest, AnalyzeCustomerResponse, SuggestResponseRequest, SuggestResponseResponse, SummarizeChatRequest, SummarizeChatResponse } from "./types/ai.types";
+import type { AiAgentConfig, AiTenantConfig, AnalyzeCustomerRequest, AnalyzeCustomerResponse, SuggestResponseRequest, SuggestResponseResponse, SummarizeChatRequest, SummarizeChatResponse, AiAgent, AiAgentChatSession, CreateAiAgentInput, UpdateAiAgentInput, AiAgentAudienceInput, AiAgentKnowledgeEntryInput, AiAgentActionLogFilters, PaginatedActionLogs, AiAgentAudiencePreview } from "./types/ai.types";
 export default class AiClient extends ApiClient {
     private authHeader;
     suggestResponse(data: SuggestResponseRequest, token: string): Promise<SuggestResponseResponse>;
@@ -9,4 +9,19 @@ export default class AiClient extends ApiClient {
     upsertTenantConfig(instance: string, data: Partial<AiTenantConfig>, token: string): Promise<AiTenantConfig>;
     getAgentConfig(instance: string, token: string): Promise<AiAgentConfig | null>;
     upsertAgentConfig(instance: string, data: Partial<AiAgentConfig>, token: string): Promise<AiAgentConfig>;
+    listAgents(token: string): Promise<AiAgent[]>;
+    getAgent(agentId: number, token: string): Promise<AiAgent>;
+    createAgent(data: CreateAiAgentInput, token: string): Promise<AiAgent>;
+    updateAgent(agentId: number, data: UpdateAiAgentInput, token: string): Promise<AiAgent>;
+    deleteAgent(agentId: number, token: string): Promise<void>;
+    upsertAgentAudience(agentId: number, data: AiAgentAudienceInput, token: string): Promise<AiAgent>;
+    previewAgentAudience(agentId: number, filters: {
+        page?: number;
+        perPage?: number;
+    } | undefined, token: string): Promise<AiAgentAudiencePreview>;
+    addAgentKnowledgeEntry(agentId: number, data: AiAgentKnowledgeEntryInput, token: string): Promise<AiAgent>;
+    updateAgentKnowledgeEntry(agentId: number, entryId: number, data: Partial<AiAgentKnowledgeEntryInput>, token: string): Promise<AiAgent>;
+    deleteAgentKnowledgeEntry(agentId: number, entryId: number, token: string): Promise<void>;
+    listAgentActionLogs(filters: AiAgentActionLogFilters, token: string): Promise<PaginatedActionLogs>;
+    listActiveSessions(token: string): Promise<AiAgentChatSession[]>;
 }

@@ -127,6 +127,7 @@ export default function RenderWhatsappChatMessages({
               isForwardMode={isSelectionMode}
               isEdited={!!m.isEdited}
               channelId={m.clientId}
+              agentId={m.agentId}
               isReadOnly={isReadOnlyMode}
               onEdit={
                 !isReadOnlyMode &&
