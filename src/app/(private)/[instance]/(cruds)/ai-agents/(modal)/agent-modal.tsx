@@ -1,5 +1,7 @@
 "use client";
 
+import { useAuthContext } from "@/app/auth-context";
+import filesService from "@/lib/services/files.service";
 import type {
   AiAgent,
   AiAgentActionType,
@@ -20,6 +22,8 @@ import type {
   WppContactWithCustomer,
 } from "@/lib/types/sdk-local.types";
 import instancesService, { type GeoStateOption } from "@/lib/services/instances.service";
+import { FileDirType } from "@in.pulse-crm/sdk";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { type MessageTemplate, useWhatsappContext } from "../../../whatsapp-context";
 import AddIcon from "@mui/icons-material/Add";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
@@ -57,7 +61,9 @@ import {
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import { useAiAgentsContext } from "../ai-agents-context";
+import FilePicker from "../../ready-messages/(modal)/file-picker";
 
 const ALL_ACTIONS: { value: AiAgentActionType; label: string; description: string }[] = [
   { value: "REPLY", label: "Responder", description: "Permite que o agente responda mensagens diretamente." },
@@ -74,9 +80,9 @@ const ALL_ACTIONS: { value: AiAgentActionType; label: string; description: strin
 
 const ALL_TRIGGERS: { value: AiAgentTriggerType; label: string; description: string }[] = [
   {
-    value: "NEW_MESSAGE_NO_AGENT",
-    label: "Nova mensagem sem agente",
-    description: "Aciona quando chega uma nova mensagem em conversas sem atendente humano ativo.",
+    value: "MESSAGE_DURING_HOURS",
+    label: "Mensagem dentro do horario",
+    description: "Aciona quando chega uma nova mensagem do cliente dentro da janela de horario configurada.",
   },
   {
     value: "RESPONSE_TIMEOUT",
@@ -145,6 +151,12 @@ const TIMEZONE_OPTIONS = [
   "America/Belem",
   "America/Porto_Velho",
 ];
+
+const DEFAULT_MESSAGE_DURING_HOURS_TRIGGER_CONFIG = {
+  startTime: "09:00",
+  endTime: "18:00",
+  timezone: "America/Sao_Paulo",
+};
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -392,6 +404,21 @@ function getTriggerConfig(trigger: AiAgentTriggerInput) {
 
 function normalizeTriggers(triggers: AiAgentTriggerInput[]) {
   return triggers.map((trigger) => {
+    if (trigger.type === "MESSAGE_DURING_HOURS") {
+      const startTime = String(getTriggerConfig(trigger).startTime ?? "").trim();
+      const endTime = String(getTriggerConfig(trigger).endTime ?? "").trim();
+      const timezone = String(getTriggerConfig(trigger).timezone ?? "").trim();
+
+      return {
+        type: trigger.type,
+        config: {
+          ...(startTime ? { startTime } : {}),
+          ...(endTime ? { endTime } : {}),
+          ...(timezone ? { timezone } : {}),
+        },
+      } satisfies AiAgentTriggerInput;
+    }
+
     if (trigger.type === "RESPONSE_TIMEOUT") {
       const timeoutMinutes = Number(getTriggerConfig(trigger).timeoutMinutes);
 
@@ -439,8 +466,10 @@ function HelpLabel({ label, tooltip, required = false }: { label: string; toolti
 
 export default function AgentModal({ agent, onClose }: Props) {
   const theme = useTheme();
+  const { instance } = useAuthContext();
   const { templates } = useWhatsappContext();
   const {
+    agents,
     createAgent,
     updateAgent,
     saveAgentAudience,
@@ -493,7 +522,12 @@ export default function AgentModal({ agent, onClose }: Props) {
   const [proactive, setProactive] = useState<ProactiveFormState>(() => getProactiveFormState(agent));
   const [audience, setAudience] = useState<AudienceFormState>(() => getAudienceFormState(agent));
   const [newKnowledge, setNewKnowledge] = useState({ title: "", content: "" });
+  const [selectedKnowledgeFile, setSelectedKnowledgeFile] = useState<File | null>(null);
   const [addingKnowledge, setAddingKnowledge] = useState(false);
+  const currentAgent = useMemo(
+    () => (agent ? agents.find((candidate) => candidate.id === agent.id) ?? agent : undefined),
+    [agent, agents],
+  );
 
   const initialAudience = useMemo(() => getAudienceFormState(agent), [agent]);
   const audienceInput = useMemo(() => buildAudienceInput(audience), [audience]);
@@ -592,6 +626,15 @@ export default function AgentModal({ agent, onClose }: Props) {
     const errors: Partial<Record<AiAgentTriggerType, string>> = {};
 
     for (const trigger of normalizedTriggers) {
+      if (
+        trigger.type === "MESSAGE_DURING_HOURS" &&
+        (!TIME_PATTERN.test(trigger.config?.startTime ?? "") ||
+          !TIME_PATTERN.test(trigger.config?.endTime ?? "") ||
+          !(trigger.config?.timezone ?? "").trim())
+      ) {
+        errors[trigger.type] = "Informe horario inicial, horario final e fuso para este gatilho.";
+      }
+
       if (trigger.type === "RESPONSE_TIMEOUT" && !trigger.config?.timeoutMinutes) {
         errors[trigger.type] = "Informe quantos minutos sem resposta devem acionar o agente.";
       }
@@ -761,7 +804,12 @@ export default function AgentModal({ agent, onClose }: Props) {
             ...prev,
             {
               type,
-              config: type === "KEYWORD" ? { keywords: [] } : {},
+              config:
+                type === "KEYWORD"
+                  ? { keywords: [] }
+                  : type === "MESSAGE_DURING_HOURS"
+                    ? { ...DEFAULT_MESSAGE_DURING_HOURS_TRIGGER_CONFIG }
+                    : {},
             },
           ],
     );
@@ -849,16 +897,36 @@ export default function AgentModal({ agent, onClose }: Props) {
   }
 
   async function handleAddKnowledge() {
-    if (!agent || !newKnowledge.title.trim() || !newKnowledge.content.trim()) return;
+    if (!currentAgent || !newKnowledge.title.trim() || !newKnowledge.content.trim()) return;
 
     setAddingKnowledge(true);
     try {
+      const uploadedFile = selectedKnowledgeFile
+        ? await filesService.uploadBrowserFile({
+            instance,
+            dirType: FileDirType.MODELS,
+            file: selectedKnowledgeFile,
+          })
+        : null;
+
       const payload: AiAgentKnowledgeEntryInput = {
         title: newKnowledge.title.trim(),
         content: newKnowledge.content.trim(),
+        ...(uploadedFile && {
+          fileId: uploadedFile.id,
+          fileName: uploadedFile.name,
+          fileType: uploadedFile.mime_type,
+          fileSize: uploadedFile.size,
+        }),
       };
-      await addKnowledgeEntry(agent.id, payload);
+
+      const saved = await addKnowledgeEntry(currentAgent.id, payload);
+      if (!saved) return;
+
       setNewKnowledge({ title: "", content: "" });
+      setSelectedKnowledgeFile(null);
+    } catch (error) {
+      toast.error(`Falha ao adicionar conhecimento: ${sanitizeErrorMessage(error)}`);
     } finally {
       setAddingKnowledge(false);
     }
@@ -1351,7 +1419,70 @@ export default function AgentModal({ agent, onClose }: Props) {
                               </Box>
                             )}
 
-                            {selected && (trigger.value === "ALWAYS" || trigger.value === "NEW_MESSAGE_NO_AGENT") && (
+                            {selected && trigger.value === "MESSAGE_DURING_HOURS" && (
+                              <Stack sx={{ mt: 1.5, maxWidth: 420 }} spacing={1.5}>
+                                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                                  <TextField
+                                    label="Inicio"
+                                    placeholder="09:00"
+                                    fullWidth
+                                    disabled={!receptiveEnabled}
+                                    value={String(config.startTime ?? "")}
+                                    onChange={(event) => {
+                                      updateTriggerConfig(trigger.value, {
+                                        ...config,
+                                        startTime: event.target.value.trim(),
+                                      });
+                                    }}
+                                    error={!!triggerError}
+                                    helperText={triggerError ?? "Use HH:MM para o inicio da janela."}
+                                    onClick={(event) => event.stopPropagation()}
+                                  />
+
+                                  <TextField
+                                    label="Fim"
+                                    placeholder="18:00"
+                                    fullWidth
+                                    disabled={!receptiveEnabled}
+                                    value={String(config.endTime ?? "")}
+                                    onChange={(event) => {
+                                      updateTriggerConfig(trigger.value, {
+                                        ...config,
+                                        endTime: event.target.value.trim(),
+                                      });
+                                    }}
+                                    error={!!triggerError}
+                                    helperText={triggerError ?? "Pode cruzar meia-noite, por exemplo 22:00 ate 06:00."}
+                                    onClick={(event) => event.stopPropagation()}
+                                  />
+                                </Stack>
+
+                                <TextField
+                                  select
+                                  label="Fuso horario"
+                                  fullWidth
+                                  disabled={!receptiveEnabled}
+                                  value={String(config.timezone ?? DEFAULT_MESSAGE_DURING_HOURS_TRIGGER_CONFIG.timezone)}
+                                  onChange={(event) => {
+                                    updateTriggerConfig(trigger.value, {
+                                      ...config,
+                                      timezone: event.target.value,
+                                    });
+                                  }}
+                                  error={!!triggerError}
+                                  helperText={triggerError ?? "A mensagem so aciona o agente se chegar dentro dessa janela no fuso escolhido."}
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {TIMEZONE_OPTIONS.map((timezone) => (
+                                    <MenuItem key={timezone} value={timezone}>
+                                      {timezone}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                              </Stack>
+                            )}
+
+                            {selected && trigger.value === "ALWAYS" && (
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
                                 Este gatilho nao exige configuracao adicional.
                               </Typography>
@@ -2077,13 +2208,13 @@ export default function AgentModal({ agent, onClose }: Props) {
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
                 Base de conhecimento
               </Typography>
-              {agent.knowledgeEntries.length === 0 && (
+              {(currentAgent?.knowledgeEntries.length ?? 0) === 0 && (
                 <Typography variant="body2" color="text.secondary">
                   Nenhuma entrada de conhecimento cadastrada.
                 </Typography>
               )}
               <Stack spacing={1.5}>
-                {agent.knowledgeEntries.map((entry) => (
+                {currentAgent?.knowledgeEntries.map((entry) => (
                   <Box
                     key={entry.id}
                     sx={{
@@ -2104,9 +2235,50 @@ export default function AgentModal({ agent, onClose }: Props) {
                       <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
                         {entry.content}
                       </Typography>
+
+                      {entry.fileId && (
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.25 }} useFlexGap flexWrap="wrap">
+                          <Chip
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            label={entry.fileName ? `Anexo: ${entry.fileName}` : `Anexo #${entry.fileId}`}
+                            sx={{ borderRadius: 999, maxWidth: "100%" }}
+                          />
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={entry.fileType ?? "Tipo não informado"}
+                            sx={{ borderRadius: 999 }}
+                          />
+                          {entry.fileSize !== null && (
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={`${entry.fileSize} bytes`}
+                              sx={{ borderRadius: 999 }}
+                            />
+                          )}
+                          <Button
+                            size="small"
+                            variant="text"
+                            component="a"
+                            href={filesService.getFileDownloadUrl(entry.fileId)}
+                            target="_blank"
+                            rel="noreferrer"
+                            sx={{ alignSelf: "flex-start" }}
+                          >
+                            Abrir anexo
+                          </Button>
+                        </Stack>
+                      )}
                     </Box>
                     <Tooltip title="Remover entrada">
-                      <IconButton size="small" color="error" onClick={() => deleteKnowledgeEntry(agent.id, entry.id)}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => deleteKnowledgeEntry(currentAgent.id, entry.id)}
+                      >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -2133,7 +2305,9 @@ export default function AgentModal({ agent, onClose }: Props) {
                   minRows={4}
                   value={newKnowledge.content}
                   onChange={(event) => setNewKnowledge((prev) => ({ ...prev, content: event.target.value }))}
+                  helperText="Explique para a IA o que existe neste conhecimento e em que contexto ele deve ser usado."
                 />
+                <FilePicker selectedFile={selectedKnowledgeFile} onChangeFile={setSelectedKnowledgeFile} />
                 <Button
                   variant="outlined"
                   startIcon={<AddIcon />}

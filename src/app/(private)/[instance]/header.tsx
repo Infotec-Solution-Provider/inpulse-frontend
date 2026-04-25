@@ -5,6 +5,7 @@ import NotificationsDropdown from "@/lib/components/notifications-dropdown";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { UserRole } from "@in.pulse-crm/sdk";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -41,7 +42,6 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
     arr.push({ title: "Usuários", href: "/users" });
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
-    arr.push({ title: "Agentes de IA", href: "/ai-agents" });
   }
 
   if (params["disable_internal_groups"] !== "true") {
@@ -54,6 +54,8 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
 
   return arr;
 };
+
+const aiRoutes = [{ title: "Agentes", href: "/ai-agents" }];
 
 /*
 const toolsRoutes = [
@@ -146,6 +148,15 @@ const MobileMenu = ({
             <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
           </ListItem>
           {renderMenuItems(crudsRoutes(parameters, isUserAdmin))}
+
+          {isUserAdmin && (
+            <>
+              <ListItem>
+                <ListItemText primary="IA" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
+              </ListItem>
+              {renderMenuItems(aiRoutes)}
+            </>
+          )}
 
           {/* Relatórios */}
           {isUserAdmin && (
@@ -256,6 +267,11 @@ export default function Header() {
                 <HeaderNavItem title="Pipelines" href="/funnel">
                   <FilterAltIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
+                {isUserAdmin && (
+                  <HeaderNavItem title="IA" routes={aiRoutes}>
+                    <AutoAwesomeIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
                 {isUserAdmin && (
                   <HeaderNavItem title="Disparos" href="/tools/mass-messages">
                     <CampaignIcon className="text-gray-900 dark:text-slate-200" />

@@ -32,7 +32,7 @@ export interface AiAgentConfig {
     maxMessagesPerChat: number;
     conditions: unknown;
 }
-export type AiAgentTriggerType = "NEW_MESSAGE_NO_AGENT" | "RESPONSE_TIMEOUT" | "KEYWORD" | "ALWAYS";
+export type AiAgentTriggerType = "MESSAGE_DURING_HOURS" | "RESPONSE_TIMEOUT" | "KEYWORD" | "ALWAYS";
 export type AiAgentProactiveFrequency = "DAILY" | "WEEKDAYS" | "CUSTOM_DAYS";
 export type AiAgentProactiveEntryMessageMode = "AI_TEXT" | "WABA_TEMPLATE";
 export type AiAgentActionType = "REPLY" | "SEND_TEMPLATE" | "SEND_FILE" | "ESCALATE" | "CLOSE_CHAT" | "UPDATE_CRM" | "SCHEDULE" | "IGNORED";
@@ -55,6 +55,10 @@ export interface AiAgentKnowledgeEntry {
     agentId: number;
     title: string;
     content: string;
+    fileId: number | null;
+    fileName: string | null;
+    fileType: string | null;
+    fileSize: number | null;
     order: number;
 }
 export interface AiAgentProactiveSchedule {
@@ -147,11 +151,18 @@ export interface AiAgentTriggerInput {
     config?: {
         timeoutMinutes?: number;
         keywords?: string[];
+        startTime?: string;
+        endTime?: string;
+        timezone?: string;
     };
 }
 export interface AiAgentKnowledgeEntryInput {
     title: string;
     content: string;
+    fileId?: number;
+    fileName?: string;
+    fileType?: string;
+    fileSize?: number;
     order?: number;
 }
 export interface CreateAiAgentInput {

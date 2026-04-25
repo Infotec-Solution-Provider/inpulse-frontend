@@ -34,7 +34,7 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 const TRIGGER_LABELS: Record<string, string> = {
-  NEW_MESSAGE_NO_AGENT: "Nova mensagem",
+  MESSAGE_DURING_HOURS: "Mensagem por horario",
   RESPONSE_TIMEOUT: "Timeout",
   KEYWORD: "Palavra-chave",
   ALWAYS: "Sempre",

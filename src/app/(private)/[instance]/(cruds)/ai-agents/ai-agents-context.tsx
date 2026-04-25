@@ -66,7 +66,7 @@ interface IAiAgentsContext {
   ) => Promise<boolean>;
   previewAgentAudience: (agentId: number, page?: number, perPage?: number) => Promise<void>;
   deleteAgent: (id: number) => Promise<void>;
-  addKnowledgeEntry: (agentId: number, data: AiAgentKnowledgeEntryInput) => Promise<void>;
+  addKnowledgeEntry: (agentId: number, data: AiAgentKnowledgeEntryInput) => Promise<boolean>;
   deleteKnowledgeEntry: (agentId: number, entryId: number) => Promise<void>;
 }
 
@@ -239,15 +239,17 @@ export default function AiAgentsProvider({ children }: { children: ReactNode }) 
   );
 
   const addKnowledgeEntry = useCallback(
-    async (agentId: number, data: AiAgentKnowledgeEntryInput) => {
-      if (!token) return;
+    async (agentId: number, data: AiAgentKnowledgeEntryInput): Promise<boolean> => {
+      if (!token) return false;
 
       try {
         const updated = await aiService.addAgentKnowledgeEntry(agentId, data, token);
         replaceAgent(updated);
         toast.success("Entrada de conhecimento adicionada.");
+        return true;
       } catch (err) {
         toast.error(`Falha: ${sanitizeErrorMessage(err)}`);
+        return false;
       }
     },
     [replaceAgent, token],
