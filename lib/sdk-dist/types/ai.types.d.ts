@@ -17,6 +17,72 @@ export interface AnalyzeCustomerRequest {
 export interface AnalyzeCustomerResponse {
     analysis: string;
 }
+export type SupervisorAiSessionStatus = "ACTIVE" | "ARCHIVED";
+export type SupervisorAiMessageRole = "USER" | "ASSISTANT";
+export type SupervisorAiReportFormat = "csv" | "pdf" | "txt";
+export interface SupervisorAiContextInput {
+    chatId?: number;
+    customerId?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    operatorIds?: number[];
+    sectorIds?: number[];
+    includeMetrics?: boolean;
+}
+export interface SupervisorAiSource {
+    type: "action" | "chat" | "contact" | "customer" | "metrics" | "session" | "sql";
+    label: string;
+    entityId?: number;
+    metadata?: Record<string, unknown>;
+}
+export interface SupervisorAiReportPreview {
+    title: string;
+    summary: string;
+    columns: string[];
+    rows: Array<Record<string, string | number | boolean | null>>;
+    availableFormats: SupervisorAiReportFormat[];
+}
+export interface SupervisorAiMessageMetadata {
+    context?: SupervisorAiContextInput;
+    sources?: SupervisorAiSource[];
+    reportPreview?: SupervisorAiReportPreview | null;
+}
+export interface SupervisorAiSession {
+    id: number;
+    instance: string;
+    userId: number;
+    title: string;
+    status: SupervisorAiSessionStatus;
+    createdAt: string;
+    updatedAt: string;
+    lastMessageAt: string | null;
+}
+export interface SupervisorAiMessage {
+    id: number;
+    sessionId: number;
+    role: SupervisorAiMessageRole;
+    content: string;
+    metadata: SupervisorAiMessageMetadata | null;
+    createdAt: string;
+}
+export interface CreateSupervisorAiSessionRequest {
+    title?: string;
+}
+export interface SendSupervisorAiMessageRequest {
+    message: string;
+    context?: SupervisorAiContextInput;
+}
+export interface SendSupervisorAiMessageResponse {
+    session: SupervisorAiSession;
+    userMessage: SupervisorAiMessage;
+    assistantMessage: SupervisorAiMessage;
+    sources: SupervisorAiSource[];
+    reportPreview: SupervisorAiReportPreview | null;
+}
+export interface SupervisorAiSessionDetail {
+    session: SupervisorAiSession;
+    messages: SupervisorAiMessage[];
+}
 export interface AiTenantConfig {
     instance: string;
     model: string;
@@ -93,6 +159,7 @@ export interface AiAgent {
     templateVariableMapping: Record<string, string> | null;
     escalateToWalletId: number | null;
     escalateToUserId: number | null;
+    escalateToUserIds: number[];
     createdAt: string;
     updatedAt: string;
     triggers: AiAgentTrigger[];
@@ -181,6 +248,7 @@ export interface CreateAiAgentInput {
     templateVariableMapping?: Record<string, string>;
     escalateToWalletId?: number;
     escalateToUserId?: number;
+    escalateToUserIds?: number[];
     triggers?: AiAgentTriggerInput[];
     knowledgeEntries?: AiAgentKnowledgeEntryInput[];
     audience?: AiAgentAudienceInput;

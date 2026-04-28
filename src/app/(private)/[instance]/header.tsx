@@ -55,7 +55,10 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
   return arr;
 };
 
-const aiRoutes = [{ title: "Agentes", href: "/ai-agents" }];
+const aiRoutes = [
+  { title: "Assistente", href: "/ai-supervisor" },
+  { title: "Agentes", href: "/ai-agents" },
+];
 
 /*
 const toolsRoutes = [
@@ -226,7 +229,7 @@ export default function Header() {
     ...(user?.NIVEL === UserRole.ADMIN
       ? [
           { title: "Dashboard Financeiro", href: "/reports/financial" },
-          { title: "Gerador de Relatório", href: "/reports/report-generator" },
+          /* { title: "Gerador de Relatório", href: "/reports/report-generator" }, */
         ]
       : []),
   ];

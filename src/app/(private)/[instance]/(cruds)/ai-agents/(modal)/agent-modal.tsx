@@ -73,7 +73,7 @@ const ALL_ACTIONS: { value: AiAgentActionType; label: string; description: strin
     description: "Libera o disparo de templates aprovados no WhatsApp Business API.",
   },
   { value: "SEND_FILE", label: "Enviar arquivo", description: "Autoriza o envio de anexos e materiais de apoio." },
-  { value: "ESCALATE", label: "Escalar para humano", description: "Encaminha a conversa para carteira ou operador." },
+  { value: "ESCALATE", label: "Transferir para humano", description: "Transfere a conversa para um operador humano." },
   { value: "CLOSE_CHAT", label: "Fechar conversa", description: "Permite encerrar o atendimento automaticamente." },
   { value: "IGNORED", label: "Ignorar mensagem", description: "Permite decidir que uma mensagem nao deve receber resposta." },
 ];
@@ -221,7 +221,7 @@ type FormState = {
   templateName: string;
   templateLanguage: string;
   escalateToWalletId: string;
-  escalateToUserId: string;
+  escalateToUserIds: number[];
 };
 
 type AudienceFormState = {
@@ -261,7 +261,7 @@ const DEFAULT_FORM: FormState = {
   templateName: "",
   templateLanguage: "pt_BR",
   escalateToWalletId: "",
-  escalateToUserId: "",
+  escalateToUserIds: [],
 };
 
 const DEFAULT_AUDIENCE_FORM: AudienceFormState = {
@@ -302,6 +302,15 @@ function sanitizeDaysOfWeek(values: unknown): number[] {
   return [...new Set(values.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))].sort(
     (left, right) => left - right,
   );
+}
+
+function getEscalationOperatorIds(agent?: AiAgent): number[] {
+  const idsFromList = sanitizeIds(agent?.escalateToUserIds);
+  if (idsFromList.length > 0) {
+    return idsFromList;
+  }
+
+  return sanitizeIds(agent?.escalateToUserId ? [agent.escalateToUserId] : []);
 }
 
 function getAudienceFormState(agent?: AiAgent): AudienceFormState {
@@ -508,7 +517,7 @@ export default function AgentModal({ agent, onClose }: Props) {
           templateName: agent.templateName ?? "",
           templateLanguage: agent.templateLanguage ?? "pt_BR",
           escalateToWalletId: agent.escalateToWalletId?.toString() ?? "",
-          escalateToUserId: agent.escalateToUserId?.toString() ?? "",
+          escalateToUserIds: getEscalationOperatorIds(agent),
         }
       : DEFAULT_FORM,
   );
@@ -622,6 +631,17 @@ export default function AgentModal({ agent, onClose }: Props) {
     );
   }, [availableTemplates, form.templateLanguage, form.templateName]);
   const selectedTemplatePreview = useMemo(() => selectedTemplate?.text?.trim() || "", [selectedTemplate]);
+  const escalationOperatorOptions = useMemo(() => {
+    if (form.escalateToUserIds.length === 0) {
+      return operatorOptions;
+    }
+
+    const missingSelectedOptions = form.escalateToUserIds
+      .filter((operatorId) => !operatorOptions.some((option) => option.CODIGO === operatorId))
+      .map((operatorId) => ({ CODIGO: operatorId, NOME: null } satisfies CustomerLookupOption));
+
+    return [...operatorOptions, ...missingSelectedOptions];
+  }, [form.escalateToUserIds, operatorOptions]);
   const triggerErrors = useMemo(() => {
     const errors: Partial<Record<AiAgentTriggerType, string>> = {};
 
@@ -656,6 +676,7 @@ export default function AgentModal({ agent, onClose }: Props) {
     proactive.enabled && proactive.frequency === "CUSTOM_DAYS" && proactive.daysOfWeek.length === 0;
   const proactiveNeedsTemplate = proactive.enabled && proactive.entryMessageMode === "WABA_TEMPLATE";
   const proactiveHasTemplateError = proactiveNeedsTemplate && form.templateName.trim().length === 0;
+  const hasEscalationTargetError = form.allowedActions.includes("ESCALATE") && form.escalateToUserIds.length === 0;
   const receptiveSummary = useMemo(() => {
     if (!receptiveEnabled) {
       return ["Desligado"];
@@ -692,7 +713,8 @@ export default function AgentModal({ agent, onClose }: Props) {
     !proactiveHasTimeError &&
     !proactiveHasBatchSizeError &&
     !proactiveHasCustomDaysError &&
-    !proactiveHasTemplateError;
+    !proactiveHasTemplateError &&
+    !hasEscalationTargetError;
 
   useEffect(() => {
     clearAudiencePreview();
@@ -838,6 +860,13 @@ export default function AgentModal({ agent, onClose }: Props) {
       }));
     };
 
+  const handleEscalationOperatorsChange = (_: unknown, values: CustomerLookupOption[]) => {
+    setField(
+      "escalateToUserIds",
+      values.map((value) => value.CODIGO),
+    );
+  };
+
   const toggleCustomDay = (day: number) => {
     setProactive((prev) => ({
       ...prev,
@@ -852,6 +881,7 @@ export default function AgentModal({ agent, onClose }: Props) {
 
     setSaving(true);
     try {
+      const escalationUserIds = sanitizeIds(form.escalateToUserIds);
       const payload: CreateAiAgentInput = {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
@@ -867,7 +897,7 @@ export default function AgentModal({ agent, onClose }: Props) {
         ...(form.templateName.trim() && { templateName: form.templateName.trim() }),
         ...(form.templateName.trim() && form.templateLanguage.trim() && { templateLanguage: form.templateLanguage.trim() }),
         ...(form.escalateToWalletId && { escalateToWalletId: Number(form.escalateToWalletId) }),
-        ...(form.escalateToUserId && { escalateToUserId: Number(form.escalateToUserId) }),
+        ...(escalationUserIds.length > 0 && { escalateToUserIds: escalationUserIds }),
       };
 
       if (!isEdit) {
@@ -1802,24 +1832,54 @@ export default function AgentModal({ agent, onClose }: Props) {
             {form.allowedActions.includes("ESCALATE") && (
               <Box sx={surfaceSx}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                  Destino de escalonamento
+                  Destino da transferencia
                 </Typography>
-                <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-                  <TextField
-                    label="Carteira de destino (ID)"
-                    type="number"
-                    fullWidth
-                    value={form.escalateToWalletId}
-                    onChange={(event) => setField("escalateToWalletId", event.target.value)}
+                <Stack spacing={2}>
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={escalationOperatorOptions}
+                    value={escalationOperatorOptions.filter((option) => form.escalateToUserIds.includes(option.CODIGO))}
+                    onChange={handleEscalationOperatorsChange}
+                    loading={lookupsLoading}
+                    getOptionLabel={getLookupLabel}
+                    isOptionEqualToValue={(option, value) => option.CODIGO === value.CODIGO}
+                    noOptionsText="Nenhum operador encontrado"
+                    renderOption={(props, option, { selected }) => {
+                      const { key, ...optionProps } = props;
+
+                      return (
+                        <li key={key} {...optionProps}>
+                          <Checkbox
+                            icon={EMPTY_ICON}
+                            checkedIcon={CHECKED_ICON}
+                            checked={selected}
+                            sx={{ mr: 1 }}
+                          />
+                          {getLookupLabel(option)}
+                        </li>
+                      );
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Operadores de destino"
+                        required
+                        error={hasEscalationTargetError}
+                        helperText={
+                          hasEscalationTargetError
+                            ? "Selecione pelo menos um operador para a transferencia."
+                            : "A IA escolhe um operador por vez em round-robin."
+                        }
+                      />
+                    )}
                   />
-                  <TextField
-                    label="Operador de destino (ID)"
-                    type="number"
-                    fullWidth
-                    value={form.escalateToUserId}
-                    onChange={(event) => setField("escalateToUserId", event.target.value)}
-                  />
-                </Box>
+
+                  <Alert severity="info" sx={{ borderRadius: 2 }}>
+                    Carteira de destino representa a carteira ou setor para onde o chat seria encaminhado. Essa transferencia por carteira esta desabilitada no momento; use os operadores acima.
+                    {form.escalateToWalletId ? ` Valor salvo atualmente: ${form.escalateToWalletId}.` : ""}
+                  </Alert>
+                </Stack>
               </Box>
             )}
           </Stack>

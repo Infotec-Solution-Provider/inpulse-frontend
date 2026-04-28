@@ -92,9 +92,9 @@ const channelOptions = [
 ];
 
 const repurchaseStatusOptions: Array<{ value: UnifiedScheduleRepurchaseStatus; label: string }> = [
-  { value: "green", label: "Dentro da janela" },
+  { value: "green", label: "Pronto para comprar" },
   { value: "yellow", label: "Próximo da recompra" },
-  { value: "red", label: "Atrasado" },
+  { value: "red", label: "Longe da recompra" },
   { value: "neutral", label: "Sem histórico" },
 ];
 

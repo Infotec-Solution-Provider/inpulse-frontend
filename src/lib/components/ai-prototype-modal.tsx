@@ -80,6 +80,7 @@ interface PurchaseAnalytics {
   proximityRatio: number | null;
   semaphoreStatus: "green" | "yellow" | "red" | "neutral";
   overdueDays: number | null;
+  situationLabel: string;
 }
 
 function formatCurrency(value?: number | null) {
@@ -160,6 +161,10 @@ function calculatePurchaseAnalytics(purchases: CustomerPurchaseDetail[]): Purcha
       ? new Date(lastPurchase.purchaseDate.getTime() + averageRepurchaseDays * 86400000)
       : null;
 
+  const daysUntilNextRepurchase = nextRepurchaseDate
+    ? Math.round((nextRepurchaseDate.getTime() - now.getTime()) / 86400000)
+    : null;
+
   const proximityRatio = averageRepurchaseDays && daysSinceLastPurchase != null
     ? daysSinceLastPurchase / averageRepurchaseDays
     : null;
@@ -168,17 +173,34 @@ function calculatePurchaseAnalytics(purchases: CustomerPurchaseDetail[]): Purcha
 
   if (proximityRatio != null) {
     if (proximityRatio < 0.75) {
-      semaphoreStatus = "green";
+      semaphoreStatus = "red";
     } else if (proximityRatio <= 1) {
       semaphoreStatus = "yellow";
     } else {
-      semaphoreStatus = "red";
+      semaphoreStatus = "green";
     }
   }
 
   const overdueDays = nextRepurchaseDate
     ? Math.max(0, Math.round((now.getTime() - nextRepurchaseDate.getTime()) / 86400000))
     : null;
+
+  const situationLabel = (() => {
+    if (daysUntilNextRepurchase == null) {
+      return "Dentro do intervalo esperado";
+    }
+
+    if (daysUntilNextRepurchase > 0) {
+      return `Faltam ${daysUntilNextRepurchase} dia${daysUntilNextRepurchase === 1 ? "" : "s"} para a próxima recompra`;
+    }
+
+    if (daysUntilNextRepurchase < 0) {
+      const daysLate = Math.abs(daysUntilNextRepurchase);
+      return `${daysLate} dia${daysLate === 1 ? "" : "s"} de atraso`;
+    }
+
+    return "A recompra é hoje";
+  })();
 
   return {
     chartData,
@@ -191,13 +213,14 @@ function calculatePurchaseAnalytics(purchases: CustomerPurchaseDetail[]): Purcha
     proximityRatio,
     semaphoreStatus,
     overdueDays,
+    situationLabel,
   };
 }
 
 function getSemaphoreAccent(status: PurchaseAnalytics["semaphoreStatus"]) {
   if (status === "green") {
     return {
-      label: "Dentro da janela",
+      label: "Pronto para comprar",
       tone: "text-emerald-700 dark:text-emerald-300",
       marker: "#10b981",
     };
@@ -213,7 +236,7 @@ function getSemaphoreAccent(status: PurchaseAnalytics["semaphoreStatus"]) {
 
   if (status === "red") {
     return {
-      label: "Janela vencida",
+      label: "Longe da recompra",
       tone: "text-rose-700 dark:text-rose-300",
       marker: "#ef4444",
     };
@@ -746,17 +769,23 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
                         <div className="mt-4 space-y-4">
                           <div className="relative overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
                             <div className="grid h-5 grid-cols-3">
-                              <div className="bg-emerald-500/85" />
-                              <div className="bg-amber-400/90" />
                               <div className="bg-rose-500/85" />
+                              <div className="bg-amber-400/90" />
+                              <div className="bg-emerald-500/85" />
                             </div>
-                            <div
-                              className="absolute top-1/2 h-7 w-1 -translate-y-1/2 rounded-full bg-slate-900 shadow-[0_0_0_2px_rgba(255,255,255,0.95)] dark:bg-white"
-                              style={{
-                                left: `${Math.min(100, Math.max(0, (purchaseAnalytics.proximityRatio ?? 0) * 100))}%`,
-                                borderColor: semaphoreAccent.marker,
-                              }}
-                            />
+                            {(() => {
+                              const markerLeft = Math.min(96, Math.max(4, (purchaseAnalytics.proximityRatio ?? 0) * 96));
+
+                              return (
+                                <div
+                                  className="absolute top-1/2 h-7 w-1 -translate-y-1/2 rounded-full bg-slate-900 shadow-[0_0_0_2px_rgba(255,255,255,0.95)] dark:bg-white"
+                                  style={{
+                                    left: `${markerLeft}%`,
+                                    borderColor: semaphoreAccent.marker,
+                                  }}
+                                />
+                              );
+                            })()}
                           </div>
 
                           <div className="grid gap-3 text-sm md:grid-cols-3">
@@ -775,9 +804,7 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
                             <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
                               <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Situação</p>
                               <p className={`mt-1 font-semibold ${semaphoreAccent.tone}`}>
-                                {purchaseAnalytics.overdueDays
-                                  ? `${purchaseAnalytics.overdueDays} dia(s) de atraso`
-                                  : "Dentro do intervalo esperado"}
+                                {purchaseAnalytics.situationLabel}
                               </p>
                             </div>
                           </div>
