@@ -7,11 +7,32 @@ export interface FunnelCard {
   clienteId: number;
   nome: string;
   fone1: string | null;
+  groupCode?: number | null;
+  groupName?: string | null;
+  segmentCode?: number | null;
+  segmentName?: string | null;
   campanha: string | null;
   agendamento: string | null;
   operador: string | null;
   totalContatos: number;
+  totalVendas?: number;
   ultimoContato: string | null;
+}
+
+export type FunnelBoardSortField = "ultimoContato" | "nome" | "agendamento" | "totalContatos" | "operador";
+export type FunnelBoardSortOrder = "asc" | "desc";
+
+export interface FunnelBoardFilters {
+  groupQuery: string;
+  segmentQuery: string;
+  operatorQuery: string;
+  campaignQuery: string;
+  lastContactFrom: string;
+  lastContactTo: string;
+  scheduleFrom: string;
+  scheduleTo: string;
+  sortBy: FunnelBoardSortField;
+  sortOrder: FunnelBoardSortOrder;
 }
 
 export interface FunnelDef {
@@ -20,6 +41,7 @@ export interface FunnelDef {
   name: string;
   type: FunnelType;
   createdAt: string;
+  stages?: FunnelStageDef[];
 }
 
 export interface FunnelStageDef {

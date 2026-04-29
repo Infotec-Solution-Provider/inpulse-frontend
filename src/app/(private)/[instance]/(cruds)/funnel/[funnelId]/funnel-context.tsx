@@ -14,6 +14,7 @@ import { AuthContext } from "@/app/auth-context";
 import funnelApiService from "@/lib/services/funnel.service";
 import type {
   FunnelBoardColumn,
+  FunnelBoardFilters,
   FunnelCard,
   FunnelSnapshotStatus,
   FunnelType,
@@ -29,16 +30,20 @@ interface FunnelContextValue {
   funnelId: number;
   funnelName: string;
   funnelType: FunnelType;
+  boardTraceId: string | null;
+  filters: FunnelBoardFilters;
   columns: FunnelBoardColumn[];
+  pageState: Record<number, StagePageState>;
   loading: boolean;
   hasSnapshot: boolean;
   snapshotStatus: FunnelSnapshotStatus;
   lastComputedAt: string | null;
   loadBoard: () => Promise<void>;
   triggerRefresh: () => Promise<void>;
-  loadMoreClients: (stageId: number) => Promise<void>;
-  hasMore: (stageId: number) => boolean;
+  goToStagePage: (stageId: number, page: number) => Promise<void>;
   loadingMore: Record<number, boolean>;
+  applyFilters: (nextFilters: FunnelBoardFilters) => Promise<void>;
+  resetFilters: () => Promise<void>;
   // Manual funnel handlers
   addManualEntry: (stageId: number, ccId: number) => Promise<void>;
   removeManualEntry: (entryId: number, stageId: number) => Promise<void>;
@@ -60,12 +65,32 @@ interface Props {
   children: ReactNode;
 }
 
+const DEFAULT_FILTERS: FunnelBoardFilters = {
+  groupQuery: "",
+  segmentQuery: "",
+  operatorQuery: "",
+  campaignQuery: "",
+  lastContactFrom: "",
+  lastContactTo: "",
+  scheduleFrom: "",
+  scheduleTo: "",
+  sortBy: "ultimoContato",
+  sortOrder: "desc",
+};
+
+function createTraceId(prefix: string): string {
+  const randomPart = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${Date.now()}-${randomPart}`;
+}
+
 export default function FunnelProvider({ funnelId, children }: Props) {
   const PREVIEW = 10;
   const { token } = useContext(AuthContext);
 
   const [funnelName, setFunnelName] = useState("");
   const [funnelType, setFunnelType] = useState<FunnelType>("AUTOMATIC");
+  const [boardTraceId, setBoardTraceId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FunnelBoardFilters>(DEFAULT_FILTERS);
   const [columns, setColumns] = useState<FunnelBoardColumn[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -75,6 +100,8 @@ export default function FunnelProvider({ funnelId, children }: Props) {
   const [pageState, setPageState] = useState<Record<number, StagePageState>>({});
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const boardLoadVersionRef = useRef(0);
+  const activeBoardTraceRef = useRef<string | null>(null);
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current !== null) {
@@ -85,49 +112,170 @@ export default function FunnelProvider({ funnelId, children }: Props) {
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  const loadBoard = useCallback(async () => {
+  const fetchStagePage = useCallback(
+    async (
+      stageId: number,
+      page: number,
+      perPage: number,
+      activeFilters: FunnelBoardFilters,
+      loadVersion: number,
+      traceId?: string,
+      silent = false,
+    ) => {
+      if (!token) return;
+
+      const startedAt = performance.now();
+
+      setLoadingMore((prev) => ({ ...prev, [stageId]: true }));
+      try {
+        const result = await funnelApiService.getClientsByStage(
+          token,
+          funnelId,
+          stageId,
+          page,
+          perPage,
+          activeFilters,
+          traceId,
+        );
+
+        if (boardLoadVersionRef.current !== loadVersion) {
+          return;
+        }
+
+        setColumns((prev) =>
+          prev.map((col) => {
+            if (col.stageId !== stageId) return col;
+            return { ...col, clients: result.clients, total: result.page.totalRows };
+          }),
+        );
+
+        setPageState((prev) => ({
+          ...prev,
+          [stageId]: { page, totalRows: result.page.totalRows, perPage },
+        }));
+
+      } catch (error) {
+        if (!silent && boardLoadVersionRef.current === loadVersion) {
+          toast.error("Não foi possível carregar a página desta etapa.");
+        }
+      } finally {
+        setLoadingMore((prev) => ({ ...prev, [stageId]: false }));
+      }
+    },
+    [token, funnelId],
+  );
+
+  const hydrateInitialStagePages = useCallback(
+    async (
+      stageIds: number[],
+      nextPageState: Record<number, StagePageState>,
+      activeFilters: FunnelBoardFilters,
+      loadVersion: number,
+      parentTraceId: string,
+    ) => {
+      const BATCH_SIZE = 2;
+
+      for (let index = 0; index < stageIds.length; index += BATCH_SIZE) {
+        if (boardLoadVersionRef.current !== loadVersion) {
+          return;
+        }
+
+        const batch = stageIds.slice(index, index + BATCH_SIZE);
+        const batchStartedAt = performance.now();
+
+        await Promise.all(
+          batch.map((stageId) =>
+            fetchStagePage(
+              stageId,
+              1,
+              nextPageState[stageId]?.perPage ?? PREVIEW,
+              activeFilters,
+              loadVersion,
+              `${parentTraceId}:stage-${stageId}:page-1`,
+              true,
+            ),
+          ),
+        );
+
+      }
+    },
+    [fetchStagePage],
+  );
+
+  const loadBoardWithFilters = useCallback(async (activeFilters: FunnelBoardFilters) => {
     if (!token) return;
+
+    const loadVersion = boardLoadVersionRef.current + 1;
+    const traceId = createTraceId(`board-${funnelId}-v${loadVersion}`);
+    boardLoadVersionRef.current = loadVersion;
+    activeBoardTraceRef.current = traceId;
+    setBoardTraceId(traceId);
+
+    const startedAt = performance.now();
+
     setLoading(true);
+    setLoadingMore({});
+
     try {
-      const board = await funnelApiService.getBoard(token, funnelId, PREVIEW);
+      const board = await funnelApiService.getBoardSummary(token, funnelId, activeFilters, traceId);
+
+      if (boardLoadVersionRef.current !== loadVersion) {
+        return;
+      }
 
       if (!board) {
         setHasSnapshot(false);
         setColumns([]);
+        setPageState({});
         return;
+      }
+
+      const summaryColumns = board.columns.map((col) => ({ ...col, clients: [] }));
+      const newPageState: Record<number, StagePageState> = {};
+      for (const col of summaryColumns) {
+        newPageState[col.stageId] = { page: 1, totalRows: col.total, perPage: PREVIEW };
       }
 
       setHasSnapshot(true);
       setLastComputedAt(board.computedAt);
-      setColumns(board.columns);
-
-      const newPageState: Record<number, StagePageState> = {};
-      for (const col of board.columns) {
-        newPageState[col.stageId] = { page: 1, totalRows: col.total, perPage: PREVIEW };
-      }
+      setColumns(summaryColumns);
       setPageState(newPageState);
-    } catch {
+      setLoading(false);
+
+      const stageIds = summaryColumns.filter((col) => col.total > 0).map((col) => col.stageId);
+      void hydrateInitialStagePages(stageIds, newPageState, activeFilters, loadVersion, traceId);
+      return;
+    } catch (error) {
+
       toast.error("Não foi possível carregar o funil de vendas.");
     } finally {
-      setLoading(false);
+      if (boardLoadVersionRef.current === loadVersion) {
+        setLoading(false);
+      }
     }
-  }, [token, funnelId]);
+  }, [token, funnelId, hydrateInitialStagePages]);
 
-  // Load funnel name and board on mount
+  const loadBoard = useCallback(async () => {
+    await loadBoardWithFilters(filters);
+  }, [filters, loadBoardWithFilters]);
+
+  // Load funnel metadata on mount
   useEffect(() => {
     if (!token) return;
+    const traceId = createTraceId(`metadata-${funnelId}`);
+    const startedAt = performance.now();
     funnelApiService
-      .listFunnels(token)
-      .then((list) => {
-        const found = list.find((f) => f.id === funnelId);
-        if (found) {
-          setFunnelName(found.name);
-          setFunnelType(found.type);
-        }
+      .getFunnel(token, funnelId, traceId)
+      .then((funnel) => {
+        setFunnelName(funnel.name);
+        setFunnelType(funnel.type);
       })
-      .catch(() => {/* non-fatal */});
-    loadBoard();
-  }, [token, funnelId, loadBoard]);
+  }, [token, funnelId]);
+
+  useEffect(() => {
+    if (!token) return;
+    void loadBoardWithFilters(filters);
+  }, [token, funnelId, loadBoardWithFilters]);
 
   const triggerRefresh = useCallback(async () => {
     if (!token) return;
@@ -159,52 +307,34 @@ export default function FunnelProvider({ funnelId, children }: Props) {
     }
   }, [token, funnelId, stopPolling, loadBoard]);
 
-  const hasMore = useCallback(
-    (stageId: number) => {
+  const goToStagePage = useCallback(
+    async (stageId: number, page: number) => {
       const ps = pageState[stageId];
-      if (!ps) return false;
-      return ps.page * ps.perPage < ps.totalRows;
+      if (!ps || !token) return;
+
+      const totalPages = Math.max(1, Math.ceil(ps.totalRows / ps.perPage));
+      if (page < 1 || page > totalPages || page === ps.page) return;
+
+      const traceId = `${activeBoardTraceRef.current ?? createTraceId(`board-${funnelId}`)}:stage-${stageId}:page-${page}`;
+      await fetchStagePage(stageId, page, ps.perPage, filters, boardLoadVersionRef.current, traceId);
     },
-    [pageState],
+    [pageState, token, filters, fetchStagePage],
   );
 
-  const loadMoreClients = useCallback(
-    async (stageId: number) => {
-      const ps = pageState[stageId];
-      if (!ps || !hasMore(stageId) || !token) return;
-
-      setLoadingMore((prev) => ({ ...prev, [stageId]: true }));
-      try {
-        const nextPage = ps.page + 1;
-        const result = await funnelApiService.getClientsByStage(
-          token,
-          funnelId,
-          stageId,
-          nextPage,
-          ps.perPage,
-        );
-
-        setColumns((prev) =>
-          prev.map((col) => {
-            if (col.stageId !== stageId) return col;
-            const existingIds = new Set(col.clients.map((c: FunnelCard) => c.ccId));
-            const newClients = result.clients.filter((c) => !existingIds.has(c.ccId));
-            return { ...col, clients: [...col.clients, ...newClients] };
-          }),
-        );
-
-        setPageState((prev) => ({
-          ...prev,
-          [stageId]: { ...ps, page: nextPage, totalRows: result.page.totalRows },
-        }));
-      } catch {
-        toast.error("Não foi possível carregar mais clientes.");
-      } finally {
-        setLoadingMore((prev) => ({ ...prev, [stageId]: false }));
-      }
+  const applyFilters = useCallback(
+    async (nextFilters: FunnelBoardFilters) => {
+      setFilters(nextFilters);
+      setPageState({});
+      await loadBoardWithFilters(nextFilters);
     },
-    [pageState, hasMore, token, funnelId],
+    [loadBoardWithFilters],
   );
+
+  const resetFilters = useCallback(async () => {
+    setFilters(DEFAULT_FILTERS);
+    setPageState({});
+    await loadBoardWithFilters(DEFAULT_FILTERS);
+  }, [loadBoardWithFilters]);
 
   const addManualEntry = useCallback(
     async (stageId: number, ccId: number) => {
@@ -286,16 +416,20 @@ export default function FunnelProvider({ funnelId, children }: Props) {
         funnelId,
         funnelName,
         funnelType,
+        boardTraceId,
+        filters,
         columns,
+        pageState,
         loading,
         hasSnapshot,
         snapshotStatus,
         lastComputedAt,
         loadBoard,
         triggerRefresh,
-        loadMoreClients,
-        hasMore,
+        goToStagePage,
         loadingMore,
+        applyFilters,
+        resetFilters,
         addManualEntry,
         removeManualEntry,
         moveCard,

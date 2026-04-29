@@ -1,33 +1,106 @@
 "use client";
 
-import { useEffect } from "react";
+import { Profiler, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
+import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import SettingsIcon from "@mui/icons-material/Settings";
+import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import IconButton from "@mui/material/IconButton";
 import LinearProgress from "@mui/material/LinearProgress";
+import MenuItem from "@mui/material/MenuItem";
+import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import FunnelProvider, { useFunnelContext } from "./funnel-context";
 import FunnelBoard from "@/lib/components/funnel/FunnelBoard";
+import funnelApiService, { type FunnelFilterOptions } from "@/lib/services/funnel.service";
+import { useAuthContext } from "@/app/auth-context";
+import type { FunnelBoardFilters } from "@/lib/types/funnel.types";
 
 function FunnelPageContent() {
-  const { funnelName, funnelType, loadBoard, loading, hasSnapshot, snapshotStatus, lastComputedAt, triggerRefresh } =
+  const {
+    funnelName,
+    funnelType,
+    boardTraceId,
+    filters,
+    loading,
+    hasSnapshot,
+    snapshotStatus,
+    lastComputedAt,
+    triggerRefresh,
+    applyFilters,
+    resetFilters,
+  } =
     useFunnelContext();
   const isManual = funnelType === "MANUAL";
   const router = useRouter();
   const params = useParams<{ instance: string; funnelId: string }>();
+  const { token } = useAuthContext();
+  const [draftFilters, setDraftFilters] = useState<FunnelBoardFilters>(filters);
+  const [groupTags, setGroupTags] = useState<string[]>(() =>
+    filters.groupQuery ? filters.groupQuery.split("|").filter(Boolean) : [],
+  );
+  const [operatorTags, setOperatorTags] = useState<string[]>(() =>
+    filters.operatorQuery ? filters.operatorQuery.split("|").filter(Boolean) : [],
+  );
+  const [campanhaTags, setCampanhaTags] = useState<string[]>(() =>
+    filters.campaignQuery ? filters.campaignQuery.split("|").filter(Boolean) : [],
+  );
+  const [segmentTags, setSegmentTags] = useState<string[]>(() =>
+    filters.segmentQuery ? filters.segmentQuery.split("|").filter(Boolean) : [],
+  );
+  const [filterOptions, setFilterOptions] = useState<FunnelFilterOptions>({
+    groups: [],
+    operators: [],
+    campaigns: [],
+    segments: [],
+  });
 
   useEffect(() => {
-    loadBoard();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setDraftFilters(filters);
+    setGroupTags(filters.groupQuery ? filters.groupQuery.split("|").filter(Boolean) : []);
+    setOperatorTags(filters.operatorQuery ? filters.operatorQuery.split("|").filter(Boolean) : []);
+    setCampanhaTags(filters.campaignQuery ? filters.campaignQuery.split("|").filter(Boolean) : []);
+    setSegmentTags(filters.segmentQuery ? filters.segmentQuery.split("|").filter(Boolean) : []);
+  }, [filters]);
+
+  useEffect(() => {
+    if (!token) return;
+    const funnelId = parseInt(params.funnelId, 10);
+    funnelApiService.getFunnelFilterOptions(token, funnelId)
+      .then((data) => setFilterOptions(data))
+      .catch(() => { /* silently ignore — fields remain empty */ });
+  }, [token, params.funnelId]);
 
   const isProcessing = snapshotStatus === "processing";
+  const activeFiltersCount = useMemo(
+    () => Object.entries(filters).filter(([key, value]) => {
+      if (key === "sortBy") return value !== "ultimoContato";
+      if (key === "sortOrder") return value !== "desc";
+      return value !== "";
+    }).length,
+    [filters],
+  );
+
+  const handleFilterChange = (field: keyof FunnelBoardFilters, value: string) => {
+    setDraftFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleApplyFilters = async () => {
+    await applyFilters(draftFilters);
+  };
+
+  const handleResetFilters = async () => {
+    await resetFilters();
+  };
+
 
   return (
+
     <div className="flex h-full flex-col">
       {/* Processing progress bar */}
       {isProcessing && (
@@ -53,9 +126,9 @@ function FunnelPageContent() {
                   ? "Gerando snapshot… isso pode levar alguns minutos."
                   : lastComputedAt
                     ? `Atualizado ${new Date(lastComputedAt).toLocaleString("pt-BR", {
-                        day: "2-digit", month: "2-digit", year: "2-digit",
-                        hour: "2-digit", minute: "2-digit",
-                      })}`
+                      day: "2-digit", month: "2-digit", year: "2-digit",
+                      hour: "2-digit", minute: "2-digit",
+                    })}`
                     : "Nenhum snapshot gerado ainda."}
             </p>
           </div>
@@ -85,6 +158,156 @@ function FunnelPageContent() {
               {isProcessing ? "Processando…" : "Atualizar"}
             </Button>
           )}
+        </div>
+      </div>
+
+      <div className="flex shrink-0 flex-wrap items-end gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+        <Autocomplete
+          multiple
+          freeSolo
+          options={["__NULL__", ...filterOptions.groups.map((g) => g.name)]}
+          value={groupTags}
+          onChange={(_e, newTags) => {
+            const tags = newTags as string[];
+            setGroupTags(tags);
+            setDraftFilters((prev) => ({ ...prev, groupQuery: tags.join("|") }));
+          }}
+          getOptionLabel={(option) => option === "__NULL__" ? "Sem Grupo" : option}
+          size="small"
+          sx={{ minWidth: 200 }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip label={option === "__NULL__" ? "Sem Grupo" : option} {...getTagProps({ index })} size="small" key={index} />
+            ))
+          }
+          renderInput={(inputParams) => <TextField {...inputParams} label="Grupo" />}
+        />
+        <Autocomplete
+          multiple
+          freeSolo
+          options={["__NULL__", ...filterOptions.segments.map((s) => s.name)]}
+          value={segmentTags}
+          onChange={(_e, newTags) => {
+            const tags = newTags as string[];
+            setSegmentTags(tags);
+            setDraftFilters((prev) => ({ ...prev, segmentQuery: tags.join("|") }));
+          }}
+          getOptionLabel={(option) => option === "__NULL__" ? "Sem Segmento" : option}
+          size="small"
+          sx={{ minWidth: 180 }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip label={option === "__NULL__" ? "Sem Segmento" : option} {...getTagProps({ index })} size="small" key={index} />
+            ))
+          }
+          renderInput={(inputParams) => <TextField {...inputParams} label="Segmento" />}
+        />
+        <Autocomplete
+          multiple
+          freeSolo
+          options={["__NULL__", ...filterOptions.operators.map((o) => o.name)]}
+          value={operatorTags}
+          onChange={(_e, newTags) => {
+            const tags = newTags as string[];
+            setOperatorTags(tags);
+            setDraftFilters((prev) => ({ ...prev, operatorQuery: tags.join("|") }));
+          }}
+          getOptionLabel={(option) => option === "__NULL__" ? "Sem Operador" : option}
+          size="small"
+          sx={{ minWidth: 200 }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip label={option === "__NULL__" ? "Sem Operador" : option} {...getTagProps({ index })} size="small" key={index} />
+            ))
+          }
+          renderInput={(inputParams) => <TextField {...inputParams} label="Operador" />}
+        />
+        <Autocomplete
+          multiple
+          freeSolo
+          options={filterOptions.campaigns.map((c) => c.name)}
+          value={campanhaTags}
+          onChange={(_e, newTags) => {
+            const tags = newTags as string[];
+            setCampanhaTags(tags);
+            setDraftFilters((prev) => ({ ...prev, campaignQuery: tags.join("|") }));
+          }}
+          size="small"
+          sx={{ minWidth: 200 }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip label={option} {...getTagProps({ index })} size="small" key={index} />
+            ))
+          }
+          renderInput={(inputParams) => <TextField {...inputParams} label="Campanha" />}
+        />
+        <TextField
+          label="Último contato de"
+          type="date"
+          value={draftFilters.lastContactFrom}
+          onChange={(event) => handleFilterChange("lastContactFrom", event.target.value)}
+          size="small"
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="Último contato até"
+          type="date"
+          value={draftFilters.lastContactTo}
+          onChange={(event) => handleFilterChange("lastContactTo", event.target.value)}
+          size="small"
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="Agendamento de"
+          type="date"
+          value={draftFilters.scheduleFrom}
+          onChange={(event) => handleFilterChange("scheduleFrom", event.target.value)}
+          size="small"
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="Agendamento até"
+          type="date"
+          value={draftFilters.scheduleTo}
+          onChange={(event) => handleFilterChange("scheduleTo", event.target.value)}
+          size="small"
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="Ordenar por"
+          select
+          value={draftFilters.sortBy}
+          onChange={(event) => handleFilterChange("sortBy", event.target.value)}
+          size="small"
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="ultimoContato">Último contato</MenuItem>
+          <MenuItem value="nome">Nome</MenuItem>
+          <MenuItem value="agendamento">Agendamento</MenuItem>
+          <MenuItem value="totalContatos">Total de contatos</MenuItem>
+          <MenuItem value="operador">Operador</MenuItem>
+        </TextField>
+        <TextField
+          label="Ordem"
+          select
+          value={draftFilters.sortOrder}
+          onChange={(event) => handleFilterChange("sortOrder", event.target.value)}
+          size="small"
+          sx={{ minWidth: 120 }}
+        >
+          <MenuItem value="desc">Desc</MenuItem>
+          <MenuItem value="asc">Asc</MenuItem>
+        </TextField>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {activeFiltersCount > 0 ? `${activeFiltersCount} filtro(s) ativos` : "Sem filtros ativos"}
+          </span>
+          <Button variant="outlined" size="small" startIcon={<FilterAltOffIcon />} onClick={handleResetFilters}>
+            Limpar
+          </Button>
+          <Button variant="contained" size="small" onClick={handleApplyFilters}>
+            Aplicar filtros
+          </Button>
         </div>
       </div>
 

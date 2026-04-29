@@ -4,7 +4,7 @@ import Header from "@/app/(private)/[instance]/header";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
-import { ReactElement, ReactNode, useState } from "react";
+import { ReactElement, ReactNode, useEffect, useState } from "react";
 import ContactsProvider from "./(cruds)/contacts/contacts-context";
 import CustomersProvider from "./(cruds)/customers/customers-context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";

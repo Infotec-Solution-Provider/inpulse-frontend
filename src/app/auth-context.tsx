@@ -28,6 +28,7 @@ export default function AuthProvider({ children }: ProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+
   const signIn = useCallback(
     async (instance: string, { login, password }: AuthSignForm) => {
       try {
@@ -59,6 +60,8 @@ export default function AuthProvider({ children }: ProviderProps) {
     const instance = pathname.split("/")[1];
     instanceRef.current = instance;
     const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
+    const startedAt = Date.now();
+
     setToken(prevToken);
 
     if (prevToken) {

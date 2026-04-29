@@ -32,10 +32,10 @@ import { useContext, useEffect, useState } from "react";
 import HeaderNavItem from "./header-nav-item";
 import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
 
+
 const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
   const arr = [
     { title: "Clientes", href: "/customers" },
-    { title: "Pipelines", href: "/funnel" },
   ];
 
   if (isAdmin) {
@@ -193,6 +193,7 @@ const MobileMenu = ({
 };
 
 export default function Header() {
+  const renderStartedAt = Date.now();
   const { currentChat, parameters } = useContext(WhatsappContext);
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -209,6 +210,7 @@ export default function Header() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -222,16 +224,14 @@ export default function Header() {
 
   const reportsRoutes = [
     { title: "Relatórios", href: "/reports/dashboard" },
-    ...(isUserAdmin && instance === "exatron"
+    ...(instance === "exatron"
       ? [{ title: "Pesquisa de Satisfação", href: "/reports/dashboard?report=satisfactionSurvey" }]
       : []),
+    { title: "Performance Operadores", href: "/reports/operator-performance" },
     { title: "Conversas", href: "/reports/chats" },
-    ...(user?.NIVEL === UserRole.ADMIN
-      ? [
-          { title: "Dashboard Financeiro", href: "/reports/financial" },
-          /* { title: "Gerador de Relatório", href: "/reports/report-generator" }, */
-        ]
-      : []),
+    { title: "Dashboard: Vendas", href: "/reports/sales" },
+    { title: "Dashboard: Wpp Performance", href: "/reports/operator-performance" },
+    /* { title: "Gerador de Relatório", href: "/reports/report-generator" }, */
   ];
 
   return (

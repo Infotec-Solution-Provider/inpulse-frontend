@@ -2,6 +2,7 @@ import axios from "axios";
 import type {
   ConditionTemplate,
   FunnelBoard,
+  FunnelBoardFilters,
   FunnelCard,
   FunnelClientsResponse,
   FunnelConfigResult,
@@ -19,11 +20,44 @@ function authHeader(token: string) {
   return { authorization: `Bearer ${token}` };
 }
 
+function withTraceId<T extends Record<string, string | number | undefined>>(params: T, traceId?: string): T & { traceId?: string } {
+  return traceId ? { ...params, traceId } : params;
+}
+
+function buildBoardParams(previewPerStage: number, filters?: FunnelBoardFilters) {
+  return {
+    preview: previewPerStage,
+    ...(filters ?? {}),
+  };
+}
+
+function buildClientsParams(
+  stageId: number,
+  page: number,
+  perPage: number,
+  filters?: FunnelBoardFilters,
+) {
+  return {
+    stageId,
+    page,
+    perPage,
+    ...(filters ?? {}),
+  };
+}
+
 // ── Funnel CRUD ──────────────────────────────────────────────────────────────
 
 async function listFunnels(token: string): Promise<FunnelDef[]> {
   const res = await axios.get<{ data: FunnelDef[] }>(`${base}/api/marketing/funnels`, {
     headers: authHeader(token),
+  });
+  return res.data.data;
+}
+
+async function getFunnel(token: string, funnelId: number, traceId?: string): Promise<FunnelDef> {
+  const res = await axios.get<{ data: FunnelDef }>(`${base}/api/marketing/funnels/${funnelId}`, {
+    headers: authHeader(token),
+    params: withTraceId({}, traceId),
   });
   return res.data.data;
 }
@@ -153,10 +187,24 @@ async function getBoard(
   token: string,
   funnelId: number,
   previewPerStage = 10,
+  filters?: FunnelBoardFilters,
 ): Promise<FunnelBoard | null> {
   const res = await axios.get<{ data: FunnelBoard | null }>(
     `${base}/api/marketing/funnels/${funnelId}/board`,
-    { params: { preview: previewPerStage }, headers: authHeader(token) },
+    { params: buildBoardParams(previewPerStage, filters), headers: authHeader(token) },
+  );
+  return res.data.data;
+}
+
+async function getBoardSummary(
+  token: string,
+  funnelId: number,
+  filters?: FunnelBoardFilters,
+  traceId?: string,
+): Promise<FunnelBoard | null> {
+  const res = await axios.get<{ data: FunnelBoard | null }>(
+    `${base}/api/marketing/funnels/${funnelId}/board-summary`,
+    { params: withTraceId(filters ?? {}, traceId), headers: authHeader(token) },
   );
   return res.data.data;
 }
@@ -167,10 +215,12 @@ async function getClientsByStage(
   stageId: number,
   page: number,
   perPage: number,
+  filters?: FunnelBoardFilters,
+  traceId?: string,
 ): Promise<FunnelClientsResponse> {
   const res = await axios.get<{ data: FunnelClientsResponse }>(
     `${base}/api/marketing/funnels/${funnelId}/clients`,
-    { params: { stageId, page, perPage }, headers: authHeader(token) },
+    { params: withTraceId(buildClientsParams(stageId, page, perPage, filters), traceId), headers: authHeader(token) },
   );
   return res.data.data;
 }
@@ -248,8 +298,26 @@ async function moveManualEntry(
   );
 }
 
+// ── Filter options ────────────────────────────────────────────────────────────
+
+export interface FunnelFilterOptions {
+  groups: { code: number; name: string }[];
+  operators: { code: number; name: string }[];
+  campaigns: { code: number; name: string }[];
+  segments: { code: number; name: string }[];
+}
+
+async function getFunnelFilterOptions(token: string, funnelId: number): Promise<FunnelFilterOptions> {
+  const res = await axios.get<{ data: FunnelFilterOptions }>(
+    `${base}/api/marketing/funnels/${funnelId}/filter-options`,
+    { headers: authHeader(token) },
+  );
+  return res.data.data;
+}
+
 const funnelApiService = {
   listFunnels,
+  getFunnel,
   createFunnel,
   deleteFunnel,
   createStage,
@@ -261,6 +329,7 @@ const funnelApiService = {
   listTemplates,
   createTemplate,
   deleteTemplate,
+  getBoardSummary,
   getBoard,
   getClientsByStage,
   triggerSnapshot,
@@ -269,6 +338,7 @@ const funnelApiService = {
   addManualEntry,
   removeManualEntry,
   moveManualEntry,
+  getFunnelFilterOptions,
 };
 
 export default funnelApiService;

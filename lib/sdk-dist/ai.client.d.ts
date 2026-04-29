@@ -5,8 +5,9 @@ export default class AiClient extends ApiClient {
     suggestResponse(data: SuggestResponseRequest, token: string): Promise<SuggestResponseResponse>;
     summarizeChat(data: SummarizeChatRequest, token: string): Promise<SummarizeChatResponse>;
     analyzeCustomer(data: AnalyzeCustomerRequest, token: string): Promise<AnalyzeCustomerResponse>;
-    listSupervisorSessions(token: string): Promise<SupervisorAiSession[]>;
+    listSupervisorSessions(token: string, status?: "ACTIVE" | "ARCHIVED"): Promise<SupervisorAiSession[]>;
     createSupervisorSession(data: CreateSupervisorAiSessionRequest | undefined, token: string): Promise<SupervisorAiSession>;
+    patchSupervisorSessionStatus(sessionId: number, status: "ACTIVE" | "ARCHIVED", token: string): Promise<SupervisorAiSession>;
     getSupervisorSession(sessionId: number, token: string): Promise<SupervisorAiSessionDetail>;
     sendSupervisorMessage(sessionId: number, data: SendSupervisorAiMessageRequest, token: string): Promise<SendSupervisorAiMessageResponse>;
     getTenantConfig(instance: string, token: string): Promise<AiTenantConfig>;

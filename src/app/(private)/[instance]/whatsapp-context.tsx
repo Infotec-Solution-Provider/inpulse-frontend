@@ -45,7 +45,6 @@ import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
 import filesService from "../../../lib/services/files.service";
 import getFileSHA256 from "../../../lib/utils/get-file-sha256";
-
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -157,6 +156,7 @@ export const NOTIFICATIONS_PER_PAGE = 15;
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
+  const renderStartedAt = Date.now();
   const { token, instance, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
 

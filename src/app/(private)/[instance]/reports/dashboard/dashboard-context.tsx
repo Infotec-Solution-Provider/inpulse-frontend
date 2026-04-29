@@ -12,6 +12,7 @@ export type SatisfactionViewMode = "analytical" | "synthetic";
 export type ReportKey =
   | "generalPerformance"
   | "operatorPerformance"
+  | "salesFunnel"
   | "contactsAwaitingReturn"
   | "messagesPerUser"
   | "messagesPerContact"
@@ -196,6 +197,7 @@ interface DashboardContextType {
 const defaultChartTypes: Record<ReportKey, ChartType> = {
   generalPerformance: "bar",
   operatorPerformance: "bar",
+  salesFunnel: "bar",
   contactsAwaitingReturn: "pie",
   messagesPerUser: "bar",
   messagesPerContact: "bar",
@@ -213,9 +215,10 @@ function formatDateInputValue(date: Date) {
 
 function createDefaultFilters(): DashboardFilters {
   const today = formatDateInputValue(new Date());
+  const sevenDaysAgo = formatDateInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)); // Data de 7 dias atrás
 
   return {
-    startDate: today,
+    startDate: sevenDaysAgo,
     endDate: today,
     userId: "",
     sectors: "*",
@@ -303,6 +306,10 @@ export default function DashboardProvider({
         setOperatorPerformancePreviousSummary(res.data?.data?.previousSummary || null);
         setOperatorPerformance(res.data?.data?.operatorPerformance || []);
         setOperatorPerformanceDailySeries(res.data?.data?.dailySeries || []);
+      }
+
+      if (target === "salesFunnel") {
+        return;
       }
 
       if (target === "messagesPerContact") {

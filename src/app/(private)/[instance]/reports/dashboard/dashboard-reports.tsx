@@ -14,6 +14,7 @@ import {
 } from "./dashboard-context";
 import DashboardLoadingIndicator from "./dashboard-loading-indicator";
 import DashboardReportCard from "./dashboard-report-card";
+import SalesFunnelReport from "./sales-funnel-report";
 import { MenuItem, TextField } from "@mui/material";
 import { toast } from "react-toastify";
 import {
@@ -33,10 +34,6 @@ import {
 } from "recharts";
 
 const GeneralPerformanceReport = dynamic(() => import("./general-performance-report"), {
-  ssr: false,
-});
-
-const OperatorPerformanceReport = dynamic(() => import("./operator-performance-report"), {
   ssr: false,
 });
 
@@ -508,6 +505,7 @@ export default function DashboardReports() {
               e.target.value as
                 | "generalPerformance"
                 | "operatorPerformance"
+                | "salesFunnel"
                 | "messagesPerUser"
                 | "messagesPerContact"
                 | "messagesPerHourDay"
@@ -518,7 +516,7 @@ export default function DashboardReports() {
           className="min-w-[240px]"
         >
           <MenuItem value="generalPerformance">Performance Geral</MenuItem>
-          <MenuItem value="operatorPerformance">Performance por Operador</MenuItem>
+          <MenuItem value="salesFunnel">Funil de Vendas</MenuItem>
           <MenuItem value="messagesPerUser">Mensagens por Operador</MenuItem>
           <MenuItem value="messagesPerContact">Mensagens por Contato</MenuItem>
           <MenuItem value="messagesPerHourDay">Mensagens por Hora e Dia</MenuItem>
@@ -539,15 +537,7 @@ export default function DashboardReports() {
         />
       )}
 
-      {selectedReport === "operatorPerformance" && (
-        <OperatorPerformanceReport
-          summary={operatorPerformanceSummary}
-          previousSummary={operatorPerformancePreviousSummary}
-          data={operatorPerformance}
-          dailySeries={operatorPerformanceDailySeries}
-          isLoading={loading}
-        />
-      )}
+      {selectedReport === "salesFunnel" && <SalesFunnelReport />}
 
       {selectedReport === "messagesPerUser" && (
         <DashboardReportCard
