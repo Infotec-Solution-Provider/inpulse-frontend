@@ -1,5 +1,5 @@
 import ApiClient from "./api-client";
-import type { AiAgentConfig, AiTenantConfig, AnalyzeCustomerRequest, AnalyzeCustomerResponse, CreateSupervisorAiSessionRequest, SuggestResponseRequest, SuggestResponseResponse, SupervisorAiSession, SupervisorAiSessionDetail, SummarizeChatRequest, SummarizeChatResponse, AiAgent, AiAgentChatSession, CreateAiAgentInput, UpdateAiAgentInput, AiAgentAudienceInput, AiAgentKnowledgeEntryInput, AiAgentActionLogFilters, PaginatedActionLogs, AiAgentAudiencePreview, SendSupervisorAiMessageRequest, SendSupervisorAiMessageResponse } from "./types/ai.types";
+import type { AiAgentConfig, AiTenantConfig, AnalyzeCustomerRequest, AnalyzeCustomerResponse, CreateSupervisorAiSessionRequest, SuggestResponseRequest, SuggestResponseResponse, SupervisorAiSession, SupervisorAiSessionDetail, SummarizeChatRequest, SummarizeChatResponse, AiAgent, AiAgentChatSession, CreateAiAgentInput, UpdateAiAgentInput, AiAgentAudienceInput, AiAgentKnowledgeEntryInput, AiAgentActionLogFilters, PaginatedActionLogs, AiAgentAudiencePreview, SendSupervisorAiMessageRequest, SendSupervisorAiMessageResponse, AiUsageSummary } from "./types/ai.types";
 export default class AiClient extends ApiClient {
     private authHeader;
     suggestResponse(data: SuggestResponseRequest, token: string): Promise<SuggestResponseResponse>;
@@ -29,4 +29,5 @@ export default class AiClient extends ApiClient {
     deleteAgentKnowledgeEntry(agentId: number, entryId: number, token: string): Promise<void>;
     listAgentActionLogs(filters: AiAgentActionLogFilters, token: string): Promise<PaginatedActionLogs>;
     listActiveSessions(token: string): Promise<AiAgentChatSession[]>;
+    getUsageSummary(period: string, token: string): Promise<AiUsageSummary>;
 }

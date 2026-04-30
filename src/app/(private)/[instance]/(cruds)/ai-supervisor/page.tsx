@@ -5,6 +5,7 @@ import AssistantMarkdown from "@/lib/components/assistant-markdown";
 import aiService from "@/lib/services/ai.service";
 import type {
 	SupervisorAiMessage,
+	SupervisorAiReportPreview,
 	SupervisorAiSession,
 	SupervisorAiSessionDetail,
 } from "@/lib/types/sdk-local.types";
@@ -66,10 +67,81 @@ function sourceLabel(type: string) {
 	}
 }
 
+function buildCsv(preview: SupervisorAiReportPreview): string {
+	const escape = (v: string | number | boolean | null) => {
+		const s = String(v ?? "");
+		return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+	};
+	const header = preview.columns.map(escape).join(",");
+	const body = preview.rows.map((row) => preview.columns.map((col) => escape(row[col] ?? null)).join(",")).join("\n");
+	return `${header}\n${body}`;
+}
+
+function ReportPreviewPanel({ preview }: { preview: SupervisorAiReportPreview }) {
+	const handleExportCsv = () => {
+		const csv = buildCsv(preview);
+		const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${preview.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.csv`;
+		a.click();
+		URL.revokeObjectURL(url);
+	};
+
+	return (
+		<div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
+			<div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2 dark:border-slate-700">
+				<div className="min-w-0">
+					<p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{preview.title}</p>
+					<p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{preview.summary}</p>
+				</div>
+				{preview.availableFormats.includes("csv") && (
+					<button
+						type="button"
+						onClick={handleExportCsv}
+						className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+					>
+						Exportar CSV
+					</button>
+				)}
+			</div>
+			<div className="overflow-x-auto">
+				<table className="w-full text-left text-xs">
+					<thead>
+						<tr className="bg-slate-100 dark:bg-slate-800">
+							{preview.columns.map((col) => (
+								<th key={col} className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600 dark:text-slate-300">{col}</th>
+							))}
+						</tr>
+					</thead>
+					<tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+						{preview.rows.map((row, ri) => (
+							<tr key={ri} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+								{preview.columns.map((col) => (
+									<td key={col} className="whitespace-nowrap px-3 py-1.5 text-slate-700 dark:text-slate-300">{String(row[col] ?? "—")}</td>
+								))}
+							</tr>
+						))}
+						{preview.rows.length === 0 && (
+							<tr>
+								<td colSpan={preview.columns.length} className="px-3 py-4 text-center text-slate-400 dark:text-slate-500">Sem dados para o período.</td>
+							</tr>
+						)}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	);
+}
+
 export default function AiSupervisorPage() {
-	const { token, user } = useAuthContext();
+	const { token, user, instance } = useAuthContext();
 	const userLevel = String(user?.NIVEL ?? "");
 	const canAccess = userLevel === UserRole.ADMIN || userLevel === "SUPERVISOR";
+
+	// Tenant config (for model filtering)
+	const [configAvailableModels, setConfigAvailableModels] = useState<string[] | null>(null);
 
 	// Sessions state
 	const [sessions, setSessions] = useState<SupervisorAiSession[]>([]);
@@ -88,6 +160,21 @@ export default function AiSupervisorPage() {
 
 	const messagesEndRef = useRef<HTMLDivElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+	// Visible models — filtered by tenant config if set
+	const visibleModels = AVAILABLE_MODELS.filter(
+		(m) => m.value === "" || configAvailableModels === null || configAvailableModels.includes(m.value),
+	);
+
+	// Fetch tenant config to apply model filter
+	useEffect(() => {
+		if (typeof token !== "string" || !instance) return;
+		const authToken = token;
+		const inst = instance;
+		void aiService.getTenantConfig(inst, authToken).then((config) => {
+			setConfigAvailableModels(config.availableModels ?? null);
+		}).catch(() => { /* silently ignore — use all models */ });
+	}, [token, instance]);
 
 	// Load sessions when tab changes
 	useEffect(() => {
@@ -362,7 +449,7 @@ export default function AiSupervisorPage() {
 									},
 								}}
 							>
-								{AVAILABLE_MODELS.map((m) => (
+								{visibleModels.map((m) => (
 									<MenuItem key={m.value} value={m.value} sx={{ fontSize: "0.75rem" }}>
 										{m.label}
 									</MenuItem>
@@ -398,6 +485,9 @@ export default function AiSupervisorPage() {
 												);
 											})}
 										</Stack>
+									)}
+									{entry.metadata?.reportPreview && (
+										<ReportPreviewPanel preview={entry.metadata.reportPreview as SupervisorAiReportPreview} />
 									)}
 								</div>
 							))}

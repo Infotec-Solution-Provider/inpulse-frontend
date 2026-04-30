@@ -58,6 +58,7 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
 const aiRoutes = [
   { title: "Assistente", href: "/ai-supervisor" },
   { title: "Agentes", href: "/ai-agents" },
+  { title: "Configurações IA", href: "/ai-settings" },
 ];
 
 /*

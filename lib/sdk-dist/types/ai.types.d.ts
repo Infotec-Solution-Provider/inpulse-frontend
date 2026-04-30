@@ -89,12 +89,44 @@ export interface SupervisorAiSessionDetail {
     session: SupervisorAiSession;
     messages: SupervisorAiMessage[];
 }
+export interface AiFeatureModels {
+    suggest_response?: string;
+    summarize_chat?: string;
+    analyze_customer?: string;
+    supervisor_chat?: string;
+}
 export interface AiTenantConfig {
     instance: string;
     model: string;
     temperature: number;
     maxTokens: number;
     enabled: boolean;
+    monthlyBudgetUsd?: number | null;
+    availableModels?: string[] | null;
+    featureModels?: AiFeatureModels | null;
+    operatorBudgets?: Record<string, number> | null;
+}
+export interface AiFeatureUsageStat {
+    feature: string;
+    callCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+}
+export interface AiOperatorUsageStat {
+    operatorId: number;
+    callCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    estimatedCostUsd: number;
+}
+export interface AiUsageSummary {
+    period: string;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    estimatedCostUsd: number;
+    byFeature: AiFeatureUsageStat[];
+    byOperator: AiOperatorUsageStat[];
 }
 export interface AiAgentConfig {
     instance: string;

@@ -5,6 +5,9 @@ import type {
   AiAgentAudiencePreview,
   AiAgentChatSession,
   AiAgentKnowledgeEntryInput,
+  AiFeatureModels,
+  AiTenantConfig,
+  AiUsageSummary,
   CreateAiAgentInput,
   PaginatedActionLogs,
   UpdateAiAgentInput,
@@ -130,6 +133,44 @@ class FrontendAiService extends AiClient {
       this.buildAuthConfig(token),
     );
 
+    return response.data.data;
+  }
+
+  public async getTenantConfig(instance: string, token: string): Promise<AiTenantConfig> {
+    const response = await this.ax.get<{ message: string; data: AiTenantConfig }>(
+      `/api/ai/tenant-config/${instance}`,
+      this.buildAuthConfig(token),
+    );
+    return response.data.data;
+  }
+
+  public async upsertTenantConfig(
+    instance: string,
+    data: Partial<{
+      model: string;
+      temperature: number;
+      maxTokens: number;
+      enabled: boolean;
+      monthlyBudgetUsd: number | null;
+      availableModels: string[] | null;
+      featureModels: AiFeatureModels | null;
+      operatorBudgets: Record<string, number> | null;
+    }>,
+    token: string,
+  ): Promise<AiTenantConfig> {
+    const response = await this.ax.put<{ message: string; data: AiTenantConfig }>(
+      `/api/ai/tenant-config/${instance}`,
+      data,
+      this.buildAuthConfig(token),
+    );
+    return response.data.data;
+  }
+
+  public async getUsageSummary(period: string, token: string): Promise<AiUsageSummary> {
+    const response = await this.ax.get<{ message: string; data: AiUsageSummary }>(
+      `/api/ai/usage?period=${encodeURIComponent(period)}`,
+      this.buildAuthConfig(token),
+    );
     return response.data.data;
   }
 }
