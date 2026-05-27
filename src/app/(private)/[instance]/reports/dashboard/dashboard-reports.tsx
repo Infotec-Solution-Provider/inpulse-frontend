@@ -566,7 +566,7 @@ export default function DashboardReports() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="messages" stroke="#6366f1" />
+                    <Line type="monotone" dataKey="messages" stroke="#6366f1" name="Mensagens" />
                   </LineChart>
                 ) : (
                   <BarChart data={messagesPerUserChartData}>
@@ -591,7 +591,7 @@ export default function DashboardReports() {
       {selectedReport === "messagesPerContact" && (
         <DashboardReportCard
           title="Mensagens por Contato"
-          description="Top 10 contatos com maior volume de mensagens."
+          description="10 contatos com maior volume de mensagens."
           isLoading={loading}
           onExport={() => exportToCsv("mensagens-por-contato.csv", messagesPerContact)}
           chartType={chartTypes.messagesPerContact}
@@ -614,7 +614,7 @@ export default function DashboardReports() {
                     <XAxis dataKey="contactName" hide />
                     <YAxis />
                     <Tooltip />
-                    <Line type="monotone" dataKey="messagesCount" stroke="#6366f1" />
+                    <Line type="monotone" dataKey="messagesCount" stroke="#6366f1" name="Mensagens" />
                   </LineChart>
                 ) : (
                   <BarChart data={topContacts}>

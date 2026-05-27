@@ -225,6 +225,11 @@ export default function Header() {
 
   const reportsRoutes = [
     { title: "Relatórios", href: "/reports/dashboard" },
+    { title: "Dashboard de Operadores", href: "/reports/operators" },
+    { title: "Metas e Indicadores", href: "/reports/goals-dashboard" },
+    { title: "Equipe x Metas", href: "/reports/team-goals" },
+    { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
+    { title: "Motivos de Perda", href: "/reports/lost-reasons" },
     ...(instance === "exatron"
       ? [{ title: "Pesquisa de Satisfação", href: "/reports/dashboard?report=satisfactionSurvey" }]
       : []),
@@ -232,7 +237,9 @@ export default function Header() {
     { title: "Conversas", href: "/reports/chats" },
     { title: "Dashboard: Vendas", href: "/reports/sales" },
     { title: "Dashboard: Wpp Performance", href: "/reports/operator-performance" },
-    /* { title: "Gerador de Relatório", href: "/reports/report-generator" }, */
+    { title: "Gerador de Relatório", href: "/reports/report-generator" },
+    { title: "Dashboards", href: "/reports/dashboards" },
+    { title: "Métricas", href: "/reports/metrics" },
   ];
 
   return (
