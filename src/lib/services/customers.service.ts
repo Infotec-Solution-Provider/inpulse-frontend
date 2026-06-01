@@ -12,6 +12,20 @@ interface FinishTelephonySchedulePayload {
 	dialedPhone?: string;
 }
 
+interface StartTelephonyScheduleCallPayload {
+	dialedPhone?: string;
+}
+
+interface TelephonyScheduleCallStatus {
+	callId: string | null;
+	scheduleId: number;
+	state: "idle" | "dialing" | "answered" | "failed" | "ended";
+	startedAt: string | null;
+	endedAt: string | null;
+	dialedPhone: string | null;
+	errorReason: string | null;
+}
+
 class FrontendCustomersService extends CustomersClient {
 	public async finishTelephonySchedule(
 		scheduleId: number,
@@ -23,6 +37,27 @@ class FrontendCustomersService extends CustomersClient {
 		);
 
 		return response.data;
+	}
+
+	public async startTelephonyScheduleCall(
+		scheduleId: number,
+		data: StartTelephonyScheduleCallPayload,
+	) {
+		const response = await this.ax.post<{
+			message: string;
+			data: TelephonyScheduleCallStatus;
+		}>(`/api/customers/schedules/telephony/${scheduleId}/call/start`, data);
+
+		return response.data.data;
+	}
+
+	public async getTelephonyScheduleCallStatus(scheduleId: number) {
+		const response = await this.ax.get<{
+			message: string;
+			data: TelephonyScheduleCallStatus;
+		}>(`/api/customers/schedules/telephony/${scheduleId}/call`);
+
+		return response.data.data;
 	}
 
 	public async getCampaigns() {

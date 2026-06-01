@@ -46,6 +46,7 @@ export default function TelephoneDialerCard() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState("");
   const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [isStartingDial, setIsStartingDial] = useState(false);
 
   const nextAppointment = useMemo(() => queue[0] ?? null, [queue]);
   const isDialing = nextAppointment?.id === activeId;
@@ -135,16 +136,39 @@ export default function TelephoneDialerCard() {
     }
   };
 
-  const handleStartDial = () => {
+  const handleStartDial = async () => {
     if (!nextAppointment) return;
 
-    setActiveId(nextAppointment.id);
-    setStartedAt((currentStartedAt) => currentStartedAt || new Date().toISOString());
-    setQueue((previousQueue) =>
-      previousQueue.map((item) =>
-        item.id === nextAppointment.id ? { ...item, status: "dialing" } : item,
-      ),
-    );
+    if (!token) {
+      toast.error("Sessao invalida para iniciar atendimento.");
+      return;
+    }
+
+    setIsStartingDial(true);
+
+    try {
+      customersService.setAuth(token);
+      const callStatus = await customersService.startTelephonyScheduleCall(nextAppointment.id, {
+        dialedPhone: selectedPhone || nextAppointment.phone,
+      });
+
+      if (callStatus.state !== "dialing" && callStatus.state !== "answered") {
+        throw new Error("A sessao de chamada nao entrou em estado valido de discagem.");
+      }
+
+      setActiveId(nextAppointment.id);
+      setStartedAt(callStatus.startedAt || new Date().toISOString());
+      setSelectedPhone(callStatus.dialedPhone || selectedPhone || nextAppointment.phone);
+      setQueue((previousQueue) =>
+        previousQueue.map((item) =>
+          item.id === nextAppointment.id ? { ...item, status: "dialing" } : item,
+        ),
+      );
+    } catch (err) {
+      toast.error(`Falha ao iniciar ligacao: ${sanitizeErrorMessage(err)}`);
+    } finally {
+      setIsStartingDial(false);
+    }
   };
 
   const handleFinishAppointment = async (resultId: number, scheduleDate?: string) => {
@@ -287,7 +311,7 @@ export default function TelephoneDialerCard() {
       <TelephoneAttendanceDrawer
         open={isDrawerOpen}
         appointment={nextAppointment}
-        isDialing={isDialing}
+        isDialing={isDialing || isStartingDial}
         dialedPhone={selectedPhone || nextAppointment.phone}
         onClose={() => setIsDrawerOpen(false)}
         onSelectPhone={setSelectedPhone}

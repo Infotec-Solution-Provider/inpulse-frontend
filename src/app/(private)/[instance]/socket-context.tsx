@@ -34,6 +34,10 @@ export default function SocketProvider({ children }: SocketProviderProps) {
 
   useEffect(() => {
     const socketClient = socket.current;
+    const looseSocket = socketClient as unknown as {
+      on: (event: string, callback: (data: { callerNumber: string; callerName: string | null; ramal: string }) => void) => void;
+      off: (event: string) => void;
+    };
 
     socketClient.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
       openModal(<QRModal qr={qr} phone={phone} />);
@@ -47,9 +51,26 @@ export default function SocketProvider({ children }: SocketProviderProps) {
       }
     });
 
+    // Telefonia: chamada receptiva recebida via AMI.
+    // Usa string literal ate `@in.pulse-crm/sdk` ser republicada com TelephonyCallReceived.
+    looseSocket.on(
+      "telephony_call_received",
+      (data: {
+        callerNumber: string;
+        callerName: string | null;
+        ramal: string;
+      }) => {
+        const who = data.callerName ? `${data.callerName} (${data.callerNumber})` : data.callerNumber;
+        toast.info(`Chamada recebida de ${who} no ramal ${data.ramal}`, {
+          autoClose: 8000,
+        });
+      }
+    );
+
     return () => {
       socketClient.off(SocketEventType.WwebjsQr);
       socketClient.off(SocketEventType.WwebjsAuth);
+      looseSocket.off("telephony_call_received");
     };
   }, [socket, closeModal, openModal]);
 

@@ -1,4 +1,4 @@
-import { Edit } from "@mui/icons-material";
+import { Edit, SettingsPhone } from "@mui/icons-material";
 import { User } from "@in.pulse-crm/sdk";
 import { IconButton, TableCell, TableRow } from "@mui/material";
 import { useUsersContext } from "../users-context";
@@ -7,9 +7,14 @@ import { USERS_TABLE_COLUMNS } from "./table-config";
 interface UsersTableItemProps {
   user: User;
   openEditModalHandler: (user: User) => void;
+  openSipConfigModalHandler: (user: User) => void;
 }
 
-export default function UsersTableItem({ user, openEditModalHandler }: UsersTableItemProps) {
+export default function UsersTableItem({
+  user,
+  openEditModalHandler,
+  openSipConfigModalHandler,
+}: UsersTableItemProps) {
   const { sectors } = useUsersContext();
   const sector = sectors.find((s) => s.id === user.SETOR);
 
@@ -111,6 +116,14 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         }}
       >
         <div className="flex items-center gap-1">
+          <IconButton
+            title="Configurar SIP"
+            onClick={() => openSipConfigModalHandler(user)}
+            size="small"
+            className="text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+          >
+            <SettingsPhone fontSize="small" />
+          </IconButton>
           <IconButton
             title="Editar Usuário"
             onClick={() => openEditModalHandler(user)}

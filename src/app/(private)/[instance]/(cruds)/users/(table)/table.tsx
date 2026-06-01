@@ -1,4 +1,5 @@
 "use client";
+import { useAuthContext } from "@/app/auth-context";
 import { User } from "@in.pulse-crm/sdk";
 import {
   Button,
@@ -10,15 +11,23 @@ import {
   TablePagination,
   TableRow,
 } from "@mui/material";
+import { useState } from "react";
+import UserSipConfigModal from "../(modal)/user-sip-config-modal";
 import { useUsersContext } from "../users-context";
 import UsersTableHeader from "./table-header";
 import UsersTableItem from "./table-item";
 
 export default function UsersTable() {
+  const { token } = useAuthContext();
   const { state, dispatch, openUserModal } = useUsersContext();
+  const [sipConfigUser, setSipConfigUser] = useState<User | null>(null);
 
   function openEditUserModal(user: User) {
     openUserModal(user);
+  }
+
+  function openSipConfigModal(user: User) {
+    setSipConfigUser(user);
   }
 
   const onChangePage = (page: number) => {
@@ -90,6 +99,7 @@ export default function UsersTable() {
                   key={`${user.NOME}_${user.CODIGO}`}
                   user={user}
                   openEditModalHandler={openEditUserModal}
+                  openSipConfigModalHandler={openSipConfigModal}
                 />
               ))}
           </TableBody>
@@ -124,6 +134,16 @@ export default function UsersTable() {
           }}
         />
       </div>
+
+      {sipConfigUser ? (
+        <UserSipConfigModal
+          open={Boolean(sipConfigUser)}
+          userId={sipConfigUser.CODIGO}
+          userName={sipConfigUser.NOME || `Operador #${sipConfigUser.CODIGO}`}
+          token={token || undefined}
+          onClose={() => setSipConfigUser(null)}
+        />
+      ) : null}
     </div>
   );
 }

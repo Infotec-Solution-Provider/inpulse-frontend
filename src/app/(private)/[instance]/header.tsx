@@ -40,6 +40,7 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
 
   if (isAdmin) {
     arr.push({ title: "Usuários", href: "/users" });
+    arr.push({ title: "Configuração SIP", href: "/sip-config" });
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
   }
