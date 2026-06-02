@@ -1,5 +1,6 @@
 import AIPrototypeModal, { AIPrototypeMode } from "@/lib/components/ai-prototype-modal";
 import { AI_PRESENTATION_MODE } from "@/lib/ai-prototype/config";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { Formatter } from "@in.pulse-crm/utils";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -61,9 +62,17 @@ export default function ChatHeader({
   const { currentChat, currentChatMessages, parameters } = useWhatsappContext();
   const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
   const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
-  const canOpenAIActions = AI_PRESENTATION_MODE && currentChat?.chatType === "wpp";
+  const canOpenAIActions =
+    AI_PRESENTATION_MODE &&
+    currentChat?.chatType === "wpp" &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.aiSupervisor);
   const canOpenCustomerDetail = currentChat?.chatType === "wpp" && !!customerId;
-  const hasAiAgent = currentChat?.chatType === "wpp" && !!(currentChat as { agentId?: number | null }).agentId;
+  const hasAiAgent =
+    currentChat?.chatType === "wpp" &&
+    !!(currentChat as { agentId?: number | null }).agentId &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
 
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
 

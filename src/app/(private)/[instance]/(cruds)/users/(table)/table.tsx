@@ -12,15 +12,19 @@ import {
   TableRow,
 } from "@mui/material";
 import { useState } from "react";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import UserSipConfigModal from "../(modal)/user-sip-config-modal";
 import { useUsersContext } from "../users-context";
+import { useWhatsappContext } from "../../../whatsapp-context";
 import UsersTableHeader from "./table-header";
 import UsersTableItem from "./table-item";
 
 export default function UsersTable() {
   const { token } = useAuthContext();
   const { state, dispatch, openUserModal } = useUsersContext();
+  const { parameters } = useWhatsappContext();
   const [sipConfigUser, setSipConfigUser] = useState<User | null>(null);
+  const canUseSipConfig = isFeatureEnabled(parameters, FEATURE_FLAGS.sipConfig);
 
   function openEditUserModal(user: User) {
     openUserModal(user);
@@ -98,6 +102,7 @@ export default function UsersTable() {
                 <UsersTableItem
                   key={`${user.NOME}_${user.CODIGO}`}
                   user={user}
+                  canUseSipConfig={canUseSipConfig}
                   openEditModalHandler={openEditUserModal}
                   openSipConfigModalHandler={openSipConfigModal}
                 />

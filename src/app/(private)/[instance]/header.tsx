@@ -2,6 +2,7 @@
 import { AuthContext } from "@/app/auth-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import NotificationsDropdown from "@/lib/components/notifications-dropdown";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { UserRole } from "@in.pulse-crm/sdk";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
@@ -40,7 +41,9 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
 
   if (isAdmin) {
     arr.push({ title: "Usuários", href: "/users" });
-    arr.push({ title: "Configuração SIP", href: "/sip-config" });
+    if (isFeatureEnabled(params, FEATURE_FLAGS.sipConfig)) {
+      arr.push({ title: "Configuração SIP", href: "/sip-config" });
+    }
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
   }
@@ -56,11 +59,62 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
   return arr;
 };
 
-const aiRoutes = [
-  { title: "Assistente", href: "/ai-supervisor" },
-  { title: "Agentes", href: "/ai-agents" },
-  { title: "Configurações IA", href: "/ai-settings" },
-];
+const aiRoutes = (params: Record<string, string>) => {
+  if (!isFeatureEnabled(params, FEATURE_FLAGS.ai)) {
+    return [];
+  }
+
+  return [
+    ...(isFeatureEnabled(params, FEATURE_FLAGS.aiSupervisor)
+      ? [{ title: "Assistente", href: "/ai-supervisor" }]
+      : []),
+    ...(isFeatureEnabled(params, FEATURE_FLAGS.aiAgents)
+      ? [{ title: "Agentes", href: "/ai-agents" }]
+      : []),
+    ...(isFeatureEnabled(params, FEATURE_FLAGS.aiSettings)
+      ? [{ title: "Configurações IA", href: "/ai-settings" }]
+      : []),
+  ];
+};
+
+const reportsRoutes = (params: Record<string, string>, instance: string) => {
+  const routes = [
+    { title: "Relatórios", href: "/reports/dashboard" },
+  ];
+
+  if (isFeatureEnabled(params, FEATURE_FLAGS.reportsAdvanced)) {
+    routes.push(
+      { title: "Dashboard de Operadores", href: "/reports/operators" },
+      { title: "Metas e Indicadores", href: "/reports/goals-dashboard" },
+      { title: "Equipe x Metas", href: "/reports/team-goals" },
+      { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
+      { title: "Motivos de Perda", href: "/reports/lost-reasons" },
+      { title: "Performance Operadores", href: "/reports/operator-performance" },
+      { title: "Conversas", href: "/reports/chats" },
+    );
+  }
+
+  if (instance === "exatron") {
+    routes.push({ title: "Pesquisa de Satisfação", href: "/reports/dashboard?report=satisfactionSurvey" });
+  }
+
+  if (isFeatureEnabled(params, FEATURE_FLAGS.salesReports)) {
+    routes.push(
+      { title: "Dashboard: Vendas", href: "/reports/sales" },
+      { title: "Dashboard: Wpp Performance", href: "/reports/operator-performance" },
+    );
+  }
+
+  if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
+    routes.push(
+      { title: "Gerador de Relatório", href: "/reports/report-generator" },
+      { title: "Dashboards", href: "/reports/dashboards" },
+      { title: "Métricas", href: "/reports/metrics" },
+    );
+  }
+
+  return routes;
+};
 
 /*
 const toolsRoutes = [
@@ -87,6 +141,8 @@ const MobileMenu = ({
   const pathname = usePathname();
   const baseHref = pathname.split("/")[1];
   const { parameters } = useWhatsappContext();
+  const visibleAiRoutes = aiRoutes(parameters);
+  const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
 
   const renderMenuItems = (routes: { title: string; href: string }[]) => {
     return routes.map((route) => (
@@ -154,22 +210,26 @@ const MobileMenu = ({
           </ListItem>
           {renderMenuItems(crudsRoutes(parameters, isUserAdmin))}
 
-          {isUserAdmin && (
+          {isUserAdmin && visibleAiRoutes.length > 0 && (
             <>
               <ListItem>
                 <ListItemText primary="IA" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
               </ListItem>
-              {renderMenuItems(aiRoutes)}
+              {renderMenuItems(visibleAiRoutes)}
             </>
           )}
 
           {/* Relatórios */}
           {isUserAdmin && (
             <>
-              <ListItem>
-                <ListItemText primary="Disparos" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
-              </ListItem>
-              {renderMenuItems([{ title: "Mensagens em massa", href: "/tools/mass-messages" }])}
+              {showMassMessages && (
+                <>
+                  <ListItem>
+                    <ListItemText primary="Disparos" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
+                  </ListItem>
+                  {renderMenuItems([{ title: "Mensagens em massa", href: "/tools/mass-messages" }])}
+                </>
+              )}
 
               <ListItem>
                 <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
@@ -224,24 +284,12 @@ export default function Header() {
 
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
 
-  const reportsRoutes = [
-    { title: "Relatórios", href: "/reports/dashboard" },
-    { title: "Dashboard de Operadores", href: "/reports/operators" },
-    { title: "Metas e Indicadores", href: "/reports/goals-dashboard" },
-    { title: "Equipe x Metas", href: "/reports/team-goals" },
-    { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
-    { title: "Motivos de Perda", href: "/reports/lost-reasons" },
-    ...(instance === "exatron"
-      ? [{ title: "Pesquisa de Satisfação", href: "/reports/dashboard?report=satisfactionSurvey" }]
-      : []),
-    { title: "Performance Operadores", href: "/reports/operator-performance" },
-    { title: "Conversas", href: "/reports/chats" },
-    { title: "Dashboard: Vendas", href: "/reports/sales" },
-    { title: "Dashboard: Wpp Performance", href: "/reports/operator-performance" },
-    { title: "Gerador de Relatório", href: "/reports/report-generator" },
-    { title: "Dashboards", href: "/reports/dashboards" },
-    { title: "Métricas", href: "/reports/metrics" },
-  ];
+  const visibleAiRoutes = aiRoutes(parameters);
+  const visibleReportsRoutes = reportsRoutes(parameters, instance);
+  const showFunnels = isFeatureEnabled(parameters, FEATURE_FLAGS.funnels);
+  const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
+  const showAiMenu = isUserAdmin && visibleAiRoutes.length > 0;
+  const showReportsMenu = isUserAdmin && visibleReportsRoutes.length > 0;
 
   return (
     <header className="sticky top-0 z-20 shadow-md">
@@ -276,21 +324,23 @@ export default function Header() {
                 <HeaderNavItem title="Cadastros" routes={crudsRoutes(parameters, isUserAdmin)}>
                   <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
-                <HeaderNavItem title="Pipelines" href="/funnel">
-                  <FilterAltIcon className="text-gray-900 dark:text-slate-200" />
-                </HeaderNavItem>
-                {isUserAdmin && (
-                  <HeaderNavItem title="IA" routes={aiRoutes}>
+                {showFunnels && (
+                  <HeaderNavItem title="Pipelines" href="/funnel">
+                    <FilterAltIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
+                {showAiMenu && (
+                  <HeaderNavItem title="IA" routes={visibleAiRoutes}>
                     <AutoAwesomeIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {isUserAdmin && (
+                {isUserAdmin && showMassMessages && (
                   <HeaderNavItem title="Disparos" href="/tools/mass-messages">
                     <CampaignIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {isUserAdmin && (
-                  <HeaderNavItem title="Relatórios" routes={reportsRoutes}>
+                {showReportsMenu && (
+                  <HeaderNavItem title="Relatórios" routes={visibleReportsRoutes}>
                     <BarChartIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
@@ -328,7 +378,7 @@ export default function Header() {
         instance={instance}
         isUserAdmin={isUserAdmin}
         signOut={signOut}
-        reportsRoutes={reportsRoutes}
+        reportsRoutes={visibleReportsRoutes}
       />
     </header>
   );

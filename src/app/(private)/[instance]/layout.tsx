@@ -4,16 +4,68 @@ import Header from "@/app/(private)/[instance]/header";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
-import { ReactElement, ReactNode, useEffect, useState } from "react";
+import { FEATURE_FLAGS, FeatureFlag, isFeatureEnabled } from "@/lib/feature-flags";
+import { usePathname } from "next/navigation";
+import { ReactElement, ReactNode, useState } from "react";
 import ContactsProvider from "./(cruds)/contacts/contacts-context";
 import CustomersProvider from "./(cruds)/customers/customers-context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
 import { InternalChatProvider } from "./internal-context";
 import WhatsappProvider from "./whatsapp-context";
+import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
 
 interface AppLayoutProps {
   children: ReactNode;
+}
+
+const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
+  { segment: "/ai-supervisor", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiSupervisor] },
+  { segment: "/ai-agents", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiAgents] },
+  { segment: "/ai-settings", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiSettings] },
+  { segment: "/funnel", flags: [FEATURE_FLAGS.funnels] },
+  { segment: "/sip-config", flags: [FEATURE_FLAGS.sipConfig] },
+  { segment: "/tools/mass-messages", flags: [FEATURE_FLAGS.massMessages] },
+  { segment: "/reports/operators", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/goals-dashboard", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/team-goals", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/lead-origin-quality", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/lost-reasons", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/operator-performance", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/sales", flags: [FEATURE_FLAGS.salesReports] },
+  { segment: "/reports/dashboards", flags: [FEATURE_FLAGS.reportsDashboards] },
+  { segment: "/reports/metrics", flags: [FEATURE_FLAGS.reportsDashboards] },
+  { segment: "/reports/report-generator", flags: [FEATURE_FLAGS.reportsDashboards] },
+];
+
+function RouteFeatureGate({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const { loaded, parameters } = useWhatsappContext();
+  const routeConfig = ROUTE_FEATURE_FLAGS.find(({ segment }) => pathname.includes(segment));
+
+  if (!routeConfig) {
+    return <>{children}</>;
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-300">
+        Carregando permissões...
+      </div>
+    );
+  }
+
+  const isAllowed = routeConfig.flags.every((flag) => isFeatureEnabled(parameters, flag));
+
+  if (!isAllowed) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500 dark:text-slate-300">
+        Funcionalidade indisponível para esta instância.
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
@@ -32,7 +84,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <ThemeProvider>
                         <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
                           <Header />
-                          <main className="min-h-0 overflow-y-auto">{children}</main>
+                          <main className="min-h-0 overflow-y-auto">
+                            <RouteFeatureGate>{children}</RouteFeatureGate>
+                          </main>
                           <Modal
                             open={!!modal}
                             onClose={(_, r) => {

@@ -14,6 +14,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { CustomersContext } from "../customers-context";
 import { WhatsappContext } from "../../../whatsapp-context";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";
 import ContactsModal from "./(modal)/contacts-modal";
 import CreateCustomerModal from "./(modal)/create-customer-modal";
@@ -25,7 +26,8 @@ import CustomersTableItem from "./table-item";
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
   const { state, dispatch } = useContext(CustomersContext);
-  const { wppApi } = useContext(WhatsappContext);
+  const { parameters, wppApi } = useContext(WhatsappContext);
+  const canUseProfileTags = isFeatureEnabled(parameters, FEATURE_FLAGS.customerProfileTags);
   const [profileSummaries, setProfileSummaries] = useState<Record<number, CustomerProfileSummaryPayload | null>>({});
   const [isLoadingProfileSummaries, setIsLoadingProfileSummaries] = useState(false);
 
@@ -42,7 +44,7 @@ export default function CustomersTable() {
   );
 
   useEffect(() => {
-    if (!wppApi.current || !customerIds.length) {
+    if (!canUseProfileTags || !wppApi.current || !customerIds.length) {
       setIsLoadingProfileSummaries(false);
       return;
     }
@@ -110,7 +112,7 @@ export default function CustomersTable() {
     return () => {
       isMounted = false;
     };
-  }, [customerIds, profileSummaries, wppApi]);
+  }, [canUseProfileTags, customerIds, profileSummaries, wppApi]);
 
   function openEditCustomerModal(customer: Customer) {
     openModal(<EditCustomerModal customer={customer} />);
@@ -208,6 +210,7 @@ export default function CustomersTable() {
                   customer={client}
                   profileSummary={profileSummaries[client.CODIGO] ?? null}
                   isProfileLoading={isLoadingProfileSummaries && !(client.CODIGO in profileSummaries)}
+                  canUseProfileTags={canUseProfileTags}
                   openEditProfileTagsHandler={openEditProfileTagsModal}
                   openEditModalHandler={openEditCustomerModal}
                   openContactModalHandler={openContactModal}

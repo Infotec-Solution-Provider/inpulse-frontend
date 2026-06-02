@@ -9,6 +9,7 @@ interface ClientListItemProps {
   customer: Customer;
   profileSummary: CustomerProfileSummaryPayload | null;
   isProfileLoading: boolean;
+  canUseProfileTags: boolean;
   openEditProfileTagsHandler: (customer: Customer) => void;
   openEditModalHandler: (customer: Customer) => void;
   openContactModalHandler: (customer: Customer) => void;
@@ -18,6 +19,7 @@ export default function CustomersTableItem({
   customer,
   profileSummary,
   isProfileLoading,
+  canUseProfileTags,
   openEditProfileTagsHandler,
   openEditModalHandler,
   openContactModalHandler,
@@ -144,7 +146,9 @@ export default function CustomersTableItem({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            {isProfileLoading ? (
+            {!canUseProfileTags ? (
+              <span className="text-xs text-slate-500 dark:text-slate-400">Tags desabilitadas</span>
+            ) : isProfileLoading ? (
               <div className="flex flex-wrap gap-2">
                 <Skeleton variant="rounded" width={120} height={24} />
                 <Skeleton variant="rounded" width={110} height={24} />
@@ -188,15 +192,17 @@ export default function CustomersTableItem({
         }}
       >
         <div className="flex items-center gap-1">
-          <Tooltip title="Editar tags manuais" arrow>
-            <IconButton
-              size="small"
-              onClick={() => openEditProfileTagsHandler(customer)}
-              className="text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
-            >
-              <Sell fontSize="small" />
-            </IconButton>
-          </Tooltip>
+          {canUseProfileTags && (
+            <Tooltip title="Editar tags manuais" arrow>
+              <IconButton
+                size="small"
+                onClick={() => openEditProfileTagsHandler(customer)}
+                className="text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+              >
+                <Sell fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
           <IconButton
             title="Editar Cliente"
             onClick={() => openEditModalHandler(customer)}
