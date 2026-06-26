@@ -91,6 +91,8 @@ const reportsRoutes = (params: Record<string, string>, instance: string) => {
       { title: "Motivos de Perda", href: "/reports/lost-reasons" },
       { title: "Performance Operadores", href: "/reports/operator-performance" },
       { title: "Conversas", href: "/reports/chats" },
+      //{ title: "Análise de Mailing", href: "/reports/mailing-analysis" },
+      //{ title: "Régua por Carteira (Sintético) + WhatsApp", href: "/reports/regua-carteira-sintetico-whatsapp" },
     );
   }
 
@@ -101,17 +103,17 @@ const reportsRoutes = (params: Record<string, string>, instance: string) => {
   if (isFeatureEnabled(params, FEATURE_FLAGS.salesReports)) {
     routes.push(
       { title: "Dashboard: Vendas", href: "/reports/sales" },
-      { title: "Dashboard: Wpp Performance", href: "/reports/operator-performance" },
+      { title: "Dashboard: WhatsApp", href: "/reports/operator-performance" },
     );
   }
 
-  if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
+/*   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
     routes.push(
-      { title: "Gerador de Relatório", href: "/reports/report-generator" },
-      { title: "Dashboards", href: "/reports/dashboards" },
-      { title: "Métricas", href: "/reports/metrics" },
+      //{ title: "Gerador de Relatório", href: "/reports/report-generator" },
+      //{ title: "Dashboards", href: "/reports/dashboards" },
+      //{ title: "Métricas", href: "/reports/metrics" },
     );
-  }
+  } */
 
   return routes;
 };

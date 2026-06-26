@@ -36,6 +36,8 @@ const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
   { segment: "/reports/dashboards", flags: [FEATURE_FLAGS.reportsDashboards] },
   { segment: "/reports/metrics", flags: [FEATURE_FLAGS.reportsDashboards] },
   { segment: "/reports/report-generator", flags: [FEATURE_FLAGS.reportsDashboards] },
+  { segment: "/reports/mailing-analysis", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/regua-carteira-sintetico-whatsapp", flags: [FEATURE_FLAGS.reportsAdvanced] },
 ];
 
 function RouteFeatureGate({ children }: { children: ReactNode }) {
