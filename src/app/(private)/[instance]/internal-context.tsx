@@ -54,6 +54,7 @@ interface InternalChatContextType {
   phoneNameMap: Map<string, string>;
 
   users: User[];
+  contacts: WppContact[];
 }
 
 const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
@@ -347,6 +348,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         openInternalChat,
         currentInternalChatMessages,
         users,
+        contacts,
         monitorInternalChats,
         getInternalChatsMonitor,
         monitorMessages,

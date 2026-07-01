@@ -1,6 +1,7 @@
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
+import { replaceMentions } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
@@ -44,30 +45,6 @@ export default function ChatsMenuList() {
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
   const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
   const { state } = useContext(ContactsContext);
-
-  const mentionNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const user of users) {
-      const phone = user.WHATSAPP?.replace(/\D/g, "");
-      if (phone) {
-        map.set(phone, user.NOME);
-      }
-    }
-    for (const contact of state.contacts) {
-      const phone = contact.phone?.replace(/\D/g, "");
-      if (phone && !map.has(phone)) {
-        map.set(phone, contact.name);
-      }
-    }
-    return map;
-  }, [users, state.contacts]);
-
-  const replaceMentionsWpp = (text: string): string => {
-    return text.replace(/@(\d{6,})/g, (match, phone) => {
-      const name = mentionNameMap.get(phone);
-      return name ? `@${name}` : match;
-    });
-  };
 
   const filteredChats = useMemo(() => {
     const validChats = Array.isArray(chats) ? chats : [];
@@ -184,7 +161,7 @@ export default function ChatsMenuList() {
                 chat.lastMessage
                   ? chat.lastMessage.type !== "chat"
                     ? getTypeTextIcon(chat.lastMessage.type)
-                    : replaceMentionsWpp(chat.lastMessage.body)
+                    : replaceMentions(chat.lastMessage.body, users ?? [], state.contacts ?? [])
                   : "Nenhuma mensagem"
               }
               messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}

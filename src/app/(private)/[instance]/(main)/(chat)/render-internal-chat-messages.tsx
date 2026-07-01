@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
+import { replaceMentions } from "@/lib/utils/message-mentions";
 import { InternalMessage } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -33,7 +34,7 @@ export default function RenderInternalChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderInternalChatMessagesProps) {
-  const { currentInternalChatMessages, users } = useContext(InternalChatContext);
+  const { currentInternalChatMessages, users, contacts } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
 
@@ -91,7 +92,7 @@ export default function RenderInternalChatMessages({
               id={m.id}
               key={`message_${m.id}`}
               style={getInternalMessageStyle(m, user?.CODIGO)}
-              text={m.body ?? ""}
+              text={replaceMentions(m.body ?? "", users ?? [], contacts ?? [])}
               type={m.type}
               date={new Date(Number(m.timestamp))}
               status={m.status}
