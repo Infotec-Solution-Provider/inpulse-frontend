@@ -58,6 +58,9 @@ interface InternalChatContextType {
 }
 
 const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
+const INTERNAL_UPLOAD_TIMEOUT_MS = Number(
+  process.env["NEXT_PUBLIC_UPLOAD_TIMEOUT_MS"] || "300000",
+);
 
 export const InternalChatContext = createContext({} as InternalChatContextType);
 
@@ -189,6 +192,38 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     async (data: InternalSendMessageData) => {
       if (token) {
         api.current.setAuth(token);
+
+        if (data.file) {
+          const formData = new FormData();
+
+          formData.append("chatId", data.chatId.toString());
+          formData.append("text", data.text);
+          data.quotedId && formData.append("quotedId", data.quotedId.toString());
+          data.sendAsAudio && formData.append("sendAsAudio", "true");
+          data.sendAsDocument && formData.append("sendAsDocument", "true");
+          formData.append("file", data.file);
+          data.fileId && formData.append("fileId", data.fileId.toString());
+
+          if (data.mentions && data.mentions.length > 0) {
+            formData.append("mentions", JSON.stringify(data.mentions));
+          }
+
+          await api.current.ax.post(
+            `/api/internal/chats/${data.chatId}/messages`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+              timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
+              maxBodyLength: Infinity,
+              maxContentLength: Infinity,
+            },
+          );
+
+          return;
+        }
+
         await api.current.sendMessageToInternalChat(data);
       }
     },

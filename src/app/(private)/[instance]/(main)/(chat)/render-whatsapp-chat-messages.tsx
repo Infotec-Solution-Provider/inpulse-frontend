@@ -5,7 +5,7 @@ import { AuthContext } from "@/app/auth-context";
 import { WppMessage } from "@in.pulse-crm/sdk";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { DetailedChat, useWhatsappContext } from "../../whatsapp-context";
+import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import Message from "./message";
@@ -45,6 +45,7 @@ export default function RenderWhatsappChatMessages({
   const { instance } = useContext(AuthContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
+  const [visibleFileCount, setVisibleFileCount] = useState(10);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -77,6 +78,25 @@ export default function RenderWhatsappChatMessages({
     [messagesToRender, visibleCount],
   );
 
+  useEffect(() => {
+    setVisibleFileCount(10);
+  }, [currentChatMessages]);
+
+  const visibleMessageFileIds = useMemo(
+    () =>
+      visibleMessages
+        .filter((msg) => typeof msg.fileId === "number")
+        .map((msg) => msg.fileId as number),
+    [visibleMessages],
+  );
+
+  const autoVisibleFileIdSet = useMemo(
+    () => new Set(visibleMessageFileIds.slice(-visibleFileCount)),
+    [visibleMessageFileIds, visibleFileCount],
+  );
+
+  const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
+
   return (
     <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
       {visibleCount < messagesToRender.length && (
@@ -91,6 +111,20 @@ export default function RenderWhatsappChatMessages({
         </div>
       )}
 
+      {hiddenFilesCount > 0 && (
+        <div className="mb-2 flex justify-center">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() =>
+              setVisibleFileCount((prev) => Math.min(prev + 10, visibleMessageFileIds.length))
+            }
+          >
+            Carregar arquivos antigos ({hiddenFilesCount})
+          </Button>
+        </div>
+      )}
+
       <ul className="flex flex-col gap-2">
         {visibleMessages.map((m) => {
           const findQuoted = m.contactId && m.quotedId && getMessageById(m.contactId, m.quotedId);
@@ -100,7 +134,7 @@ export default function RenderWhatsappChatMessages({
                   findQuoted,
                   getWppMessageStyle(findQuoted),
                   [],
-                  {} as DetailedChat,
+                  [],
                 )
               : null;
 
@@ -117,6 +151,10 @@ export default function RenderWhatsappChatMessages({
               fileName={m.fileName}
               fileType={m.fileType}
               fileSize={m.fileSize}
+              showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
+              showQuotedMediaByDefault={
+                !quotedMsgProps?.fileId || autoVisibleFileIdSet.has(Number(quotedMsgProps.fileId))
+              }
               quotedMessage={quotedMsgProps}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               isSelected={selectedMessageIds.has(m.id)}

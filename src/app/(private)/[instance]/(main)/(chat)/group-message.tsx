@@ -30,6 +30,8 @@ interface MessageProps {
   isForwarded?: boolean;
   isForwardMode?: boolean;
   isReadOnly?: boolean;
+  showMediaByDefault?: boolean;
+  showQuotedMediaByDefault?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
   onSelect?: (id: number | string) => void;
@@ -58,6 +60,8 @@ export default function GroupMessage({
   mentionNameMap,
   isForwardMode,
   isReadOnly = false,
+  showMediaByDefault,
+  showQuotedMediaByDefault,
   isSelected,
   isEdited,
   onSelect,
@@ -162,6 +166,7 @@ export default function GroupMessage({
                   fileName={quotedMessage.fileName || ""}
                   fileType={quotedMessage.fileType || ""}
                   fileSize={0 || ""}
+                  showMediaByDefault={showQuotedMediaByDefault}
                 />
               )}
             </div>
@@ -180,6 +185,7 @@ export default function GroupMessage({
               fileName={fileName || ""}
               fileType={fileType || ""}
               fileSize={fileSize || ""}
+              showMediaByDefault={showMediaByDefault}
             />
           )}
           {/* --- CORREÇÃO: Utiliza visualText para renderizar a mensagem --- */}

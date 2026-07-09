@@ -1,4 +1,5 @@
 import filesService from "@/lib/services/files.service";
+import { hasViewedRecentFile, markRecentFileAsViewed } from "@/lib/utils/recent-files-cache";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import DownloadIcon from "@mui/icons-material/Download";
 import { AppContext } from "../../app-context";
@@ -28,10 +29,17 @@ export default function MessageFile({
   showMediaByDefault = true,
 }: MessageFileProps) {
   const { closeModal, openModal } = useContext(AppContext);
-  const [shouldRenderMedia, setShouldRenderMedia] = useState(showMediaByDefault);
+  const [shouldRenderMedia, setShouldRenderMedia] = useState(
+    showMediaByDefault || hasViewedRecentFile(fileId),
+  );
+
+  const showMedia = () => {
+    setShouldRenderMedia(true);
+    markRecentFileAsViewed(fileId);
+  };
 
   useEffect(() => {
-    setShouldRenderMedia(showMediaByDefault);
+    setShouldRenderMedia(showMediaByDefault || hasViewedRecentFile(fileId));
   }, [showMediaByDefault, fileId]);
 
   const handleClickImage = () => {
@@ -269,7 +277,7 @@ export default function MessageFile({
           <span className="max-w-[14rem] truncate text-xs text-slate-700 dark:text-slate-300">
             {fileName}
           </span>
-          <Button size="small" variant="outlined" onClick={() => setShouldRenderMedia(true)}>
+          <Button size="small" variant="outlined" onClick={showMedia}>
             Exibir
           </Button>
         </div>

@@ -45,6 +45,8 @@ export interface MessageProps {
   isForwarded?: boolean;
   isForwardMode?: boolean;
   isReadOnly?: boolean;
+  showMediaByDefault?: boolean;
+  showQuotedMediaByDefault?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
   channelId?: number | null;
@@ -96,6 +98,8 @@ export default function Message({
   isForwarded = false,
   isForwardMode = false,
   isReadOnly = false,
+  showMediaByDefault,
+  showQuotedMediaByDefault,
   isSelected = false,
   channelId,
   agentId,
@@ -225,7 +229,7 @@ export default function Message({
                 fileName={quotedMessage.fileName || ""}
                 fileType={quotedMessage.fileType || ""}
                 fileSize={fileSize || ""}
-                showMediaByDefault={isMessageFromToday}
+                showMediaByDefault={showQuotedMediaByDefault ?? isMessageFromToday}
               />
             )}
           </div>
@@ -245,7 +249,7 @@ export default function Message({
               fileName={fileName || ""}
               fileType={fileType || ""}
               fileSize={fileSize || ""}
-              showMediaByDefault={isMessageFromToday}
+              showMediaByDefault={showMediaByDefault ?? isMessageFromToday}
             />
           )}
           <div className="w-full text-slate-900 dark:text-slate-200">

@@ -335,18 +335,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           return;
         }
 
-        const uploadFormData = new FormData();
-        uploadFormData.append("instance", instance);
-        uploadFormData.append("dirType", FileDirType.PUBLIC);
-        uploadFormData.append("file", data.file, data.file.name);
-
-        const { data: uploadResponse } = await api.current.ax.post(`${FILES_BASE_URL}/api/files`, uploadFormData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+        const uploadedFile = await filesService.uploadBrowserFile({
+          instance,
+          dirType: FileDirType.PUBLIC,
+          file: data.file,
+          contentHash: sha256,
         });
-
-        const uploadedFile = uploadResponse.data;
 
         await api.current.sendMessage(String(selectedChannel.id), to, {
           contactId: data.contactId,

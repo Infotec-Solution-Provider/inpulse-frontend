@@ -40,6 +40,7 @@ export default function RenderInternalGroupMessages({
   const { user } = useAuthContext();
 
   const [visibleCount, setVisibleCount] = useState(30);
+  const [visibleFileCount, setVisibleFileCount] = useState(10);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,6 +53,26 @@ export default function RenderInternalGroupMessages({
     () => (currentInternalChatMessages ?? []).slice(-visibleCount),
     [currentInternalChatMessages, visibleCount],
   );
+
+  useEffect(() => {
+    setVisibleFileCount(10);
+  }, [currentInternalChatMessages]);
+
+  const visibleMessageFileIds = useMemo(
+    () =>
+      visibleMessages
+        .filter((msg) => typeof msg.fileId === "number")
+        .map((msg) => msg.fileId as number),
+    [visibleMessages],
+  );
+
+  const autoVisibleFileIdSet = useMemo(
+    () => new Set(visibleMessageFileIds.slice(-visibleFileCount)),
+    [visibleMessageFileIds, visibleFileCount],
+  );
+
+  const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
+
   return (
     <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
       {visibleCount < (currentInternalChatMessages?.length ?? 0) && (
@@ -70,6 +91,20 @@ export default function RenderInternalGroupMessages({
         </div>
       )}
 
+      {hiddenFilesCount > 0 && (
+        <div className="mb-2 flex justify-center">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() =>
+              setVisibleFileCount((prev) => Math.min(prev + 10, visibleMessageFileIds.length))
+            }
+          >
+            Carregar arquivos antigos ({hiddenFilesCount})
+          </Button>
+        </div>
+      )}
+
       <ul className="flex flex-col gap-2">
         {visibleMessages.map((m, i, arr) => {
           const findQuoted =
@@ -82,7 +117,8 @@ export default function RenderInternalGroupMessages({
                 findQuoted,
                 getInternalMessageStyle(findQuoted, user?.CODIGO),
                 users ?? [],
-                null,
+                [],
+                undefined,
                 phoneNameMap,
               )
             : null;
@@ -108,6 +144,8 @@ export default function RenderInternalGroupMessages({
               fileType={m.fileType}
               fileSize={m.fileSize}
               quotedMessage={quotedMsg}
+              showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
+              showQuotedMediaByDefault={!quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)}
               isForwarded={m.isForwarded}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
