@@ -44,6 +44,11 @@ import { toast } from "react-toastify";
 import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
 import filesService from "../../../lib/services/files.service";
+import {
+  createFileUploadTraceId,
+  logFileUploadTrace,
+  logFileUploadTraceError,
+} from "../../../lib/utils/file-upload-trace";
 import getFileSHA256 from "../../../lib/utils/get-file-sha256";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -73,6 +78,11 @@ interface SendMessageOptions {
   file?: File;
   sendAsDocument: boolean;
   sendAsAudio: boolean;
+}
+
+interface TracedSendMessageOptions extends SendMessageOptions {
+  fileId?: number;
+  traceId?: string;
 }
 
 interface IWhatsappContext {
@@ -178,6 +188,31 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
+
+  const sendTracedFileMessage = useCallback(
+    async (clientId: number, to: string, data: TracedSendMessageOptions) => {
+      const formData = new FormData();
+
+      formData.append("to", to);
+      formData.append("text", data.text);
+      formData.append("contactId", String(data.contactId));
+      data.quotedId && formData.append("quotedId", String(data.quotedId));
+      data.chatId && formData.append("chatId", String(data.chatId));
+      data.fileId && formData.append("fileId", String(data.fileId));
+      data.sendAsAudio && formData.append("sendAsAudio", "true");
+      data.sendAsDocument && formData.append("sendAsDocument", "true");
+      data.sendAsChatOwner && formData.append("sendAsChatOwner", String(data.sendAsChatOwner));
+      data.traceId && formData.append("traceId", data.traceId);
+
+      await api.current.ax.post(`/api/whatsapp/${clientId}/messages`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          ...(data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
+        },
+      });
+    },
+    [],
+  );
   const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
   const pendingReadOnlyOpenRef = useRef(false);
 
@@ -300,6 +335,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions) => {
+	  let traceId: string | null = null;
       try {
         Logger.debug("Attempting to send message", { to, data });
         if (!instance) {
@@ -316,8 +352,35 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           return;
         }
 
+        traceId = createFileUploadTraceId("whatsapp-send-file");
+        const flowStartedAt = Date.now();
+        logFileUploadTrace(traceId, "frontend.whatsapp.send-file.start", {
+          instance,
+          channelId: selectedChannel.id,
+          contactId: data.contactId,
+          chatId: data.chatId,
+          to,
+          fileName: data.file.name,
+          fileSize: data.file.size,
+          fileType: data.file.type,
+          sendAsAudio: data.sendAsAudio,
+          sendAsDocument: data.sendAsDocument,
+        });
+
+        const hashStartedAt = Date.now();
         const sha256 = await getFileSHA256(data.file);
+        logFileUploadTrace(traceId, "frontend.whatsapp.hash.ready", {
+          elapsedMs: Date.now() - hashStartedAt,
+          sha256,
+        });
+
+		const dedupeStartedAt = Date.now();
         const res = await filesService.getFileByHash(instance, sha256);
+        logFileUploadTrace(traceId, "frontend.whatsapp.dedupe.checked", {
+          elapsedMs: Date.now() - dedupeStartedAt,
+          foundExistingFile: !!res.file,
+          existingFileId: res.file?.id,
+        });
 
         if (!!res.file) {
           const sendFileData = {
@@ -329,8 +392,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             sendAsAudio: !data.sendAsAudio,
             sendAsChatOwner: !data.sendAsChatOwner,
             sendAsDocument: !data.sendAsDocument,
+            traceId,
           };
-          await api.current.sendMessage(String(selectedChannel.id), to, sendFileData);
+
+		  logFileUploadTrace(traceId, "frontend.whatsapp.send-message.start", {
+			  mode: "dedupe-hit",
+			  fileId: res.file.id,
+			  elapsedMs: Date.now() - flowStartedAt,
+		  });
+      await sendTracedFileMessage(selectedChannel.id, to, sendFileData);
+		  logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
+			  mode: "dedupe-hit",
+			  elapsedMs: Date.now() - flowStartedAt,
+		  });
 
           return;
         }
@@ -340,9 +414,20 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           dirType: FileDirType.PUBLIC,
           file: data.file,
           contentHash: sha256,
+          traceId,
         });
+		logFileUploadTrace(traceId, "frontend.whatsapp.upload.completed", {
+		  elapsedMs: Date.now() - flowStartedAt,
+		  uploadedFileId: uploadedFile.id,
+		  uploadedFileSize: uploadedFile.size,
+		});
 
-        await api.current.sendMessage(String(selectedChannel.id), to, {
+		logFileUploadTrace(traceId, "frontend.whatsapp.send-message.start", {
+		  mode: "uploaded",
+		  fileId: uploadedFile.id,
+		  elapsedMs: Date.now() - flowStartedAt,
+		});
+        await sendTracedFileMessage(selectedChannel.id, to, {
           contactId: data.contactId,
           text: data.text,
           chatId: data.chatId,
@@ -351,13 +436,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           sendAsAudio: !data.sendAsAudio,
           sendAsChatOwner: !data.sendAsChatOwner,
           sendAsDocument: !data.sendAsDocument,
+          traceId,
         });
+		logFileUploadTrace(traceId, "frontend.whatsapp.send-file.success", {
+		  elapsedMs: Date.now() - flowStartedAt,
+		  fileId: uploadedFile.id,
+		});
 
       } catch (err) {
+		traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
         toast.error(sanitizeErrorMessage(err));
       }
     },
-    [channels, selectedChannel],
+    [channels, selectedChannel, sendTracedFileMessage],
   );
 
   const editMessage = useCallback(

@@ -28,6 +28,11 @@ import {
 import { toast } from "react-toastify";
 import { SocketContext } from "./socket-context";
 import { DetailedChat, useWhatsappContext } from "./whatsapp-context";
+import {
+  createFileUploadTraceId,
+  logFileUploadTrace,
+  logFileUploadTraceError,
+} from "../../../lib/utils/file-upload-trace";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -194,6 +199,8 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         api.current.setAuth(token);
 
         if (data.file) {
+          const traceId = createFileUploadTraceId("internal-send-file");
+          const requestStartedAt = Date.now();
           const formData = new FormData();
 
           formData.append("chatId", data.chatId.toString());
@@ -203,23 +210,47 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           data.sendAsDocument && formData.append("sendAsDocument", "true");
           formData.append("file", data.file);
           data.fileId && formData.append("fileId", data.fileId.toString());
+          formData.append("traceId", traceId);
 
           if (data.mentions && data.mentions.length > 0) {
             formData.append("mentions", JSON.stringify(data.mentions));
           }
 
-          await api.current.ax.post(
-            `/api/internal/chats/${data.chatId}/messages`,
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
+      logFileUploadTrace(traceId, "frontend.internal.send-file.start", {
+        chatId: data.chatId,
+        fileName: data.file.name,
+        fileSize: data.file.size,
+        fileType: data.file.type,
+        sendAsAudio: data.sendAsAudio,
+        sendAsDocument: data.sendAsDocument,
+      });
+
+      try {
+        await api.current.ax.post(
+              `/api/internal/chats/${data.chatId}/messages`,
+              formData,
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+          "x-upload-trace-id": traceId,
+                },
+                timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
+                maxBodyLength: Infinity,
+                maxContentLength: Infinity,
               },
-              timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
-              maxBodyLength: Infinity,
-              maxContentLength: Infinity,
-            },
-          );
+            );
+
+        logFileUploadTrace(traceId, "frontend.internal.send-file.success", {
+          elapsedMs: Date.now() - requestStartedAt,
+          chatId: data.chatId,
+        });
+      } catch (error) {
+        logFileUploadTraceError(traceId, "frontend.internal.send-file.error", error, {
+          elapsedMs: Date.now() - requestStartedAt,
+          chatId: data.chatId,
+        });
+        throw error;
+      }
 
           return;
         }
