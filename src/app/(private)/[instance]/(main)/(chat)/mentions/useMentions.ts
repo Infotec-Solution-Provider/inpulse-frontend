@@ -5,6 +5,8 @@ import { User, WppContact } from "@in.pulse-crm/sdk";
 export interface MentionableUser {
   userId: number;
   name: string;
+  // phone é enviado ao backend somente para notificação WhatsApp de menção.
+  // O roteamento do chat interno é sempre nativo da aplicação.
   phone: string;
 }
 

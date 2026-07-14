@@ -248,6 +248,7 @@ export default function ChatSendMessageArea() {
   }, [isDisabled, state.text, state.file]);
 
   const refMessage = isReadOnlyMode ? null : quotedMessage || editingMessage || null;
+  const mentionCount = state.mentions?.length || 0;
 
   useEffect(() => {
     if (editingMessage) {
@@ -406,6 +407,12 @@ export default function ChatSendMessageArea() {
                     </div>
                   ))
                 )}
+              </div>
+            )}
+
+            {currentChat?.chatType === "internal" && mentionCount > 0 && (
+              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Menções ativas: {mentionCount}. Usuários mencionados receberão notificação via WhatsApp.
               </div>
             )}
           </div>

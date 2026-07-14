@@ -15,7 +15,7 @@ import { InternalChatContext } from "../../../../internal-context";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
 import ImageIcon from "@mui/icons-material/Image";
-import { IWppGroup, useInternalGroupsContext } from "../../internal-groups-context";
+import { useInternalGroupsContext } from "../../internal-groups-context";
 
 type UnifiedContact = {
   name: string;
@@ -37,15 +37,11 @@ const getParticipantKey = (participant: UnifiedContact) => {
 export default function CreateInternalGroupModal() {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
-  const { createInternalGroup, wppGroups } = useInternalGroupsContext();
-  const availableWppGroups = wppGroups ?? [];
+  const { createInternalGroup } = useInternalGroupsContext();
 
   const [name, setName] = useState("");
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<IWppGroup | null>(
-    null,
-  );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -82,7 +78,7 @@ export default function CreateInternalGroupModal() {
     await createInternalGroup({
       name,
       participants: participants.map((p) => p.userId ?? 0),
-      groupId: selectedGroup?.id || null,
+      groupId: null,
       groupImage: groupImageRef.current,
     });
 
@@ -195,26 +191,6 @@ export default function CreateInternalGroupModal() {
                       theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
                   },
                 }}
-              />
-              <Autocomplete
-                options={availableWppGroups}
-                getOptionLabel={(option) => option.name}
-                getOptionKey={(option) => option.id}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Vincular Grupo WhatsApp"
-                    className="bg-white dark:bg-slate-700"
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        backgroundColor: (theme) =>
-                          theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
-                      },
-                    }}
-                  />
-                )}
-                value={selectedGroup}
-                onChange={(_, group) => setSelectedGroup(group)}
               />
             </div>
           </div>

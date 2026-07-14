@@ -12,10 +12,8 @@ import {
 import { useAuthContext } from "@/app/auth-context";
 import { InternalGroup } from "@in.pulse-crm/sdk";
 import { Logger } from "@in.pulse-crm/utils";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { InternalChatContext } from "../../internal-context";
-import { useWhatsappContext, WPP_BASE_URL } from "../../whatsapp-context";
 import internalGroupsReducer, {
   ChangeInternalGroupsStateAction,
   InternalGroupsContextState,
@@ -25,14 +23,8 @@ interface IInternalGroupsProviderProps {
   children: ReactNode;
 }
 
-export interface IWppGroup {
-  id: string;
-  name: string;
-}
-
 interface IInternalGroupsContext {
   state: InternalGroupsContextState;
-  wppGroups: IWppGroup[];
   dispatch: ActionDispatch<[ChangeInternalGroupsStateAction]>;
   updateInternalGroup: (
     id: number,
@@ -59,9 +51,7 @@ export const useInternalGroupsContext = () => {
 
 export default function InternalGroupsProvider({ children }: IInternalGroupsProviderProps) {
   const { internalApi } = useContext(InternalChatContext);
-  const { globalChannel, loaded } = useWhatsappContext();
   const { token } = useAuthContext();
-  const [wppGroups, setWppGroups] = useState<IWppGroup[]>([]);
   const [state, dispatch] = useReducer(internalGroupsReducer, {
     internalGroups: [],
     totalRows: 0,
@@ -194,31 +184,10 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
   );
 
   useEffect(() => {
-    if (!token || !internalApi.current || !loaded) return;
+    if (!token || !internalApi.current) return;
     internalApi.current.setAuth(token);
     loadInternalGroups({});
-
-    const channelId = globalChannel.current?.id;
-
-    if (!channelId) {
-      setWppGroups([]);
-      return;
-    }
-
-    // Load WhatsApp groups
-    axios
-      .get(WPP_BASE_URL + `/api/whatsapp/${channelId}/groups`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((res) => {
-        setWppGroups(res.data.data);
-      })
-      .catch((err) => {
-        Logger.debug("Error loading WhatsApp groups", err as Error);
-      });
-  }, [token, internalApi, loadInternalGroups, loaded]);
+  }, [token, internalApi, loadInternalGroups]);
 
   return (
     <InternalGroupsContext.Provider
@@ -228,7 +197,6 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         updateInternalGroup,
         createInternalGroup,
         loadInternalGroups,
-        wppGroups,
         deleteInternalGroup,
         updateInternalGroupImage,
       }}
