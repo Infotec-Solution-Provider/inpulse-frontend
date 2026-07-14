@@ -10,6 +10,8 @@ import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { User } from "@/lib/sdk-local";
 import usersService from "../lib/services/users.service";
 
+const LAST_TENANT_STORAGE_KEY = "@inpulse/last-tenant";
+
 export const AuthContext = createContext({} as AuthContextProps);
 
 export function useAuthContext() {
@@ -23,7 +25,8 @@ export function useAuthContext() {
 export default function AuthProvider({ children }: ProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const instanceRef = useRef(pathname.split("/")[1]);
+  const getInstanceFromPath = (path: string) => path.split("/").filter(Boolean)[0] ?? "";
+  const instanceRef = useRef(getInstanceFromPath(pathname));
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -34,6 +37,7 @@ export default function AuthProvider({ children }: ProviderProps) {
       try {
         const session = await authService.login(instance, login, password);
         localStorage.setItem(`@inpulse/${instance}/token`, session.token);
+        localStorage.setItem(LAST_TENANT_STORAGE_KEY, instance);
 
         instanceRef.current = instance;
 
@@ -51,16 +55,30 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   const signOut = useCallback(() => {
     setToken(null);
-    localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
-    router.replace(`/${instanceRef.current}/login`);
+    if (instanceRef.current) {
+      localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+      router.replace(`/${instanceRef.current}/login`);
+      setUser(null);
+      return;
+    }
+
+    router.replace("/");
     setUser(null);
   }, [router]);
 
   useEffect(() => {
-    const instance = pathname.split("/")[1];
+    const instance = getInstanceFromPath(pathname);
     instanceRef.current = instance;
-    const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
+    if (instanceRef.current) {
+      localStorage.setItem(LAST_TENANT_STORAGE_KEY, instanceRef.current);
+    }
+    const prevToken = instanceRef.current
+      ? localStorage.getItem(`@inpulse/${instanceRef.current}/token`)
+      : null;
     const startedAt = Date.now();
+    const isRootPath = pathname === "/";
+    const isLoginPath = pathname.includes("/login");
+    const requiresAuth = !isRootPath && !isLoginPath;
 
     setToken(prevToken);
 
@@ -76,22 +94,24 @@ export default function AuthProvider({ children }: ProviderProps) {
           const user = await usersService.getUserById(session.userId);
           setUser(user);
 
-          if (pathname.includes("login")) {
+          if (isLoginPath) {
             router.replace(`/${instanceRef.current}`);
           }
         })
         .catch((err) => {
           toast.error(err.message || "Sessão expirada, faça o login novamente!");
-          localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+          if (instanceRef.current) {
+            localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+          }
           setUser(null);
 
-          if (!pathname.includes("login")) {
+          if (requiresAuth && instanceRef.current) {
             router.replace(`/${instanceRef.current}/login`);
           }
         });
     }
 
-    if (!prevToken && !pathname.includes("login")) {
+    if (!prevToken && requiresAuth && instanceRef.current) {
       router.replace(`/${instanceRef.current}/login`);
     }
   }, [pathname, router]);
