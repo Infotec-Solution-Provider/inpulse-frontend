@@ -20,6 +20,12 @@ export default function InternalChatStartedHandler(
   user: User,
   openChat: (chat: DetailedInternalChat) => void,
   userInitiatedInternalChat: React.RefObject<boolean>,
+  notify?: (payload: {
+    event: "new_conversation";
+    title: string;
+    body: string;
+    isChatFocused: boolean;
+  }) => void,
 ) {
   return async ({ chat }: HandleChatStartedCallbackProps) => {
     socket.joinRoom(`internal-chat:${chat.id}`);
@@ -31,6 +37,15 @@ export default function InternalChatStartedHandler(
       isUnread: true,
       users: users.filter((u) => chat.participants.some((p) => p.userId === u.CODIGO)),
     };
+
+    if (!userInitiatedInternalChat.current) {
+      notify?.({
+        event: "new_conversation",
+        title: "Nova conversa interna",
+        body: detailedChat.groupName || "Uma nova conversa interna foi iniciada.",
+        isChatFocused: false,
+      });
+    }
 
     setChats((prev) => {
       const chatExists = prev.some((c) => c.id === chat.id);

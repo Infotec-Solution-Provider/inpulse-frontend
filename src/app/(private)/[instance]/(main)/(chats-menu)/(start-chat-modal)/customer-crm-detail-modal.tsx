@@ -1,6 +1,7 @@
 "use client";
 
 import customersService from "@/lib/services/customers.service";
+import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { Customer } from "@/lib/sdk-local";
 import AddIcon from "@mui/icons-material/Add";
@@ -304,10 +305,13 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
     };
   }, [addressDraft.ESTADO]);
 
-  const canEditMain = canEdit;
-  const canEditAddress = canEdit;
-  const canEditObservations = canEdit;
-  const canEditPhones = canEdit;
+  const isSystemCustomer = isSystemDefaultCustomer(customerId);
+  const canEditModal = canEdit && !isSystemCustomer;
+
+  const canEditMain = canEditModal;
+  const canEditAddress = canEditModal;
+  const canEditObservations = canEditModal;
+  const canEditPhones = canEditModal;
 
   const resetMainDraft = () => {
     if (!detail) return;
@@ -491,10 +495,14 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
     );
   };
 
-  const canEditOrigin = canEdit;
+  const canEditOrigin = canEditModal;
 
   const savePatch = async (payload: Partial<Customer>, successMessage: string) => {
     if (!token) return;
+    if (isSystemCustomer) {
+      toast.info("O cliente padrão do sistema não pode ser editado.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -512,6 +520,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
   const saveEditContact = async () => {
     if (!token || !editingContactId) return;
+    if (isSystemCustomer) {
+      toast.info("O cliente padrão do sistema não pode ser editado.");
+      return;
+    }
     setSavingContact(true);
     try {
       customersService.setAuth(token);
@@ -532,6 +544,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
   const saveNewContact = async () => {
     if (!token) return;
+    if (isSystemCustomer) {
+      toast.info("O cliente padrão do sistema não pode ser editado.");
+      return;
+    }
     if (!newContactDraft.NOME?.trim()) {
       toast.error("Nome do contato é obrigatório.");
       return;
@@ -554,6 +570,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
   const handleDeleteContact = async (contactId: string) => {
     if (!token) return;
+    if (isSystemCustomer) {
+      toast.info("O cliente padrão do sistema não pode ser editado.");
+      return;
+    }
     setSavingContact(true);
     try {
       customersService.setAuth(token);

@@ -12,6 +12,7 @@ export enum UserRole {
     ACTIVE = "ATIVO",
     RECEPTIONIST = "RECEP",
     BOTH = "AMBOS",
+	EXTERNAL = "EXTERNO",
 }
 
 /**
@@ -161,3 +162,36 @@ export interface CreateUserDTO {
  * Interface que representa o objeto de transferência de dados para atualizar um usuário.
  */
 export type UpdateUserDTO = Partial<CreateUserDTO>;
+
+export type NotificationEventKey =
+	| "new_message"
+	| "new_conversation"
+	| "mention";
+
+export interface NotificationSoundPreferences {
+	enabled: boolean;
+	file: string;
+	volume: number;
+}
+
+export interface NotificationChannelPreferences {
+	toast: boolean;
+	browser: boolean;
+	sound: NotificationSoundPreferences;
+}
+
+export interface NotificationEventPreferences {
+	enabled: boolean;
+	suppressWhenChatFocused: boolean;
+	channels: NotificationChannelPreferences;
+}
+
+export type NotificationEventPreferencesMap = Record<
+	NotificationEventKey,
+	NotificationEventPreferences
+>;
+
+export interface UserNotificationPreferences {
+	version: number;
+	events: NotificationEventPreferencesMap;
+}

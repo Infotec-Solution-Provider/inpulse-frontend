@@ -1,4 +1,5 @@
 import { UsersClient } from "@/lib/sdk-local";
+import { UserNotificationPreferences } from "@/lib/sdk-local/types/user.types";
 
 const USERS_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
 
@@ -70,6 +71,26 @@ export interface UpsertGlobalSipConfigPayload {
 }
 
 class FrontendUsersService extends UsersClient {
+	public async getUserNotificationPreferences(userId: number) {
+		const response = await this.ax.get<{ message: string; data: UserNotificationPreferences }>(
+			`/api/users/${userId}/notification-preferences`,
+		);
+
+		return response.data.data;
+	}
+
+	public async upsertUserNotificationPreferences(
+		userId: number,
+		payload: Partial<UserNotificationPreferences>,
+	) {
+		const response = await this.ax.put<{ message: string; data: UserNotificationPreferences }>(
+			`/api/users/${userId}/notification-preferences`,
+			payload,
+		);
+
+		return response.data.data;
+	}
+
 	public async getSipConfigs(filters?: Record<string, string>) {
 		let url = "/api/sip-configs";
 

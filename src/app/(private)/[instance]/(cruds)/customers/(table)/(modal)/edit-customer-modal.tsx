@@ -3,6 +3,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { Customer, UpdateCustomerDTO } from "@/lib/sdk-local";
 import { toast } from "react-toastify";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
+import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import { useRef } from "react";
 import { useCustomersContext } from "../../customers-context";
 
@@ -40,6 +41,12 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
   });
 
   const onClickSave = async () => {
+    if (isSystemDefaultCustomer(customer.CODIGO)) {
+      toast.info("O cliente padrão do sistema não pode ser editado.");
+      closeModal();
+      return;
+    }
+
     const isValid = validateForm(formRef.current);
 
     if (isValid) {

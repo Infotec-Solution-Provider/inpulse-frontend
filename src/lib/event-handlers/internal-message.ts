@@ -1,11 +1,10 @@
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
-import { safeNotification } from "@/lib/utils/notifications";
 import { InternalChatClient, InternalMessage, User, WppContact } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import getInternalMessageAuthor from "../utils/get-internal-message-author";
 import { replaceMentions } from "../utils/message-mentions";
+import { isInternalMentionForUser } from "../utils/notification-preferences";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -30,6 +29,12 @@ export default function InternalReceiveMessageHandler(
   contacts: WppContact[],
   loggedUser: User,
   phoneNameMap: Map<string, string>,
+  notify?: (payload: {
+    event: "new_message" | "mention";
+    title: string;
+    body: string;
+    isChatFocused: boolean;
+  }) => void,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
     if (notifiedMessages.has(message.id)) return;
@@ -57,10 +62,13 @@ export default function InternalReceiveMessageHandler(
         message.type !== "chat"
           ? types[message.type] || "Enviou um arquivo"
           : replaceMentions(message.body || "", users, contacts);
+      const isMention = isInternalMentionForUser(message.body || "", loggedUser);
 
-      safeNotification(author, {
+      notify?.({
+        event: isMention ? "mention" : "new_message",
+        title: author,
         body: bodyFinal,
-        icon: HorizontalLogo.src,
+        isChatFocused: isCurrentChat,
       });
     }
 

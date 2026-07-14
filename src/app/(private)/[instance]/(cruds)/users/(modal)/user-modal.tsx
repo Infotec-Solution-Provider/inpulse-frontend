@@ -192,10 +192,11 @@ export default function UserModal({ user }: UserModalProps) {
                 onChange={(e) => handleFormChange("NIVEL", e.target.value as UserRole)}
                 className="bg-white dark:bg-slate-700"
               >
-                <MenuItem value="ADMIN">Administrador</MenuItem>
-                <MenuItem value="ATIVO">Usuário (Ativo)</MenuItem>
-                <MenuItem value="RECEP">Usuário (Recep)</MenuItem>
-                <MenuItem value="AMBOS">Usuário (Ambos)</MenuItem>
+                <MenuItem value={UserRole.ADMIN}>Administrador</MenuItem>
+                <MenuItem value={UserRole.ACTIVE}>Usuário (Ativo)</MenuItem>
+                <MenuItem value={UserRole.RECEPTIONIST}>Usuário (Recep)</MenuItem>
+                <MenuItem value={UserRole.BOTH}>Usuário (Ambos)</MenuItem>
+                <MenuItem value={UserRole.EXTERNAL}>Operador Externo</MenuItem>
               </TextField>
             </div>
 

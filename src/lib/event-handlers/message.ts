@@ -1,7 +1,5 @@
 import { WhatsappClient, WppMessage } from "@/lib/sdk-local";
-import { safeNotification } from "@/lib/utils/notifications";
 import { Formatter, Logger } from "@in.pulse-crm/utils";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
@@ -26,6 +24,12 @@ export default function ReceiveMessageHandler(
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
   chats: DetailedChat[],
+  notify?: (payload: {
+    event: "new_message";
+    title: string;
+    body: string;
+    isChatFocused: boolean;
+  }) => void,
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
@@ -43,19 +47,15 @@ export default function ReceiveMessageHandler(
       const contactName = matchedChat?.contact?.name;
 
       const isTextMsg = ["chat", "text"].includes(message.type);
-      safeNotification(contactName || Formatter.phone(phone), {
-        body: isTextMsg ? message.body : types[message.type] || "Enviou um arquivo",
-        icon: HorizontalLogo.src,
-      });
+      const isCurrentWppChat =
+        chatRef.current?.chatType === "wpp" && chatRef.current.contactId === message.contactId;
 
-      // Tocar som de notificação (client-side only)
-      if (typeof window !== "undefined") {
-        const audio = new Audio("/notification-sound.wav");
-        audio.volume = 0.5;
-        audio.play().catch((error) => {
-          console.log("Não foi possível tocar o som da notificação:", error);
-        });
-      }
+      notify?.({
+        event: "new_message",
+        title: contactName || Formatter.phone(phone),
+        body: isTextMsg ? message.body : types[message.type] || "Enviou um arquivo",
+        isChatFocused: !!isCurrentWppChat,
+      });
     }
 
     setMessages((prev) => {

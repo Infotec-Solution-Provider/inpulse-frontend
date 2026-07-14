@@ -1,10 +1,15 @@
 "use client";
 import { AuthContext } from "@/app/auth-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
+import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
 import NotificationsDropdown from "@/lib/components/notifications-dropdown";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { UserRole } from "@/lib/sdk-local";
+import {
+  canAccessInternalGroups,
+  isExternalOperator,
+} from "@/lib/permissions/operator-access";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import BarChartIcon from "@mui/icons-material/BarChart";
@@ -15,6 +20,7 @@ import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import MenuIcon from "@mui/icons-material/Menu";
 import MonitorIcon from "@mui/icons-material/Monitor";
 import NotificationsIcon from "@mui/icons-material/Notifications";
+import SettingsIcon from "@mui/icons-material/Settings";
 import {
   Box,
   Divider,
@@ -34,10 +40,17 @@ import HeaderNavItem from "./header-nav-item";
 import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
 
 
-const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
-  const arr = [
-    { title: "Clientes", href: "/customers" },
-  ];
+const crudsRoutes = (
+  params: Record<string, string>,
+  isAdmin: boolean,
+  role: UserRole | null | undefined,
+) => {
+  const isExternal = isExternalOperator(role);
+  const arr: { title: string; href: string }[] = [];
+
+  if (!isExternal) {
+    arr.push({ title: "Clientes", href: "/customers" });
+  }
 
   if (isAdmin) {
     arr.push({ title: "Usuários", href: "/users" });
@@ -48,11 +61,11 @@ const crudsRoutes = (params: Record<string, string>, isAdmin: boolean) => {
     arr.push({ title: "Resposta automática", href: "/auto-response" });
   }
 
-  if (params["disable_internal_groups"] !== "true") {
+  if (canAccessInternalGroups(params, role)) {
     arr.push({ title: "Grupos Internos", href: "/internal-groups" });
   }
 
-  if (params["disable_contacts_crud"] !== "true") {
+  if (!isExternal && params["disable_contacts_crud"] !== "true") {
     arr.push({ title: "Contatos", href: "/contacts" });
   }
 
@@ -130,6 +143,7 @@ const MobileMenu = ({
   onClose,
   instance,
   isUserAdmin,
+  userRole,
   signOut,
   reportsRoutes,
 }: {
@@ -137,6 +151,7 @@ const MobileMenu = ({
   onClose: () => void;
   instance: string;
   isUserAdmin: boolean;
+  userRole: UserRole | null | undefined;
   signOut: () => void;
   reportsRoutes: { title: string; href: string }[];
 }) => {
@@ -145,6 +160,8 @@ const MobileMenu = ({
   const { parameters } = useWhatsappContext();
   const visibleAiRoutes = aiRoutes(parameters);
   const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
+
+  const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, userRole);
 
   const renderMenuItems = (routes: { title: string; href: string }[]) => {
     return routes.map((route) => (
@@ -207,10 +224,14 @@ const MobileMenu = ({
           )}
 
           {/* Cadastros */}
-          <ListItem>
-            <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
-          </ListItem>
-          {renderMenuItems(crudsRoutes(parameters, isUserAdmin))}
+          {availableCrudRoutes.length > 0 && (
+            <>
+              <ListItem>
+                <ListItemText primary="Cadastros" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
+              </ListItem>
+              {renderMenuItems(availableCrudRoutes)}
+            </>
+          )}
 
           {isUserAdmin && visibleAiRoutes.length > 0 && (
             <>
@@ -262,6 +283,7 @@ export default function Header() {
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -285,10 +307,12 @@ export default function Header() {
   }
 
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
+  const isExternal = isExternalOperator(user?.NIVEL);
 
+  const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, user?.NIVEL);
   const visibleAiRoutes = aiRoutes(parameters);
   const visibleReportsRoutes = reportsRoutes(parameters, instance);
-  const showFunnels = isFeatureEnabled(parameters, FEATURE_FLAGS.funnels);
+  const showFunnels = !isExternal && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels);
   const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
   const showAiMenu = isUserAdmin && visibleAiRoutes.length > 0;
   const showReportsMenu = isUserAdmin && visibleReportsRoutes.length > 0;
@@ -320,12 +344,16 @@ export default function Header() {
                 <HeaderNavItem title="Área de Atendimento" href="/">
                   <HeadsetMicIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
-                <HeaderNavItem title="Monitoria" href="/monitor" disabled={!isUserAdmin}>
-                  <MonitorIcon className="text-gray-900 dark:text-slate-200" />
-                </HeaderNavItem>
-                <HeaderNavItem title="Cadastros" routes={crudsRoutes(parameters, isUserAdmin)}>
-                  <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
-                </HeaderNavItem>
+                {!isExternal && (
+                  <HeaderNavItem title="Monitoria" href="/monitor" disabled={!isUserAdmin}>
+                    <MonitorIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
+                {availableCrudRoutes.length > 0 && (
+                  <HeaderNavItem title="Cadastros" routes={availableCrudRoutes}>
+                    <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
                 {showFunnels && (
                   <HeaderNavItem title="Pipelines" href="/funnel">
                     <FilterAltIcon className="text-gray-900 dark:text-slate-200" />
@@ -355,6 +383,14 @@ export default function Header() {
 
             <NotificationsDropdown />
 
+            <IconButton
+              color="inherit"
+              aria-label="configurações de notificações"
+              onClick={() => setNotificationSettingsOpen(true)}
+            >
+              <SettingsIcon className="text-gray-900 dark:text-slate-200" />
+            </IconButton>
+
             <h1 className="mx-4 truncate text-gray-900 dark:text-slate-200">{user?.NOME}</h1>
 
             <IconButton onClick={signOut}>
@@ -365,6 +401,9 @@ export default function Header() {
           <div className="flex gap-2 md:hidden">
             <IconButton>
               <NotificationsIcon className="text-gray-900 dark:text-slate-200" />
+            </IconButton>
+            <IconButton onClick={() => setNotificationSettingsOpen(true)}>
+              <SettingsIcon className="text-gray-900 dark:text-slate-200" />
             </IconButton>
             <IconButton onClick={signOut}>
               <LogoutIcon className="text-gray-900 dark:text-slate-200" />
@@ -379,8 +418,14 @@ export default function Header() {
         onClose={() => setMobileOpen(false)}
         instance={instance}
         isUserAdmin={isUserAdmin}
+        userRole={user?.NIVEL}
         signOut={signOut}
         reportsRoutes={visibleReportsRoutes}
+      />
+
+      <NotificationPreferencesModal
+        open={notificationSettingsOpen}
+        onClose={() => setNotificationSettingsOpen(false)}
       />
     </header>
   );

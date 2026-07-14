@@ -1,5 +1,6 @@
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
+import { isExternalOperator } from "@/lib/permissions/operator-access";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
 import { replaceMentions } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
@@ -42,6 +43,7 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 
 export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
+  const isExternal = isExternalOperator(user?.NIVEL);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
   const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
   const { state } = useContext(ContactsContext);
@@ -56,6 +58,14 @@ export default function ChatsMenuList() {
     ];
 
     return combinedChats.filter((chat) => {
+      if (isExternal && chat.chatType !== "internal") {
+        return false;
+      }
+
+      if (isExternal && chat.chatType === "internal" && chat.isGroup) {
+        return false;
+      }
+
       if (chatFilters.showingType === "scheduled" && !("schedule" in chat)) {
         return false;
       }
@@ -70,7 +80,7 @@ export default function ChatsMenuList() {
       }
       return chatFilters.search.length === 0 || matchesFilter(chat, chatFilters.search);
     });
-  }, [chats, internalChats, chatFilters]);
+  }, [chats, internalChats, chatFilters, isExternal]);
 
   const sortedChats = useMemo(() => {
     const getUserCreatorName = (chat: CombinedChat): string => {

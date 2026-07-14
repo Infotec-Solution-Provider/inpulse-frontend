@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { SendTemplateData } from "@/lib/components/send-template-modal";
 import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
 import ChatStartedHandler from "@/lib/event-handlers/chat-started";
@@ -19,6 +20,7 @@ import {
   ForwardMessagesData,
   SendMessageData,
   SocketEventType,
+  UserNotificationPreferences,
   WhatsappClient,
   WppChat,
   WppChatWithDetails,
@@ -44,6 +46,13 @@ import { toast } from "react-toastify";
 import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
 import filesService from "../../../lib/services/files.service";
+import usersService from "../../../lib/services/users.service";
+import { dispatchConfiguredNotification } from "../../../lib/utils/notification-dispatch";
+import {
+  createDefaultNotificationPreferences,
+  normalizeNotificationPreferences,
+  shouldDispatchNotification,
+} from "../../../lib/utils/notification-preferences";
 import {
   createFileUploadTraceId,
   logFileUploadTrace,
@@ -117,6 +126,9 @@ interface IWhatsappContext {
   getNotifications: (params: GetNotificationsParams) => Promise<GetNotificationsResponse>;
   markAllAsReadNotification: () => void;
   markAsReadNotificationById: (notificationId: number) => Promise<void>;
+  notificationPreferences: UserNotificationPreferences;
+  updateNotificationPreferences: (payload: Partial<UserNotificationPreferences>) => Promise<void>;
+  refreshNotificationPreferences: () => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
   loadChatMessages: (chat: DetailedChat) => Promise<WppMessage[]>;
@@ -188,6 +200,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
+  const [notificationPreferences, setNotificationPreferences] = useState<UserNotificationPreferences>(
+    createDefaultNotificationPreferences(),
+  );
+  const notificationPreferencesRef = useRef<UserNotificationPreferences>(
+    createDefaultNotificationPreferences(),
+  );
 
   const sendTracedFileMessage = useCallback(
     async (clientId: number, to: string, data: TracedSendMessageOptions) => {
@@ -217,6 +235,66 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const pendingReadOnlyOpenRef = useRef(false);
 
   const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    notificationPreferencesRef.current = notificationPreferences;
+  }, [notificationPreferences]);
+
+  const refreshNotificationPreferences = useCallback(async () => {
+    if (!token || !user) {
+      setNotificationPreferences(createDefaultNotificationPreferences());
+      return;
+    }
+
+    usersService.setAuth(token);
+
+    try {
+      const data = await usersService.getUserNotificationPreferences(user.CODIGO);
+      setNotificationPreferences(normalizeNotificationPreferences(data));
+    } catch {
+      setNotificationPreferences(createDefaultNotificationPreferences());
+    }
+  }, [token, user]);
+
+  const updateNotificationPreferences = useCallback(
+    async (payload: Partial<UserNotificationPreferences>) => {
+      if (!token || !user) {
+        return;
+      }
+
+      usersService.setAuth(token);
+      const updated = await usersService.upsertUserNotificationPreferences(user.CODIGO, payload);
+      setNotificationPreferences(normalizeNotificationPreferences(updated));
+    },
+    [token, user],
+  );
+
+  const emitPolicyNotification = useCallback(
+    (payload: {
+      event: keyof UserNotificationPreferences["events"];
+      title: string;
+      body: string;
+      isChatFocused: boolean;
+    }) => {
+      const prefs = notificationPreferencesRef.current;
+
+      if (
+        !shouldDispatchNotification(prefs, {
+          event: payload.event,
+          isChatFocused: payload.isChatFocused,
+        })
+      ) {
+        return;
+      }
+
+      dispatchConfiguredNotification(prefs, payload.event, {
+        title: payload.title,
+        body: payload.body,
+        icon: HorizontalLogo.src,
+      });
+    },
+    [],
+  );
 
   const prepareReadOnlyOpen = useCallback((enabled: boolean) => {
     pendingReadOnlyOpenRef.current = enabled;
@@ -658,6 +736,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   useEffect(() => {
     if (token?.length && api.current && user) {
       api.current.setAuth(token);
+      usersService.setAuth(token);
+      refreshNotificationPreferences();
       api.current.getSectors().then((res) => {
         setSectors(res as SectorData[]);
 
@@ -706,11 +786,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setTemplates([]);
         setParameters({});
         setNotifications([]);
+        setNotificationPreferences(createDefaultNotificationPreferences());
         setLoaded(false);
       };
     }
     // Removendo api.current das dependências para evitar loop infinito
-  }, [token, instance, user]);
+  }, [token, instance, user, refreshNotificationPreferences]);
 
   useEffect(() => {
     if (socket) {
@@ -728,6 +809,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setCurrentChat,
           setUniqueCurrentChatMessages,
           userInitiatedChatContactId,
+          emitPolicyNotification,
         ),
       );
       socket.on(
@@ -763,6 +845,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setChats,
         currentChatRef,
         chats,
+        emitPolicyNotification,
       );
       socket.on(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
         handleMessage(data);
@@ -799,7 +882,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         socket.off(SocketEventType.WppContactMessagesRead);
       };
     }
-  }, [socket, chats, currentChat]);
+  }, [socket, chats, currentChat, emitPolicyNotification]);
 
   return (
     <WhatsappContext.Provider
@@ -835,6 +918,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         templates,
         parameters,
         loadChatMessages,
+        notificationPreferences,
+        updateNotificationPreferences,
+        refreshNotificationPreferences,
         markAsReadNotificationById,
         getChatById,
         chat,

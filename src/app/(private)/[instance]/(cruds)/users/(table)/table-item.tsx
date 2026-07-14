@@ -30,6 +30,8 @@ export default function UsersTableItem({
         return "Recepção";
       case "AMBOS":
         return "Ambos";
+      case "EXTERNO":
+        return "Externo";
       default:
         return "N/D";
     }
@@ -93,6 +95,8 @@ export default function UsersTableItem({
           className={`rounded-full px-2 py-1 text-xs font-semibold ${
             user.NIVEL === "ADMIN"
               ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+              : user.NIVEL === "EXTERNO"
+                ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
               : user.NIVEL === "ATIVO" || user.NIVEL === "RECEP" || user.NIVEL === "AMBOS"
                 ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                 : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"

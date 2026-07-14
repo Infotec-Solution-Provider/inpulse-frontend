@@ -19,6 +19,7 @@ import {
 } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
+import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import customersReducer, {
   ChangeCustomersStateAction,
   CustomerListFilters,
@@ -82,6 +83,11 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
 
   const updateCustomer = useCallback(
     async (id: number, data: UpdateCustomerDTO) => {
+      if (isSystemDefaultCustomer(id)) {
+        toast.info("O cliente padrão do sistema não pode ser editado.");
+        return;
+      }
+
       try {
         if (token) {
           await api.current.updateCustomer(id, data);

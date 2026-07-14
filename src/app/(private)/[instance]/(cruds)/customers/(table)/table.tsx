@@ -16,6 +16,8 @@ import { CustomersContext } from "../customers-context";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";
+import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
+import { toast } from "react-toastify";
 import ContactsModal from "./(modal)/contacts-modal";
 import CreateCustomerModal from "./(modal)/create-customer-modal";
 import EditCustomerProfileTagsModal from "./(modal)/edit-customer-profile-tags-modal";
@@ -115,6 +117,11 @@ export default function CustomersTable() {
   }, [canUseProfileTags, customerIds, profileSummaries, wppApi]);
 
   function openEditCustomerModal(customer: Customer) {
+    if (isSystemDefaultCustomer(customer.CODIGO)) {
+      toast.info("O cliente padrão do sistema não pode ser editado.");
+      return;
+    }
+
     openModal(<EditCustomerModal customer={customer} />);
   }
 

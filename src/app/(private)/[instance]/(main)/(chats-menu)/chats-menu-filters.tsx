@@ -22,9 +22,11 @@ import {
   SelectChangeEvent,
   TextField,
 } from "@mui/material";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "@/app/auth-context";
 import { useAppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
+import { canAccessInternalChats, isExternalOperator } from "@/lib/permissions/operator-access";
 import SchedulesModal from "./(schedules-modal)/schedules-modal";
 import StartChatModal from "./(start-chat-modal)/start-chat-modal";
 import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
@@ -39,7 +41,10 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 
 export default function ChatsMenuFilters() {
   const { openModal, closeModal } = useAppContext();
+  const { user } = useContext(AuthContext);
   const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
+  const isExternal = isExternalOperator(user?.NIVEL);
+  const canStartInternalChat = canAccessInternalChats(parameters, user?.NIVEL);
 
   const [newChatMenuAnchorEl, setNewChatMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [newInternalChatAnchorEl, setNewInternalChatAnchorEl] = useState<null | HTMLElement>(null);
@@ -102,6 +107,12 @@ export default function ChatsMenuFilters() {
     changeChatFilters({ type: "change-sort-order", sortOrder: value });
   };
 
+  useEffect(() => {
+    if (isExternal && chatFilters.showingType !== "internal") {
+      changeChatFilters({ type: "change-showing-type", showingType: "internal" });
+    }
+  }, [isExternal, chatFilters.showingType, changeChatFilters]);
+
   return (
     <div className="flex flex-col gap-1 rounded-t-md p-3">
       <header className="mb-1 flex w-full items-center justify-between font-semibold dark:font-normal">
@@ -133,12 +144,14 @@ export default function ChatsMenuFilters() {
             },
           }}
         >
-          <MenuItem onClick={handleOpenStartChatModal} className="flex items-center gap-2">
-            <WhatsAppIcon />
-            <p>Nova Conversa</p>
-          </MenuItem>
+          {!isExternal && (
+            <MenuItem onClick={handleOpenStartChatModal} className="flex items-center gap-2">
+              <WhatsAppIcon />
+              <p>Nova Conversa</p>
+            </MenuItem>
+          )}
 
-          {parameters["disable_internal_chats"] !== "true" && (
+          {canStartInternalChat && (
             <MenuItem onClick={handleOpenInternalChat} className="flex items-center gap-2">
               <SmsIcon />
               <p>Nova Conversa Interna</p>
@@ -163,30 +176,34 @@ export default function ChatsMenuFilters() {
           open={isFilterMenuOpen}
           onClose={handleFilterMenuClose}
         >
-          <MenuItem
-            onClick={() => handleChangeShowingType("all")}
-            aria-hidden={chatFilters.showingType === "all"}
-            className="flex items-center gap-2"
-          >
-            <CategoryIcon />
-            <p>Todas</p>
-          </MenuItem>
-          <MenuItem
-            onClick={() => handleChangeShowingType("unread")}
-            aria-hidden={chatFilters.showingType === "unread"}
-            className="flex items-center gap-2"
-          >
-            <MarkChatUnreadIcon />
-            <p>Não lidas</p>
-          </MenuItem>
-          <MenuItem
-            onClick={() => handleChangeShowingType("scheduled")}
-            aria-hidden={chatFilters.showingType === "scheduled"}
-            className="flex items-center gap-2"
-          >
-            <ScheduleIcon />
-            <p>Agendados</p>
-          </MenuItem>
+          {!isExternal && (
+            <>
+              <MenuItem
+                onClick={() => handleChangeShowingType("all")}
+                aria-hidden={chatFilters.showingType === "all"}
+                className="flex items-center gap-2"
+              >
+                <CategoryIcon />
+                <p>Todas</p>
+              </MenuItem>
+              <MenuItem
+                onClick={() => handleChangeShowingType("unread")}
+                aria-hidden={chatFilters.showingType === "unread"}
+                className="flex items-center gap-2"
+              >
+                <MarkChatUnreadIcon />
+                <p>Não lidas</p>
+              </MenuItem>
+              <MenuItem
+                onClick={() => handleChangeShowingType("scheduled")}
+                aria-hidden={chatFilters.showingType === "scheduled"}
+                className="flex items-center gap-2"
+              >
+                <ScheduleIcon />
+                <p>Agendados</p>
+              </MenuItem>
+            </>
+          )}
           <MenuItem
             onClick={() => handleChangeShowingType("internal")}
             aria-hidden={chatFilters.showingType === "internal"}
@@ -195,14 +212,16 @@ export default function ChatsMenuFilters() {
             <GroupsIcon />
             <p>Internos</p>
           </MenuItem>
-          <MenuItem
-            onClick={() => handleChangeShowingType("external")}
-            aria-hidden={chatFilters.showingType === "external"}
-            className="flex items-center gap-2"
-          >
-            <HailIcon />
-            <p>Clientes</p>
-          </MenuItem>
+          {!isExternal && (
+            <MenuItem
+              onClick={() => handleChangeShowingType("external")}
+              aria-hidden={chatFilters.showingType === "external"}
+              className="flex items-center gap-2"
+            >
+              <HailIcon />
+              <p>Clientes</p>
+            </MenuItem>
+          )}
         </Menu>
       </header>
 

@@ -5,8 +5,8 @@ import { User, WppContact } from "@/lib/sdk-local";
 export interface MentionableUser {
   userId: number;
   name: string;
-  // phone é enviado ao backend somente para notificação WhatsApp de menção.
-  // O roteamento do chat interno é sempre nativo da aplicação.
+  // Campo legado para compatibilidade de payload.
+  // O backend resolve o destino da notificação por userId -> WHATSAPP do operador.
   phone: string;
 }
 

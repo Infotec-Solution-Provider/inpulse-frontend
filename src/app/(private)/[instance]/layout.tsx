@@ -5,8 +5,9 @@ import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
 import { FEATURE_FLAGS, FeatureFlag, isFeatureEnabled } from "@/lib/feature-flags";
+import { canAccessPrivatePathForRole } from "@/lib/permissions/operator-access";
 import { usePathname } from "next/navigation";
-import { ReactElement, ReactNode, useState } from "react";
+import { ReactElement, ReactNode, useContext, useState } from "react";
 import ContactsProvider from "./(cruds)/contacts/contacts-context";
 import CustomersProvider from "./(cruds)/customers/customers-context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
@@ -14,6 +15,7 @@ import { InternalChatProvider } from "./internal-context";
 import WhatsappProvider from "./whatsapp-context";
 import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
+import { AuthContext } from "@/app/auth-context";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -42,8 +44,19 @@ const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
 
 function RouteFeatureGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { user } = useContext(AuthContext);
   const { loaded, parameters } = useWhatsappContext();
   const routeConfig = ROUTE_FEATURE_FLAGS.find(({ segment }) => pathname.includes(segment));
+
+  const hasRoleAccess = canAccessPrivatePathForRole(pathname, user?.NIVEL);
+
+  if (!hasRoleAccess) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500 dark:text-slate-300">
+        Perfil sem acesso a esta funcionalidade.
+      </div>
+    );
+  }
 
   if (!routeConfig) {
     return <>{children}</>;

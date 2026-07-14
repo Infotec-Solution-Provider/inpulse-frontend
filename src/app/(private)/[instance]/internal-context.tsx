@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import HorizontalLogo from "@/assets/img/hlogodark.png";
 import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-finished";
 import InternalChatStartedHandler from "@/lib/event-handlers/internal-chat-started";
 import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
@@ -33,6 +34,8 @@ import {
   logFileUploadTrace,
   logFileUploadTraceError,
 } from "../../../lib/utils/file-upload-trace";
+import { dispatchConfiguredNotification } from "../../../lib/utils/notification-dispatch";
+import { shouldDispatchNotification } from "../../../lib/utils/notification-preferences";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -87,6 +90,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     setCurrentChatMessages: setWppCurrMsgs,
     chats: wppChats,
     wppApi,
+    notificationPreferences,
   } = useWhatsappContext();
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
@@ -349,6 +353,22 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           user,
           openInternalChat,
           userInitiatedInternalChat,
+          ({ event, title, body, isChatFocused }) => {
+            if (
+              !shouldDispatchNotification(notificationPreferences, {
+                event,
+                isChatFocused,
+              })
+            ) {
+              return;
+            }
+
+            dispatchConfiguredNotification(notificationPreferences, event, {
+              title,
+              body,
+              icon: HorizontalLogo.src,
+            });
+          },
         ),
       );
 
@@ -378,6 +398,22 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           contacts,
           user!,
           phoneNameMap,
+          ({ event, title, body, isChatFocused }) => {
+            if (
+              !shouldDispatchNotification(notificationPreferences, {
+                event,
+                isChatFocused,
+              })
+            ) {
+              return;
+            }
+
+            dispatchConfiguredNotification(notificationPreferences, event, {
+              title,
+              body,
+              icon: HorizontalLogo.src,
+            });
+          },
         ),
       );
 
@@ -400,7 +436,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         socket.off(SocketEventType.InternalChatFinished);
       };
     }
-  }, [socket, user, users, currentInternalChatMessages]);
+  }, [socket, user, users, currentInternalChatMessages, notificationPreferences]);
 
   return (
     <InternalChatContext.Provider

@@ -1,5 +1,6 @@
 import { Edit, Sell, ViewAgenda } from "@mui/icons-material";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
+import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import { Customer } from "@/lib/sdk-local";
 import { Chip, IconButton, Skeleton, TableCell, TableRow, Tooltip } from "@mui/material";
 import { CUSTOMERS_TABLE_COLUMNS } from "./table-config";
@@ -24,6 +25,8 @@ export default function CustomersTableItem({
   openEditModalHandler,
   openContactModalHandler,
 }: ClientListItemProps) {
+  const isSystemCustomer = isSystemDefaultCustomer(customer.CODIGO);
+
   const qualificationChips = profileSummary
     ? [
         {
@@ -204,10 +207,11 @@ export default function CustomersTableItem({
             </Tooltip>
           )}
           <IconButton
-            title="Editar Cliente"
+            title={isSystemCustomer ? "Cliente padrão do sistema não pode ser editado" : "Editar Cliente"}
             onClick={() => openEditModalHandler(customer)}
             size="small"
-            className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+            disabled={isSystemCustomer}
+            className="text-blue-600 hover:bg-blue-50 disabled:text-slate-400 dark:text-blue-400 dark:hover:bg-blue-950/30"
           >
             <Edit fontSize="small" />
           </IconButton>
