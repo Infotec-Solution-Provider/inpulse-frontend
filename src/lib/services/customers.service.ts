@@ -1,4 +1,4 @@
-import { CustomersClient } from "@in.pulse-crm/sdk";
+import { CustomersClient } from "@/lib/sdk-local";
 
 import type { CustomerLookupOption } from "@/lib/types/sdk-local.types";
 

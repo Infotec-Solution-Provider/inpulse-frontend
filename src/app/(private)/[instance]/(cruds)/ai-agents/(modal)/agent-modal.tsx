@@ -22,7 +22,7 @@ import type {
   WppContactWithCustomer,
 } from "@/lib/types/sdk-local.types";
 import instancesService, { type GeoStateOption } from "@/lib/services/instances.service";
-import { FileDirType } from "@in.pulse-crm/sdk";
+import { FileDirType } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { type MessageTemplate, useWhatsappContext } from "../../../whatsapp-context";
 import AddIcon from "@mui/icons-material/Add";

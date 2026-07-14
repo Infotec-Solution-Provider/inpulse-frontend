@@ -1,7 +1,7 @@
 import Message from "./message";
 import { useContext, useEffect, useMemo, useRef } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
-import { InternalMessage, User, WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, User, WppMessage } from "@/lib/sdk-local";
 import { InternalChatContext } from "../../internal-context";
 import { AuthContext } from "@/app/auth-context";
 import GroupMessage from "./group-message";

@@ -1,6 +1,6 @@
 import { Button, IconButton, MenuItem, TextField } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { Customer, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
+import { Customer, UpdateCustomerDTO } from "@/lib/sdk-local";
 import { toast } from "react-toastify";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { useRef } from "react";

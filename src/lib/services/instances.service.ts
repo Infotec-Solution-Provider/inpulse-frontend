@@ -1,4 +1,4 @@
-import { InstancesClient } from "@in.pulse-crm/sdk";
+import { InstancesClient } from "@/lib/sdk-local";
 
 export interface GeoStateOption {
   code: string;

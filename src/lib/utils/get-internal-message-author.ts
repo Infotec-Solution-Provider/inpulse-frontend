@@ -1,4 +1,4 @@
-import { InternalMessage, User } from "@in.pulse-crm/sdk";
+import { InternalMessage, User } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 
 function getInternalMessageAuthor(

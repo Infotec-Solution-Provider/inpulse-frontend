@@ -4,7 +4,7 @@ import { useContext, useMemo } from "react";
 import SimCardDownloadIcon from "@mui/icons-material/SimCardDownload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { ChatsReportContext } from "./chats-reports-context";
-import { ChatsReport } from "@in.pulse-crm/sdk";
+import { ChatsReport } from "@/lib/sdk-local";
 
 interface ChatReportListItemProps {
   user: string;

@@ -1,5 +1,5 @@
 import { Edit, SettingsPhone } from "@mui/icons-material";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import { IconButton, TableCell, TableRow } from "@mui/material";
 import { useUsersContext } from "../users-context";
 import { USERS_TABLE_COLUMNS } from "./table-config";

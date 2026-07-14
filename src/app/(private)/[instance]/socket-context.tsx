@@ -1,5 +1,5 @@
 "use client";
-import { SocketClient, SocketEventType } from "@in.pulse-crm/sdk";
+import { SocketClient, SocketEventType } from "@/lib/sdk-local";
 import { ReactNode, createContext, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../../auth-context";
 import { AppContext } from "./app-context";
@@ -52,7 +52,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     });
 
     // Telefonia: chamada receptiva recebida via AMI.
-    // Usa string literal ate `@in.pulse-crm/sdk` ser republicada com TelephonyCallReceived.
+    // Usa string literal ate `@/lib/sdk-local` ser republicada com TelephonyCallReceived.
     looseSocket.on(
       "telephony_call_received",
       (data: {

@@ -1,5 +1,5 @@
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
-import { InternalChat, InternalChatMember, InternalMessage, User } from "@in.pulse-crm/sdk";
+import { InternalChat, InternalChatMember, InternalMessage, User } from "@/lib/sdk-local";
 
 export default function processInternalChatsAndMessages(
   userId: number,

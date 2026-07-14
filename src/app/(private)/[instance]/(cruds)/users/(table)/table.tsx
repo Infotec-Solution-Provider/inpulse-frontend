@@ -1,6 +1,6 @@
 "use client";
 import { useAuthContext } from "@/app/auth-context";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import {
   Button,
   CircularProgress,

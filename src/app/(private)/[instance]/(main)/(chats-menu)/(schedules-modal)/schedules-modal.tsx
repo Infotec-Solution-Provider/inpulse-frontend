@@ -26,7 +26,7 @@ import {
   UnifiedScheduleFilters,
   UnifiedSchedulesResponse,
   UnifiedScheduleRepurchaseStatus,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useWhatsappContext } from "../../../whatsapp-context";
 

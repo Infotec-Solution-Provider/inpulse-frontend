@@ -1,4 +1,4 @@
-import { AiClient } from "@in.pulse-crm/sdk";
+import { AiClient } from "@/lib/sdk-local";
 import type {
   AiAgent,
   AiAgentAudienceInput,

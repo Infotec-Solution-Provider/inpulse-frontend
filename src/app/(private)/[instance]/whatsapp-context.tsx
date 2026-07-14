@@ -25,7 +25,7 @@ import {
   WppChatWithDetailsAndMessages,
   WppMessage,
   WppSchedule,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { Logger, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
   ActionDispatch,
@@ -161,7 +161,7 @@ interface SectorData {
 }
 
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
-export const FILES_BASE_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "http://localhost:8003";
+export const FILES_BASE_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "https://inpulse.infotecrs.inf.br";
 export const NOTIFICATIONS_PER_PAGE = 15;
 export const WhatsappContext = createContext({} as IWhatsappContext);
 

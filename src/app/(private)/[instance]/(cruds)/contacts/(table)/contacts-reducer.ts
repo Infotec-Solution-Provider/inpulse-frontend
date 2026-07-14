@@ -1,4 +1,4 @@
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 
 export type ContactWithSectors = WppContact & { sectors?: Array<{ sectorId: number }> };
 

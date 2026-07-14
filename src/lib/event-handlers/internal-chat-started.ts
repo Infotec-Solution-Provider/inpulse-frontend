@@ -4,7 +4,7 @@ import {
   User,
   InternalMessage,
   InternalChatMember,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 

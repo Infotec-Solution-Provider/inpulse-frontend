@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "@in.pulse-crm/sdk";
+import { WppMessageStatus } from "@/lib/sdk-local";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";

@@ -1,7 +1,7 @@
 "use client";
 import aiService from "@/lib/services/ai.service";
 import { useAuthContext } from "@/app/auth-context";
-import type { AiAgentActionLog } from "@in.pulse-crm/sdk";
+import type { AiAgentActionLog } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";

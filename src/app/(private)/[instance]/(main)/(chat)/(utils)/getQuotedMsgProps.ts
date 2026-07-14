@@ -1,9 +1,9 @@
-import { InternalMessage, User, WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, User, WppMessage } from "@/lib/sdk-local";
 import { DetailedChat } from "../../../whatsapp-context";
 import { QuotedMessageProps } from "../message";
 import getInternalMessageAuthor from "../../../../../../lib/utils/get-internal-message-author";
 import { replaceMentions } from "@/lib/utils/message-mentions";
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 
 
 

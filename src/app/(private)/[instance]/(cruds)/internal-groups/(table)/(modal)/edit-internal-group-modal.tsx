@@ -1,5 +1,5 @@
 import filesService from "@/lib/services/files.service";
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup } from "@/lib/sdk-local";
 import { PersonAdd } from "@mui/icons-material";
 import ImageIcon from "@mui/icons-material/Image";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";

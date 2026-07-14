@@ -1,4 +1,4 @@
-import { User, WppContact } from "@in.pulse-crm/sdk";
+import { User, WppContact } from "@/lib/sdk-local";
 
 export function replaceMentions(
   text: string,

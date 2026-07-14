@@ -2,7 +2,7 @@
 
 // --- 1. IMPORTAÇÕES ---
 import { AuthContext } from "@/app/auth-context";
-import { WppMessage } from "@in.pulse-crm/sdk";
+import { WppMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useWhatsappContext } from "../../whatsapp-context";

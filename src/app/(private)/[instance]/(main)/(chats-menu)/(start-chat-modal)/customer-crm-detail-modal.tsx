@@ -2,7 +2,7 @@
 
 import customersService from "@/lib/services/customers.service";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 import AddIcon from "@mui/icons-material/Add";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import CloseIcon from "@mui/icons-material/Close";

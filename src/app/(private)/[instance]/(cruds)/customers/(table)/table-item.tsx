@@ -1,6 +1,6 @@
 import { Edit, Sell, ViewAgenda } from "@mui/icons-material";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 import { Chip, IconButton, Skeleton, TableCell, TableRow, Tooltip } from "@mui/material";
 import { CUSTOMERS_TABLE_COLUMNS } from "./table-config";
 import { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";

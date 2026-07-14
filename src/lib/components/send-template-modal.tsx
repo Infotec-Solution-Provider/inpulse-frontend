@@ -1,6 +1,6 @@
 import { MessageTemplate, useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { useAuthContext } from "@/app/auth-context";
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppContact } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";

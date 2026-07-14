@@ -1,4 +1,4 @@
-import { Customer, RequestFilters, UpdateCustomerDTO } from "@in.pulse-crm/sdk";
+import { Customer, RequestFilters, UpdateCustomerDTO } from "@/lib/sdk-local";
 import { CustomerProfileSummaryFilters } from "@/lib/types/customer-profile-summary";
 
 export type CustomerListFilters = RequestFilters<Customer> & CustomerProfileSummaryFilters;

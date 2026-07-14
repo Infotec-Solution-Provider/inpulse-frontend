@@ -9,7 +9,7 @@ import {
   ReportStatusEventData,
   SocketEventType,
   User,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { usePathname } from "next/navigation";
 import {

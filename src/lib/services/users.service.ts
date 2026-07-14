@@ -1,4 +1,4 @@
-import { UsersClient } from "@in.pulse-crm/sdk";
+import { UsersClient } from "@/lib/sdk-local";
 
 const USERS_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
 

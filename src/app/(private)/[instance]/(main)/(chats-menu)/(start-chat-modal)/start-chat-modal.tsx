@@ -10,7 +10,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import BusinessIcon from "@mui/icons-material/Business";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import { ChangeEventHandler, useContext, useEffect, useMemo, useState } from "react";
-import { WppContactWithCustomer } from "@in.pulse-crm/sdk";
+import { WppContactWithCustomer } from "@/lib/sdk-local";
 import { WhatsappContext } from "../../../whatsapp-context";
 import StartChatModalItem from "./start-chat-modal-item";
 import { Button } from "@mui/material";

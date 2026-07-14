@@ -1,4 +1,4 @@
-import { CustomerTelephonySchedule } from "@in.pulse-crm/sdk";
+import { CustomerTelephonySchedule } from "@/lib/sdk-local";
 
 export interface TelephoneQueuePhoneOption {
   key: "FONE1" | "FONE2" | "FONE3";

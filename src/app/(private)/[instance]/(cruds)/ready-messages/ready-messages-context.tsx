@@ -6,7 +6,7 @@ import {
   ReadyMessage,
   ReadyMessageClient,
   UpdateReadyMessageDto,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import {
   ActionDispatch,
   createContext,

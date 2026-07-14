@@ -4,7 +4,7 @@ import HorizontalLogo from "@/assets/img/hlogodark.png";
 import NotificationsDropdown from "@/lib/components/notifications-dropdown";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
-import { UserRole } from "@in.pulse-crm/sdk";
+import { UserRole } from "@/lib/sdk-local";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import BarChartIcon from "@mui/icons-material/BarChart";

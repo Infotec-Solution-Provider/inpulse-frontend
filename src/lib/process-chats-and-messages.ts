@@ -1,5 +1,5 @@
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { WppChatWithDetails, WppMessage } from "@in.pulse-crm/sdk";
+import { WppChatWithDetails, WppMessage } from "@/lib/sdk-local";
 
 export default function processChatsAndMessages(
   /* socketClient: SocketClient, */

@@ -13,7 +13,7 @@ import ChatReducer, {
   SendMessageDataState,
 } from "@/app/(private)/[instance]/(main)/(chat)/chat-reducer";
 import { InternalChatContext } from "../../internal-context";
-import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import { toast } from "react-toastify";
 
 interface IChatContext {

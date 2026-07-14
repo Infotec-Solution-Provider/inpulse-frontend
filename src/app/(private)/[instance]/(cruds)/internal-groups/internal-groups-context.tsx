@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import { InternalChatContext } from "../../internal-context";

@@ -1,6 +1,6 @@
 "use client"
 import { useAuthContext } from "@/app/auth-context";
-import { WalletsClient, WppWallet } from "@in.pulse-crm/sdk";
+import { WalletsClient, WppWallet } from "@/lib/sdk-local";
 // import walletsService from "@/lib/services/wallets.service";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { createContext, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"

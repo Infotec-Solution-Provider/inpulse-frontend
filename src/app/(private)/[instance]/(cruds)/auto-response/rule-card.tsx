@@ -2,7 +2,7 @@
 import { Tooltip, IconButton, Switch } from "@mui/material";
 import { Edit, Trash2, Globe, Users, Clock } from "lucide-react";
 import { useAutoResponseContext } from "./auto-response.context";
-import { AutomaticResponseRule } from "@in.pulse-crm/sdk";
+import { AutomaticResponseRule } from "@/lib/sdk-local";
 
 export default function RuleCard({ rule }: { rule: AutomaticResponseRule }) {
   const { openRuleModal, handleDeleteRule, updateRule } = useAutoResponseContext();

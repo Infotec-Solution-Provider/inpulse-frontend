@@ -1,4 +1,4 @@
-import { WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
+import { WhatsappClient, WppMessage } from "@/lib/sdk-local";
 import { safeNotification } from "@/lib/utils/notifications";
 import { Formatter, Logger } from "@in.pulse-crm/utils";
 import HorizontalLogo from "@/assets/img/hlogodark.png";

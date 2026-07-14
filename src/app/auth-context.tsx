@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import usersService from "../lib/services/users.service";
 
 export const AuthContext = createContext({} as AuthContextProps);

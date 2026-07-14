@@ -16,7 +16,7 @@ import {
   CustomersClient,
   RequestFilters,
   UpdateCustomerDTO,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import customersReducer, {

@@ -2,7 +2,7 @@ import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-contex
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { safeNotification } from "@/lib/utils/notifications";
-import { InternalChatClient, InternalMessage, User, WppContact } from "@in.pulse-crm/sdk";
+import { InternalChatClient, InternalMessage, User, WppContact } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import getInternalMessageAuthor from "../utils/get-internal-message-author";
 import { replaceMentions } from "../utils/message-mentions";

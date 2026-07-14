@@ -1,5 +1,5 @@
 import SendTemplateModal from "@/lib/components/send-template-modal";
-import { WppMessage } from "@in.pulse-crm/sdk";
+import { WppMessage } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { Close } from "@mui/icons-material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";

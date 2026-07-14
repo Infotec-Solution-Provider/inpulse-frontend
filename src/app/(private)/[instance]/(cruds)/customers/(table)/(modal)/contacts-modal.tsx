@@ -1,5 +1,5 @@
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppContact } from "@/lib/sdk-local";
 import { Button, IconButton, TextField } from "@mui/material";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ContactItem from "./contact-item";

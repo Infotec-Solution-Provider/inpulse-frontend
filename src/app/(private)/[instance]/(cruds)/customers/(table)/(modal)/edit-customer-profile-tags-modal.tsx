@@ -7,7 +7,7 @@ import {
   CustomerProfileSummaryPayload,
   CustomerPurchaseInterestLevel,
 } from "@/lib/types/customer-profile-summary";
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import {

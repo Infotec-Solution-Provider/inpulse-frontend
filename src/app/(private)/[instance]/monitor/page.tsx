@@ -1,7 +1,7 @@
 "use client";
 import filesService from "@/lib/services/files.service";
 import toDateString from "@/lib/utils/date-string";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";

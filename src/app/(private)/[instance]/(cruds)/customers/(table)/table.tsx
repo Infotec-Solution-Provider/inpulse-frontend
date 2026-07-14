@@ -1,5 +1,5 @@
 "use client";
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 import {
   Button,
   CircularProgress,

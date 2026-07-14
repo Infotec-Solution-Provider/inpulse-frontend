@@ -1,5 +1,5 @@
 import usersService from "@/lib/services/users.service";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
 import {

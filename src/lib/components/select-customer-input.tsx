@@ -1,5 +1,5 @@
 import { useCustomersContext } from "@/app/(private)/[instance]/(cruds)/customers/customers-context";
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 import { Autocomplete, CircularProgress, MenuItem, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 

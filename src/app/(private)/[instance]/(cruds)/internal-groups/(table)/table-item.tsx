@@ -1,5 +1,5 @@
 import { Delete, Edit } from "@mui/icons-material";
-import { InternalGroup, User } from "@in.pulse-crm/sdk";
+import { InternalGroup, User } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { IconButton, TableCell, TableRow } from "@mui/material";
 import { INTERNAL_GROUPS_TABLE_COLUMNS } from "./table-config";

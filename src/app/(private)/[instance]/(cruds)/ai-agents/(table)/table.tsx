@@ -1,5 +1,5 @@
 "use client";
-import { AiAgent } from "@in.pulse-crm/sdk";
+import { AiAgent } from "@/lib/sdk-local";
 import AddIcon from "@mui/icons-material/Add";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteIcon from "@mui/icons-material/Delete";

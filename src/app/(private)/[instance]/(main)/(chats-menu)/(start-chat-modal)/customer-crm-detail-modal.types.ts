@@ -1,4 +1,4 @@
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 
 export interface CustomerContactDetail {
   CODIGO: string;

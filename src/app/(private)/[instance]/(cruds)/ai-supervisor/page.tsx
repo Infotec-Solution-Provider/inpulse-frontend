@@ -9,7 +9,7 @@ import type {
 	SupervisorAiSession,
 	SupervisorAiSessionDetail,
 } from "@/lib/types/sdk-local.types";
-import { UserRole } from "@in.pulse-crm/sdk";
+import { UserRole } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import AddIcon from "@mui/icons-material/Add";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";

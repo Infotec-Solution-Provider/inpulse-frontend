@@ -1,6 +1,6 @@
 import { Button, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup } from "@/lib/sdk-local";
 import { useAppContext } from "../../../../app-context";
 import { useInternalGroupsContext } from "../../internal-groups-context";
 

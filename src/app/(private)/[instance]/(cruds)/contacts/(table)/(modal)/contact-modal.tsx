@@ -3,7 +3,7 @@
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import SelectCustomerInput from "@/lib/components/select-customer-input";
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppContact } from "@/lib/sdk-local";
 import { Close } from "@mui/icons-material";
 import { Autocomplete, Button, Chip, IconButton, TextField } from "@mui/material";
 import { useContext, useEffect, useState } from "react";

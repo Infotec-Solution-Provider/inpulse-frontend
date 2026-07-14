@@ -9,7 +9,7 @@ import type {
 	AiTenantConfig,
 	AiUsageSummary,
 } from "@/lib/types/sdk-local.types";
-import { User, UserRole } from "@in.pulse-crm/sdk";
+import { User, UserRole } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import ModelTrainingIcon from "@mui/icons-material/ModelTraining";

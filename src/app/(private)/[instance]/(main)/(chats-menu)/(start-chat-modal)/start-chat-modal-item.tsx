@@ -1,4 +1,4 @@
-import { Customer, WppChatPriority, WppChatType, WppContact, WppMessage } from "@in.pulse-crm/sdk";
+import { Customer, WppChatPriority, WppChatType, WppContact, WppMessage } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { IconButton, Avatar, Tooltip, Chip } from "@mui/material";
 import { useCallback, useContext, useMemo } from "react";

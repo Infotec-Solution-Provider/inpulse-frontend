@@ -5,7 +5,7 @@ import { useAuthContext } from "@/app/auth-context";
 import { useContactsContext } from "@/app/(private)/[instance]/(cruds)/contacts/contacts-context";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import customersService from "@/lib/services/customers.service";
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import AddIcCallIcon from "@mui/icons-material/AddIcCall";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";

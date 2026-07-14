@@ -1,7 +1,7 @@
 "use client";
 
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import { AppNotification, WppChatWithDetailsAndMessages, WppContact } from "@in.pulse-crm/sdk";
+import { AppNotification, WppChatWithDetailsAndMessages, WppContact } from "@/lib/sdk-local";
 import ChatIcon from "@mui/icons-material/Chat";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import {

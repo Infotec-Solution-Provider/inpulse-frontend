@@ -1,4 +1,4 @@
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup } from "@/lib/sdk-local";
 
 // State Type
 export interface InternalGroupsContextState {

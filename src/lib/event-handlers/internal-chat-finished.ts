@@ -1,4 +1,4 @@
-import { InternalMessage, SocketClient } from "@in.pulse-crm/sdk";
+import { InternalMessage, SocketClient } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";

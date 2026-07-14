@@ -2,7 +2,7 @@
 import { useAuthContext } from "@/app/auth-context";
 import AvatarInput from "@/lib/components/avatar-input";
 import filesService from "@/lib/services/files.service";
-import { CreateUserDTO, FileDirType, User, UserRole } from "@in.pulse-crm/sdk";
+import { CreateUserDTO, FileDirType, User, UserRole } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import Visibility from "@mui/icons-material/Visibility";

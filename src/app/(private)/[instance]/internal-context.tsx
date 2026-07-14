@@ -15,7 +15,7 @@ import {
   SocketEventType,
   User,
   WppContact,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import {
   createContext,
   useCallback,

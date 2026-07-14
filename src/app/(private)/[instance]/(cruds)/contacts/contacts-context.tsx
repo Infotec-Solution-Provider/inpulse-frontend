@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppContact } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";

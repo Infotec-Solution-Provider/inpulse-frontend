@@ -1,7 +1,8 @@
-import { type File as StoredFile, FilesClient, type FileDirType } from "@in.pulse-crm/sdk";
+import { type File as StoredFile, FilesClient, type FileDirType } from "@/lib/sdk-local";
 import { logFileUploadTrace, logFileUploadTraceError } from "../utils/file-upload-trace";
 
-const FILES_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "http://localhost:8003";
+const DEFAULT_FILES_BASE_URL = "https://inpulse.infotecrs.inf.br";
+const FILES_URL = process.env["NEXT_PUBLIC_FILES_URL"] || DEFAULT_FILES_BASE_URL;
 const UPLOAD_TIMEOUT_MS = Number(
 	process.env["NEXT_PUBLIC_UPLOAD_TIMEOUT_MS"] || "300000",
 );

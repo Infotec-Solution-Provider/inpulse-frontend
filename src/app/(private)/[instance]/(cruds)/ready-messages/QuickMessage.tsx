@@ -1,5 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
-import { ReadyMessage } from "@in.pulse-crm/sdk";
+import { ReadyMessage } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {

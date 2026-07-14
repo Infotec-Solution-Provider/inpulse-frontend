@@ -2,7 +2,7 @@
 
 import { useAuthContext } from "@/app/auth-context";
 import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
-import { InternalMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { InternalChatContext } from "../../internal-context";

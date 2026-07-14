@@ -1,6 +1,6 @@
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { WppMessage, WppMessageEditEventData } from "@in.pulse-crm/sdk";
+import { WppMessage, WppMessageEditEventData } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 
 export default function EditedMessageHandler(

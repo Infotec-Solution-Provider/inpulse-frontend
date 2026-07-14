@@ -1,4 +1,4 @@
-import { WppMessage, WppMessageStatus } from "@in.pulse-crm/sdk";
+import { WppMessage, WppMessageStatus } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import compareMessageStatus from "../utils/compare-message-status";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
