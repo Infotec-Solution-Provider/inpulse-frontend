@@ -10,7 +10,7 @@ export default function ChatsMenu() {
   const showTelephonyDialer = isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyDialer);
 
   return (
-    <aside className="flex flex-col h-full rounded-md bg-slate-200 text-black shadow-md dark:bg-slate-800 dark:text-slate-300">
+    <aside className="flex h-full min-h-0 flex-col rounded-md bg-slate-200 text-black shadow-md dark:bg-slate-800 dark:text-slate-300">
       <ChatsMenuFilters />
       {showTelephonyDialer && (
         <div className="sticky top-0 z-10 bg-slate-200 pt-3 dark:bg-slate-800">

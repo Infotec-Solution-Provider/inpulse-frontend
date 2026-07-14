@@ -137,41 +137,41 @@ export default function ChatHeader({
 
   return (
     <>
-    <div className="flex items-center justify-between gap-4 border-b bg-slate-200 px-4 py-2 pt-10 dark:border-none dark:bg-slate-800 md:pt-2">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 rounded-md bg-slate-300 px-2 py-1 dark:bg-slate-700">
+    <div className="flex flex-col gap-2 border-b bg-slate-200 px-3 py-2 dark:border-none dark:bg-slate-800 sm:px-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-slate-300 px-2 py-1 dark:bg-slate-700">
           <Avatar
             variant="rounded"
             alt={name}
             src={avatarUrl || ""}
-            sx={{ width: 60, height: 60 }}
+            sx={{ width: { xs: 44, sm: 52, md: 60 }, height: { xs: 44, sm: 52, md: 60 } }}
           />
-          <div>
-            <h2 className="font-semibold text-slate-800 dark:text-slate-200">{name}</h2>
-            <h2 className="text-sm text-slate-700 dark:text-slate-200">
+          <div className="min-w-0">
+            <h2 className="truncate font-semibold text-slate-800 dark:text-slate-200">{name}</h2>
+            <h2 className="truncate text-sm text-slate-700 dark:text-slate-200">
               {customerName || "Contato Não Atribuído"}
             </h2>
-            <h2 className="text-sm text-slate-400 dark:text-slate-300">{safeFormatPhone(phone)}</h2>
+            <h2 className="truncate text-sm text-slate-400 dark:text-slate-300">{safeFormatPhone(phone)}</h2>
           </div>
         </div>
         {customerId && (
-          <div className="flex flex-col rounded-md bg-slate-300 px-2 py-1 dark:bg-slate-700">
-            <span className="text-sm text-slate-800 dark:text-slate-200">
+          <div className="flex w-full flex-col rounded-md bg-slate-300 px-2 py-1 text-xs dark:bg-slate-700 sm:w-auto sm:text-sm">
+            <span className="text-slate-800 dark:text-slate-200">
               <b>CPF/CNPJ: </b>
               {cpfCnpj || "N/D"}
             </span>
-            <span className="text-sm text-slate-800 dark:text-slate-200">
+            <span className="text-slate-800 dark:text-slate-200">
               <b>Código Cliente: </b>
               {customerId || "N/D"}
             </span>
-            <span className="text-sm text-slate-800 dark:text-slate-200">
+            <span className="text-slate-800 dark:text-slate-200">
               <b>Código ERP: </b>
               {codErp || "N/D"}
             </span>
           </div>
         )}
       </div>
-      <div className="flex items-center">
+      <div className="flex w-full flex-wrap items-center justify-end gap-1 md:w-auto md:gap-0">
         {hasAiAgent && (
           <Tooltip title={<h3 className="text-base dark:text-white">Logs do Agente de IA</h3>}>
             <IconButton onClick={() => setAuditDrawerOpen(true)}>
@@ -254,7 +254,6 @@ export default function ChatHeader({
         {onClose && (
           <IconButton
             onClick={onClose}
-            className="mx-auto"
             sx={{
               color: "inherit",
               "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.1)" },

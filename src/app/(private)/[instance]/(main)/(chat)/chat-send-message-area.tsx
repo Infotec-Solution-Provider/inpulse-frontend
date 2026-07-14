@@ -260,9 +260,12 @@ export default function ChatSendMessageArea() {
   }, [editingMessage]);
 
   return (
-    <div className="mb-6 flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0">
+    <div
+      className="flex w-full flex-col gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+    >
       <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-      <div className="flex items-center gap-2">
+      <div className="flex w-full flex-wrap items-center gap-1 sm:gap-2">
         {parameters["is_official"] === "true" && (
           <IconButton
             size="small"
@@ -418,34 +421,36 @@ export default function ChatSendMessageArea() {
           </div>
         )}
       </div>
-      {editingMessage && (
+      <div className="flex w-full items-center justify-end gap-2">
+        {editingMessage && (
+          <IconButton
+            size="small"
+            className="bg-white/20 dark:text-indigo-400"
+            onClick={handleStopEditMessage}
+            title="Cancelar edição"
+          >
+            <Close />
+          </IconButton>
+        )}
+
         <IconButton
           size="small"
+          aria-hidden={textWithNames.length === 0 && !state.sendAsAudio}
           className="bg-white/20 dark:text-indigo-400"
-          onClick={handleStopEditMessage}
-          title="Cancelar edição"
+          disabled={isDisabled}
+          onClick={sendMessages}
         >
-          <Close />
+          <SendIcon />
         </IconButton>
-      )}
 
-      <IconButton
-        size="small"
-        aria-hidden={textWithNames.length === 0 && !state.sendAsAudio}
-        className="bg-white/20 dark:text-indigo-400"
-        disabled={isDisabled}
-        onClick={sendMessages}
-      >
-        <SendIcon />
-      </IconButton>
-
-      <div
-        className="aria-hidden:hidden"
-        aria-hidden={
-          isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage
-        }
-      >
-        <AudioRecorder onAudioRecorded={handleAudioRecord} />
+        <div
+          className="aria-hidden:hidden"
+          aria-hidden={
+            isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage
+          }
+        >
+          <AudioRecorder onAudioRecorded={handleAudioRecord} />
+        </div>
       </div>
 
       {quickMessageOpen && !isDisabled && (

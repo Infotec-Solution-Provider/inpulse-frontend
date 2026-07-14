@@ -33,13 +33,15 @@ export default function Home() {
   return (
     <ChatProvider>
       <div
-        className={`box-border grid h-auto w-full grid-rows-1 overflow-auto md:h-full md:gap-2 md:overflow-hidden md:p-2 ${currentChat ? "chat-open" : ""} grid-cols-1 md:grid-cols-[24rem_1fr]`}
+        className={`box-border grid h-full min-h-0 w-full grid-cols-1 grid-rows-1 overflow-hidden md:gap-2 md:p-2 ${currentChat ? "chat-open" : ""} md:grid-cols-[24rem_1fr]`}
       >
         <div className={`chats-menu ${currentChat ? "hidden" : "block"} md:block`}>
           {" "}
           <ChatsMenu />{" "}
         </div>
-        <div className="chat-panel-container flex h-full w-full flex-1 flex-col overflow-hidden">
+        <div
+          className={`chat-panel-container h-full min-h-0 w-full overflow-hidden ${currentChat ? "flex" : "hidden"} md:flex md:flex-col`}
+        >
           {/* mobile back handled by hardware/browser history */}
           {false && (
             <button

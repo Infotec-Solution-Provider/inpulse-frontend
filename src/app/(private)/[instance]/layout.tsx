@@ -74,7 +74,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [modal, setModal] = useState<ReactNode>(null);
 
   return (
-    <div className="box-border h-screen w-full overflow-hidden md:w-screen">
+    <div className="box-border h-[100dvh] w-full overflow-hidden md:w-screen">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
