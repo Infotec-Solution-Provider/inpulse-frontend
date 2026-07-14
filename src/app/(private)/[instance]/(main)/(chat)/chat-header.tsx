@@ -3,16 +3,18 @@ import { AI_PRESENTATION_MODE } from "@/lib/ai-prototype/config";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { Formatter } from "@in.pulse-crm/utils";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import { Avatar, IconButton, Tooltip } from "@mui/material";
+import { Avatar, IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import { AppContext } from "../../app-context";
@@ -73,8 +75,10 @@ export default function ChatHeader({
     !!(currentChat as { agentId?: number | null }).agentId &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
+  const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || hasAiAgent || canInteract;
 
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
+  const [mobileActionsAnchor, setMobileActionsAnchor] = useState<null | HTMLElement>(null);
 
   const lastMessageBody = useMemo(() => {
     const lastMessage = [...currentChatMessages].reverse().find((message) => message.body?.trim());
@@ -137,8 +141,18 @@ export default function ChatHeader({
 
   return (
     <>
-    <div className="flex flex-col gap-2 border-b bg-slate-200 px-3 py-2 dark:border-none dark:bg-slate-800 sm:px-4 md:flex-row md:items-center md:justify-between">
-      <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="flex items-center justify-between gap-2 border-b bg-slate-200 px-2 py-2 dark:border-slate-700 dark:bg-slate-800 sm:px-4">
+      {onClose && (
+        <IconButton
+          onClick={onClose}
+          className="shrink-0 md:hidden"
+          aria-label="Voltar para conversas"
+          sx={{ color: "inherit" }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+      )}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-slate-300 px-2 py-1 dark:bg-slate-700">
           <Avatar
             variant="rounded"
@@ -155,7 +169,7 @@ export default function ChatHeader({
           </div>
         </div>
         {customerId && (
-          <div className="flex w-full flex-col rounded-md bg-slate-300 px-2 py-1 text-xs dark:bg-slate-700 sm:w-auto sm:text-sm">
+          <div className="hidden flex-col rounded-md bg-slate-300 px-2 py-1 text-sm dark:bg-slate-700 md:flex">
             <span className="text-slate-800 dark:text-slate-200">
               <b>CPF/CNPJ: </b>
               {cpfCnpj || "N/D"}
@@ -171,7 +185,7 @@ export default function ChatHeader({
           </div>
         )}
       </div>
-      <div className="flex w-full flex-wrap items-center justify-end gap-1 md:w-auto md:gap-0">
+      <div className="hidden items-center md:flex">
         {hasAiAgent && (
           <Tooltip title={<h3 className="text-base dark:text-white">Logs do Agente de IA</h3>}>
             <IconButton onClick={() => setAuditDrawerOpen(true)}>
@@ -263,6 +277,63 @@ export default function ChatHeader({
           </IconButton>
         )}
       </div>
+      {hasMobileActions && <div className="md:hidden">
+        <IconButton
+          onClick={(event) => setMobileActionsAnchor(event.currentTarget)}
+          aria-label="Ações da conversa"
+          sx={{ color: "inherit" }}
+        >
+          <MoreVertIcon />
+        </IconButton>
+        <Menu
+          anchorEl={mobileActionsAnchor}
+          open={Boolean(mobileActionsAnchor)}
+          onClose={() => setMobileActionsAnchor(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
+        >
+          {canOpenCustomerDetail && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openCustomerDetailModal(); }}>
+              <InfoOutlinedIcon className="mr-3" color="success" /> Detalhes do cliente
+            </MenuItem>
+          )}
+          {canOpenAIActions && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openAIPrototypeModal("suggest-response"); }}>
+              <AutoAwesomeIcon className="mr-3" color="info" /> Sugerir resposta
+            </MenuItem>
+          )}
+          {hasAiAgent && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); setAuditDrawerOpen(true); }}>
+              <ManageAccountsIcon className="mr-3" color="secondary" /> Logs do agente
+            </MenuItem>
+          )}
+          {currentChat?.chatType === "wpp" && canInteract && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openEditContactModal(); }}>
+              <EditIcon className="mr-3" color="info" /> Editar contato
+            </MenuItem>
+          )}
+          {currentChat?.chatType === "wpp" && canInteract && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openTransferChatModal(); }}>
+              <SyncAltIcon className="mr-3" color="secondary" /> Transferir conversa
+            </MenuItem>
+          )}
+          {currentChat?.chatType === "wpp" && canInteract && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openScheduleChatModal(); }}>
+              <ScheduleIcon className="mr-3" color="warning" /> Agendar retorno
+            </MenuItem>
+          )}
+          {currentChat?.chatType === "wpp" && canInteract && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openFinishChatModal(); }}>
+              <AssignmentTurnedInIcon className="mr-3" color="success" /> Finalizar conversa
+            </MenuItem>
+          )}
+          {currentChat?.chatType === "internal" && canInteract && !currentChat.isGroup && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); openFinishInternalChatModal(); }}>
+              <AssignmentTurnedInIcon className="mr-3" color="success" /> Finalizar conversa
+            </MenuItem>
+          )}
+        </Menu>
+      </div>}
     </div>
     {auditDrawerOpen && currentChat?.id && (
       <AgentAuditDrawer

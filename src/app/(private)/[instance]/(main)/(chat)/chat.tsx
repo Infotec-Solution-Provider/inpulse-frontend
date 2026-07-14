@@ -47,7 +47,7 @@ export default function Chat({
   };
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-md bg-white text-black shadow-md dark:bg-slate-900 dark:text-white">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-black shadow-md dark:bg-slate-900 dark:text-white md:rounded-md">
       <div className="sticky top-0 z-30">
         <div className="relative">
           <ChatHeader

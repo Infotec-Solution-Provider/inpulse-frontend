@@ -387,9 +387,9 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="mx-3 my-4 flex h-[85vh] min-h-[38rem] max-h-[90vh] w-[60rem] flex-col overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto">
+    <div className="flex h-[100dvh] max-h-[100dvh] w-screen flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto sm:my-4 sm:h-[85vh] sm:min-h-[38rem] sm:max-h-[90vh] sm:w-[60rem] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl">
       {/* Header com gradiente */}
-      <header className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white shadow-lg">
+      <header className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 text-white shadow-lg sm:rounded-t-xl sm:px-6 sm:py-5">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
             <ChatBubbleOutlineIcon className="text-2xl" />
@@ -412,10 +412,10 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
       </header>
 
       {/* Conteúdo principal */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-6">
         {/* Área de busca melhorada */}
-        <div className="mb-6 space-y-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-4 space-y-4 sm:mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <TextField
@@ -475,7 +475,8 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               value={searchField}
               onChange={handleChangeField}
               sx={{
-                minWidth: "200px",
+                width: { xs: "100%", sm: "auto" },
+                minWidth: { sm: "200px" },
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "12px",
                   backgroundColor: "white",
@@ -533,6 +534,8 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                 textTransform: "none",
                 fontWeight: 600,
                 px: 3,
+                py: { xs: 1.25, sm: 0.75 },
+                width: { xs: "100%", sm: "auto" },
                 whiteSpace: "nowrap",
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 "&:hover": {
@@ -650,6 +653,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                 sx: {
                   mt: 1,
                   width: 320,
+                  maxWidth: "calc(100vw - 24px)",
                   borderRadius: 3,
                   p: 2,
                 },
@@ -795,7 +799,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Paginação moderna */}
-        <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 p-4 dark:from-indigo-950/30 dark:to-purple-950/30">
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 p-3 dark:from-indigo-950/30 dark:to-purple-950/30 sm:p-4">
           <Button
             variant="contained"
             size="medium"
@@ -805,7 +809,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               borderRadius: "10px",
               textTransform: "none",
               fontWeight: 600,
-              px: 3,
+              px: { xs: 1.5, sm: 3 },
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               "&:hover": {
                 background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",
@@ -842,7 +846,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               borderRadius: "10px",
               textTransform: "none",
               fontWeight: 600,
-              px: 3,
+              px: { xs: 1.5, sm: 3 },
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               "&:hover": {
                 background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",

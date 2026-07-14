@@ -190,7 +190,7 @@ export default function Message({
       )}
 
       <div
-        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
+        className={`flex w-max max-w-[86%] flex-col items-center gap-2 rounded-md p-2 sm:max-w-[76%] lg:max-w-[66%] ${msgStyleVariants[style]}`}
       >
         {quotedMessage && (
           <div
@@ -284,7 +284,7 @@ export default function Message({
       {style !== "system" && !isForwardMode && !isReadOnly && (
         <>
           <IconButton
-            className="invisible group-hover:visible"
+            className="visible shrink-0 md:invisible md:group-hover:visible"
             size="small"
             title="Mais opções"
             onClick={handleMenuClick}

@@ -152,7 +152,7 @@ export default function ChatsMenuFilters() {
           onClose={handleCloseInternalChat}
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
           transformOrigin={{ vertical: "top", horizontal: "right" }}
-          PaperProps={{ style: { width: 350 } }}
+          PaperProps={{ sx: { width: 350, maxWidth: "calc(100vw - 24px)" } }}
         >
           <StartInternalChatModal onClose={handleCloseInternalChat} />
         </Popover>
@@ -214,7 +214,7 @@ export default function ChatsMenuFilters() {
           onChange={handleChangeText}
         />
       </div>
-      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <FormControl fullWidth size="small">
           <InputLabel id="sort-by-label">Ordenar por</InputLabel>
           <Select

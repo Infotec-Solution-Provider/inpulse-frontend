@@ -40,7 +40,7 @@ export default function Home() {
           <ChatsMenu />{" "}
         </div>
         <div
-          className={`chat-panel-container h-full min-h-0 w-full overflow-hidden ${currentChat ? "flex" : "hidden"} md:flex md:flex-col`}
+          className={`chat-panel-container overflow-hidden ${currentChat ? "fixed inset-0 z-40 flex h-[100dvh] w-full flex-col bg-white dark:bg-slate-900" : "hidden"} md:static md:z-auto md:flex md:h-full md:min-h-0 md:w-full md:flex-col md:bg-transparent`}
         >
           {/* mobile back handled by hardware/browser history */}
           {false && (

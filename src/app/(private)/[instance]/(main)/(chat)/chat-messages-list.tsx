@@ -128,15 +128,15 @@ export default function ChatMessagesList() {
   return (
     <div className="flex h-full w-full flex-col">
       {isSelectionMode && (
-        <div className="flex items-center justify-between bg-white p-2 shadow-lg dark:bg-slate-900">
-          <Typography variant="subtitle1" component="div" className="font-semibold">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-2 shadow-lg dark:bg-slate-900">
+          <Typography variant="subtitle1" component="div" className="min-w-0 font-semibold">
             {selectedMessageIds.size} mensagem(s) selecionada(s)
           </Typography>
-          <div className="flex gap-2">
-            <Button variant="outlined" onClick={clearSelection}>
+          <div className="ml-auto flex gap-2">
+            <Button size="small" variant="outlined" onClick={clearSelection}>
               Cancelar
             </Button>
-            <Button variant="contained" onClick={() => setForwardModalOpen(true)}>
+            <Button size="small" variant="contained" onClick={() => setForwardModalOpen(true)}>
               Encaminhar
             </Button>
           </div>
