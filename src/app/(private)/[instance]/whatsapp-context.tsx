@@ -259,7 +259,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const updateNotificationPreferences = useCallback(
     async (payload: Partial<UserNotificationPreferences>) => {
       if (!token || !user) {
-        return;
+        throw new Error("Sessão indisponível para salvar preferências de notificação.");
       }
 
       usersService.setAuth(token);

@@ -83,6 +83,7 @@ export default class UsersClient extends ApiClient {
 	 * @param token - The authentication token to be used in the `Authorization` header.
 	 */
 	public setAuth(token: string) {
-		this.ax.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+		const normalizedToken = token.replace(/^Bearer\s+/i, "").trim();
+		this.ax.defaults.headers.common["Authorization"] = `Bearer ${normalizedToken}`;
 	}
 }
