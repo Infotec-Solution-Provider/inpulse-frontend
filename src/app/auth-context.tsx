@@ -90,7 +90,7 @@ export default function AuthProvider({ children }: ProviderProps) {
         .then(async (session) => {
           instanceRef.current = session.instance;
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
-          usersService.setAuth(`Bearer ${prevToken}`);
+          usersService.setAuth(prevToken);
           const user = await usersService.getUserById(session.userId);
           setUser(user);
 
