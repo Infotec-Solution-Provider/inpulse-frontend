@@ -1,12 +1,15 @@
 "use client";
 
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { useAuthContext } from "@/app/auth-context";
 import {
   NotificationEventKey,
   NotificationEventPreferences,
   UserNotificationPreferences,
 } from "@/lib/sdk-local";
 import { dispatchConfiguredNotification } from "@/lib/utils/notification-dispatch";
+import { subscribeToPushNotifications } from "@/lib/utils/push-notifications";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import {
   notificationEvents,
   NOTIFICATION_SOUND_OPTIONS,
@@ -81,10 +84,12 @@ export default function NotificationPreferencesModal({
   onClose,
 }: NotificationPreferencesModalProps) {
   const theme = useTheme();
+  const { token, user } = useAuthContext();
   const { notificationPreferences, updateNotificationPreferences } = useWhatsappContext();
   const [activeSection, setActiveSection] = useState<SettingsSection>("notifications");
   const [draft, setDraft] = useState<UserNotificationPreferences>(notificationPreferences);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -108,6 +113,23 @@ export default function NotificationPreferencesModal({
       toast.error("Falha ao salvar preferências de notificação.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEnablePush = async () => {
+    if (!token || !user) {
+      toast.error("Sessão indisponível para ativar notificações do aparelho.");
+      return;
+    }
+
+    setIsEnablingPush(true);
+    try {
+      await subscribeToPushNotifications(user.CODIGO, token);
+      toast.success("Notificações do aparelho ativadas.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao ativar notificações do aparelho.");
+    } finally {
+      setIsEnablingPush(false);
     }
   };
 
@@ -375,6 +397,13 @@ export default function NotificationPreferencesModal({
           Salvar
         </Button>
       </DialogActions>
+        <Button
+          startIcon={<NotificationsActiveIcon />}
+          onClick={handleEnablePush}
+          disabled={isEnablingPush}
+        >
+          {isEnablingPush ? "Ativando..." : "Ativar no aparelho"}
+        </Button>
     </Dialog>
   );
 }

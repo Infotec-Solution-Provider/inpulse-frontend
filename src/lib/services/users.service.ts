@@ -70,6 +70,15 @@ export interface UpsertGlobalSipConfigPayload {
 	GRAVAR_LIGACAO?: string | null;
 }
 
+export interface PushSubscriptionPayload {
+	endpoint: string;
+	expirationTime: number | null;
+	keys: {
+		auth: string;
+		p256dh: string;
+	};
+}
+
 class FrontendUsersService extends UsersClient {
 	public async getUserNotificationPreferences(userId: number) {
 		const response = await this.ax.get<{ message: string; data: UserNotificationPreferences }>(
@@ -89,6 +98,18 @@ class FrontendUsersService extends UsersClient {
 		);
 
 		return response.data.data;
+	}
+
+	public async getPushVapidPublicKey() {
+		const response = await this.ax.get<{ data: { publicKey: string | null } }>(
+			"/api/push/vapid-public-key",
+		);
+
+		return response.data.data.publicKey;
+	}
+
+	public async upsertPushSubscription(userId: number, payload: PushSubscriptionPayload) {
+		await this.ax.post(`/api/users/${userId}/push-subscriptions`, payload);
 	}
 
 	public async getSipConfigs(filters?: Record<string, string>) {

@@ -66,7 +66,6 @@ export default function ReceiveMessageHandler(
         newMessages[contactId] = [];
       }
 
-      const previousLength = newMessages[contactId].length;
       const findIndex = newMessages[contactId].findIndex((m) => m.id === message.id);
       if (findIndex === -1) {
         newMessages[contactId].push(message);
@@ -85,10 +84,12 @@ export default function ReceiveMessageHandler(
           if (chat.contactId === message.contactId) {
             const isCurrentWppChat =
               x?.chatType === "wpp" && x.contactId === message.contactId;
+            const isFromMe = message.from.startsWith("me");
+            const isUnread = !isCurrentWppChat && !isFromMe;
 
             return {
               ...chat,
-              isUnread: !isCurrentWppChat,
+              isUnread: isUnread,
               lastMessage: message,
             };
           }
@@ -103,7 +104,6 @@ export default function ReceiveMessageHandler(
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
         const newMessages = [...prev];
-        const previousLength = newMessages.length;
         const i = newMessages.findIndex((m) => m.id === message.id);
         if (i === -1) {
           newMessages.push(message);
