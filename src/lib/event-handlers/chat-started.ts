@@ -27,12 +27,12 @@ export default function ChatStartedHandler(
     const res = await api.getChatById(chatId);
     const { messages, ...chat } = res;
 
-    const isUnread = true;
-
+    
     const lastMessage = messages?.reduce((prev, current) => {
       return +prev.timestamp > +current.timestamp ? prev : current;
     }, messages[0]);
-
+    
+    const isUnread = !lastMessage.from.startsWith("me");
     socket.joinRoom(`chat:${chat.id}`);
 
     notify?.({
