@@ -38,8 +38,7 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "InPulse";
   const options = {
     body: payload.body || "Você recebeu uma nova notificação.",
-    icon: payload.icon || "/icons/icon-192.png",
-    badge: payload.badge || "/icons/icon-192.png",
+    ...(payload.icon ? { icon: payload.icon } : {}),
     tag: payload.tag,
     data: { url: payload.url || "/" },
   };
