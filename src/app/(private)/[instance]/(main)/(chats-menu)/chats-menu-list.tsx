@@ -169,7 +169,7 @@ export default function ChatsMenuList() {
               name={names}
               message={
                 chat.lastMessage
-                  ? chat.lastMessage.type !== "chat"
+                  ? !["template", "text", "system", "chat"].includes(chat.lastMessage.type)
                     ? getTypeTextIcon(chat.lastMessage.type)
                     : replaceMentions(chat.lastMessage.body, users ?? [], state.contacts ?? [])
                   : "Nenhuma mensagem"
