@@ -3,25 +3,22 @@ import { AuthContext } from "@/app/auth-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
 import NotificationsDropdown from "@/lib/components/notifications-dropdown";
-import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
+import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
 import { UserRole } from "@/lib/sdk-local";
-import {
-  canAccessInternalGroups,
-  isExternalOperator,
-} from "@/lib/permissions/operator-access";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import CampaignIcon from "@mui/icons-material/Campaign";
+import CellTowerIcon from "@mui/icons-material/CellTower";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import LogoutIcon from "@mui/icons-material/Logout";
-import CampaignIcon from "@mui/icons-material/Campaign";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import MenuIcon from "@mui/icons-material/Menu";
 import MonitorIcon from "@mui/icons-material/Monitor";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
-import CellTowerIcon from "@mui/icons-material/CellTower";
 import {
   Box,
   Divider,
@@ -39,7 +36,6 @@ import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import HeaderNavItem from "./header-nav-item";
 import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
-
 
 const crudsRoutes = (
   params: Record<string, string>,
@@ -92,9 +88,7 @@ const aiRoutes = (params: Record<string, string>) => {
 };
 
 const reportsRoutes = (params: Record<string, string>, instance: string) => {
-  const routes = [
-    { title: "Relatórios", href: "/reports/dashboard" },
-  ];
+  const routes = [{ title: "Relatórios", href: "/reports/dashboard" }];
 
   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsAdvanced)) {
     routes.push(
@@ -111,7 +105,10 @@ const reportsRoutes = (params: Record<string, string>, instance: string) => {
   }
 
   if (instance === "exatron") {
-    routes.push({ title: "Pesquisa de Satisfação", href: "/reports/dashboard?report=satisfactionSurvey" });
+    routes.push({
+      title: "Pesquisa de Satisfação",
+      href: "/reports/dashboard?report=satisfactionSurvey",
+    });
   }
 
   if (isFeatureEnabled(params, FEATURE_FLAGS.salesReports)) {
@@ -121,7 +118,7 @@ const reportsRoutes = (params: Record<string, string>, instance: string) => {
     );
   }
 
-/*   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
+  /*   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
     routes.push(
       //{ title: "Gerador de Relatório", href: "/reports/report-generator" },
       //{ title: "Dashboards", href: "/reports/dashboards" },
@@ -161,7 +158,10 @@ const MobileMenu = ({
   const { parameters } = useWhatsappContext();
   const visibleAiRoutes = aiRoutes(parameters);
   const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
-  const showSessionMonitoring = isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring);
+  const showSessionMonitoring = isFeatureEnabled(
+    parameters,
+    FEATURE_FLAGS.whatsappSessionMonitoring,
+  );
 
   const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, userRole);
 
@@ -216,7 +216,9 @@ const MobileMenu = ({
             <ListItem>
               <Link href={`/${instance}/channels`} className="w-full">
                 <ListItemButton>
-                  <ListItemIcon><CellTowerIcon /></ListItemIcon>
+                  <ListItemIcon>
+                    <CellTowerIcon />
+                  </ListItemIcon>
                   <ListItemText primary="Canais WhatsApp" />
                 </ListItemButton>
               </Link>
@@ -291,7 +293,6 @@ const MobileMenu = ({
 };
 
 export default function Header() {
-  const renderStartedAt = Date.now();
   const { currentChat, parameters } = useContext(WhatsappContext);
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -309,7 +310,6 @@ export default function Header() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -326,8 +326,9 @@ export default function Header() {
   const visibleAiRoutes = aiRoutes(parameters);
   const visibleReportsRoutes = reportsRoutes(parameters, instance);
   const showFunnels = !isExternal && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels);
-  const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
-  const showSessionMonitoring = isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring);
+  const showMassMessages = isUserAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
+  const showSessionMonitoring =
+    isUserAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring);
   const showAiMenu = isUserAdmin && visibleAiRoutes.length > 0;
   const showReportsMenu = isUserAdmin && visibleReportsRoutes.length > 0;
 
@@ -358,27 +359,27 @@ export default function Header() {
                 <HeaderNavItem title="Área de Atendimento" href="/">
                   <HeadsetMicIcon className="text-gray-900 dark:text-slate-200" />
                 </HeaderNavItem>
-                {!isExternal && (
-                  <HeaderNavItem title="Monitoria" href="/monitor" disabled={!isUserAdmin}>
+                {isUserAdmin && (
+                  <HeaderNavItem title="Monitoria" href="/monitor">
                     <MonitorIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {showSessionMonitoring && (
+                {isUserAdmin && showSessionMonitoring && (
                   <HeaderNavItem title="Canais WhatsApp" href="/channels">
                     <CellTowerIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {availableCrudRoutes.length > 0 && (
+                {isUserAdmin && availableCrudRoutes.length > 0 && (
                   <HeaderNavItem title="Cadastros" routes={availableCrudRoutes}>
                     <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {showFunnels && (
+                {isUserAdmin && showFunnels && (
                   <HeaderNavItem title="Pipelines" href="/funnel">
                     <FilterAltIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {showAiMenu && (
+                {isUserAdmin && showAiMenu && (
                   <HeaderNavItem title="IA" routes={visibleAiRoutes}>
                     <AutoAwesomeIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
@@ -388,7 +389,7 @@ export default function Header() {
                     <CampaignIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {showReportsMenu && (
+                {isUserAdmin && showReportsMenu && (
                   <HeaderNavItem title="Relatórios" routes={visibleReportsRoutes}>
                     <BarChartIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
