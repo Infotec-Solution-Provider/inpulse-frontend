@@ -19,8 +19,12 @@ export const INTERNAL_GROUPS_TABLE_COLUMNS = {
     width: "14rem",
   },
   PARTICIPANTS_COUNT: {
-    label: "Participantes",
-    width: "10rem",
+    label: "Usuários do sistema",
+    width: "12rem",
+  },
+  WHATSAPP_GROUP: {
+    label: "Grupo do WhatsApp",
+    width: "16rem",
   },
   ACTIONS: {
     label: "Ações",

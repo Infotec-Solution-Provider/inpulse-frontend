@@ -369,7 +369,7 @@ export default function Header() {
                     <CellTowerIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
-                {isUserAdmin && availableCrudRoutes.length > 0 && (
+                {availableCrudRoutes.length > 0 && (
                   <HeaderNavItem title="Cadastros" routes={availableCrudRoutes}>
                     <AppRegistrationIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
