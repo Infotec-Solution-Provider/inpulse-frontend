@@ -1,5 +1,10 @@
 import { Customer } from "./customers.types";
 
+export interface WhatsappGroup {
+	id: string;
+	name: string;
+}
+
 export interface WppContact {
 	id: number;
 	name: string;
@@ -201,6 +206,7 @@ export interface WppMessage {
 	status: WppMessageStatus;
 	isForwarded: boolean;
 	isEdited: boolean;
+	reaction?: string;
 	fileId: number | null;
 	fileName: string | null;
 	fileType: string | null;

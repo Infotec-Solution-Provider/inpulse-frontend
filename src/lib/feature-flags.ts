@@ -11,6 +11,7 @@ export const FEATURE_FLAGS = {
   salesReports: "feature_sales_reports_enabled",
   sipConfig: "feature_sip_config_enabled",
   telephonyDialer: "feature_telephony_dialer_enabled",
+  whatsappSessionMonitoring: "feature_whatsapp_session_monitoring_enabled",
 } as const;
 
 export type FeatureFlag = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];

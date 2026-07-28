@@ -84,10 +84,14 @@ export default class ReadyMessageClient extends ApiClient {
 	 */
 	public async getReadyMessages(): Promise<ReadyMessage[]> {
 		const url = `/api/ready-messages`;
-		const { data: res } =
-			await this.ax.get<DataResponse<ReadyMessage[]>>(url);
+		const { data: response } =
+			await this.ax.get<DataResponse<ReadyMessage[]> | ReadyMessage[]>(url);
 
-		return res.data;
+		if (Array.isArray(response)) {
+			return response;
+		}
+
+		return Array.isArray(response?.data) ? response.data : [];
 	}
 
 	/**

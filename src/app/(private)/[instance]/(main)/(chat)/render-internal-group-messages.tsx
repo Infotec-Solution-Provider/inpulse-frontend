@@ -152,6 +152,7 @@ export default function RenderInternalGroupMessages({
               isForwardMode={isSelectionMode}
               isSelected={selectedMessageIds.has(m.id)}
               isEdited={m.isEdited}
+              reaction={m.reaction}
               onSelect={isReadOnlyMode ? undefined : () => toggleSelectMessage(m.id)}
               onForward={isReadOnlyMode ? undefined : () => openManualForward(m)}
               isReadOnly={isReadOnlyMode}

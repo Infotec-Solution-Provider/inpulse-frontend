@@ -177,24 +177,27 @@ export default function ChatsMenuFilters() {
           onClose={handleFilterMenuClose}
         >
           {!isExternal && (
-            <>
+            [
               <MenuItem
+                key="all"
                 onClick={() => handleChangeShowingType("all")}
                 aria-hidden={chatFilters.showingType === "all"}
                 className="flex items-center gap-2"
               >
                 <CategoryIcon />
                 <p>Todas</p>
-              </MenuItem>
+              </MenuItem>,
               <MenuItem
+                key="unread"
                 onClick={() => handleChangeShowingType("unread")}
                 aria-hidden={chatFilters.showingType === "unread"}
                 className="flex items-center gap-2"
               >
                 <MarkChatUnreadIcon />
                 <p>Não lidas</p>
-              </MenuItem>
+              </MenuItem>,
               <MenuItem
+                key="scheduled"
                 onClick={() => handleChangeShowingType("scheduled")}
                 aria-hidden={chatFilters.showingType === "scheduled"}
                 className="flex items-center gap-2"
@@ -202,7 +205,7 @@ export default function ChatsMenuFilters() {
                 <ScheduleIcon />
                 <p>Agendados</p>
               </MenuItem>
-            </>
+            ]
           )}
           <MenuItem
             onClick={() => handleChangeShowingType("internal")}

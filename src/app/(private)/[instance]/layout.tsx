@@ -22,6 +22,7 @@ interface AppLayoutProps {
 }
 
 const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
+  { segment: "/channels", flags: [FEATURE_FLAGS.whatsappSessionMonitoring] },
   { segment: "/ai-supervisor", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiSupervisor] },
   { segment: "/ai-agents", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiAgents] },
   { segment: "/ai-settings", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiSettings] },
@@ -48,7 +49,7 @@ function RouteFeatureGate({ children }: { children: ReactNode }) {
   const { loaded, parameters } = useWhatsappContext();
   const routeConfig = ROUTE_FEATURE_FLAGS.find(({ segment }) => pathname.includes(segment));
 
-  const hasRoleAccess = canAccessPrivatePathForRole(pathname, user?.NIVEL);
+  const hasRoleAccess = routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
 
   if (!hasRoleAccess) {
     return (

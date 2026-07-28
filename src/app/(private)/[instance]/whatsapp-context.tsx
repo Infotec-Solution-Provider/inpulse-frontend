@@ -6,6 +6,8 @@ import ChatStartedHandler from "@/lib/event-handlers/chat-started";
 import ChatTransferHandler from "@/lib/event-handlers/chat-transfer";
 import ReceiveMessageHandler from "@/lib/event-handlers/message";
 import EditedMessageHandler from "@/lib/event-handlers/message-edit";
+import MessageDeleteHandler from "@/lib/event-handlers/message-delete";
+import MessageReactionHandler from "@/lib/event-handlers/message-reaction";
 import MessageStatusHandler from "@/lib/event-handlers/message-status";
 import ReadChatHandler from "@/lib/event-handlers/read-chat";
 import processChatsAndMessages from "@/lib/process-chats-and-messages";
@@ -603,7 +605,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         pageSize,
       });
 
-      const { notifications: newNotifications, totalCount } = response.data;
+      const notificationsData = response?.data;
+      const newNotifications = Array.isArray(notificationsData?.notifications)
+        ? notificationsData.notifications
+        : [];
+      const totalCount =
+        typeof notificationsData?.totalCount === "number"
+          ? notificationsData.totalCount
+          : 0;
 
       if (page === 1) {
         setNotifications(newNotifications);
@@ -739,11 +748,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       usersService.setAuth(token);
       refreshNotificationPreferences();
       api.current.getSectors().then((res) => {
-        setSectors(res as SectorData[]);
+        const secs = Array.isArray(res)
+          ? (res as SectorData[])
+          : Array.isArray((res as { data?: SectorData[] })?.data)
+            ? ((res as { data: SectorData[] }).data ?? [])
+            : [];
 
-        const secs = res as SectorData[];
+        setSectors(secs);
 
-        api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
+        api.current.getChatsBySession(true, true).then((payload) => {
+          const chats = Array.isArray(payload?.chats) ? payload.chats : [];
+          const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+
           const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
           setChats(detailedChats);
           setMessages(chatsMessages);
@@ -751,29 +767,35 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         const sector = secs.find((s) => s.id === user.SETOR);
 
-        api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then((res) => {
-          const channelsData: WppClient[] = res.data.data;
+        api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then(async (res) => {
+          const channelsPayload = res?.data;
+          const channelsData: WppClient[] = Array.isArray(
+            (channelsPayload as { data?: WppClient[] })?.data,
+          )
+            ? ((channelsPayload as { data: WppClient[] }).data ?? [])
+            : Array.isArray(channelsPayload)
+              ? (channelsPayload as WppClient[])
+              : [];
           const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
           const activeChannel = defaultChannel || channelsData[0] || null;
 
           globalChannel.current = activeChannel;
           setSelectedChannel((current) => current ?? activeChannel);
 
-          api.current.ax.get("/api/whatsapp/session/parameters").then(async (res) => {
-            const parameters: Record<string, string> = res.data["parameters"];
-            if (parameters["is_official"] === "true" && activeChannel?.id) {
-              const templatesResponse = await api.current.ax.get(
-                `/api/whatsapp/${activeChannel.id}/templates`,
-              );
-              setTemplates(templatesResponse.data.templates);
-            } else {
-              setTemplates([]);
-            }
-            setParameters(parameters);
-            console.log("Loaded parameters:", parameters);
-          });
+          const parametersResponse = await api.current.ax.get("/api/whatsapp/session/parameters");
+          const parameters: Record<string, string> = parametersResponse.data["parameters"];
+          if (parameters["is_official"] === "true" && activeChannel?.id) {
+            const templatesResponse = await api.current.ax.get(
+              `/api/whatsapp/${activeChannel.id}/templates`,
+            );
+            setTemplates(templatesResponse.data.templates);
+          } else {
+            setTemplates([]);
+          }
+          setParameters(parameters);
+          console.log("Loaded parameters:", parameters);
 
-          setChannels(res.data.data);
+          setChannels(channelsData);
           setLoaded(true);
         });
 
@@ -873,6 +895,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       );
 
       socket.on(
+        SocketEventType.WppMessageReaction,
+        MessageReactionHandler(setMessages, setUniqueCurrentChatMessages),
+      );
+
+      socket.on(
+        SocketEventType.WppMessageDelete,
+        MessageDeleteHandler(setMessages, setUniqueCurrentChatMessages),
+      );
+
+      socket.on(
         SocketEventType.WppMessageStatus,
         MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
       );
@@ -880,6 +912,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         socket.off(SocketEventType.WppMessage);
         socket.off(SocketEventType.WppChatStarted);
         socket.off(SocketEventType.WppContactMessagesRead);
+        socket.off(SocketEventType.WppMessageEdit);
+        socket.off(SocketEventType.WppMessageReaction);
+        socket.off(SocketEventType.WppMessageDelete);
       };
     }
   }, [socket, chats, currentChat, emitPolicyNotification]);

@@ -21,6 +21,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import MonitorIcon from "@mui/icons-material/Monitor";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
+import CellTowerIcon from "@mui/icons-material/CellTower";
 import {
   Box,
   Divider,
@@ -160,6 +161,7 @@ const MobileMenu = ({
   const { parameters } = useWhatsappContext();
   const visibleAiRoutes = aiRoutes(parameters);
   const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
+  const showSessionMonitoring = isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring);
 
   const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, userRole);
 
@@ -210,6 +212,17 @@ const MobileMenu = ({
           </ListItem>
 
           {/* Monitoria */}
+          {showSessionMonitoring && (
+            <ListItem>
+              <Link href={`/${instance}/channels`} className="w-full">
+                <ListItemButton>
+                  <ListItemIcon><CellTowerIcon /></ListItemIcon>
+                  <ListItemText primary="Canais WhatsApp" />
+                </ListItemButton>
+              </Link>
+            </ListItem>
+          )}
+
           {isUserAdmin && (
             <>
               <ListItem>
@@ -314,6 +327,7 @@ export default function Header() {
   const visibleReportsRoutes = reportsRoutes(parameters, instance);
   const showFunnels = !isExternal && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels);
   const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
+  const showSessionMonitoring = isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring);
   const showAiMenu = isUserAdmin && visibleAiRoutes.length > 0;
   const showReportsMenu = isUserAdmin && visibleReportsRoutes.length > 0;
 
@@ -347,6 +361,11 @@ export default function Header() {
                 {!isExternal && (
                   <HeaderNavItem title="Monitoria" href="/monitor" disabled={!isUserAdmin}>
                     <MonitorIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
+                {showSessionMonitoring && (
+                  <HeaderNavItem title="Canais WhatsApp" href="/channels">
+                    <CellTowerIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
                 {availableCrudRoutes.length > 0 && (

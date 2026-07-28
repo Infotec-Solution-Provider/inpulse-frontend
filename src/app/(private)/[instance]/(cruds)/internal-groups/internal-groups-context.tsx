@@ -10,10 +10,11 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { InternalGroup } from "@/lib/sdk-local";
+import { InternalGroup, WhatsappGroup } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import { InternalChatContext } from "../../internal-context";
+import { useWhatsappContext } from "../../whatsapp-context";
 import internalGroupsReducer, {
   ChangeInternalGroupsStateAction,
   InternalGroupsContextState,
@@ -25,6 +26,7 @@ interface IInternalGroupsProviderProps {
 
 interface IInternalGroupsContext {
   state: InternalGroupsContextState;
+  wppGroups: WhatsappGroup[];
   dispatch: ActionDispatch<[ChangeInternalGroupsStateAction]>;
   updateInternalGroup: (
     id: number,
@@ -51,7 +53,9 @@ export const useInternalGroupsContext = () => {
 
 export default function InternalGroupsProvider({ children }: IInternalGroupsProviderProps) {
   const { internalApi } = useContext(InternalChatContext);
+  const { globalChannel, loaded, wppApi } = useWhatsappContext();
   const { token } = useAuthContext();
+  const [wppGroups, setWppGroups] = useState<WhatsappGroup[]>([]);
   const [state, dispatch] = useReducer(internalGroupsReducer, {
     internalGroups: [],
     totalRows: 0,
@@ -155,7 +159,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
           const groups = await internalApi.current.getInternalGroups();
 
           // Apply client-side filtering if needed
-          let filteredGroups = groups;
+          let filteredGroups = Array.isArray(groups) ? groups : [];
           if (filters.groupName) {
             filteredGroups = filteredGroups.filter((g) =>
               g.groupName?.toLowerCase().includes(filters.groupName.toLowerCase()),
@@ -189,6 +193,35 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     loadInternalGroups({});
   }, [token, internalApi, loadInternalGroups]);
 
+  useEffect(() => {
+    if (!token || !loaded) {
+      setWppGroups([]);
+      return;
+    }
+
+    const channelId = globalChannel.current?.id;
+    if (!channelId) {
+      setWppGroups([]);
+      return;
+    }
+
+    let active = true;
+    wppApi.current.setAuth(token);
+    wppApi.current
+      .getGroups(channelId)
+      .then((groups) => {
+        if (active) setWppGroups(groups);
+      })
+      .catch((err) => {
+        if (active) setWppGroups([]);
+        Logger.debug("Error loading WhatsApp groups", err as Error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [globalChannel, loaded, token, wppApi]);
+
   return (
     <InternalGroupsContext.Provider
       value={{
@@ -197,6 +230,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         updateInternalGroup,
         createInternalGroup,
         loadInternalGroups,
+        wppGroups,
         deleteInternalGroup,
         updateInternalGroupImage,
       }}

@@ -19,6 +19,7 @@ import {
 	UnifiedSchedule,
 	UnifiedScheduleFilters,
 	UnifiedSchedulesResponse,
+	WhatsappGroup,
 	WppChatsAndMessages,
 	WppChatWithDetailsAndMessages,
 	WppContact,
@@ -33,6 +34,8 @@ type GetChatResponse = DataResponse<WppChatWithDetailsAndMessages>;
 type GetMessageResponse = DataResponse<WppMessage>;
 type MarkChatAsReadResponse = DataResponse<WppMessage[]>;
 
+type GetNotificationsResponse = DataResponse<PaginatedNotificationsResponse>;
+
 interface FetchMessagesFilters {
 	minDate: string;
 	maxDate: string;
@@ -40,6 +43,53 @@ interface FetchMessagesFilters {
 }
 
 export default class WhatsappClient extends ApiClient {
+	private normalizeChatsPayload(
+		response:
+			| GetChatsResponse
+			| WppChatsAndMessages
+			| null
+			| undefined,
+	): WppChatsAndMessages {
+		const payload = Array.isArray((response as GetChatsResponse | undefined)?.data?.chats)
+			|| Array.isArray((response as GetChatsResponse | undefined)?.data?.messages)
+			? (response as GetChatsResponse).data
+			: (response as WppChatsAndMessages | null | undefined);
+
+		return {
+			chats: Array.isArray(payload?.chats) ? payload.chats : [],
+			messages: Array.isArray(payload?.messages) ? payload.messages : [],
+		};
+	}
+
+	private normalizeNotificationsPayload(
+		response:
+			| GetNotificationsResponse
+			| PaginatedNotificationsResponse
+			| null
+			| undefined,
+	): PaginatedNotificationsResponse {
+		const payload = Array.isArray(
+			(response as GetNotificationsResponse | undefined)?.data?.notifications,
+		)
+			? (response as GetNotificationsResponse).data
+			: (response as PaginatedNotificationsResponse | null | undefined);
+
+		return {
+			notifications: Array.isArray(payload?.notifications)
+				? payload.notifications
+				: [],
+			totalCount:
+				typeof payload?.totalCount === "number" ? payload.totalCount : 0,
+		};
+	}
+
+	public async getGroups(clientId: number) {
+		const { data: res } = await this.ax.get<DataResponse<WhatsappGroup[]>>(
+			`/api/whatsapp/${clientId}/groups`,
+		);
+		return res.data;
+	}
+
 	public async getChatsBySession(
 		messages = false,
 		contact = false,
@@ -49,10 +99,10 @@ export default class WhatsappClient extends ApiClient {
 			? { Authorization: `Bearer ${token}` }
 			: undefined;
 		const url = `/api/whatsapp/session/chats?messages=${messages}&contact=${contact}`;
-		const { data: res } = await this.ax.get<GetChatsResponse>(url, {
+		const { data: response } = await this.ax.get<GetChatsResponse | WppChatsAndMessages>(url, {
 			headers,
 		});
-		return res.data;
+		return this.normalizeChatsPayload(response);
 	}
 
 	public async getChatById(id: number) {
@@ -336,8 +386,8 @@ export default class WhatsappClient extends ApiClient {
 
 	public async getChatsMonitor() {
 		const url = `/api/whatsapp/session/monitor`;
-		const { data: res } = await this.ax.get<GetChatsResponse>(url);
-		return res.data;
+		const { data: response } = await this.ax.get<GetChatsResponse | WppChatsAndMessages>(url);
+		return this.normalizeChatsPayload(response);
 	}
 
 	public async transferAttendance(id: number, userId: number) {
@@ -354,11 +404,15 @@ export default class WhatsappClient extends ApiClient {
 			pageSize: String(params.pageSize),
 		});
 		const url = `/api/whatsapp/notifications?${searchParams.toString()}`;
-		const { data: res } =
-			await this.ax.get<DataResponse<PaginatedNotificationsResponse>>(
+		const { data: response } =
+			await this.ax.get<GetNotificationsResponse | PaginatedNotificationsResponse>(
 				url,
 			);
-		return res;
+
+		const normalized = this.normalizeNotificationsPayload(response);
+		return {
+			data: normalized,
+		} as GetNotificationsResponse;
 	}
 
 	/**

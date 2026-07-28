@@ -1,5 +1,5 @@
 import filesService from "@/lib/services/files.service";
-import { InternalGroup } from "@/lib/sdk-local";
+import { InternalGroup, WhatsappGroup } from "@/lib/sdk-local";
 import { PersonAdd } from "@mui/icons-material";
 import ImageIcon from "@mui/icons-material/Image";
 import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
@@ -57,10 +57,28 @@ interface EditInternalGroupModalProps {
 export default function EditInternalGroupModal({ group }: EditInternalGroupModalProps) {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
-  const { updateInternalGroup, updateInternalGroupImage } = useInternalGroupsContext();
+  const { updateInternalGroup, updateInternalGroupImage, wppGroups } =
+    useInternalGroupsContext();
 
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<WhatsappGroup | null>(() =>
+    group.wppGroupId ? { id: group.wppGroupId, name: group.wppGroupId } : null,
+  );
+
+  useEffect(() => {
+    if (!group.wppGroupId) {
+      setSelectedGroup(null);
+      return;
+    }
+
+    setSelectedGroup(
+      wppGroups.find((wppGroup) => wppGroup.id === group.wppGroupId) ?? {
+        id: group.wppGroupId,
+        name: group.wppGroupId,
+      },
+    );
+  }, [group.wppGroupId, wppGroups]);
 
   const mergedContacts: UnifiedContact[] = useMemo(() => {
     const map = new Map<string, UnifiedContact>();
@@ -129,7 +147,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
     await updateInternalGroup(group.id, {
       name,
       participants: participantIds,
-      wppGroupId: null,
+      wppGroupId: selectedGroup?.id ?? null,
     });
 
     if (groupImageRef.current) {
@@ -253,6 +271,27 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
                       theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
                   },
                 }}
+              />
+              <Autocomplete
+                options={wppGroups}
+                getOptionLabel={(option) => option.name}
+                getOptionKey={(option) => option.id}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Vincular Grupo WhatsApp"
+                    className="bg-white dark:bg-slate-700"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+                      },
+                    }}
+                  />
+                )}
+                value={selectedGroup}
+                onChange={(_, groupOption) => setSelectedGroup(groupOption)}
               />
             </div>
           </div>

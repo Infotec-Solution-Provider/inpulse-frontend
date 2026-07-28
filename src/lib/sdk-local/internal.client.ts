@@ -13,7 +13,31 @@ type GetChatsResponse = DataResponse<{
 	chats: (InternalChat & { participants: InternalChatMember[] })[];
 	messages: InternalMessage[];
 }>;
+
+type InternalChatsPayload = {
+	chats: (InternalChat & { participants: InternalChatMember[] })[];
+	messages: InternalMessage[];
+};
+
 export default class InternalChatClient extends ApiClient {
+	private normalizeChatsPayload(
+		response:
+			| GetChatsResponse
+			| InternalChatsPayload
+			| null
+			| undefined,
+	): InternalChatsPayload {
+		const payload = Array.isArray((response as GetChatsResponse | undefined)?.data?.chats)
+			|| Array.isArray((response as GetChatsResponse | undefined)?.data?.messages)
+			? (response as GetChatsResponse).data
+			: (response as InternalChatsPayload | null | undefined);
+
+		return {
+			chats: Array.isArray(payload?.chats) ? payload.chats : [],
+			messages: Array.isArray(payload?.messages) ? payload.messages : [],
+		};
+	}
+
 	public async createInternalChat(
 		participants: number[],
 		isGroup: boolean = false,
@@ -58,19 +82,23 @@ export default class InternalChatClient extends ApiClient {
 			? { Authorization: `Bearer ${token}` }
 			: undefined;
 
-		const { data: res } = await this.ax.get<GetChatsResponse>(url, {
+		const { data: response } = await this.ax.get<GetChatsResponse | InternalChatsPayload>(url, {
 			headers,
 		});
 
-		return res.data;
+		return this.normalizeChatsPayload(response);
 	}
 
 	public async getInternalGroups() {
 		const url = `/api/internal/groups`;
-		const { data: res } =
-			await this.ax.get<DataResponse<InternalGroup[]>>(url);
+		const { data: response } =
+			await this.ax.get<DataResponse<InternalGroup[]> | InternalGroup[]>(url);
 
-		return res.data;
+		if (Array.isArray(response)) {
+			return response;
+		}
+
+		return Array.isArray(response?.data) ? response.data : [];
 	}
 
 	public async sendMessageToInternalChat(data: InternalSendMessageData) {
@@ -139,9 +167,9 @@ export default class InternalChatClient extends ApiClient {
 	
 	public async getInternalChatsMonitor() {
 		const url = `/api/internal/monitor/chats`;
-		const { data: res } = await this.ax.get<GetChatsResponse>(url);
+		const { data: response } = await this.ax.get<GetChatsResponse | InternalChatsPayload>(url);
 
-		return res.data;
+		return this.normalizeChatsPayload(response);
 	}
 	
 	public setAuth(token: string) {

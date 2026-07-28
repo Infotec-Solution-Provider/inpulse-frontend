@@ -4,6 +4,8 @@ import InternalChatFinishedHandler from "@/lib/event-handlers/internal-chat-fini
 import InternalChatStartedHandler from "@/lib/event-handlers/internal-chat-started";
 import InternalReceiveMessageHandler from "@/lib/event-handlers/internal-message";
 import InternalMessageEditHandler from "@/lib/event-handlers/internal-message-edit";
+import InternalMessageDeleteHandler from "@/lib/event-handlers/internal-message-delete";
+import InternalMessageReactionHandler from "@/lib/event-handlers/internal-message-reaction";
 import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-status";
 import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
 import usersService from "@/lib/services/users.service";
@@ -103,13 +105,15 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
+    const safeContacts = Array.isArray(contacts) ? contacts : [];
+    const safeUsers = Array.isArray(users) ? users : [];
 
-    contacts.forEach((contact) => {
+    safeContacts.forEach((contact) => {
       const phone = contact.phone?.replace(/\D/g, "");
       if (phone && contact.name) map.set(phone, contact.name);
     });
 
-    users.forEach((u) => {
+    safeUsers.forEach((u) => {
       const phone = u.WHATSAPP?.replace(/\D/g, "");
       if (phone && u.NOME) map.set(phone, u.NOME);
     });
@@ -277,7 +281,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     usersService
       .getUsers({ perPage: "999" })
-      .then((res) => setUsers(res.data))
+      .then((res) => setUsers(Array.isArray(res?.data) ? res.data : []))
       .catch((err) => {
         console.error("Falha ao carregar usuários internos", err);
         setUsers([]);
@@ -289,14 +293,17 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     if (token && user && usersLoaded && users.length > 0) {
       api.current.setAuth(token);
       wppApi.current.getContacts().then((res) => {
-        setContacts(res);
+        setContacts(Array.isArray(res) ? res : []);
       });
-      api.current.getInternalChatsBySession().then(({ chats, messages }) => {
+      api.current.getInternalChatsBySession().then((payload) => {
+        const chats = Array.isArray(payload?.chats) ? payload.chats : [];
+        const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+
         const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
           user!.CODIGO,
           users,
-          chats || [],
-          messages || [],
+          chats,
+          messages,
         );
 
         setInternalChats(detailedChats || []);
@@ -423,6 +430,16 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         InternalMessageEditHandler(setMessages, setCurrentChatMessages, currentChatRef),
       );
 
+      socket.on(
+        SocketEventType.WppMessageReaction,
+        InternalMessageReactionHandler(setMessages, setCurrentChatMessages),
+      );
+
+      socket.on(
+        SocketEventType.InternalMessageDelete,
+        InternalMessageDeleteHandler(setMessages, setCurrentChatMessages),
+      );
+
       // Evento de status de mensagem
       socket.on(
         SocketEventType.InternalMessageStatus,
@@ -433,6 +450,9 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         socket.off(SocketEventType.InternalChatStarted);
         socket.off(SocketEventType.InternalMessage);
         socket.off(SocketEventType.InternalMessageStatus);
+        socket.off(SocketEventType.InternalMessageEdit);
+        socket.off(SocketEventType.WppMessageReaction);
+        socket.off(SocketEventType.InternalMessageDelete);
         socket.off(SocketEventType.InternalChatFinished);
       };
     }

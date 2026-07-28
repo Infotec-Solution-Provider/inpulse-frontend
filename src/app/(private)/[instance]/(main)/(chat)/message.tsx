@@ -49,6 +49,7 @@ export interface MessageProps {
   showQuotedMediaByDefault?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
+  reaction?: string;
   channelId?: number | null;
   agentId?: number | null;
   onSelect?: (id: number | string) => void;
@@ -95,6 +96,7 @@ export default function Message({
   quotedMessage,
   onQuote,
   isEdited = false,
+  reaction,
   isForwarded = false,
   isForwardMode = false,
   isReadOnly = false,
@@ -263,6 +265,11 @@ export default function Message({
               ))
             )}
           </div>
+          {reaction && (
+            <span className="self-start rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
+              {reaction}
+            </span>
+          )}
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {channelName && channelColor && (
               <span className="font-semibold" style={{ color: channelColor }}>

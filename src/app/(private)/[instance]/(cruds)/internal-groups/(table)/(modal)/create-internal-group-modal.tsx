@@ -16,6 +16,7 @@ import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import { toast } from "react-toastify";
 import ImageIcon from "@mui/icons-material/Image";
 import { useInternalGroupsContext } from "../../internal-groups-context";
+import { WhatsappGroup } from "@/lib/sdk-local";
 
 type UnifiedContact = {
   name: string;
@@ -37,11 +38,12 @@ const getParticipantKey = (participant: UnifiedContact) => {
 export default function CreateInternalGroupModal() {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
-  const { createInternalGroup } = useInternalGroupsContext();
+  const { createInternalGroup, wppGroups } = useInternalGroupsContext();
 
   const [name, setName] = useState("");
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<WhatsappGroup | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const groupImageRef = useRef<File | null>(null);
   const groupImageInputRef = useRef<HTMLInputElement | null>(null);
@@ -78,7 +80,7 @@ export default function CreateInternalGroupModal() {
     await createInternalGroup({
       name,
       participants: participants.map((p) => p.userId ?? 0),
-      groupId: null,
+      groupId: selectedGroup?.id ?? null,
       groupImage: groupImageRef.current,
     });
 
@@ -191,6 +193,27 @@ export default function CreateInternalGroupModal() {
                       theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
                   },
                 }}
+              />
+              <Autocomplete
+                options={wppGroups}
+                getOptionLabel={(option) => option.name}
+                getOptionKey={(option) => option.id}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Vincular Grupo WhatsApp"
+                    className="bg-white dark:bg-slate-700"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+                      },
+                    }}
+                  />
+                )}
+                value={selectedGroup}
+                onChange={(_, group) => setSelectedGroup(group)}
               />
             </div>
           </div>
