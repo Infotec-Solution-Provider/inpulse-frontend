@@ -102,7 +102,7 @@ class FrontendUsersService extends UsersClient {
 
 	public async getPushVapidPublicKey() {
 		const response = await this.ax.get<{ data: { publicKey: string | null } }>(
-			"/api/push/vapid-public-key",
+			"/api/users/push/vapid-public-key",
 		);
 
 		return response.data.data.publicKey;
