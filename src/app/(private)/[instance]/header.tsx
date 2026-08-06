@@ -16,6 +16,7 @@ import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import MonitorIcon from "@mui/icons-material/Monitor";
+import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
@@ -62,6 +63,7 @@ const crudsRoutes = (
     }
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
+    arr.push({ title: "Identificar remetentes", href: "/whatsapp-senders" });
   }
 
   if (canAccessInternalGroups(params, role)) {
@@ -279,6 +281,16 @@ const MobileMenu = ({
                 <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
               </ListItem>
               {renderMenuItems(reportsRoutes)}
+              <ListItem>
+                <Link href={`/${instance}/changelog`} className="w-full">
+                  <ListItemButton>
+                    <ListItemIcon>
+                      <NewReleasesIcon />
+                    </ListItemIcon>
+                    <ListItemText primary="Novidades" />
+                  </ListItemButton>
+                </Link>
+              </ListItem>
             </>
           )}
           <Divider sx={{ my: 2 }} />
@@ -399,6 +411,11 @@ export default function Header() {
                 {isUserAdmin && showReportsMenu && (
                   <HeaderNavItem title="Relatórios" routes={visibleReportsRoutes}>
                     <BarChartIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
+                {isUserAdmin && (
+                  <HeaderNavItem title="Novidades" href="/changelog">
+                    <NewReleasesIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
               </menu>

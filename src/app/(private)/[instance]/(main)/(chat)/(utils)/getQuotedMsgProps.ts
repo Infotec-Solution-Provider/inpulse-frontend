@@ -5,9 +5,6 @@ import getInternalMessageAuthor from "../../../../../../lib/utils/get-internal-m
 import { replaceMentions } from "@/lib/utils/message-mentions";
 import { WppContact } from "@/lib/sdk-local";
 
-
-
-
 export default function getQuotedMsgProps(
   quotedMsg: InternalMessage | WppMessage | null,
   style: "received" | "sent" | "system" | "thirdparty",
@@ -15,13 +12,18 @@ export default function getQuotedMsgProps(
   contacts: WppContact[] = [],
   chat?: DetailedChat | null,
   contactsMap?: Map<string, string>,
+  whatsappSenderNameMap?: Map<string, string>,
 ): QuotedMessageProps | null {
-
   if (!quotedMsg) {
     return null;
   }
 
-  let authorName: string | null = getInternalMessageAuthor(quotedMsg.from, contactsMap || new Map(), users);
+  const authorName = getInternalMessageAuthor(
+    quotedMsg.from,
+    contactsMap || new Map(),
+    users,
+    whatsappSenderNameMap,
+  );
 
   const result = {
     id: quotedMsg.id,

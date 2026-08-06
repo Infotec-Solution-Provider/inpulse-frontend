@@ -29,6 +29,7 @@ export default function InternalReceiveMessageHandler(
   contacts: WppContact[],
   loggedUser: User,
   phoneNameMap: Map<string, string>,
+  whatsappSenderNameMap: Map<string, string>,
   notify?: (payload: {
     event: "new_message" | "mention";
     title: string;
@@ -61,7 +62,12 @@ export default function InternalReceiveMessageHandler(
     }
 
     if (message.from !== `user:${loggedUser.CODIGO}`) {
-      const author = getInternalMessageAuthor(message.from, phoneNameMap, users);
+      const author = getInternalMessageAuthor(
+        message.from,
+        phoneNameMap,
+        users,
+        whatsappSenderNameMap,
+      );
       const bodyFinal =
         message.type !== "chat"
           ? types[message.type] || "Enviou um arquivo"

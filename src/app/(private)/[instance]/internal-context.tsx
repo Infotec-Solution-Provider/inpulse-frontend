@@ -71,6 +71,8 @@ interface InternalChatContextType {
   deleteInternalChat: (id: number) => Promise<void>;
   finishInternalChat: (id: number) => Promise<void>;
   phoneNameMap: Map<string, string>;
+  whatsappSenderNameMap: Map<string, string>;
+  refreshWhatsappSenderNames: () => Promise<void>;
 
   users: User[];
   contacts: WppContact[];
@@ -112,6 +114,9 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
   const [contacts, setContacts] = useState<WppContact[]>([]);
+  const [whatsappSenderNameMap, setWhatsappSenderNameMap] = useState<Map<string, string>>(
+    new Map(),
+  );
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -146,11 +151,36 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const internalChatsRef = useRef<DetailedInternalChat[]>([]);
   const phoneNameMapRef = useRef(phoneNameMap);
   const notificationPreferencesRef = useRef(notificationPreferences);
+  const whatsappSenderNameMapRef = useRef(whatsappSenderNameMap);
   usersRef.current = users;
   contactsRef.current = contacts;
   internalChatsRef.current = internalChats;
   phoneNameMapRef.current = phoneNameMap;
   notificationPreferencesRef.current = notificationPreferences;
+  whatsappSenderNameMapRef.current = whatsappSenderNameMap;
+
+  const refreshWhatsappSenderNames = useCallback(async () => {
+    if (!token) {
+      setWhatsappSenderNameMap(new Map());
+      return;
+    }
+
+    api.current.setAuth(token);
+    const names = await api.current.getWhatsappSenderNames();
+    setWhatsappSenderNameMap(
+      new Map(
+        names
+          .filter((sender) => sender.displayName)
+          .map((sender) => [sender.senderId, sender.displayName]),
+      ),
+    );
+  }, [token]);
+
+  useEffect(() => {
+    void refreshWhatsappSenderNames().catch(() => {
+      setWhatsappSenderNameMap(new Map());
+    });
+  }, [refreshWhatsappSenderNames]);
 
   useEffect(() => {
     const originalTitle = "InPulse";
@@ -533,6 +563,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
             contactsRef.current,
             user!,
             phoneNameMapRef.current,
+            whatsappSenderNameMapRef.current,
             ({ event, title, body, isChatFocused }) => {
               const preferences = notificationPreferencesRef.current;
               if (
@@ -618,6 +649,8 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         deleteInternalChat,
         finishInternalChat,
         phoneNameMap,
+        whatsappSenderNameMap,
+        refreshWhatsappSenderNames,
         hasOlderInternalMessages,
         loadOlderInternalMessages,
         historyPrependRef,
