@@ -1,8 +1,9 @@
-"use-client";
+"use client";
 
 // --- 1. IMPORTAÇÕES ---
 import { AuthContext } from "@/app/auth-context";
 import { WppMessage } from "@/lib/sdk-local";
+import shouldAutoScrollChat from "@/lib/chat-scroll-policy";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useWhatsappContext } from "../../whatsapp-context";
@@ -40,22 +41,28 @@ export default function RenderWhatsappChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
-  const { currentChatMessages } = useWhatsappContext();
+  const { currentChatMessages, hasOlderMessages, loadOlderMessages, historyPrependRef } =
+    useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { instance } = useContext(AuthContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isSelectionMode && messagesEndRef.current) {
+    const isHistoryPrepend = historyPrependRef.current;
+    if (isHistoryPrepend) {
+      historyPrependRef.current = false;
+    }
+    if (shouldAutoScrollChat(isHistoryPrepend, isSelectionMode) && scrollContainerRef.current) {
       const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView();
+        const container = scrollContainerRef.current;
+        if (container) container.scrollTop = container.scrollHeight;
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentChatMessages, isSelectionMode]);
+  }, [currentChatMessages, historyPrependRef, isSelectionMode]);
 
   const messagesToRender = useMemo(
     () =>
@@ -78,10 +85,6 @@ export default function RenderWhatsappChatMessages({
     [messagesToRender, visibleCount],
   );
 
-  useEffect(() => {
-    setVisibleFileCount(10);
-  }, [currentChatMessages]);
-
   const visibleMessageFileIds = useMemo(
     () =>
       visibleMessages
@@ -98,13 +101,23 @@ export default function RenderWhatsappChatMessages({
   const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
 
   return (
-    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
-      {visibleCount < messagesToRender.length && (
+    <div
+      ref={scrollContainerRef}
+      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+    >
+      {(visibleCount < messagesToRender.length || hasOlderMessages) && (
         <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
-            onClick={() => setVisibleCount((prev) => Math.min(prev + 30, messagesToRender.length))}
+            onClick={async () => {
+              if (visibleCount < messagesToRender.length) {
+                setVisibleCount((prev) => Math.min(prev + 30, messagesToRender.length));
+                return;
+              }
+              const loaded = await loadOlderMessages();
+              if (loaded > 0) setVisibleCount((prev) => prev + loaded);
+            }}
           >
             Carregar mais
           </Button>
@@ -130,12 +143,7 @@ export default function RenderWhatsappChatMessages({
           const findQuoted = m.contactId && m.quotedId && getMessageById(m.contactId, m.quotedId);
           const quotedMsgProps =
             findQuoted && "to" in findQuoted
-              ? getQuotedMsgProps(
-                  findQuoted,
-                  getWppMessageStyle(findQuoted),
-                  [],
-                  [],
-                )
+              ? getQuotedMsgProps(findQuoted, getWppMessageStyle(findQuoted), [], [])
               : null;
 
           return (
@@ -178,7 +186,7 @@ export default function RenderWhatsappChatMessages({
             />
           );
         })}
-        <div ref={messagesEndRef} className="h-1" />
+        <div className="h-1" />
       </ul>
     </div>
   );

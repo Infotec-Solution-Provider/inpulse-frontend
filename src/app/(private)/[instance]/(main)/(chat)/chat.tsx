@@ -81,14 +81,9 @@ export default function Chat({
         )}
       </div>
       {!isReadOnlyMode && (!state?.file || state.sendAsAudio) && (
-        <>
-          <div className="sticky bottom-0 z-30 border-t border-slate-300/70 bg-slate-200/95 backdrop-blur dark:border-slate-700/70 dark:bg-slate-800/95 md:hidden">
-            <ChatSendMessageArea />
-          </div>
-          <div className="hidden border-t border-slate-300/70 dark:border-slate-700/70 md:block">
-            <ChatSendMessageArea />
-          </div>
-        </>
+        <div className="sticky bottom-0 z-30 border-t border-slate-300/70 bg-slate-200/95 backdrop-blur dark:border-slate-700/70 dark:bg-slate-800/95 md:static md:bg-transparent md:backdrop-blur-none dark:md:bg-transparent">
+          <ChatSendMessageArea />
+        </div>
       )}
     </div>
   );

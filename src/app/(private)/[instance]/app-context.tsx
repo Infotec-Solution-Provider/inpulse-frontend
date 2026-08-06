@@ -1,5 +1,13 @@
 "use client";
-import { createContext, ReactElement, ReactNode, useContext, useEffect } from "react";
+import {
+  createContext,
+  ReactElement,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
 
 interface AppContextProps {
   modal: ReactNode;
@@ -24,13 +32,18 @@ export function useAppContext() {
 }
 
 export default function AppProvider({ children, modal, setModal }: AppProviderProps) {
-  const openModal = (modal: ReactElement) => {
-    setModal(modal);
-  };
+  const openModal = useCallback(
+    (modal: ReactElement) => {
+      setModal(modal);
+    },
+    [setModal],
+  );
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModal(null);
-  };
+  }, [setModal]);
+
+  const value = useMemo(() => ({ modal, openModal, closeModal }), [closeModal, modal, openModal]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -40,15 +53,5 @@ export default function AppProvider({ children, modal, setModal }: AppProviderPr
     }
   }, []);
 
-  return (
-    <AppContext.Provider
-      value={{
-        modal,
-        openModal,
-        closeModal,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

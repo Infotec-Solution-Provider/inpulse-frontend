@@ -63,8 +63,10 @@ export default function processInternalChatsAndMessages(
   const detailedChats = chats.map((chat) => ({
     ...chat,
     chatType: "internal",
-    isUnread: messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
-    lastMessage: lastMessages[chat.id] || null,
+    isUnread:
+      chat.isUnread ??
+      messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
+    lastMessage: chat.lastMessage ?? (lastMessages[chat.id] || null),
     users: users.filter((user) => chat.participants.some((p) => p.userId === user.CODIGO)),
   })) as DetailedInternalChat[];
 

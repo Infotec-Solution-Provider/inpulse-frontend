@@ -25,11 +25,18 @@ import {
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "@/app/auth-context";
 import { useAppContext } from "../../app-context";
-import { WhatsappContext } from "../../whatsapp-context";
+import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
 import { canAccessInternalChats, isExternalOperator } from "@/lib/permissions/operator-access";
-import SchedulesModal from "./(schedules-modal)/schedules-modal";
-import StartChatModal from "./(start-chat-modal)/start-chat-modal";
-import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
+import dynamic from "next/dynamic";
+
+const SchedulesModal = dynamic(() => import("./(schedules-modal)/schedules-modal"), { ssr: false });
+const StartChatModal = dynamic(() => import("./(start-chat-modal)/start-chat-modal"), {
+  ssr: false,
+});
+const StartInternalChatModal = dynamic(
+  () => import("./(start-internal-chat-modal)/start-internal-chat-modal"),
+  { ssr: false },
+);
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
   all: "",
@@ -42,7 +49,7 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 export default function ChatsMenuFilters() {
   const { openModal, closeModal } = useAppContext();
   const { user } = useContext(AuthContext);
-  const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
+  const { changeChatFilters, chatFilters, parameters } = useWhatsappChatList();
   const isExternal = isExternalOperator(user?.NIVEL);
   const canStartInternalChat = canAccessInternalChats(parameters, user?.NIVEL);
 
@@ -176,37 +183,35 @@ export default function ChatsMenuFilters() {
           open={isFilterMenuOpen}
           onClose={handleFilterMenuClose}
         >
-          {!isExternal && (
-            [
-              <MenuItem
-                key="all"
-                onClick={() => handleChangeShowingType("all")}
-                aria-hidden={chatFilters.showingType === "all"}
-                className="flex items-center gap-2"
-              >
-                <CategoryIcon />
-                <p>Todas</p>
-              </MenuItem>,
-              <MenuItem
-                key="unread"
-                onClick={() => handleChangeShowingType("unread")}
-                aria-hidden={chatFilters.showingType === "unread"}
-                className="flex items-center gap-2"
-              >
-                <MarkChatUnreadIcon />
-                <p>Não lidas</p>
-              </MenuItem>,
-              <MenuItem
-                key="scheduled"
-                onClick={() => handleChangeShowingType("scheduled")}
-                aria-hidden={chatFilters.showingType === "scheduled"}
-                className="flex items-center gap-2"
-              >
-                <ScheduleIcon />
-                <p>Agendados</p>
-              </MenuItem>
-            ]
-          )}
+          {!isExternal && [
+            <MenuItem
+              key="all"
+              onClick={() => handleChangeShowingType("all")}
+              aria-hidden={chatFilters.showingType === "all"}
+              className="flex items-center gap-2"
+            >
+              <CategoryIcon />
+              <p>Todas</p>
+            </MenuItem>,
+            <MenuItem
+              key="unread"
+              onClick={() => handleChangeShowingType("unread")}
+              aria-hidden={chatFilters.showingType === "unread"}
+              className="flex items-center gap-2"
+            >
+              <MarkChatUnreadIcon />
+              <p>Não lidas</p>
+            </MenuItem>,
+            <MenuItem
+              key="scheduled"
+              onClick={() => handleChangeShowingType("scheduled")}
+              aria-hidden={chatFilters.showingType === "scheduled"}
+              className="flex items-center gap-2"
+            >
+              <ScheduleIcon />
+              <p>Agendados</p>
+            </MenuItem>,
+          ]}
           <MenuItem
             onClick={() => handleChangeShowingType("internal")}
             aria-hidden={chatFilters.showingType === "internal"}

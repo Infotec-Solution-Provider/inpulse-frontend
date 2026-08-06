@@ -43,10 +43,11 @@ export default function processChatsAndMessages(
     const detailedChat: DetailedChat = {
       ...chat,
       chatType: "wpp",
-      isUnread: messages.some(
-        (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
-      ),
-      lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
+      isUnread:
+        chat.isUnread ??
+        messages.some((m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m)),
+      lastMessage:
+        chat.lastMessage ?? (chat.contactId ? lastMessages[chat.contactId] || null : null),
     };
 
     // Se tem uma mensagem do contato, que status seja diferente de "READ" e que não seja nossa

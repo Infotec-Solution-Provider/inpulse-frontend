@@ -9,6 +9,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { User } from "@/lib/sdk-local";
 import usersService from "../lib/services/users.service";
+import { createCacheScope } from "@/lib/cache/cache-scope";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
 
 const LAST_TENANT_STORAGE_KEY = "@inpulse/last-tenant";
 
@@ -30,7 +32,6 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-
 
   const signIn = useCallback(
     async (instance: string, { login, password }: AuthSignForm) => {
@@ -54,6 +55,9 @@ export default function AuthProvider({ children }: ProviderProps) {
   );
 
   const signOut = useCallback(() => {
+    if (user && instanceRef.current) {
+      void hybridCache.clearScope(createCacheScope(instanceRef.current, user.CODIGO));
+    }
     setToken(null);
     if (instanceRef.current) {
       localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
@@ -64,7 +68,12 @@ export default function AuthProvider({ children }: ProviderProps) {
 
     router.replace("/");
     setUser(null);
-  }, [router]);
+  }, [router, user]);
+
+  useEffect(() => {
+    window.addEventListener("inpulse:unauthorized", signOut);
+    return () => window.removeEventListener("inpulse:unauthorized", signOut);
+  }, [signOut]);
 
   useEffect(() => {
     const instance = getInstanceFromPath(pathname);
@@ -102,6 +111,7 @@ export default function AuthProvider({ children }: ProviderProps) {
           toast.error(err.message || "Sessão expirada, faça o login novamente!");
           if (instanceRef.current) {
             localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+            void hybridCache.clearInstance(instanceRef.current);
           }
           setUser(null);
 

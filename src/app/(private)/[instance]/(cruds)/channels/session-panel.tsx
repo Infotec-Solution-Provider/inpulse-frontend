@@ -103,7 +103,9 @@ const STABILITY_LABELS: Record<ChannelSession["stability"], string> = {
 
 function formatDate(value: string | null | undefined): string {
   if (!value) return "Sem registro";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" }).format(new Date(value));
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "medium" }).format(
+    new Date(value),
+  );
 }
 
 function relativeTime(value: string | null | undefined, now: number): string {
@@ -123,12 +125,33 @@ function duration(seconds: number): string {
 }
 
 function StateChip({ state }: { state: string | undefined }) {
-  const color = state === "CONNECTED" ? "success" : state === "ERROR" || state === "LOGGED_OUT" ? "error" : state === "DISCONNECTED" ? "warning" : "info";
-  return <Chip size="small" color={color} variant="outlined" label={state ? STATE_LABELS[state] || state : "Sem dados"} />;
+  const color =
+    state === "CONNECTED"
+      ? "success"
+      : state === "ERROR" || state === "LOGGED_OUT"
+        ? "error"
+        : state === "DISCONNECTED"
+          ? "warning"
+          : "info";
+  return (
+    <Chip
+      size="small"
+      color={color}
+      variant="outlined"
+      label={state ? STATE_LABELS[state] || state : "Sem dados"}
+    />
+  );
 }
 
 function StabilityChip({ value }: { value: ChannelSession["stability"] }) {
-  const color = value === "STABLE" ? "success" : value === "UNSTABLE" || value === "LOGGED_OUT" ? "error" : value === "ATTENTION" ? "warning" : "default";
+  const color =
+    value === "STABLE"
+      ? "success"
+      : value === "UNSTABLE" || value === "LOGGED_OUT"
+        ? "error"
+        : value === "ATTENTION"
+          ? "warning"
+          : "default";
   return <Chip size="small" color={color} label={STABILITY_LABELS[value]} />;
 }
 
@@ -143,23 +166,33 @@ export default function ChannelSessionPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [pending, setPending] = useState<{ clientId: number; action: "restart" | "reset" } | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{ channel: ChannelSession; action: "restart" | "reset" } | null>(null);
+  const [pending, setPending] = useState<{ clientId: number; action: "restart" | "reset" } | null>(
+    null,
+  );
+  const [confirmAction, setConfirmAction] = useState<{
+    channel: ChannelSession;
+    action: "restart" | "reset";
+  } | null>(null);
 
-  const loadChannels = useCallback(async (silent = false) => {
-    if (!token) return;
-    if (!silent) setLoading(true);
-    try {
-      wppApi.current.setAuth(token);
-      const response = await wppApi.current.ax.get<ChannelSession[] | { data: ChannelSession[] }>("/api/whatsapp/session-monitor/clients");
-      setChannels(Array.isArray(response.data) ? response.data : response.data.data);
-      setError(null);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Falha ao carregar os canais");
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [token, wppApi]);
+  const loadChannels = useCallback(
+    async (silent = false) => {
+      if (!token) return;
+      if (!silent) setLoading(true);
+      try {
+        wppApi.current.setAuth(token);
+        const response = await wppApi.current.ax.get<ChannelSession[] | { data: ChannelSession[] }>(
+          "/api/whatsapp/session-monitor/clients",
+        );
+        setChannels(Array.isArray(response.data) ? response.data : response.data.data);
+        setError(null);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Falha ao carregar os canais");
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [token, wppApi],
+  );
 
   useEffect(() => {
     void loadChannels();
@@ -180,43 +213,61 @@ export default function ChannelSessionPanel() {
 
   useEffect(() => {
     const onStatus = (status: WWEBJSSessionStatusEventData) => {
-      setChannels((current) => current.map((channel) => channel.id === status.clientId ? {
-        ...channel,
-        phone: status.phone,
-        snapshot: channel.snapshot ? {
-          ...channel.snapshot,
-          state: status.state,
-          stateChangedAt: status.stateChangedAt,
-          lastObservedAt: status.lastObservedAt,
-          reconnectAttempts: status.reconnectAttempts,
-          currentOperationId: status.currentOperation?.id || null,
-          currentOperationType: status.currentOperation?.type || null,
-          currentOperationStarted: status.currentOperation?.startedAt || null,
-        } : channel.snapshot,
-      } : channel));
+      setChannels((current) =>
+        current.map((channel) =>
+          channel.id === status.clientId
+            ? {
+                ...channel,
+                phone: status.phone,
+                snapshot: channel.snapshot
+                  ? {
+                      ...channel.snapshot,
+                      state: status.state,
+                      stateChangedAt: status.stateChangedAt,
+                      lastObservedAt: status.lastObservedAt,
+                      reconnectAttempts: status.reconnectAttempts,
+                      currentOperationId: status.currentOperation?.id || null,
+                      currentOperationType: status.currentOperation?.type || null,
+                      currentOperationStarted: status.currentOperation?.startedAt || null,
+                    }
+                  : channel.snapshot,
+              }
+            : channel,
+        ),
+      );
       void loadChannels(true);
     };
-    socket.on(SocketEventType.WwebjsSessionStatus, onStatus);
-    return () => socket.off(SocketEventType.WwebjsSessionStatus);
+    return socket.subscribe(SocketEventType.WwebjsSessionStatus, onStatus);
   }, [loadChannels, socket]);
 
-  const newestObservation = useMemo(() => channels.reduce<string | null>((latest, channel) => {
-    const observed = channel.snapshot?.lastObservedAt;
-    return observed && (!latest || new Date(observed) > new Date(latest)) ? observed : latest;
-  }, null), [channels]);
+  const newestObservation = useMemo(
+    () =>
+      channels.reduce<string | null>((latest, channel) => {
+        const observed = channel.snapshot?.lastObservedAt;
+        return observed && (!latest || new Date(observed) > new Date(latest)) ? observed : latest;
+      }, null),
+    [channels],
+  );
 
   const showDetails = async (channel: ChannelSession) => {
     try {
-      const response = await wppApi.current.ax.get<ChannelSession>(`/api/whatsapp/session-monitor/clients/${channel.id}`);
+      const response = await wppApi.current.ax.get<ChannelSession>(
+        `/api/whatsapp/session-monitor/clients/${channel.id}`,
+      );
       openModal(<SessionDetail channel={response.data} onClose={closeModal} />);
     } catch (detailError) {
-      toast.error(detailError instanceof Error ? detailError.message : "Falha ao carregar o histórico");
+      toast.error(
+        detailError instanceof Error ? detailError.message : "Falha ao carregar o histórico",
+      );
     }
   };
 
-  const showQr = useCallback((channel: ChannelSession) => {
-    openModal(<SessionQr channel={channel} api={wppApi.current.ax} onClose={closeModal} />);
-  }, [closeModal, openModal, wppApi]);
+  const showQr = useCallback(
+    (channel: ChannelSession) => {
+      openModal(<SessionQr channel={channel} api={wppApi.current.ax} onClose={closeModal} />);
+    },
+    [closeModal, openModal, wppApi],
+  );
 
   const executeAction = async () => {
     if (!confirmAction) return;
@@ -228,12 +279,17 @@ export default function ChannelSessionPanel() {
         await wppApi.current.ax.post(`/api/whatsapp/session-monitor/clients/${channel.id}/restart`);
         toast.info("Reinício solicitado. A autenticação será preservada.");
       } else {
-        await wppApi.current.ax.post(`/api/whatsapp/session-monitor/clients/${channel.id}/reset-qr`, { confirm: true });
+        await wppApi.current.ax.post(
+          `/api/whatsapp/session-monitor/clients/${channel.id}/reset-qr`,
+          { confirm: true },
+        );
         showQr(channel);
       }
       await loadChannels(true);
     } catch (actionError) {
-      toast.error(actionError instanceof Error ? actionError.message : "Falha ao executar a operação");
+      toast.error(
+        actionError instanceof Error ? actionError.message : "Falha ao executar a operação",
+      );
     } finally {
       setPending(null);
     }
@@ -243,9 +299,36 @@ export default function ChannelSessionPanel() {
     const busy = !!channel.snapshot?.currentOperationId || pending?.clientId === channel.id;
     return (
       <div className="flex min-w-[132px] justify-end gap-1">
-        <Tooltip title="Histórico de 24 horas"><span><IconButton size="small" onClick={() => void showDetails(channel)}><HistoryIcon fontSize="small" /></IconButton></span></Tooltip>
-        <Tooltip title="Reiniciar sessão"><span><IconButton size="small" disabled={busy} onClick={() => setConfirmAction({ channel, action: "restart" })}><RestartAltIcon fontSize="small" /></IconButton></span></Tooltip>
-        <Tooltip title="Gerar novo QR"><span><IconButton size="small" color="error" disabled={busy} onClick={() => setConfirmAction({ channel, action: "reset" })}><QrCode2Icon fontSize="small" /></IconButton></span></Tooltip>
+        <Tooltip title="Histórico de 24 horas">
+          <span>
+            <IconButton size="small" onClick={() => void showDetails(channel)}>
+              <HistoryIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Reiniciar sessão">
+          <span>
+            <IconButton
+              size="small"
+              disabled={busy}
+              onClick={() => setConfirmAction({ channel, action: "restart" })}
+            >
+              <RestartAltIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="Gerar novo QR">
+          <span>
+            <IconButton
+              size="small"
+              color="error"
+              disabled={busy}
+              onClick={() => setConfirmAction({ channel, action: "reset" })}
+            >
+              <QrCode2Icon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
       </div>
     );
   };
@@ -256,50 +339,148 @@ export default function ChannelSessionPanel() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-700">
           <div>
             <h1 className="text-2xl font-semibold">Canais WhatsApp</h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300" title={formatDate(newestObservation)}>
+            <p
+              className="mt-1 text-sm text-slate-600 dark:text-slate-300"
+              title={formatDate(newestObservation)}
+            >
               Última atualização: {relativeTime(newestObservation, now)}
             </p>
           </div>
-          <Tooltip title="Atualizar canais"><span><IconButton onClick={() => void loadChannels()} disabled={loading}><RefreshIcon /></IconButton></span></Tooltip>
+          <Tooltip title="Atualizar canais">
+            <span>
+              <IconButton onClick={() => void loadChannels()} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </span>
+          </Tooltip>
         </div>
 
-        {error && <Alert severity="warning" className="mb-4">{error}. Os últimos dados permanecem visíveis.</Alert>}
+        {error && (
+          <Alert severity="warning" className="mb-4">
+            {error}. Os últimos dados permanecem visíveis.
+          </Alert>
+        )}
         {loading && channels.length === 0 ? (
-          <div className="flex min-h-64 items-center justify-center"><CircularProgress size={30} /></div>
+          <div className="flex min-h-64 items-center justify-center">
+            <CircularProgress size={30} />
+          </div>
         ) : channels.length === 0 ? (
           <Alert severity="info">Nenhum canal remoto está disponível para este setor.</Alert>
         ) : mobile ? (
           <div className="grid gap-3">
             {channels.map((channel) => (
-              <article key={channel.id} className="rounded-md border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-gray-900">
-                <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{channel.name}</h2><p className="text-sm text-slate-500">{channel.phone || "Sem telefone"}</p></div>{actions(channel)}</div>
-                <div className="mt-3 flex flex-wrap gap-2"><StateChip state={channel.snapshot?.state} /><StabilityChip value={channel.stability} /></div>
-                <div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><span className="text-slate-500">Conexão</span><p>{duration(channel.connectedUptimeSeconds)}</p></div><div><span className="text-slate-500">Quedas em 24h</span><p>{channel.disconnections24h}</p></div></div>
-                <p className="mt-3 text-xs text-slate-500" title={formatDate(channel.snapshot?.lastObservedAt)}>Atualizado {relativeTime(channel.snapshot?.lastObservedAt, now)}</p>
+              <article
+                key={channel.id}
+                className="rounded-md border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-gray-900"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold">{channel.name}</h2>
+                    <p className="text-sm text-slate-500">{channel.phone || "Sem telefone"}</p>
+                  </div>
+                  {actions(channel)}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <StateChip state={channel.snapshot?.state} />
+                  <StabilityChip value={channel.stability} />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-slate-500">Conexão</span>
+                    <p>{duration(channel.connectedUptimeSeconds)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Quedas em 24h</span>
+                    <p>{channel.disconnections24h}</p>
+                  </div>
+                </div>
+                <p
+                  className="mt-3 text-xs text-slate-500"
+                  title={formatDate(channel.snapshot?.lastObservedAt)}
+                >
+                  Atualizado {relativeTime(channel.snapshot?.lastObservedAt, now)}
+                </p>
               </article>
             ))}
           </div>
         ) : (
           <TableContainer className="rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-gray-900">
             <Table stickyHeader sx={{ minWidth: 980 }}>
-              <TableHead><TableRow><TableCell>Canal</TableCell><TableCell>Estado</TableCell><TableCell>Estabilidade</TableCell><TableCell>Conexão atual</TableCell><TableCell>Quedas 24h</TableCell><TableCell>Última atualização</TableCell><TableCell align="right">Ações</TableCell></TableRow></TableHead>
-              <TableBody>{channels.map((channel) => {
-                const stale = channel.snapshot && now - new Date(channel.snapshot.lastObservedAt).getTime() > 90_000;
-                return <TableRow key={channel.id} hover><TableCell><strong>{channel.name}</strong><div className="text-xs text-slate-500">{channel.phone || "Sem telefone"}</div></TableCell><TableCell><StateChip state={channel.snapshot?.state} /></TableCell><TableCell><Tooltip title={channel.stabilityReason}><span><StabilityChip value={channel.stability} /></span></Tooltip></TableCell><TableCell>{duration(channel.connectedUptimeSeconds)}</TableCell><TableCell>{channel.disconnections24h}</TableCell><TableCell><span title={formatDate(channel.snapshot?.lastObservedAt)}>{relativeTime(channel.snapshot?.lastObservedAt, now)}</span>{stale && <div className="text-xs font-medium text-amber-700">Dados desatualizados</div>}</TableCell><TableCell align="right">{actions(channel)}</TableCell></TableRow>;
-              })}</TableBody>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Canal</TableCell>
+                  <TableCell>Estado</TableCell>
+                  <TableCell>Estabilidade</TableCell>
+                  <TableCell>Conexão atual</TableCell>
+                  <TableCell>Quedas 24h</TableCell>
+                  <TableCell>Última atualização</TableCell>
+                  <TableCell align="right">Ações</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {channels.map((channel) => {
+                  const stale =
+                    channel.snapshot &&
+                    now - new Date(channel.snapshot.lastObservedAt).getTime() > 90_000;
+                  return (
+                    <TableRow key={channel.id} hover>
+                      <TableCell>
+                        <strong>{channel.name}</strong>
+                        <div className="text-xs text-slate-500">
+                          {channel.phone || "Sem telefone"}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StateChip state={channel.snapshot?.state} />
+                      </TableCell>
+                      <TableCell>
+                        <Tooltip title={channel.stabilityReason}>
+                          <span>
+                            <StabilityChip value={channel.stability} />
+                          </span>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>{duration(channel.connectedUptimeSeconds)}</TableCell>
+                      <TableCell>{channel.disconnections24h}</TableCell>
+                      <TableCell>
+                        <span title={formatDate(channel.snapshot?.lastObservedAt)}>
+                          {relativeTime(channel.snapshot?.lastObservedAt, now)}
+                        </span>
+                        {stale && (
+                          <div className="text-xs font-medium text-amber-700">
+                            Dados desatualizados
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">{actions(channel)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
             </Table>
           </TableContainer>
         )}
       </div>
 
       <Dialog open={!!confirmAction} onClose={() => setConfirmAction(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>{confirmAction?.action === "reset" ? "Gerar novo QR code?" : "Reiniciar sessão?"}</DialogTitle>
+        <DialogTitle>
+          {confirmAction?.action === "reset" ? "Gerar novo QR code?" : "Reiniciar sessão?"}
+        </DialogTitle>
         <DialogContent>
           {confirmAction?.action === "reset"
             ? "O aparelho atual será desvinculado e será necessário ler um novo QR code."
             : "O socket será recriado sem remover a autenticação atual."}
         </DialogContent>
-        <DialogActions><Button onClick={() => setConfirmAction(null)}>Cancelar</Button><Button color={confirmAction?.action === "reset" ? "error" : "primary"} variant="contained" onClick={() => void executeAction()}>Confirmar</Button></DialogActions>
+        <DialogActions>
+          <Button onClick={() => setConfirmAction(null)}>Cancelar</Button>
+          <Button
+            color={confirmAction?.action === "reset" ? "error" : "primary"}
+            variant="contained"
+            onClick={() => void executeAction()}
+          >
+            Confirmar
+          </Button>
+        </DialogActions>
       </Dialog>
     </div>
   );
@@ -308,15 +489,57 @@ export default function ChannelSessionPanel() {
 function SessionDetail({ channel, onClose }: { channel: ChannelSession; onClose: () => void }) {
   return (
     <div className="max-h-[85dvh] w-[min(720px,92vw)] overflow-y-auto rounded-md bg-white p-5 text-slate-950 dark:bg-gray-900 dark:text-slate-100">
-      <div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-semibold">{channel.name}</h2><p className="text-sm text-slate-500">Janela de estabilidade: 24 horas</p></div><Button onClick={onClose}>Fechar</Button></div>
-      <div className="my-5 grid gap-3 border-y border-slate-200 py-4 sm:grid-cols-3 dark:border-slate-700"><div><span className="text-xs text-slate-500">Processo iniciado</span><p className="text-sm">{formatDate(channel.snapshot?.processStartedAt)}</p></div><div><span className="text-xs text-slate-500">Última conexão</span><p className="text-sm">{formatDate(channel.snapshot?.lastConnectedAt)}</p></div><div><span className="text-xs text-slate-500">Última desconexão</span><p className="text-sm">{formatDate(channel.snapshot?.lastDisconnectedAt)}</p></div></div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">{channel.name}</h2>
+          <p className="text-sm text-slate-500">Janela de estabilidade: 24 horas</p>
+        </div>
+        <Button onClick={onClose}>Fechar</Button>
+      </div>
+      <div className="my-5 grid gap-3 border-y border-slate-200 py-4 dark:border-slate-700 sm:grid-cols-3">
+        <div>
+          <span className="text-xs text-slate-500">Processo iniciado</span>
+          <p className="text-sm">{formatDate(channel.snapshot?.processStartedAt)}</p>
+        </div>
+        <div>
+          <span className="text-xs text-slate-500">Última conexão</span>
+          <p className="text-sm">{formatDate(channel.snapshot?.lastConnectedAt)}</p>
+        </div>
+        <div>
+          <span className="text-xs text-slate-500">Última desconexão</span>
+          <p className="text-sm">{formatDate(channel.snapshot?.lastDisconnectedAt)}</p>
+        </div>
+      </div>
       <h3 className="font-semibold">Transições recentes</h3>
-      {channel.events?.length ? <List dense>{channel.events.map((event) => <ListItem key={event.id} divider><ListItemText primary={STATE_LABELS[event.state] || event.state} secondary={`${formatDate(event.occurredAt)}${event.reason ? ` · ${event.reason}` : ""}`} /></ListItem>)}</List> : <p className="mt-3 text-sm text-slate-500">Nenhuma transição registrada nas últimas 24 horas.</p>}
+      {channel.events?.length ? (
+        <List dense>
+          {channel.events.map((event) => (
+            <ListItem key={event.id} divider>
+              <ListItemText
+                primary={STATE_LABELS[event.state] || event.state}
+                secondary={`${formatDate(event.occurredAt)}${event.reason ? ` · ${event.reason}` : ""}`}
+              />
+            </ListItem>
+          ))}
+        </List>
+      ) : (
+        <p className="mt-3 text-sm text-slate-500">
+          Nenhuma transição registrada nas últimas 24 horas.
+        </p>
+      )}
     </div>
   );
 }
 
-function SessionQr({ channel, api, onClose }: { channel: ChannelSession; api: AxiosInstance; onClose: () => void }) {
+function SessionQr({
+  channel,
+  api,
+  onClose,
+}: {
+  channel: ChannelSession;
+  api: AxiosInstance;
+  onClose: () => void;
+}) {
   const [qr, setQr] = useState<string | null>(null);
   const [state, setState] = useState("CONNECTING");
   const [expired, setExpired] = useState(false);
@@ -349,15 +572,30 @@ function SessionQr({ channel, api, onClose }: { channel: ChannelSession; api: Ax
     };
     void poll();
     const timer = window.setInterval(() => void poll(), 2_000);
-    return () => { active = false; window.clearInterval(timer); };
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, [api, channel.id, channel.name, onClose]);
 
   return (
     <div className="w-[min(440px,92vw)] rounded-md bg-white p-5 text-center text-slate-950 dark:bg-gray-900 dark:text-slate-100">
       <h2 className="text-xl font-semibold">{channel.name}</h2>
-      <p className="mt-1 text-sm text-slate-500">{state === "QR_PENDING" ? "Aguardando leitura" : state === "CONNECTED" ? "Conectado" : "Preparando sessão"}</p>
+      <p className="mt-1 text-sm text-slate-500">
+        {state === "QR_PENDING"
+          ? "Aguardando leitura"
+          : state === "CONNECTED"
+            ? "Conectado"
+            : "Preparando sessão"}
+      </p>
       <div className="my-5 flex aspect-square w-full items-center justify-center bg-white p-3">
-        {qr && !expired ? <QRCodeSVG value={qr} className="h-full w-full" /> : expired ? <Alert severity="warning">QR expirado. Feche e solicite um novo código.</Alert> : <CircularProgress />}
+        {qr && !expired ? (
+          <QRCodeSVG value={qr} className="h-full w-full" />
+        ) : expired ? (
+          <Alert severity="warning">QR expirado. Feche e solicite um novo código.</Alert>
+        ) : (
+          <CircularProgress />
+        )}
       </div>
       <Button onClick={onClose}>Fechar</Button>
     </div>

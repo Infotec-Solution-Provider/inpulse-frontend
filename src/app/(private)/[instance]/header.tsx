@@ -1,8 +1,7 @@
 "use client";
 import { AuthContext } from "@/app/auth-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
-import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
-import NotificationsDropdown from "@/lib/components/notifications-dropdown";
+import LazyNotificationsDropdown from "@/lib/components/lazy-notifications-dropdown";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
@@ -31,11 +30,18 @@ import {
   ListItemText,
 } from "@mui/material";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import HeaderNavItem from "./header-nav-item";
-import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
+import { useWhatsappSelection } from "./whatsapp-selection-context";
+import { useWhatsappSession } from "./whatsapp-session-context";
+
+const NotificationPreferencesModal = dynamic(
+  () => import("@/lib/components/notification-preferences-modal"),
+  { ssr: false },
+);
 
 const crudsRoutes = (
   params: Record<string, string>,
@@ -155,7 +161,7 @@ const MobileMenu = ({
 }) => {
   const pathname = usePathname();
   const baseHref = pathname.split("/")[1];
-  const { parameters } = useWhatsappContext();
+  const { parameters } = useWhatsappSession();
   const visibleAiRoutes = aiRoutes(parameters);
   const showMassMessages = isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages);
   const showSessionMonitoring = isFeatureEnabled(
@@ -293,7 +299,8 @@ const MobileMenu = ({
 };
 
 export default function Header() {
-  const { currentChat, parameters } = useContext(WhatsappContext);
+  const { currentChat } = useWhatsappSelection();
+  const { parameters } = useWhatsappSession();
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -401,7 +408,7 @@ export default function Header() {
           <div className="hidden items-center gap-2 md:flex">
             <ThemeToggleButton />
 
-            <NotificationsDropdown />
+            <LazyNotificationsDropdown />
 
             <IconButton
               color="inherit"
@@ -443,10 +450,9 @@ export default function Header() {
         reportsRoutes={visibleReportsRoutes}
       />
 
-      <NotificationPreferencesModal
-        open={notificationSettingsOpen}
-        onClose={() => setNotificationSettingsOpen(false)}
-      />
+      {notificationSettingsOpen && (
+        <NotificationPreferencesModal open onClose={() => setNotificationSettingsOpen(false)} />
+      )}
     </header>
   );
 }

@@ -6,14 +6,18 @@ export default function MessageReactionHandler(
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
 ) {
   return ({ messageId, reaction }: WppMessageReactionEventData) => {
-    setMessages((previous) => Object.fromEntries(
-      Object.entries(previous).map(([contactId, messages]) => [
-        contactId,
-        messages.map((message) => message.id === messageId ? { ...message, reaction } : message),
-      ]),
-    ));
-    setCurrentChatMessages((previous) => previous.map(
-      (message) => message.id === messageId ? { ...message, reaction } : message,
-    ));
+    setMessages((previous) => {
+      for (const [contactId, messages] of Object.entries(previous)) {
+        const index = messages.findIndex((message) => message.id === messageId);
+        if (index === -1) continue;
+        const next = [...messages];
+        next[index] = { ...next[index]!, reaction };
+        return { ...previous, [contactId]: next };
+      }
+      return previous;
+    });
+    setCurrentChatMessages((previous) =>
+      previous.map((message) => (message.id === messageId ? { ...message, reaction } : message)),
+    );
   };
 }

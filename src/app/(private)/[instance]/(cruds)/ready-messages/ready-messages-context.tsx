@@ -25,6 +25,8 @@ import readyMessagesReducer, {
   MultipleActions,
   ReadyMessagesContextState,
 } from "./(table)/ready-messages-reducer";
+import { createCacheScope } from "@/lib/cache/cache-scope";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
 
 interface IReadyMessagesProviderProps {
   children: ReactNode;
@@ -75,7 +77,8 @@ export const useReadyMessagesContext = () => {
 const INTERNAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
 
 export default function ReadyMessagesProvider({ children }: IReadyMessagesProviderProps) {
-  const { token } = useContext(AuthContext);
+  const { token, user, instance } = useContext(AuthContext);
+  const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
   const { wppApi } = useContext(WhatsappContext);
 
   const api = useRef(new ReadyMessageClient(INTERNAL_BASE_URL));
@@ -122,10 +125,11 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
 
         if (file) {
           const res = await api.current.updateReadyMessage(id, data, file);
-          fileId = res?.fileId ;
+          fileId = res?.fileId;
         } else {
           await api.current.updateReadyMessage(id, data);
         }
+        if (cacheScope) void hybridCache.invalidateResource(cacheScope, "ready-messages");
 
         dispatch({
           type: "update-ready-message",
@@ -144,7 +148,7 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
         throw error;
       }
     },
-    [token],
+    [cacheScope, token],
   );
 
   const createReadyMessage = useCallback(
@@ -154,6 +158,7 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       try {
         api.current.setAuth(token);
         const created = await api.current.createReadyMessage(data, file);
+        if (cacheScope) void hybridCache.invalidateResource(cacheScope, "ready-messages");
         dispatch({ type: "add-ready-message", data: created });
         toast.success("Mensagem pronta criada com sucesso!");
         await loadReadyMessages();
@@ -162,9 +167,8 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
         toast.error("Erro ao criar Mensagem pronta");
       }
     },
-    [token],
+    [cacheScope, token],
   );
-
 
   const deleteReadyMessage = useCallback(
     async (id: number) => {
@@ -173,6 +177,7 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       try {
         api.current.setAuth(token);
         await api.current.deleteReadyMessage(id);
+        if (cacheScope) void hybridCache.invalidateResource(cacheScope, "ready-messages");
         dispatch({ type: "delete-ready-message", id });
         toast.success("Mensagem pronta deletada com sucesso!");
       } catch (error) {
@@ -180,9 +185,8 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
         toast.error("Erro ao deletar Mensagem pronta");
       }
     },
-    [token],
+    [cacheScope, token],
   );
-
 
   const fetchReadyMessages = useCallback(async () => {
     if (!token) return;
@@ -190,8 +194,8 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
     api.current.setAuth(token);
     const msgs = await api.current.getReadyMessages();
     setReadyMessages(msgs);
-  }, [token]);
-
+    if (cacheScope) void hybridCache.set(cacheScope, "ready-messages", msgs);
+  }, [cacheScope, token]);
 
   const loadReadyMessages = useCallback(async () => {
     dispatch({ type: "change-loading", isLoading: true });
@@ -203,6 +207,7 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       }
       api.current.setAuth(token);
       const msgs = await api.current.getReadyMessages();
+      if (cacheScope) void hybridCache.set(cacheScope, "ready-messages", msgs);
 
       dispatch({
         type: "multiple",
@@ -217,21 +222,39 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       dispatch({ type: "change-loading", isLoading: false });
       toast.error("Falha ao carregar mensagens prontas!");
     }
-  }, [token]);
+  }, [cacheScope, token]);
 
   useEffect(() => {
     if (token) {
       api.current.setAuth(token);
+      if (cacheScope) {
+        void hybridCache.get<ReadyMessage[]>(cacheScope, "ready-messages").then((cached) => {
+          if (!cached) return;
+          setReadyMessages(cached);
+          dispatch({ type: "load-ready-messages", readyMessages: cached });
+          dispatch({ type: "change-total-rows", totalRows: cached.length });
+        });
+      }
       loadReadyMessages();
     }
-  }, [token]);
+  }, [cacheScope, loadReadyMessages, token]);
 
   useEffect(() => {
     if (wppApi.current && token) {
       wppApi.current.setAuth(token);
-      wppApi.current.getSectors().then(setSectors);
+      if (cacheScope) {
+        void hybridCache
+          .get<Array<{ id: number; name: string }>>(cacheScope, "sectors")
+          .then((cached) => {
+            if (cached) setSectors(cached);
+          });
+      }
+      wppApi.current.getSectors().then((loadedSectors) => {
+        setSectors(loadedSectors);
+        if (cacheScope) void hybridCache.set(cacheScope, "sectors", loadedSectors);
+      });
     }
-  }, [wppApi, token]);
+  }, [cacheScope, wppApi, token]);
 
   useEffect(() => {
     loadReadyMessages();

@@ -12,9 +12,17 @@ import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
-import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
+import {
+  Checkbox,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
-import { useWhatsappContext } from "../../whatsapp-context";
+import { useWhatsappSession } from "../../whatsapp-session-context";
 import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
@@ -82,7 +90,7 @@ export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   REVOKED: <DeleteIcon className="text-slate-300" />,
 };
 
-export default function Message({
+function Message({
   id,
   style,
   type,
@@ -112,7 +120,7 @@ export default function Message({
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-  const { parameters, channels } = useWhatsappContext();
+  const { parameters, channels } = useWhatsappSession();
 
   const channelName = useMemo(() => {
     if (!channelId || channels.length <= 1) return null;
@@ -345,3 +353,35 @@ export default function Message({
     </li>
   );
 }
+
+function areMessagePropsEqual(previous: MessageProps, next: MessageProps) {
+  return (
+    previous.id === next.id &&
+    previous.style === next.style &&
+    previous.text === next.text &&
+    previous.type === next.type &&
+    previous.date.getTime() === next.date.getTime() &&
+    previous.status === next.status &&
+    previous.fileId === next.fileId &&
+    previous.fileName === next.fileName &&
+    previous.fileType === next.fileType &&
+    previous.fileSize === next.fileSize &&
+    previous.isForwarded === next.isForwarded &&
+    previous.isForwardMode === next.isForwardMode &&
+    previous.isReadOnly === next.isReadOnly &&
+    previous.showMediaByDefault === next.showMediaByDefault &&
+    previous.showQuotedMediaByDefault === next.showQuotedMediaByDefault &&
+    previous.isSelected === next.isSelected &&
+    previous.isEdited === next.isEdited &&
+    previous.reaction === next.reaction &&
+    previous.channelId === next.channelId &&
+    previous.agentId === next.agentId &&
+    previous.quotedMessage?.id === next.quotedMessage?.id &&
+    previous.quotedMessage?.text === next.quotedMessage?.text &&
+    Boolean(previous.onQuote) === Boolean(next.onQuote) &&
+    Boolean(previous.onForward) === Boolean(next.onForward) &&
+    Boolean(previous.onEdit) === Boolean(next.onEdit)
+  );
+}
+
+export default React.memo(Message, areMessagePropsEqual);

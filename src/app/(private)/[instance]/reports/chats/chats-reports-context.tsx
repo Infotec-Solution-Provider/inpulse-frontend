@@ -128,16 +128,17 @@ export default function ChatsReportProvider({ children }: IChatsReportProviderPr
 
   useEffect(() => {
     const CHATS_REPORT_ROOM = "reports:chats";
+    let unsubscribe: (() => void) | null = null;
 
     if (socket) {
       socket.joinRoom(CHATS_REPORT_ROOM);
-      socket.on(SocketEventType.ReportStatus, handleReportStatus);
+      unsubscribe = socket.subscribe(SocketEventType.ReportStatus, handleReportStatus);
     }
 
     return () => {
       if (socket) {
         socket.leaveRoom(CHATS_REPORT_ROOM);
-        socket.off(SocketEventType.ReportStatus);
+        unsubscribe?.();
       }
     };
   }, [socket, handleReportStatus]);

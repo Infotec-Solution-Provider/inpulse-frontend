@@ -8,7 +8,8 @@ import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined
 import SendIcon from "@mui/icons-material/Send";
 import TryIcon from "@mui/icons-material/Try";
 import { IconButton, Modal, TextField } from "@mui/material";
-import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
+import type { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
+import dynamic from "next/dynamic";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
@@ -20,6 +21,14 @@ import AudioRecorder from "./audio-recorder";
 import ChannelSelect from "./channels-select";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+  loading: () => null,
+});
+const EMOJI_THEME = "auto" as Theme;
+const EMOJI_STYLE = "facebook" as EmojiStyle;
+const EMOJI_SUGGESTION_MODE = "frequent" as SuggestionMode;
 
 function getDefaultSelectedChannel(currentChatMessages: WppMessage[], channels: WppClient[]) {
   const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
@@ -417,10 +426,10 @@ export default function ChatSendMessageArea() {
             <div className="fixed bottom-20 right-2 z-[9999] sm:absolute sm:bottom-full sm:right-0 sm:z-50">
               <EmojiPicker
                 onEmojiClick={handleEmojiClick}
-                theme={Theme.AUTO}
-                emojiStyle={EmojiStyle.FACEBOOK}
+                theme={EMOJI_THEME}
+                emojiStyle={EMOJI_STYLE}
                 lazyLoadEmojis
-                suggestedEmojisMode={SuggestionMode.FREQUENT}
+                suggestedEmojisMode={EMOJI_SUGGESTION_MODE}
                 open={state.isEmojiMenuOpen}
                 reactionsDefaultOpen={false}
               />

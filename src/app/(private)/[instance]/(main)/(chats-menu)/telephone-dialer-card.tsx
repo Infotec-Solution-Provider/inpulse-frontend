@@ -9,12 +9,13 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Button, Chip } from "@mui/material";
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
-import TelephoneFinishModal from "./telephone-finish-modal";
-import {
-  mapTelephonyScheduleToQueueItem,
-  TelephoneQueueItem,
-} from "./telephone-dialer.types";
+import dynamic from "next/dynamic";
+import { mapTelephonyScheduleToQueueItem, TelephoneQueueItem } from "./telephone-dialer.types";
+
+const TelephoneAttendanceDrawer = dynamic(() => import("./telephone-attendance-drawer"), {
+  ssr: false,
+});
+const TelephoneFinishModal = dynamic(() => import("./telephone-finish-modal"), { ssr: false });
 
 const formatPhone = (phone: string) => {
   try {

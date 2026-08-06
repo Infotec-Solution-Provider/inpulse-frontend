@@ -3,12 +3,12 @@ import Chat from "./(chat)/chat";
 import ChatsMenu from "./(chats-menu)/chats-menu";
 import React, { useContext } from "react";
 import ChatProvider from "./(chat)/chat-context";
-import { WhatsappContext } from "../whatsapp-context";
+import { useWhatsappSelection } from "../whatsapp-selection-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 
 export default function Home() {
-  const { currentChat, setCurrentChat } = useContext(WhatsappContext);
+  const { currentChat, setCurrentChat } = useWhatsappSelection();
   const { user, instance } = useContext(AuthContext);
 
   // Handle browser/hardware back to close chat on mobile
@@ -28,7 +28,7 @@ export default function Home() {
 
   const handleCloseChat = () => {
     setCurrentChat(null);
-  }
+  };
 
   return (
     <ChatProvider>

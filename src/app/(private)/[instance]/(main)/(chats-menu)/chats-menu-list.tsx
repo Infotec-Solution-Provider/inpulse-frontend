@@ -5,9 +5,12 @@ import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
 import { replaceMentions } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
-import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
-import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
+import { DetailedInternalChat } from "../../internal-context";
+import { DetailedChat } from "../../whatsapp-context";
+import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
+import { useInternalChatList } from "../../internal-chat-list-context";
 import ChatsMenuItem from "./chats-menu-item";
+import { Virtuoso } from "react-virtuoso";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
@@ -44,9 +47,13 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
   const isExternal = isExternalOperator(user?.NIVEL);
-  const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
-  const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
+  const { chats, openChat, currentChat, chatFilters } = useWhatsappChatList();
+  const { internalChats, openInternalChat, users } = useInternalChatList();
   const { state } = useContext(ContactsContext);
+  const userNameById = useMemo(
+    () => new Map(users.map((directoryUser) => [directoryUser.CODIGO, directoryUser.NOME])),
+    [users],
+  );
 
   const filteredChats = useMemo(() => {
     const validChats = Array.isArray(chats) ? chats : [];
@@ -87,13 +94,13 @@ export default function ChatsMenuList() {
       if (chat.chatType === "wpp") {
         // For WhatsApp chats, prefer assigned user name via userId
         const uid = (chat as any).userId as number | undefined;
-        const assigned = uid ? users.find((u) => u.CODIGO === uid)?.NOME : undefined;
+        const assigned = uid ? userNameById.get(uid) : undefined;
         return String(assigned || "").toLowerCase();
       }
       // Internal chats: use creatorId if available, else first participant's name
       const internal = chat as DetailedInternalChat;
       const creatorId = (internal as any).creatorId as number | undefined;
-      const creator = creatorId ? users.find((u) => u.CODIGO === creatorId)?.NOME : undefined;
+      const creator = creatorId ? userNameById.get(creatorId) : undefined;
       return String(creator || internal.users?.[0]?.NOME || "").toLowerCase();
     };
 
@@ -139,11 +146,15 @@ export default function ChatsMenuList() {
       const blt = getDate(b, "lastMessage");
       return blt - alt;
     });
-  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder]);
+  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder, userNameById]);
 
   return (
-    <menu className="scrollbar-whatsapp flex flex-col gap-2 bg-slate-300/5 p-3 dark:bg-slate-800/50">
-      {sortedChats.map((chat) => {
+    <Virtuoso
+      className="scrollbar-whatsapp h-full bg-slate-300/5 dark:bg-slate-800/50"
+      data={sortedChats}
+      increaseViewportBy={240}
+      computeItemKey={(_, chat) => `${chat.chatType}:${chat.id}`}
+      itemContent={(_, chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
@@ -201,7 +212,7 @@ export default function ChatsMenuList() {
             onClick={() => openChat(chat)}
           />
         );
-      })}
-    </menu>
+      }}
+    />
   );
 }

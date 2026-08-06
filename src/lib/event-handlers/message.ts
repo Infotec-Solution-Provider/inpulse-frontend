@@ -1,6 +1,6 @@
 import { WhatsappClient, WppMessage } from "@/lib/sdk-local";
 import { Formatter, Logger } from "@in.pulse-crm/utils";
-import { Dispatch, RefObject, SetStateAction } from "react";
+import { Dispatch, RefObject, SetStateAction, startTransition } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
@@ -58,48 +58,41 @@ export default function ReceiveMessageHandler(
       });
     }
 
-    setMessages((prev) => {
-      const newMessages = { ...prev };
-      const contactId = message.contactId || 0;
-
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = [];
-      }
-
-      const findIndex = newMessages[contactId].findIndex((m) => m.id === message.id);
-      if (findIndex === -1) {
-        newMessages[contactId].push(message);
-      } else {
-        newMessages[contactId][findIndex] = message;
-      }
-
-      return newMessages;
-    });
-
     const x = chatRef.current;
 
-    setChats((prev) =>
-      prev
-        .map((chat) => {
-          if (chat.contactId === message.contactId) {
-            const isCurrentWppChat =
-              x?.chatType === "wpp" && x.contactId === message.contactId;
-            const isFromMe = message.from.startsWith("me");
-            const isUnread = !isCurrentWppChat && !isFromMe;
+    startTransition(() => {
+      setMessages((prev) => {
+        const contactId = message.contactId || 0;
+        const isCurrentChat =
+          chatRef.current?.chatType === "wpp" && chatRef.current.contactId === contactId;
+        if (!(contactId in prev) && !isCurrentChat) return prev;
+        const newMessages = { ...prev };
 
-            return {
-              ...chat,
-              isUnread: isUnread,
-              lastMessage: message,
-            };
-          }
+        const contactMessages = [...(prev[contactId] ?? [])];
+        const findIndex = contactMessages.findIndex((m) => m.id === message.id);
+        if (findIndex === -1) {
+          contactMessages.push(message);
+        } else {
+          contactMessages[findIndex] = message;
+        }
+        newMessages[contactId] = contactMessages;
 
-          return chat;
-        })
-        .sort((a, b) =>
-          (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
-        ),
-    );
+        return newMessages;
+      });
+
+      setChats((prev) => {
+        const index = prev.findIndex((chat) => chat.contactId === message.contactId);
+        if (index === -1) return prev;
+        const chat = prev[index]!;
+        const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
+        const updated = {
+          ...chat,
+          isUnread: !isCurrentWppChat && !message.from.startsWith("me"),
+          lastMessage: message,
+        };
+        return [updated, ...prev.slice(0, index), ...prev.slice(index + 1)];
+      });
+    });
 
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
@@ -116,12 +109,13 @@ export default function ReceiveMessageHandler(
 
       // TODO: Change the logic to only update the received message;
       if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        api
-          .markContactMessagesAsRead(message.contactId || 0)
-          .catch((error) => {
-            Logger.error(`[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`, error);
-          });
+        api.markContactMessagesAsRead(message.contactId || 0).catch((error) => {
+          Logger.error(
+            `[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`,
+            error,
+          );
+        });
       }
-    };
-  }
+    }
+  };
 }

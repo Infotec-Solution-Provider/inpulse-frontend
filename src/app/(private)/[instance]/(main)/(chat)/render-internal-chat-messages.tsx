@@ -4,6 +4,7 @@ import { useAuthContext } from "@/app/auth-context";
 import { replaceMentions } from "@/lib/utils/message-mentions";
 import { InternalMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
+import shouldAutoScrollChat from "@/lib/chat-scroll-policy";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { InternalChatContext } from "../../internal-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
@@ -34,32 +35,40 @@ export default function RenderInternalChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderInternalChatMessagesProps) {
-  const { currentInternalChatMessages, users, contacts } = useContext(InternalChatContext);
+  const {
+    currentInternalChatMessages,
+    users,
+    contacts,
+    hasOlderInternalMessages,
+    loadOlderInternalMessages,
+    historyPrependRef,
+  } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isSelectionMode && messagesEndRef.current) {
+    const isHistoryPrepend = historyPrependRef.current;
+    if (isHistoryPrepend) {
+      historyPrependRef.current = false;
+    }
+    if (shouldAutoScrollChat(isHistoryPrepend, isSelectionMode) && scrollContainerRef.current) {
       const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView();
+        const container = scrollContainerRef.current;
+        if (container) container.scrollTop = container.scrollHeight;
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentInternalChatMessages, isSelectionMode]);
+  }, [currentInternalChatMessages, historyPrependRef, isSelectionMode]);
 
   const total = currentInternalChatMessages?.length ?? 0;
   const visibleMessages = useMemo(
     () => (currentInternalChatMessages ?? []).slice(-visibleCount),
     [currentInternalChatMessages, visibleCount],
   );
-
-  useEffect(() => {
-    setVisibleFileCount(10);
-  }, [currentInternalChatMessages]);
 
   const visibleMessageFileIds = useMemo(
     () =>
@@ -77,13 +86,23 @@ export default function RenderInternalChatMessages({
   const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
 
   return (
-    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
-      {visibleCount < total && (
+    <div
+      ref={scrollContainerRef}
+      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+    >
+      {(visibleCount < total || hasOlderInternalMessages) && (
         <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
-            onClick={() => setVisibleCount((prev) => Math.min(prev + 30, total))}
+            onClick={async () => {
+              if (visibleCount < total) {
+                setVisibleCount((prev) => Math.min(prev + 30, total));
+                return;
+              }
+              const loaded = await loadOlderInternalMessages();
+              if (loaded > 0) setVisibleCount((prev) => prev + loaded);
+            }}
           >
             Carregar mais
           </Button>
@@ -135,7 +154,9 @@ export default function RenderInternalChatMessages({
               fileType={m.fileType}
               fileSize={m.fileSize}
               showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
-              showQuotedMediaByDefault={!quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)}
+              showQuotedMediaByDefault={
+                !quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)
+              }
               quotedMessage={quotedMsg}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               isSelected={selectedMessageIds.has(m.id)}
@@ -154,7 +175,7 @@ export default function RenderInternalChatMessages({
             />
           );
         })}
-        <div ref={messagesEndRef} className="h-1" />
+        <div className="h-1" />
       </ul>
     </div>
   );

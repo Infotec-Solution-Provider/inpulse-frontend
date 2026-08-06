@@ -3,10 +3,10 @@ import ChatsMenuFilters from "./chats-menu-filters";
 import ChatsMenuList from "./chats-menu-list";
 import TelephoneDialerCard from "./telephone-dialer-card";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
-import { useWhatsappContext } from "../../whatsapp-context";
+import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
 
 export default function ChatsMenu() {
-  const { parameters } = useWhatsappContext();
+  const { parameters } = useWhatsappChatList();
   const showTelephonyDialer = isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyDialer);
 
   return (
@@ -17,7 +17,7 @@ export default function ChatsMenu() {
           <TelephoneDialerCard />
         </div>
       )}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-whatsapp">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <ChatsMenuList />
       </div>
     </aside>

@@ -39,6 +39,10 @@ export default function InternalReceiveMessageHandler(
   return ({ message }: InternalReceiveMessageCallbackProps) => {
     if (notifiedMessages.has(message.id)) return;
     notifiedMessages.add(message.id);
+    if (notifiedMessages.size > 1000) {
+      const oldestId = notifiedMessages.values().next().value as number | undefined;
+      if (oldestId !== undefined) notifiedMessages.delete(oldestId);
+    }
     const isCurrentChat =
       chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
     const isCurrentUser = message.from === `user:${loggedUser.CODIGO}`;
@@ -73,19 +77,18 @@ export default function InternalReceiveMessageHandler(
     }
 
     setMessages((prev) => {
-      const newMessages = { ...prev };
       const id = message.internalChatId;
+      if (!(id in prev) && !isCurrentChat) return prev;
+      const newMessages = { ...prev };
+      const chatMessages = [...(prev[id] ?? [])];
 
-      if (!newMessages[id]) {
-        newMessages[id] = [];
-      }
-
-      const findIndex = newMessages[id].findIndex((m) => m.id === message.id);
+      const findIndex = chatMessages.findIndex((m) => m.id === message.id);
       if (findIndex === -1) {
-        newMessages[id].push(message);
+        chatMessages.push(message);
       } else {
-        newMessages[id][findIndex] = message;
+        chatMessages[findIndex] = message;
       }
+      newMessages[id] = chatMessages;
 
       return newMessages;
     });

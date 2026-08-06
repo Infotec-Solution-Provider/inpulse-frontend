@@ -40,6 +40,8 @@ export default function ChatMessagesList() {
   );
 
   const forwardingTargets = useMemo((): ForwardingTarget[] => {
+    if (!forwardModalOpen) return [];
+
     const wppTargets: ForwardingTarget[] = chats.map((chat) => ({
       id: `wpp-${chat.id}`,
       type: "wpp",
@@ -64,16 +66,19 @@ export default function ChatMessagesList() {
       }));
 
     return [...wppTargets, ...userTargets, ...groupTargets];
-  }, [chats, users, internalChats]);
+  }, [chats, forwardModalOpen, users, internalChats]);
 
-  const toggleSelectMessage = useCallback((id: string | number) => {
-    if (isReadOnlyMode) return;
-    setSelectedMessageIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-      return newSet;
-    });
-  }, [isReadOnlyMode]);
+  const toggleSelectMessage = useCallback(
+    (id: string | number) => {
+      if (isReadOnlyMode) return;
+      setSelectedMessageIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+        return newSet;
+      });
+    },
+    [isReadOnlyMode],
+  );
   const clearSelection = () => setSelectedMessageIds(new Set());
   const openManualForward = (msg: ForwardableMessage) => {
     if (isReadOnlyMode) return;
@@ -145,6 +150,7 @@ export default function ChatMessagesList() {
       <div className="h-0 flex-grow">
         {isWhatsappChat && (
           <RenderWhatsappChatMessages
+            key={currentChat.id}
             selectedMessageIds={selectedMessageIds}
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
@@ -154,6 +160,7 @@ export default function ChatMessagesList() {
         )}
         {isInternalChat && (
           <RenderInternalChatMessages
+            key={currentChat.id}
             selectedMessageIds={selectedMessageIds}
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
@@ -163,6 +170,7 @@ export default function ChatMessagesList() {
         )}
         {isInternalGroup && (
           <RenderInternalGroupMessages
+            key={currentChat.id}
             selectedMessageIds={selectedMessageIds}
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}

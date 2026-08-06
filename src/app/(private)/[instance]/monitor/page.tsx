@@ -9,13 +9,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import { IconButton } from "@mui/material";
 import { useContext } from "react";
-import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
-import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
-import ChatProvider from "../(main)/(chat)/chat-context";
-import ChatHeader from "../(main)/(chat)/chat-header";
-import ChatMessagesList from "../(main)/(chat)/chat-messages-list";
-import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor";
-import ChatSendMessageArea from "../(main)/(chat)/chat-send-message-area";
+import dynamic from "next/dynamic";
 import { AppContext } from "../app-context";
 import useInternalChatContext, {
   DetailedInternalChat,
@@ -25,6 +19,25 @@ import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-
 import MonitorCard from "./(components)/card";
 import MonitorFilters from "./(components)/filters";
 import useMonitorContext from "./context";
+
+const FinishChatModal = dynamic(() => import("../(main)/(chat)/(actions)/finish-chat-modal"), {
+  ssr: false,
+});
+const TransferChatModal = dynamic(() => import("../(main)/(chat)/(actions)/transfer-chat-modal"), {
+  ssr: false,
+});
+const ChatProvider = dynamic(() => import("../(main)/(chat)/chat-context"), { ssr: false });
+const ChatHeader = dynamic(() => import("../(main)/(chat)/chat-header"), { ssr: false });
+const ChatMessagesList = dynamic(() => import("../(main)/(chat)/chat-messages-list"), {
+  ssr: false,
+});
+const ChatMessagesListMonitor = dynamic(
+  () => import("../(main)/(chat)/chat-messages-list-monitor"),
+  { ssr: false },
+);
+const ChatSendMessageArea = dynamic(() => import("../(main)/(chat)/chat-send-message-area"), {
+  ssr: false,
+});
 
 function getChatType(
   chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
@@ -130,7 +143,10 @@ function getChatImage(
   return "";
 }
 
-function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedule, users: User[]): string {
+function getChatTitle(
+  chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
+  users: User[],
+): string {
   if (!("chatType" in chat)) {
     return chat.contact?.name || "Contato excluído";
   }

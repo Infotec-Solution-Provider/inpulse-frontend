@@ -8,14 +8,11 @@ import { FEATURE_FLAGS, FeatureFlag, isFeatureEnabled } from "@/lib/feature-flag
 import { canAccessPrivatePathForRole } from "@/lib/permissions/operator-access";
 import { usePathname } from "next/navigation";
 import { ReactElement, ReactNode, useContext, useState } from "react";
-import ContactsProvider from "./(cruds)/contacts/contacts-context";
-import CustomersProvider from "./(cruds)/customers/customers-context";
-import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
 import { InternalChatProvider } from "./internal-context";
 import WhatsappProvider from "./whatsapp-context";
-import { useWhatsappContext } from "./whatsapp-context";
-import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
+import { useWhatsappSession } from "./whatsapp-session-context";
 import { AuthContext } from "@/app/auth-context";
+import CacheWarmup from "./cache-warmup";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -46,10 +43,11 @@ const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
 function RouteFeatureGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user } = useContext(AuthContext);
-  const { loaded, parameters } = useWhatsappContext();
+  const { loaded, parameters } = useWhatsappSession();
   const routeConfig = ROUTE_FEATURE_FLAGS.find(({ segment }) => pathname.includes(segment));
 
-  const hasRoleAccess = routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
+  const hasRoleAccess =
+    routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
 
   if (!hasRoleAccess) {
     return (
@@ -92,34 +90,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
-            <ContactsProvider>
-              <InternalChatProvider>
-                <InternalGroupsProvider>
-                  <ReadyMessagesProvider>
-                    <CustomersProvider>
-                      <ThemeProvider>
-                        <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
-                          <Header />
-                          <main className="min-h-0 overflow-y-auto">
-                            <RouteFeatureGate>{children}</RouteFeatureGate>
-                          </main>
-                          <Modal
-                            open={!!modal}
-                            onClose={(_, r) => {
-                              if (r === "backdropClick") return;
-                              setModal(null);
-                            }}
-                            className="flex items-center justify-center"
-                          >
-                            <div>{modal as ReactElement}</div>
-                          </Modal>
-                        </div>
-                      </ThemeProvider>
-                    </CustomersProvider>
-                  </ReadyMessagesProvider>
-                </InternalGroupsProvider>
-              </InternalChatProvider>
-            </ContactsProvider>
+            <CacheWarmup />
+            <InternalChatProvider>
+              <ThemeProvider>
+                <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
+                  <Header />
+                  <main className="min-h-0 overflow-y-auto">
+                    <RouteFeatureGate>{children}</RouteFeatureGate>
+                  </main>
+                  <Modal
+                    open={!!modal}
+                    onClose={(_, r) => {
+                      if (r === "backdropClick") return;
+                      setModal(null);
+                    }}
+                    className="flex items-center justify-center"
+                  >
+                    <div>{modal as ReactElement}</div>
+                  </Modal>
+                </div>
+              </ThemeProvider>
+            </InternalChatProvider>
           </WhatsappProvider>
         </SocketProvider>
       </AppProvider>

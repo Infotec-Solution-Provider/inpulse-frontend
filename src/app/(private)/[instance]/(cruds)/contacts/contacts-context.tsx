@@ -1,3 +1,5 @@
+"use client";
+
 import {
   createContext,
   ReactNode,
@@ -26,6 +28,8 @@ import contactsReducer, {
   ContactsFilters,
   MultipleActions,
 } from "./(table)/contacts-reducer";
+import { createCacheScope } from "@/lib/cache/cache-scope";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
 
 interface ContactWithCustomer extends ContactWithSectors {
   customerId?: number;
@@ -68,15 +72,18 @@ export const useContactsContext = () => {
 };
 
 export default function ContactsProvider({ children }: IContactsProviderProps) {
-  const { token } = useAuthContext();
+  const { token, user, instance } = useAuthContext();
+  const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
   const [state, dispatch] = useReducer(contactsReducer, {
     contacts: [],
     totalRows: 0,
     filters: { page: "1", perPage: "10", sectorIds: [] as ContactsFilters["sectorIds"] },
     isLoading: false,
   });
-  const [contactsWithCustomers, /* setContactsWithCustomers */] = useState<ContactWithCustomer[]>([]);
-  const [contactSectors, /* setContactSectors */] = useState<
+  const [contactsWithCustomers /* setContactsWithCustomers */] = useState<ContactWithCustomer[]>(
+    [],
+  );
+  const [contactSectors /* setContactSectors */] = useState<
     Map<number, Array<{ contactId: number; sectorId: number }>>
   >(new Map());
   const { users } = useInternalChatContext();
@@ -124,7 +131,6 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     contactSectors.forEach((sectors) => {
       sectors.forEach((sector) => {
         if (sector.sectorId) {
-
           map.set(sector.sectorId, `Setor ${sector.sectorId}`);
         }
       });
@@ -137,6 +143,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       try {
         if (token) {
           await wppApi.current.updateContact(id, name, customerId, sectorIds);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "contact-page");
           dispatch({ type: "update-contact", id, name });
           closeModal();
           toast.success("Cliente atualizado com sucesso!");
@@ -146,7 +153,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao atualizar cliente!");
       }
     },
-    [closeModal, token, wppApi],
+    [cacheScope, closeModal, token, wppApi],
   );
 
   const deleteContact = useCallback(
@@ -154,6 +161,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       try {
         if (token) {
           await wppApi.current.deleteContact(id);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "contact-page");
           dispatch({ type: "delete-contact", id });
 
           toast.success("Contato deletado com sucesso!");
@@ -163,7 +171,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         toast.error("Falha ao deletar cliente!");
       }
     },
-    [token, wppApi],
+    [cacheScope, token, wppApi],
   );
 
   const createContact = useCallback(
@@ -178,6 +186,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
           customerId,
           sectorIds,
         );
+        if (cacheScope) void hybridCache.invalidateResource(cacheScope, "contact-page");
 
         dispatch({ type: "add-contact", data: newContact });
         toast.success("Contato criado com sucesso!");
@@ -189,7 +198,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         return null;
       }
     },
-    [closeModal, token, wppApi],
+    [cacheScope, closeModal, token, wppApi],
   );
 
   const openContactModal = useCallback(
@@ -271,8 +280,22 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         if (state.filters.customerId) params.customerId = Number(state.filters.customerId);
       }
 
-      let response: any;
+      const cacheKey = JSON.stringify(params);
+      if (cacheScope) {
+        const cached = await hybridCache.get<{
+          data: ContactWithCustomer[];
+          pagination?: { total?: number };
+        }>(cacheScope, "contact-page", cacheKey);
+        if (cached) {
+          dispatch({
+            type: "load-contacts",
+            contacts: cached.data,
+            totalRows: cached.pagination?.total ?? cached.data.length,
+          });
+        }
+      }
 
+      let response: any;
 
       if (params.id !== undefined) {
         const entries = Object.entries(params).filter(([, v]) => v !== undefined);
@@ -285,6 +308,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       }
 
       const totalRows = response?.pagination?.total ?? (response?.data?.length || 0);
+      if (cacheScope) void hybridCache.set(cacheScope, "contact-page", response, cacheKey);
 
       dispatch({
         type: "load-contacts",
@@ -297,7 +321,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     } finally {
       dispatch({ type: "change-loading", isLoading: false });
     }
-  }, [state.filters, wppApi]);
+  }, [cacheScope, state.filters, wppApi]);
 
   useEffect(() => {
     if (!token || !wppApi.current) return;
