@@ -78,7 +78,7 @@ export default class WhatsappClient extends ApiClient {
     const { data: res } = await this.ax.get<DataResponse<WhatsappGroup[]>>(
       `/api/whatsapp/${clientId}/groups`,
     );
-    return res.data;
+    return Array.isArray(res.data) ? res.data : [];
   }
 
   public async getChatsBySession(messages = false, contact = false, token: string | null = null) {

@@ -227,7 +227,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
     wppApi.current
       .getGroups(channelId)
       .then((groups) => {
-        if (active) setWppGroups(groups);
+        if (active) setWppGroups(Array.isArray(groups) ? groups : []);
       })
       .catch((err) => {
         if (active) setWppGroups([]);
