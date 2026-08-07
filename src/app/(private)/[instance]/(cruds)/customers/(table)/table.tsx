@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { AppContext } from "../../../app-context";
-import { CustomersContext } from "../customers-context";
+import { useCustomersContext } from "../customers-context";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";
@@ -27,10 +27,12 @@ import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
-  const { state, dispatch } = useContext(CustomersContext);
+  const { state, dispatch } = useCustomersContext();
   const { parameters, wppApi } = useContext(WhatsappContext);
   const canUseProfileTags = isFeatureEnabled(parameters, FEATURE_FLAGS.customerProfileTags);
-  const [profileSummaries, setProfileSummaries] = useState<Record<number, CustomerProfileSummaryPayload | null>>({});
+  const [profileSummaries, setProfileSummaries] = useState<
+    Record<number, CustomerProfileSummaryPayload | null>
+  >({});
   const [isLoadingProfileSummaries, setIsLoadingProfileSummaries] = useState(false);
 
   const customerIds = useMemo(
@@ -51,7 +53,9 @@ export default function CustomersTable() {
       return;
     }
 
-    const missingCustomerIds = customerIds.filter((customerId) => !(customerId in profileSummaries));
+    const missingCustomerIds = customerIds.filter(
+      (customerId) => !(customerId in profileSummaries),
+    );
     if (!missingCustomerIds.length) {
       setIsLoadingProfileSummaries(false);
       return;
@@ -167,7 +171,11 @@ export default function CustomersTable() {
           width: "100%",
         }}
       >
-        <Table className="scrollbar-whatsapp" stickyHeader sx={{ width: "100%", minWidth: "100%", tableLayout: "auto" }}>
+        <Table
+          className="scrollbar-whatsapp"
+          stickyHeader
+          sx={{ width: "100%", minWidth: "100%", tableLayout: "auto" }}
+        >
           <ClientTableHeader />
           <TableBody
             sx={{
@@ -216,7 +224,9 @@ export default function CustomersTable() {
                   key={`${client.CODIGO}`}
                   customer={client}
                   profileSummary={profileSummaries[client.CODIGO] ?? null}
-                  isProfileLoading={isLoadingProfileSummaries && !(client.CODIGO in profileSummaries)}
+                  isProfileLoading={
+                    isLoadingProfileSummaries && !(client.CODIGO in profileSummaries)
+                  }
                   canUseProfileTags={canUseProfileTags}
                   openEditProfileTagsHandler={openEditProfileTagsModal}
                   openEditModalHandler={openEditCustomerModal}

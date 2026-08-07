@@ -1,7 +1,7 @@
 "use client";
 import filesService from "@/lib/services/files.service";
 import toDateString from "@/lib/utils/date-string";
-import { User } from "@/lib/sdk-local";
+import { InternalMessage, User } from "@/lib/sdk-local";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -282,8 +282,11 @@ export default function MonitorPage() {
   const { sectors = [] } = useWhatsappContext();
   const { users = [] } = useInternalChatContext();
   const { setCurrentChat, openChat, loadChatMessages } = useWhatsappContext();
-  const { openInternalChat, setCurrentChat: setCurrentInternalChat } =
-    useContext(InternalChatContext);
+  const {
+    openInternalChat,
+    setCurrentChat: setCurrentInternalChat,
+    loadInternalMonitorMessages,
+  } = useContext(InternalChatContext);
 
   const { openModal, closeModal } = useContext(AppContext);
 
@@ -348,9 +351,15 @@ export default function MonitorPage() {
       };
     }
     if (chat.chatType === "internal") {
-      return () => {
+      return async () => {
+        let preloadedMessages: InternalMessage[] = [];
+        try {
+          preloadedMessages = await loadInternalMonitorMessages(chat.id);
+        } catch (error) {
+          console.error("Erro ao carregar mensagens internas da monitoria", chat.id, error);
+        }
         setCurrentInternalChat(chat);
-        openInternalChat(chat, false);
+        openInternalChat(chat, false, preloadedMessages);
         const internalUsers = getInternalUsers(chat, users);
         openModal(
           <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">

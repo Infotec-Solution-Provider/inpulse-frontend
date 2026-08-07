@@ -6,6 +6,7 @@ const socketMock = vi.hoisted(() => {
     listeners,
     socket: {
       auth: {},
+      connected: false,
       connect: vi.fn(),
       disconnect: vi.fn(),
       emit: vi.fn(),
@@ -29,7 +30,20 @@ import { SocketEventType } from "./types/socket-events.types";
 describe("SocketClient subscriptions", () => {
   beforeEach(() => {
     socketMock.listeners.clear();
+    socketMock.socket.connected = false;
     vi.clearAllMocks();
+  });
+
+  it("reconnects when the authenticated user token changes", () => {
+    const client = new SocketClient("ws://test");
+
+    client.connect("first-token");
+    socketMock.socket.connected = true;
+    client.connect("second-token");
+
+    expect(socketMock.socket.disconnect).toHaveBeenCalledTimes(1);
+    expect(socketMock.socket.connect).toHaveBeenCalledTimes(2);
+    expect(socketMock.socket.auth).toEqual({ token: "second-token" });
   });
 
   it("keeps multiple subscribers stable and removes only the requested listener", () => {

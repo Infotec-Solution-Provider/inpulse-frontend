@@ -1,7 +1,6 @@
 "use client";
 
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import ContactsProvider from "@/app/(private)/[instance]/(cruds)/contacts/contacts-context";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import { Badge, IconButton } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -24,11 +23,7 @@ export default function LazyNotificationsDropdown() {
   const preload = () => void import("./notifications-dropdown");
 
   if (activated) {
-    return (
-      <ContactsProvider>
-        <NotificationsDropdown openOnMount={openOnMount} />
-      </ContactsProvider>
-    );
+    return <NotificationsDropdown openOnMount={openOnMount} />;
   }
 
   return (

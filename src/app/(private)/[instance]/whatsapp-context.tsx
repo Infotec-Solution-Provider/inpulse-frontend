@@ -42,6 +42,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
@@ -71,6 +72,8 @@ import { WhatsappSessionContext } from "./whatsapp-session-context";
 import { createCacheScope } from "@/lib/cache/cache-scope";
 import { hybridCache } from "@/lib/cache/hybrid-cache";
 import isHybridCacheEnabled from "@/lib/cache/hybrid-cache-flag";
+import mergeMessagesById from "@/lib/merge-messages-by-id";
+import mergeMessageUpdate from "@/lib/merge-message-update";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -205,8 +208,21 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const userInitiatedChatContactId = useRef<number | null>(null);
   const [chats, setChats] = useState<DetailedChat[]>([]);
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
-  const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
+  const [currentChat, setCurrentChatState] = useState<DetailedChat | DetailedInternalChat | null>(
+    null,
+  );
   const currentChatRef = useRef<DetailedChat | DetailedInternalChat | null>(null);
+  const setCurrentChat = useCallback<
+    Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>
+  >((nextChat) => {
+    if (typeof nextChat !== "function") currentChatRef.current = nextChat;
+
+    setCurrentChatState((previousChat) => {
+      const resolvedChat = typeof nextChat === "function" ? nextChat(previousChat) : nextChat;
+      currentChatRef.current = resolvedChat;
+      return resolvedChat;
+    });
+  }, []);
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -214,6 +230,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const messageCursorCacheRef = useRef(new Map<number, number | null>());
   const historyPrependRef = useRef(false);
   const activeMessagesCacheRef = useRef(new Map<number, WppMessage[]>());
+  const loadedMessageChatIdsRef = useRef(new Set<number>());
+  const removedChatIdsRef = useRef(new Set<number>());
+  const realtimeStartedChatIdsRef = useRef(new Set<number>());
+  const chatsRequestRef = useRef(0);
+  const messageScopeGenerationRef = useRef(0);
+  const messageCacheEpochRef = useRef(0);
+  const messageCacheVersionsRef = useRef(new Map<number, number>());
+  const getChatsRef = useRef<() => Promise<void>>(async () => undefined);
+  const lastRealtimeReconcileAtRef = useRef(0);
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
@@ -229,7 +254,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const sendTracedFileMessage = useCallback(
-    async (clientId: number, to: string, data: TracedSendMessageOptions) => {
+    async (clientId: number, to: string, data: TracedSendMessageOptions, authToken?: string) => {
       const formData = new FormData();
 
       formData.append("to", to);
@@ -243,26 +268,40 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       data.sendAsChatOwner && formData.append("sendAsChatOwner", String(data.sendAsChatOwner));
       data.traceId && formData.append("traceId", data.traceId);
 
-      await api.current.ax.post(`/api/whatsapp/${clientId}/messages`, formData, {
+      const response = await api.current.ax.post(`/api/whatsapp/${clientId}/messages`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           ...(data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
         },
       });
+
+      const sentMessage = response.data?.data ?? response.data;
+      return sentMessage?.id != null ? (sentMessage as WppMessage) : null;
     },
     [],
   );
   const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
+  const isReadOnlyModeRef = useRef(false);
   const chatsRef = useRef<DetailedChat[]>([]);
   const channelsRef = useRef<WppClient[]>([]);
-  chatsRef.current = chats;
-  channelsRef.current = channels;
-  currentChatRef.current = currentChat;
   const pendingReadOnlyOpenRef = useRef(false);
 
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  useLayoutEffect(() => {
+    channelsRef.current = channels;
+  }, [channels]);
+
+  useLayoutEffect(() => {
+    isReadOnlyModeRef.current = isReadOnlyMode;
+  }, [isReadOnlyMode]);
+
+  useLayoutEffect(() => {
     notificationPreferencesRef.current = notificationPreferences;
   }, [notificationPreferences]);
 
@@ -330,66 +369,196 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     setCurrentChatMessages((prev) => {
       const next =
         typeof update === "function" ? (update as (p: WppMessage[]) => WppMessage[])(prev) : update;
-
-      const seen = new Set<string | number>();
-      const deduped: WppMessage[] = [];
-
-      for (const msg of next || []) {
-        const id = msg.id;
-        if (id == null) {
-          deduped.push(msg);
-          continue;
-        }
-        if (!seen.has(id)) {
-          seen.add(id);
-          deduped.push(msg);
-        }
-      }
-
-      return deduped;
+      return mergeMessagesById([], next || [], mergeMessageUpdate);
     });
   }, []);
 
-  const cacheActiveMessages = useCallback((contactId: number, loadedMessages: WppMessage[]) => {
-    const cache = activeMessagesCacheRef.current;
-    cache.delete(contactId);
-    cache.set(contactId, loadedMessages);
-    const evicted: number[] = [];
-    while (cache.size > 3) {
-      const oldestKey = cache.keys().next().value as number | undefined;
-      if (oldestKey === undefined) break;
-      cache.delete(oldestKey);
-      messageCursorCacheRef.current.delete(oldestKey);
-      evicted.push(oldestKey);
-    }
-    if (evicted.length) {
-      setMessages((previous) => {
-        const next = { ...previous };
-        for (const key of evicted) delete next[key];
-        return next;
-      });
-    }
+  const bumpMessageCacheVersion = useCallback((chatId: number) => {
+    messageCacheVersionsRef.current.set(
+      chatId,
+      (messageCacheVersionsRef.current.get(chatId) ?? 0) + 1,
+    );
   }, []);
 
-  useEffect(() => {
-    if (currentChat?.chatType !== "wpp" || !currentChat.contactId) return;
-    cacheActiveMessages(currentChat.contactId, currentChatMessages);
-  }, [cacheActiveMessages, currentChat, currentChatMessages]);
+  const cacheActiveMessages = useCallback(
+    (chatId: number, loadedMessages: WppMessage[]) => {
+      const cache = activeMessagesCacheRef.current;
+      cache.delete(chatId);
+      cache.set(chatId, loadedMessages);
+      while (cache.size > 3) {
+        const oldestKey = cache.keys().next().value as number | undefined;
+        if (oldestKey === undefined) break;
+        cache.delete(oldestKey);
+        messageCursorCacheRef.current.delete(oldestKey);
+        loadedMessageChatIdsRef.current.delete(oldestKey);
+        bumpMessageCacheVersion(oldestKey);
+      }
+    },
+    [bumpMessageCacheVersion],
+  );
+
+  const cacheRealtimeMessage = useCallback(
+    (message: WppMessage) => {
+      const chat =
+        message.chatId != null
+          ? chatsRef.current.find((item) => item.id === message.chatId)
+          : chatsRef.current.find((item) => item.contactId === message.contactId);
+      if (!chat) return;
+
+      const cachedMessages = activeMessagesCacheRef.current.get(chat.id);
+      const isCurrentChat =
+        currentChatRef.current?.chatType === "wpp" && currentChatRef.current.id === chat.id;
+      if (!cachedMessages && !isCurrentChat) return;
+
+      cacheActiveMessages(
+        chat.id,
+        mergeMessagesById(cachedMessages ?? [], [message], mergeMessageUpdate),
+      );
+    },
+    [cacheActiveMessages],
+  );
+
+  const invalidateCachedChat = useCallback(
+    (chatId: number) => {
+      activeMessagesCacheRef.current.delete(chatId);
+      messageCursorCacheRef.current.delete(chatId);
+      loadedMessageChatIdsRef.current.delete(chatId);
+      bumpMessageCacheVersion(chatId);
+    },
+    [bumpMessageCacheVersion],
+  );
+
+  const invalidateAllMessageCaches = useCallback(() => {
+    messageCacheEpochRef.current += 1;
+    activeMessagesCacheRef.current.clear();
+    messageCursorCacheRef.current.clear();
+    loadedMessageChatIdsRef.current.clear();
+  }, []);
+
+  const invalidateCachedContact = useCallback(
+    (contactId: number) => {
+      for (const chat of chatsRef.current) {
+        if (chat.contactId !== contactId) continue;
+        activeMessagesCacheRef.current.delete(chat.id);
+        messageCursorCacheRef.current.delete(chat.id);
+        loadedMessageChatIdsRef.current.delete(chat.id);
+        bumpMessageCacheVersion(chat.id);
+      }
+    },
+    [bumpMessageCacheVersion],
+  );
+
+  const invalidateCachedMessage = useCallback(
+    (messageId: number) => {
+      for (const [chatId, cachedMessages] of activeMessagesCacheRef.current) {
+        if (!cachedMessages.some((message) => message.id === messageId)) continue;
+        activeMessagesCacheRef.current.delete(chatId);
+        messageCursorCacheRef.current.delete(chatId);
+        loadedMessageChatIdsRef.current.delete(chatId);
+        bumpMessageCacheVersion(chatId);
+      }
+    },
+    [bumpMessageCacheVersion],
+  );
+
+  const upsertWppMessage = useCallback(
+    (message: WppMessage) => {
+      ReceiveMessageHandler(
+        api.current,
+        setMessages,
+        setUniqueCurrentChatMessages,
+        setChats,
+        currentChatRef,
+        chatsRef.current,
+        emitPolicyNotification,
+      )({ message });
+      cacheRealtimeMessage(message);
+
+      if (!message.clientId) return;
+
+      const matchedChat =
+        message.chatId != null
+          ? chatsRef.current.find((chat) => chat.id === message.chatId)
+          : chatsRef.current.find((chat) => chat.contactId === message.contactId);
+      if (matchedChat) chatsChannels.current.set(matchedChat.id, message.clientId);
+
+      const activeChat = currentChatRef.current;
+      const belongsToActiveChat =
+        activeChat?.chatType === "wpp" &&
+        (message.chatId != null
+          ? activeChat.id === message.chatId
+          : activeChat.contactId === message.contactId);
+      if (!belongsToActiveChat) return;
+
+      const channel = channelsRef.current.find((item) => item.id === message.clientId);
+      if (channel) setSelectedChannel(channel);
+    },
+    [cacheRealtimeMessage, emitPolicyNotification, setUniqueCurrentChatMessages],
+  );
+
+  useLayoutEffect(() => {
+    messageScopeGenerationRef.current += 1;
+    invalidateAllMessageCaches();
+    messageCacheVersionsRef.current.clear();
+    removedChatIdsRef.current.clear();
+    realtimeStartedChatIdsRef.current.clear();
+    chatsRequestRef.current += 1;
+    chatsChannels.current.clear();
+    currentMessagesCursorRef.current = null;
+    historyPrependRef.current = false;
+    currentChatRef.current = null;
+    setCurrentChat(null);
+    setUniqueCurrentChatMessages([]);
+    setHasOlderMessages(false);
+    setMessages({});
+    globalChannel.current = null;
+    setSelectedChannel(null);
+    setChannels([]);
+    setSectors([]);
+    setTemplates([]);
+    setParameters({});
+    setLoaded(false);
+  }, [cacheScope, invalidateAllMessageCaches, setCurrentChat, setUniqueCurrentChatMessages]);
 
   const loadFirstMessagePage = useCallback(
     async (chat: DetailedChat) => {
       if (!chat.contactId) return [];
-      const page = await api.current.getChatMessagesPage(chat.id, 50);
-      const lookupMessages = [...page.messages, ...page.quotedMessages];
-      setMessages((previous) => ({ ...previous, [chat.contactId!]: lookupMessages }));
-      cacheActiveMessages(chat.contactId, page.messages);
-      currentMessagesCursorRef.current = page.nextCursor;
-      messageCursorCacheRef.current.set(chat.contactId, page.nextCursor);
-      setHasOlderMessages(page.nextCursor !== null);
-      if (currentChatRef.current?.chatType === "wpp" && currentChatRef.current.id === chat.id) {
-        setUniqueCurrentChatMessages(page.messages);
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const scopeGeneration = messageScopeGenerationRef.current;
+        const cacheEpoch = messageCacheEpochRef.current;
+        const cacheVersion = messageCacheVersionsRef.current.get(chat.id) ?? 0;
+        const page = await api.current.getChatMessagesPage(chat.id, 50);
+
+        if (scopeGeneration !== messageScopeGenerationRef.current) return [];
+        if (removedChatIdsRef.current.has(chat.id)) return [];
+        if (
+          cacheEpoch !== messageCacheEpochRef.current ||
+          cacheVersion !== (messageCacheVersionsRef.current.get(chat.id) ?? 0)
+        ) {
+          continue;
+        }
+
+        const lookupMessages = [...page.messages, ...page.quotedMessages];
+        setMessages((previous) => ({
+          ...previous,
+          [chat.contactId!]: mergeMessagesById(lookupMessages, previous[chat.contactId!] ?? []),
+        }));
+        loadedMessageChatIdsRef.current.add(chat.id);
+        cacheActiveMessages(
+          chat.id,
+          mergeMessagesById(page.messages, activeMessagesCacheRef.current.get(chat.id) ?? []),
+        );
+        messageCursorCacheRef.current.set(chat.id, page.nextCursor);
+        if (currentChatRef.current?.chatType === "wpp" && currentChatRef.current.id === chat.id) {
+          currentMessagesCursorRef.current = page.nextCursor;
+          setHasOlderMessages(page.nextCursor !== null);
+          setUniqueCurrentChatMessages((current) => mergeMessagesById(page.messages, current));
+        }
+        return page.messages;
       }
-      return page.messages;
+
+      return [];
     },
     [cacheActiveMessages],
   );
@@ -406,21 +575,27 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
 
-      const contactId = chat.contactId || 0;
-      const cachedMessages = activeMessagesCacheRef.current.get(contactId);
+      const cachedMessages = activeMessagesCacheRef.current.get(chat.id);
+      const hasLoadedCache = loadedMessageChatIdsRef.current.has(chat.id);
       const messagesToUse = preloadedMessages ?? cachedMessages ?? [];
 
       setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
-      if (preloadedMessages !== undefined) cacheActiveMessages(contactId, preloadedMessages);
-      if (cachedMessages) {
-        const cachedCursor = messageCursorCacheRef.current.get(contactId) ?? null;
+      if (preloadedMessages !== undefined) {
+        loadedMessageChatIdsRef.current.add(chat.id);
+        cacheActiveMessages(chat.id, preloadedMessages);
+      }
+      if (cachedMessages && hasLoadedCache) {
+        const cachedCursor = messageCursorCacheRef.current.get(chat.id) ?? null;
         currentMessagesCursorRef.current = cachedCursor;
         setHasOlderMessages(cachedCursor !== null);
-      }
-      if (!preloadedMessages && !cachedMessages) {
+      } else {
+        currentMessagesCursorRef.current = null;
         setHasOlderMessages(false);
+      }
+      if (preloadedMessages === undefined && !hasLoadedCache) {
         void loadFirstMessagePage(chat).catch((error) => {
+          invalidateCachedChat(chat.id);
           Logger.error("Failed to load chat messages", error as Error);
           toast.error("Falha ao carregar mensagens da conversa.");
         });
@@ -442,31 +617,47 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         );
       }
     },
-    [cacheActiveMessages, loadFirstMessagePage],
+    [cacheActiveMessages, invalidateCachedChat, loadFirstMessagePage, setCurrentChat],
   );
 
   const loadOlderMessages = useCallback(async () => {
     const chat = currentChatRef.current;
     const cursor = currentMessagesCursorRef.current;
     if (!chat || chat.chatType !== "wpp" || !chat.contactId || !cursor) return 0;
+    const scopeGeneration = messageScopeGenerationRef.current;
+    const cacheEpoch = messageCacheEpochRef.current;
+    const cacheVersion = messageCacheVersionsRef.current.get(chat.id) ?? 0;
     const page = await api.current.getChatMessagesPage(chat.id, 50, cursor);
-    historyPrependRef.current = true;
-    setUniqueCurrentChatMessages((current) => [...page.messages, ...current]);
+    if (
+      scopeGeneration !== messageScopeGenerationRef.current ||
+      cacheEpoch !== messageCacheEpochRef.current ||
+      cacheVersion !== (messageCacheVersionsRef.current.get(chat.id) ?? 0) ||
+      removedChatIdsRef.current.has(chat.id)
+    ) {
+      return 0;
+    }
     setMessages((previous) => ({
       ...previous,
-      [chat.contactId!]: [
-        ...page.messages,
-        ...page.quotedMessages,
-        ...(previous[chat.contactId!] ?? []),
-      ],
+      [chat.contactId!]: mergeMessagesById(
+        [...page.messages, ...page.quotedMessages],
+        previous[chat.contactId!] ?? [],
+      ),
     }));
-    const combined = [
-      ...page.messages,
-      ...(activeMessagesCacheRef.current.get(chat.contactId) ?? []),
-    ];
-    cacheActiveMessages(chat.contactId, combined);
+    const combined = mergeMessagesById(
+      page.messages,
+      activeMessagesCacheRef.current.get(chat.id) ?? [],
+    );
+    loadedMessageChatIdsRef.current.add(chat.id);
+    cacheActiveMessages(chat.id, combined);
+    messageCursorCacheRef.current.set(chat.id, page.nextCursor);
+
+    if (currentChatRef.current?.chatType !== "wpp" || currentChatRef.current.id !== chat.id) {
+      return 0;
+    }
+
+    historyPrependRef.current = true;
+    setUniqueCurrentChatMessages((current) => mergeMessagesById(page.messages, current));
     currentMessagesCursorRef.current = page.nextCursor;
-    messageCursorCacheRef.current.set(chat.contactId, page.nextCursor);
     setHasOlderMessages(page.nextCursor !== null);
     return page.messages.length;
   }, [cacheActiveMessages]);
@@ -524,6 +715,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions) => {
       let traceId: string | null = null;
+      const scopeGeneration = messageScopeGenerationRef.current;
       try {
         Logger.debug("Attempting to send message", { to, data });
         if (!instance) {
@@ -536,7 +728,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         }
 
         if (!data.file) {
-          await api.current.sendMessage(String(selectedChannel.id), to, data);
+          api.current.setAuth(token || "");
+          const sentMessage = await api.current.sendMessage(String(selectedChannel.id), to, data);
+          if (scopeGeneration === messageScopeGenerationRef.current && sentMessage?.id != null) {
+            upsertWppMessage(sentMessage);
+          }
           return;
         }
 
@@ -588,7 +784,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             fileId: res.file.id,
             elapsedMs: Date.now() - flowStartedAt,
           });
-          await sendTracedFileMessage(selectedChannel.id, to, sendFileData);
+          const sentMessage = await sendTracedFileMessage(
+            selectedChannel.id,
+            to,
+            sendFileData,
+            token || undefined,
+          );
+          if (scopeGeneration === messageScopeGenerationRef.current && sentMessage) {
+            upsertWppMessage(sentMessage);
+          }
           logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
             mode: "dedupe-hit",
             elapsedMs: Date.now() - flowStartedAt,
@@ -615,17 +819,25 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           fileId: uploadedFile.id,
           elapsedMs: Date.now() - flowStartedAt,
         });
-        await sendTracedFileMessage(selectedChannel.id, to, {
-          contactId: data.contactId,
-          text: data.text,
-          chatId: data.chatId,
-          fileId: uploadedFile.id,
-          quotedId: data.quotedId,
-          sendAsAudio: !data.sendAsAudio,
-          sendAsChatOwner: !data.sendAsChatOwner,
-          sendAsDocument: !data.sendAsDocument,
-          traceId,
-        });
+        const sentMessage = await sendTracedFileMessage(
+          selectedChannel.id,
+          to,
+          {
+            contactId: data.contactId,
+            text: data.text,
+            chatId: data.chatId,
+            fileId: uploadedFile.id,
+            quotedId: data.quotedId,
+            sendAsAudio: !data.sendAsAudio,
+            sendAsChatOwner: !data.sendAsChatOwner,
+            sendAsDocument: !data.sendAsDocument,
+            traceId,
+          },
+          token || undefined,
+        );
+        if (scopeGeneration === messageScopeGenerationRef.current && sentMessage) {
+          upsertWppMessage(sentMessage);
+        }
         logFileUploadTrace(traceId, "frontend.whatsapp.send-file.success", {
           elapsedMs: Date.now() - flowStartedAt,
           fileId: uploadedFile.id,
@@ -635,7 +847,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         toast.error(sanitizeErrorMessage(err));
       }
     },
-    [channels, selectedChannel, sendTracedFileMessage],
+    [instance, selectedChannel, sendTracedFileMessage, token, upsertWppMessage],
   );
 
   const editMessage = useCallback(
@@ -810,32 +1022,118 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [selectedChannel, token],
   );
 
-  const getChats = useCallback(() => {
-    if (typeof token === "string" && token.length > 0 && api.current) {
-      api.current.setAuth(token);
-      api.current
-        .getChatsBySession(!isHybridCacheEnabled(), true)
-        .then(({ chats, messages }) => {
-          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
-          Logger.debug("Chats loaded for current session", {
-            chatCount: detailedChats.length,
-            messageCount: messages.length,
-            includesMessages: !isHybridCacheEnabled(),
-          });
-
-          setChats(detailedChats);
-          setMessages(chatsMessages);
-        })
-        .catch((error) => {
-          Logger.error("Failed to load chats", error as Error);
-          toast.error("Falha ao carregar as conversas.");
-        });
-    } else {
+  const getChats = useCallback(async () => {
+    if (!(typeof token === "string" && token.length > 0)) {
+      chatsRequestRef.current += 1;
       setChats([]);
       setMessages({});
+      return;
     }
-  }, [token, api.current]);
+
+    removedChatIdsRef.current.clear();
+    const requestId = ++chatsRequestRef.current;
+    api.current.setAuth(token);
+
+    try {
+      const { chats: loadedChats, messages: loadedMessages } = await api.current.getChatsBySession(
+        !isHybridCacheEnabled(),
+        true,
+      );
+      if (requestId !== chatsRequestRef.current) return;
+
+      const { chatsMessages, detailedChats } = processChatsAndMessages(loadedChats, loadedMessages);
+      const availableChats = detailedChats.filter(
+        (chat) => !removedChatIdsRef.current.has(chat.id),
+      );
+      const availableChatIds = new Set(availableChats.map((chat) => chat.id));
+      const activeChat = currentChatRef.current;
+      const activeChatWasRemoved =
+        activeChat?.chatType === "wpp" &&
+        !availableChatIds.has(activeChat.id) &&
+        !realtimeStartedChatIdsRef.current.has(activeChat.id);
+
+      if (activeChatWasRemoved && !isReadOnlyModeRef.current) {
+        setCurrentChat(null);
+        setUniqueCurrentChatMessages([]);
+        currentMessagesCursorRef.current = null;
+        setHasOlderMessages(false);
+      }
+
+      Logger.debug("Chats loaded for current session", {
+        chatCount: availableChats.length,
+        messageCount: loadedMessages.length,
+        includesMessages: !isHybridCacheEnabled(),
+      });
+
+      setChats((currentChats) => {
+        const snapshotIds = new Set(availableChats.map((chat) => chat.id));
+        const mergedSnapshot = availableChats.map((snapshotChat) => {
+          realtimeStartedChatIdsRef.current.delete(snapshotChat.id);
+          const currentChat = currentChats.find((chat) => chat.id === snapshotChat.id);
+          if (!currentChat) return snapshotChat;
+
+          const currentTimestamp = Number(currentChat.lastMessage?.timestamp ?? 0);
+          const snapshotTimestamp = Number(snapshotChat.lastMessage?.timestamp ?? 0);
+          return currentTimestamp > snapshotTimestamp
+            ? {
+                ...snapshotChat,
+                lastMessage: currentChat.lastMessage,
+                isUnread: currentChat.isUnread,
+              }
+            : snapshotChat;
+        });
+        const justStartedChats = currentChats.filter(
+          (chat) =>
+            realtimeStartedChatIdsRef.current.has(chat.id) &&
+            !snapshotIds.has(chat.id) &&
+            !removedChatIdsRef.current.has(chat.id),
+        );
+        return [...justStartedChats, ...mergedSnapshot];
+      });
+      setMessages((currentMessages) => {
+        const mergedMessages = { ...chatsMessages };
+        for (const [contactId, realtimeMessages] of Object.entries(currentMessages)) {
+          const numericContactId = Number(contactId);
+          const shouldKeepMessages =
+            availableChats.some((chat) => chat.contactId === numericContactId) ||
+            chatsRef.current.some(
+              (chat) =>
+                realtimeStartedChatIdsRef.current.has(chat.id) &&
+                chat.contactId === numericContactId,
+            );
+          if (!shouldKeepMessages) continue;
+          mergedMessages[numericContactId] = mergeMessagesById(
+            mergedMessages[numericContactId] ?? [],
+            realtimeMessages,
+          );
+        }
+        return mergedMessages;
+      });
+    } catch (error) {
+      if (requestId !== chatsRequestRef.current) return;
+      Logger.error("Failed to load chats", error as Error);
+      toast.error("Falha ao carregar as conversas.");
+    }
+  }, [setCurrentChat, setUniqueCurrentChatMessages, token]);
+  getChatsRef.current = getChats;
+
+  const reconcileRealtimeState = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastRealtimeReconcileAtRef.current < 2_000) return;
+    lastRealtimeReconcileAtRef.current = now;
+
+    invalidateAllMessageCaches();
+    await getChatsRef.current();
+    const activeChat = currentChatRef.current;
+    if (activeChat?.chatType !== "wpp") return;
+
+    try {
+      await loadFirstMessagePage(activeChat);
+    } catch (error) {
+      invalidateCachedChat(activeChat.id);
+      Logger.error("Failed to reconcile active chat messages", error as Error);
+    }
+  }, [invalidateAllMessageCaches, invalidateCachedChat, loadFirstMessagePage]);
 
   const startChatByContactId = useCallback(
     async (contactId: number, template?: SendTemplateData) => {
@@ -861,36 +1159,47 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   useEffect(() => {
     if (token?.length && api.current && user) {
+      let active = true;
+      const scopeGeneration = messageScopeGenerationRef.current;
+      const isCurrentScope = () => active && scopeGeneration === messageScopeGenerationRef.current;
+
       api.current.setAuth(token);
       usersService.setAuth(token);
-      refreshNotificationPreferences();
+      void refreshNotificationPreferences();
       if (cacheScope) {
         void Promise.all([
           hybridCache.get<SectorData[]>(cacheScope, "sectors"),
           hybridCache.get<WppClient[]>(cacheScope, "channels"),
           hybridCache.get<Record<string, string>>(cacheScope, "parameters"),
         ]).then(([cachedSectors, cachedChannels, cachedParameters]) => {
+          if (!isCurrentScope()) return;
           if (cachedSectors) setSectors(cachedSectors);
           if (cachedChannels) setChannels(cachedChannels);
           if (cachedParameters) setParameters(cachedParameters);
           if (cachedSectors && cachedChannels && cachedParameters) setLoaded(true);
         });
       }
-      getChats();
-      api.current.getSectors().then((res) => {
-        const secs = Array.isArray(res)
-          ? (res as SectorData[])
-          : Array.isArray((res as { data?: SectorData[] })?.data)
-            ? ((res as { data: SectorData[] }).data ?? [])
-            : [];
+      void getChats();
+      void api.current
+        .getSectors()
+        .then(async (res) => {
+          if (!isCurrentScope()) return;
+          const secs = Array.isArray(res)
+            ? (res as SectorData[])
+            : Array.isArray((res as { data?: SectorData[] })?.data)
+              ? ((res as { data: SectorData[] }).data ?? [])
+              : [];
 
-        setSectors(secs);
-        if (cacheScope) void hybridCache.set(cacheScope, "sectors", secs);
+          setSectors(secs);
+          if (cacheScope) void hybridCache.set(cacheScope, "sectors", secs);
 
-        const sector = secs.find((s) => s.id === user.SETOR);
+          const sector = secs.find((item) => item.id === user.SETOR);
+          const clientsResponse = await api.current.ax.get(
+            `/api/whatsapp/sector/${user.SETOR}/clients`,
+          );
+          if (!isCurrentScope()) return;
 
-        api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then(async (res) => {
-          const channelsPayload = res?.data;
+          const channelsPayload = clientsResponse?.data;
           const channelsData: WppClient[] = Array.isArray(
             (channelsPayload as { data?: WppClient[] })?.data,
           )
@@ -898,43 +1207,47 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             : Array.isArray(channelsPayload)
               ? (channelsPayload as WppClient[])
               : [];
-          const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
+          const defaultChannel = channelsData.find(
+            (channel) => channel.id === sector?.defaultClientId,
+          );
           const activeChannel = defaultChannel || channelsData[0] || null;
 
           globalChannel.current = activeChannel;
-          setSelectedChannel((current) => current ?? activeChannel);
+          setSelectedChannel((current) =>
+            current && channelsData.some((channel) => channel.id === current.id)
+              ? current
+              : activeChannel,
+          );
 
           const parametersResponse = await api.current.ax.get("/api/whatsapp/session/parameters");
-          const parameters: Record<string, string> = parametersResponse.data["parameters"];
-          if (parameters["is_official"] === "true" && activeChannel?.id) {
+          if (!isCurrentScope()) return;
+          const loadedParameters: Record<string, string> = parametersResponse.data["parameters"];
+          if (loadedParameters["is_official"] === "true" && activeChannel?.id) {
             const templatesResponse = await api.current.ax.get(
               `/api/whatsapp/${activeChannel.id}/templates`,
             );
+            if (!isCurrentScope()) return;
             setTemplates(templatesResponse.data.templates);
           } else {
             setTemplates([]);
           }
-          setParameters(parameters);
+          setParameters(loadedParameters);
           if (cacheScope) {
-            void hybridCache.set(cacheScope, "parameters", parameters);
+            void hybridCache.set(cacheScope, "parameters", loadedParameters);
             void hybridCache.set(cacheScope, "channels", channelsData);
           }
 
           setChannels(channelsData);
           setLoaded(true);
+          await getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
+        })
+        .catch((error) => {
+          if (isCurrentScope())
+            Logger.error("Failed to load WhatsApp session data", error as Error);
         });
 
-        getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
-      });
-
       return () => {
-        setChats([]);
-        setMessages([]);
-        setTemplates([]);
-        setParameters({});
-        setNotifications([]);
-        setNotificationPreferences(createDefaultNotificationPreferences());
-        setLoaded(false);
+        active = false;
       };
     }
     // Removendo api.current das dependências para evitar loop infinito
@@ -944,29 +1257,41 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (socket) {
       const unsubscribers: Array<() => void> = [];
       unsubscribers.push(
-        socket.subscribe(
-          SocketEventType.WppContactMessagesRead,
-          ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages),
-        ),
+        socket.subscribe(SocketEventType.WppContactMessagesRead, (data: { contactId: number }) => {
+          ReadChatHandler(
+            currentChatRef,
+            setChats,
+            setMessages,
+            setUniqueCurrentChatMessages,
+          )(data);
+          invalidateCachedContact(data.contactId);
+        }),
       );
       unsubscribers.push(
-        socket.subscribe(
-          SocketEventType.WppChatStarted,
-          ChatStartedHandler(
+        socket.subscribe(SocketEventType.WppChatStarted, (data: { chatId: number }) => {
+          const scopeGeneration = messageScopeGenerationRef.current;
+          removedChatIdsRef.current.delete(data.chatId);
+          realtimeStartedChatIdsRef.current.add(data.chatId);
+          return ChatStartedHandler(
             api.current,
             socket,
             setMessages,
             setChats,
-            setCurrentChat,
-            setUniqueCurrentChatMessages,
+            openChat,
             userInitiatedChatContactId,
             emitPolicyNotification,
-          ),
-        ),
+            (chatId) =>
+              scopeGeneration === messageScopeGenerationRef.current &&
+              !removedChatIdsRef.current.has(chatId),
+          )(data);
+        }),
       );
       unsubscribers.push(
-        socket.subscribe(SocketEventType.WppChatFinished, (data: any) =>
-          ChatFinishedHandler(
+        socket.subscribe(SocketEventType.WppChatFinished, (data: { chatId: number }) => {
+          realtimeStartedChatIdsRef.current.delete(data.chatId);
+          removedChatIdsRef.current.add(data.chatId);
+          invalidateCachedChat(data.chatId);
+          return ChatFinishedHandler(
             socket,
             chatsRef.current,
             currentChatRef.current,
@@ -975,12 +1300,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             setCurrentChat,
             setUniqueCurrentChatMessages,
             () => getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }),
-          )(data),
-        ),
+          )(data);
+        }),
       );
       unsubscribers.push(
-        socket.subscribe(SocketEventType.WppChatTransfer, (data: any) =>
-          ChatTransferHandler(
+        socket.subscribe(SocketEventType.WppChatTransfer, (data: { chatId: number }) => {
+          realtimeStartedChatIdsRef.current.delete(data.chatId);
+          removedChatIdsRef.current.add(data.chatId);
+          invalidateCachedChat(data.chatId);
+          return ChatTransferHandler(
             api.current,
             socket,
             chatsRef.current,
@@ -989,71 +1317,89 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             setChats,
             setCurrentChat,
             setUniqueCurrentChatMessages,
-          )(data),
-        ),
+          )(data);
+        }),
       );
       unsubscribers.push(
         socket.subscribe(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
-          ReceiveMessageHandler(
-            api.current,
-            setMessages,
-            setUniqueCurrentChatMessages,
-            setChats,
-            currentChatRef,
-            chatsRef.current,
-            emitPolicyNotification,
-          )(data);
-          // Auto-update per-chat channel based on incoming message
-          const { message } = data;
-          if (message.clientId) {
-            const matchedChat = chatsRef.current.find((c) => c.contactId === message.contactId);
-            if (matchedChat) {
-              chatsChannels.current.set(matchedChat.id, message.clientId);
-            }
+          upsertWppMessage(data.message);
+        }),
+      );
 
-            const current = currentChatRef.current;
-            if (current && current.chatType === "wpp" && current.contactId === message.contactId) {
-              const channel = channelsRef.current.find((ch) => ch.id === message.clientId);
-              if (channel) {
-                setSelectedChannel(channel);
-              }
-            }
-          }
+      unsubscribers.push(
+        socket.subscribe("connect", () => {
+          void reconcileRealtimeState();
         }),
       );
 
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.WppMessageEdit,
-          EditedMessageHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
+          (data: { messageId: number; newText: string; contactId: number }) => {
+            EditedMessageHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef)(data);
+            invalidateCachedContact(data.contactId);
+          },
         ),
       );
 
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.WppMessageReaction,
-          MessageReactionHandler(setMessages, setUniqueCurrentChatMessages),
+          (data: { messageId: number; reaction: string }) => {
+            MessageReactionHandler(setMessages, setUniqueCurrentChatMessages)(data);
+            invalidateCachedMessage(data.messageId);
+          },
         ),
       );
 
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.WppMessageDelete,
-          MessageDeleteHandler(setMessages, setUniqueCurrentChatMessages),
+          (data: { messageId: number; contactId: number }) => {
+            MessageDeleteHandler(setMessages, setUniqueCurrentChatMessages)(data);
+            invalidateCachedContact(data.contactId);
+          },
         ),
       );
 
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.WppMessageStatus,
-          MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef),
+          (data: { messageId: number; contactId: number; status: WppMessage["status"] }) => {
+            MessageStatusHandler(setMessages, setUniqueCurrentChatMessages, currentChatRef)(data);
+            invalidateCachedContact(data.contactId);
+          },
         ),
       );
       return () => {
         for (const unsubscribe of unsubscribers) unsubscribe();
       };
     }
-  }, [socket, emitPolicyNotification, getNotifications]);
+  }, [
+    socket,
+    emitPolicyNotification,
+    getNotifications,
+    invalidateCachedChat,
+    invalidateCachedContact,
+    invalidateCachedMessage,
+    openChat,
+    reconcileRealtimeState,
+    upsertWppMessage,
+  ]);
+
+  useEffect(() => {
+    const reconcileWhenVisible = () => {
+      if (document.visibilityState === "visible") void reconcileRealtimeState();
+    };
+    const reconcileWhenOnline = () => void reconcileRealtimeState();
+
+    document.addEventListener("visibilitychange", reconcileWhenVisible);
+    window.addEventListener("online", reconcileWhenOnline);
+    return () => {
+      document.removeEventListener("visibilitychange", reconcileWhenVisible);
+      window.removeEventListener("online", reconcileWhenOnline);
+    };
+  }, [reconcileRealtimeState]);
 
   const chatListValue = useMemo(
     () => ({

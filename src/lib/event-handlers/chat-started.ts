@@ -1,8 +1,9 @@
-import { SocketClient, WhatsappClient, WppChatType, WppMessage } from "@/lib/sdk-local";
-import { Dispatch, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import mergeMessagesById from "@/lib/merge-messages-by-id";
+import mergeMessageUpdate from "@/lib/merge-message-update";
+import { SocketClient, WhatsappClient, WppMessage } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
+import { Dispatch, SetStateAction } from "react";
 
 interface HandleChatStartedCallbackProps {
   chatId: number;
@@ -13,8 +14,7 @@ export default function ChatStartedHandler(
   socket: SocketClient,
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
-  setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>,
-  setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
+  openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[]) => void,
   userInitiatedChatContactId: React.RefObject<number | null>,
   notify?: (payload: {
     event: "new_conversation";
@@ -22,54 +22,65 @@ export default function ChatStartedHandler(
     body: string;
     isChatFocused: boolean;
   }) => void,
+  shouldApply: (chatId: number) => boolean = () => true,
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
-    const res = await api.getChatById(chatId);
-    const { messages, ...chat } = res;
+    try {
+      const response = await api.getChatById(chatId);
+      if (!shouldApply(chatId)) return;
+      const { messages: rawMessages, ...chat } = response;
+      const messages = Array.isArray(rawMessages) ? rawMessages : [];
+      const lastMessage = messages.reduce<WppMessage | null>((latest, current) => {
+        if (!latest) return current;
+        return Number(latest.timestamp) > Number(current.timestamp) ? latest : current;
+      }, null);
+      const isUnread = lastMessage ? !lastMessage.from.startsWith("me") : false;
+      const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage, chatType: "wpp" };
 
-    
-    const lastMessage = messages?.reduce((prev, current) => {
-      return +prev.timestamp > +current.timestamp ? prev : current;
-    }, messages[0]);
-    
-    const isUnread = !lastMessage.from.startsWith("me");
-    socket.joinRoom(`chat:${chat.id}`);
+      socket.joinRoom(`chat:${chat.id}`);
+      notify?.({
+        event: "new_conversation",
+        title: "Novo atendimento!",
+        body: `Contato: ${chat.contact?.name || "Contato excluído"}`,
+        isChatFocused: false,
+      });
 
-    notify?.({
-      event: "new_conversation",
-      title: "Novo atendimento!",
-      body: `Contato: ${chat.contact?.name || "Contato excluído"}`,
-      isChatFocused: false,
-    });
-
-    const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage, chatType: "wpp" };
-
-    setMessages((prev) => {
-      const newMessages = { ...prev };
-      const contactId = chat.contactId || 0;
-
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = messages;
-      } else {
-        newMessages[contactId] = [...newMessages[contactId], ...messages];
+      if (chat.contactId) {
+        setMessages((previous) => ({
+          ...previous,
+          [chat.contactId!]: mergeMessagesById(
+            messages,
+            previous[chat.contactId!] ?? [],
+            mergeMessageUpdate,
+          ),
+        }));
       }
 
-      return newMessages;
-    });
+      setChats((previous) => {
+        const existingIndex = previous.findIndex((item) => item.id === chat.id);
+        if (existingIndex === -1) return [parsedChat, ...previous];
 
-    setChats((prev) => {
-      const chatIndex = prev.findIndex((c) => c.id === chat.id);
-      if (chatIndex !== -1) {
-        return prev;
+        const next = [...previous];
+        const existingChat = next[existingIndex]!;
+        const existingTimestamp = Number(existingChat.lastMessage?.timestamp ?? 0);
+        const snapshotTimestamp = Number(parsedChat.lastMessage?.timestamp ?? 0);
+        next[existingIndex] =
+          existingTimestamp > snapshotTimestamp
+            ? {
+                ...parsedChat,
+                lastMessage: existingChat.lastMessage,
+                isUnread: existingChat.isUnread,
+              }
+            : parsedChat;
+        return next;
+      });
+
+      if (userInitiatedChatContactId.current === chat.contactId) {
+        openChat(parsedChat, messages);
+        userInitiatedChatContactId.current = null;
       }
-      return [parsedChat, ...prev];
-    });
-
-    // Se o usuário iniciou este chat manualmente, seleciona automaticamente
-    if (userInitiatedChatContactId.current === chat.contactId) {
-      setCurrentChat(parsedChat);
-      setCurrentChatMessages(messages);
-      userInitiatedChatContactId.current = null; // Limpa a flag
+    } catch (error) {
+      Logger.error("Failed to load a newly started chat", error as Error);
     }
   };
 }

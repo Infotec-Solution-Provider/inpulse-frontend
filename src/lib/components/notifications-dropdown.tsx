@@ -410,13 +410,15 @@ export default function NotificationsDropdown({ openOnMount = false }: { openOnM
         )}
       </Menu>
 
-      <ContactModal
-        open={isModalOpen}
-        onClose={handleModalClose}
-        contact={selectedContact}
-        chat={selectedChat}
-        isLoading={isContactLoading}
-      />
+      {isModalOpen && (
+        <ContactModal
+          open
+          onClose={handleModalClose}
+          contact={selectedContact}
+          chat={selectedChat}
+          isLoading={isContactLoading}
+        />
+      )}
     </>
   );
 }

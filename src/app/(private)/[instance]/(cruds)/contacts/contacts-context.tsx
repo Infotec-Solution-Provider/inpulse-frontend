@@ -65,9 +65,12 @@ interface IContactsContext {
   sectorMap: Map<number, string>;
 }
 
-export const ContactsContext = createContext<IContactsContext>({} as IContactsContext);
+export const ContactsContext = createContext<IContactsContext | undefined>(undefined);
 export const useContactsContext = () => {
   const context = useContext(ContactsContext);
+  if (!context) {
+    throw new Error("useContactsContext must be used within a ContactsProvider");
+  }
   return context;
 };
 
@@ -334,24 +337,35 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     }
   }, [token, state.filters.page, state.filters.perPage, loadContacts]);
 
-  return (
-    <ContactsContext.Provider
-      value={{
-        state,
-        dispatch,
-        updateContact,
-        loadContacts,
-        createContact,
-        deleteContact,
-        openContactModal,
-        handleDeleteContact,
-        phoneNameMap,
-        customerMap,
-        customerObjectMap,
-        sectorMap,
-      }}
-    >
-      {children}
-    </ContactsContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      state,
+      dispatch,
+      updateContact,
+      loadContacts,
+      createContact,
+      deleteContact,
+      openContactModal,
+      handleDeleteContact,
+      phoneNameMap,
+      customerMap,
+      customerObjectMap,
+      sectorMap,
+    }),
+    [
+      createContact,
+      customerMap,
+      customerObjectMap,
+      deleteContact,
+      handleDeleteContact,
+      loadContacts,
+      openContactModal,
+      phoneNameMap,
+      sectorMap,
+      state,
+      updateContact,
+    ],
   );
+
+  return <ContactsContext.Provider value={contextValue}>{children}</ContactsContext.Provider>;
 }

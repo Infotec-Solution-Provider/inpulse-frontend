@@ -15,8 +15,6 @@ export default function MessageStatusHandler(
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
 ) {
-  const x = chatRef.current;
-
   return ({ status, messageId, contactId }: MessageStatusCallbackProps) => {
     setMessages((prev) => {
       if (!prev[contactId]) {
@@ -35,7 +33,8 @@ export default function MessageStatusHandler(
       return { ...prev, [contactId]: contactMessages };
     });
 
-    if (x && x.chatType === "wpp" && x.contactId === contactId) {
+    const currentChat = chatRef.current;
+    if (currentChat?.chatType === "wpp" && currentChat.contactId === contactId) {
       setCurrentChatMessages((prev) =>
         prev.map((m) => {
           if (m.id === messageId) {

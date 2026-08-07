@@ -4,7 +4,7 @@ import { isExternalOperator } from "@/lib/permissions/operator-access";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
 import { replaceMentions } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
-import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { DetailedInternalChat } from "../../internal-context";
 import { DetailedChat } from "../../whatsapp-context";
 import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
@@ -49,7 +49,7 @@ export default function ChatsMenuList() {
   const isExternal = isExternalOperator(user?.NIVEL);
   const { chats, openChat, currentChat, chatFilters } = useWhatsappChatList();
   const { internalChats, openInternalChat, users } = useInternalChatList();
-  const { state } = useContext(ContactsContext);
+  const { state } = useContactsContext();
   const userNameById = useMemo(
     () => new Map(users.map((directoryUser) => [directoryUser.CODIGO, directoryUser.NOME])),
     [users],

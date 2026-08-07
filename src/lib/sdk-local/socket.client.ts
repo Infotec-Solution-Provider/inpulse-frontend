@@ -13,6 +13,7 @@ import { JoinRoomFn } from "./types";
  */
 export default class SocketClient {
   private readonly ws: Socket;
+  private activeToken: string | null = null;
   private readonly listeners: Map<SocketEventType, any> = new Map();
   private readonly subscriptions = new Map<string, Set<(...args: any[]) => void>>();
   private readonly subscriptionDispatchers = new Map<string, (...args: any[]) => void>();
@@ -41,7 +42,14 @@ export default class SocketClient {
    *                This token is sent as part of the WebSocket authentication payload.
    */
   public connect(token: string) {
+    const mustReconnect = this.activeToken !== null && this.activeToken !== token;
+    this.activeToken = token;
     this.ws.auth = { token };
+
+    if (mustReconnect && this.ws.connected) {
+      this.ws.disconnect();
+    }
+
     this.ws.connect();
   }
 
@@ -51,6 +59,7 @@ export default class SocketClient {
    * by invoking the `disconnect` method on the WebSocket instance.
    */
   public disconnect() {
+    this.activeToken = null;
     this.ws.disconnect();
   }
 

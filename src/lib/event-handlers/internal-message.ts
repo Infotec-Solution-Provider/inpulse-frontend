@@ -5,6 +5,8 @@ import { Dispatch, RefObject, SetStateAction } from "react";
 import getInternalMessageAuthor from "../utils/get-internal-message-author";
 import { replaceMentions } from "../utils/message-mentions";
 import { isInternalMentionForUser } from "../utils/notification-preferences";
+import mergeMessageUpdate from "../merge-message-update";
+import mergeMessagesById, { compareMessageChronology } from "../merge-messages-by-id";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -38,11 +40,13 @@ export default function InternalReceiveMessageHandler(
   }) => void,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
-    if (notifiedMessages.has(message.id)) return;
-    notifiedMessages.add(message.id);
-    if (notifiedMessages.size > 1000) {
-      const oldestId = notifiedMessages.values().next().value as number | undefined;
-      if (oldestId !== undefined) notifiedMessages.delete(oldestId);
+    const shouldNotify = !notifiedMessages.has(message.id);
+    if (shouldNotify) {
+      notifiedMessages.add(message.id);
+      if (notifiedMessages.size > 1000) {
+        const oldestId = notifiedMessages.values().next().value as number | undefined;
+        if (oldestId !== undefined) notifiedMessages.delete(oldestId);
+      }
     }
     const isCurrentChat =
       chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
@@ -54,14 +58,11 @@ export default function InternalReceiveMessageHandler(
     }
     if (isCurrentChat) {
       setCurrentChatMessages((prev) => {
-        if (!prev.some((m) => m.id === message.id)) {
-          return [...prev, message];
-        }
-        return prev;
+        return mergeMessagesById(prev, [message], mergeMessageUpdate);
       });
     }
 
-    if (message.from !== `user:${loggedUser.CODIGO}`) {
+    if (shouldNotify && message.from !== `user:${loggedUser.CODIGO}`) {
       const author = getInternalMessageAuthor(
         message.from,
         phoneNameMap,
@@ -86,14 +87,7 @@ export default function InternalReceiveMessageHandler(
       const id = message.internalChatId;
       if (!(id in prev) && !isCurrentChat) return prev;
       const newMessages = { ...prev };
-      const chatMessages = [...(prev[id] ?? [])];
-
-      const findIndex = chatMessages.findIndex((m) => m.id === message.id);
-      if (findIndex === -1) {
-        chatMessages.push(message);
-      } else {
-        chatMessages[findIndex] = message;
-      }
+      const chatMessages = mergeMessagesById(prev[id] ?? [], [message], mergeMessageUpdate);
       newMessages[id] = chatMessages;
 
       return newMessages;
@@ -102,10 +96,16 @@ export default function InternalReceiveMessageHandler(
     setChats((prev) =>
       prev.map((chat) => {
         if (chat.id === message.internalChatId) {
+          const lastMessage =
+            !chat.lastMessage || compareMessageChronology(message, chat.lastMessage) >= 0
+              ? chat.lastMessage?.id === message.id
+                ? mergeMessageUpdate(chat.lastMessage, message)
+                : message
+              : chat.lastMessage;
           return {
             ...chat,
-            isUnread: chatRef.current?.id !== message.internalChatId,
-            lastMessage: message,
+            isUnread: !isCurrentChat,
+            lastMessage,
           };
         }
 

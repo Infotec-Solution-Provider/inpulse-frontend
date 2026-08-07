@@ -28,6 +28,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useLayoutEffect,
   useState,
 } from "react";
 import { toast } from "react-toastify";
@@ -47,6 +48,8 @@ import isHybridCacheEnabled from "@/lib/cache/hybrid-cache-flag";
 import projectDirectoryContact from "@/lib/cache/project-directory-contact";
 import projectDirectoryUser from "@/lib/cache/project-directory-user";
 import { InternalChatListContext } from "./internal-chat-list-context";
+import mergeMessagesById from "@/lib/merge-messages-by-id";
+import mergeMessageUpdate from "@/lib/merge-message-update";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -61,12 +64,17 @@ interface InternalChatContextType {
   internalChats: DetailedInternalChat[];
   messages: Record<number, InternalMessage[]>;
   sendInternalMessage: (data: InternalSendMessageData) => Promise<void>;
-  openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
+  openInternalChat: (
+    chat: DetailedInternalChat,
+    markAsRead?: boolean,
+    preloadedMessages?: InternalMessage[],
+  ) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
   monitorInternalChats: DetailedInternalChat[];
   currentInternalChatMessages: InternalMessage[];
   getInternalChatsMonitor: () => void;
+  loadInternalMonitorMessages: (chatId: number) => Promise<InternalMessage[]>;
   monitorMessages: Record<number, InternalMessage[]>;
   deleteInternalChat: (id: number) => Promise<void>;
   finishInternalChat: (id: number) => Promise<void>;
@@ -141,6 +149,13 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const currentMessagesCursorRef = useRef<number | null>(null);
   const messageCursorCacheRef = useRef(new Map<number, number | null>());
   const activeMessagesCacheRef = useRef(new Map<number, InternalMessage[]>());
+  const loadedInternalChatIdsRef = useRef(new Set<number>());
+  const removedInternalChatIdsRef = useRef(new Set<number>());
+  const realtimeStartedInternalChatIdsRef = useRef(new Set<number>());
+  const internalChatsRequestRef = useRef(0);
+  const internalScopeGenerationRef = useRef(0);
+  const internalCacheEpochRef = useRef(0);
+  const internalCacheVersionsRef = useRef(new Map<number, number>());
   const historyPrependRef = useRef(false);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
   const userInitiatedInternalChat = useRef<boolean>(false);
@@ -148,13 +163,11 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
   const usersRef = useRef<User[]>([]);
   const contactsRef = useRef<WppContact[]>([]);
-  const internalChatsRef = useRef<DetailedInternalChat[]>([]);
   const phoneNameMapRef = useRef(phoneNameMap);
   const notificationPreferencesRef = useRef(notificationPreferences);
   const whatsappSenderNameMapRef = useRef(whatsappSenderNameMap);
   usersRef.current = users;
   contactsRef.current = contacts;
-  internalChatsRef.current = internalChats;
   phoneNameMapRef.current = phoneNameMap;
   notificationPreferencesRef.current = notificationPreferences;
   whatsappSenderNameMapRef.current = whatsappSenderNameMap;
@@ -200,53 +213,237 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     };
   }, [internalChats, wppUnreadCount]);
 
+  const bumpInternalCacheVersion = useCallback((chatId: number) => {
+    internalCacheVersionsRef.current.set(
+      chatId,
+      (internalCacheVersionsRef.current.get(chatId) ?? 0) + 1,
+    );
+  }, []);
+
+  const cacheInternalMessages = useCallback(
+    (chatId: number, loadedMessages: InternalMessage[]) => {
+      const cache = activeMessagesCacheRef.current;
+      cache.delete(chatId);
+      cache.set(chatId, loadedMessages);
+      const evicted: number[] = [];
+
+      while (cache.size > 3) {
+        const oldestKey = cache.keys().next().value as number | undefined;
+        if (oldestKey === undefined) break;
+        cache.delete(oldestKey);
+        messageCursorCacheRef.current.delete(oldestKey);
+        loadedInternalChatIdsRef.current.delete(oldestKey);
+        bumpInternalCacheVersion(oldestKey);
+        evicted.push(oldestKey);
+      }
+
+      if (evicted.length) {
+        setMessages((previous) => {
+          const next = { ...previous };
+          for (const key of evicted) delete next[key];
+          return next;
+        });
+      }
+    },
+    [bumpInternalCacheVersion],
+  );
+
+  const invalidateInternalMessageCache = useCallback(
+    (chatId: number) => {
+      activeMessagesCacheRef.current.delete(chatId);
+      messageCursorCacheRef.current.delete(chatId);
+      loadedInternalChatIdsRef.current.delete(chatId);
+      bumpInternalCacheVersion(chatId);
+    },
+    [bumpInternalCacheVersion],
+  );
+
+  const invalidateAllInternalMessageCaches = useCallback(() => {
+    internalCacheEpochRef.current += 1;
+    activeMessagesCacheRef.current.clear();
+    messageCursorCacheRef.current.clear();
+    loadedInternalChatIdsRef.current.clear();
+  }, []);
+
+  const invalidateInternalCacheByMessage = useCallback(
+    (messageId: number) => {
+      for (const [chatId, cachedMessages] of activeMessagesCacheRef.current) {
+        if (!cachedMessages.some((message) => message.id === messageId)) continue;
+        activeMessagesCacheRef.current.delete(chatId);
+        messageCursorCacheRef.current.delete(chatId);
+        loadedInternalChatIdsRef.current.delete(chatId);
+        bumpInternalCacheVersion(chatId);
+      }
+    },
+    [bumpInternalCacheVersion],
+  );
+
+  const loadFirstInternalMessagePage = useCallback(
+    async (chat: DetailedInternalChat) => {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const scopeGeneration = internalScopeGenerationRef.current;
+        const cacheEpoch = internalCacheEpochRef.current;
+        const cacheVersion = internalCacheVersionsRef.current.get(chat.id) ?? 0;
+        const page = await api.current.getChatMessagesPage(chat.id, 50);
+
+        if (scopeGeneration !== internalScopeGenerationRef.current) return [];
+        if (removedInternalChatIdsRef.current.has(chat.id)) return [];
+        if (
+          cacheEpoch !== internalCacheEpochRef.current ||
+          cacheVersion !== (internalCacheVersionsRef.current.get(chat.id) ?? 0)
+        ) {
+          continue;
+        }
+
+        const lookupMessages = [...page.messages, ...page.quotedMessages];
+        setMessages((previous) => ({
+          ...previous,
+          [chat.id]: mergeMessagesById(lookupMessages, previous[chat.id] ?? []),
+        }));
+        loadedInternalChatIdsRef.current.add(chat.id);
+        cacheInternalMessages(
+          chat.id,
+          mergeMessagesById(page.messages, activeMessagesCacheRef.current.get(chat.id) ?? []),
+        );
+        messageCursorCacheRef.current.set(chat.id, page.nextCursor);
+
+        if (
+          currentChatRef.current?.chatType === "internal" &&
+          currentChatRef.current.id === chat.id
+        ) {
+          currentMessagesCursorRef.current = page.nextCursor;
+          setHasOlderInternalMessages(page.nextCursor !== null);
+          setCurrentChatMessages((current) => mergeMessagesById(page.messages, current));
+        }
+
+        return page.messages;
+      }
+
+      return [];
+    },
+    [cacheInternalMessages, currentChatRef],
+  );
+
+  const upsertInternalMessage = useCallback(
+    (message: InternalMessage) => {
+      if (!user) return;
+
+      InternalReceiveMessageHandler(
+        api.current,
+        setMessages,
+        setCurrentChatMessages,
+        setInternalChats,
+        currentChatRef,
+        usersRef.current,
+        contactsRef.current,
+        user,
+        phoneNameMapRef.current,
+        whatsappSenderNameMapRef.current,
+        ({ event, title, body, isChatFocused }) => {
+          const preferences = notificationPreferencesRef.current;
+          if (!shouldDispatchNotification(preferences, { event, isChatFocused })) return;
+
+          dispatchConfiguredNotification(preferences, event, {
+            title,
+            body,
+            icon: HorizontalLogo.src,
+          });
+        },
+      )({ message });
+
+      const cachedMessages = activeMessagesCacheRef.current.get(message.internalChatId);
+      const isCurrentChat =
+        currentChatRef.current?.chatType === "internal" &&
+        currentChatRef.current.id === message.internalChatId;
+
+      if (cachedMessages || isCurrentChat) {
+        cacheInternalMessages(
+          message.internalChatId,
+          mergeMessagesById(cachedMessages ?? [], [message], mergeMessageUpdate),
+        );
+      }
+    },
+    [cacheInternalMessages, currentChatRef, user],
+  );
+
+  const reconcileInternalMessageSend = useCallback(
+    async (
+      chatId: number,
+      sentMessage: InternalMessage | null | undefined,
+      scopeGeneration: number,
+    ) => {
+      if (scopeGeneration !== internalScopeGenerationRef.current) return;
+      if (sentMessage?.id != null) {
+        upsertInternalMessage(sentMessage);
+        return;
+      }
+
+      invalidateInternalMessageCache(chatId);
+      const activeChat = currentChatRef.current;
+      if (activeChat?.chatType !== "internal" || activeChat.id !== chatId) return;
+
+      try {
+        await loadFirstInternalMessagePage(activeChat);
+      } catch (error) {
+        console.error("Falha ao reconciliar mensagem interna enviada", error);
+      }
+    },
+    [
+      currentChatRef,
+      invalidateInternalMessageCache,
+      loadFirstInternalMessagePage,
+      upsertInternalMessage,
+    ],
+  );
+
+  useLayoutEffect(() => {
+    internalScopeGenerationRef.current += 1;
+    invalidateAllInternalMessageCaches();
+    internalCacheVersionsRef.current.clear();
+    removedInternalChatIdsRef.current.clear();
+    realtimeStartedInternalChatIdsRef.current.clear();
+    internalChatsRequestRef.current += 1;
+    currentMessagesCursorRef.current = null;
+    historyPrependRef.current = false;
+    setCurrentChatMessages([]);
+    setHasOlderInternalMessages(false);
+    setMessages({});
+  }, [cacheScope, invalidateAllInternalMessageCaches]);
+
   const openInternalChat = useCallback(
-    (chat: DetailedInternalChat, markAsRead: boolean = true) => {
+    (
+      chat: DetailedInternalChat,
+      markAsRead: boolean = true,
+      preloadedMessages?: InternalMessage[],
+    ) => {
       setCurrentChat(chat);
-      const cachedMessages = activeMessagesCacheRef.current.get(chat.id);
+      if (preloadedMessages !== undefined) {
+        loadedInternalChatIdsRef.current.add(chat.id);
+        cacheInternalMessages(chat.id, preloadedMessages);
+        messageCursorCacheRef.current.set(chat.id, null);
+        setMessages((previous) => ({
+          ...previous,
+          [chat.id]: mergeMessagesById(previous[chat.id] ?? [], preloadedMessages),
+        }));
+      }
+
+      const cachedMessages = preloadedMessages ?? activeMessagesCacheRef.current.get(chat.id);
+      const hasLoadedCache =
+        preloadedMessages !== undefined || loadedInternalChatIdsRef.current.has(chat.id);
       setCurrentChatMessages(cachedMessages ?? []);
       setWppCurrMsgs([]);
       currentChatRef.current = chat as unknown as DetailedChat;
-      if (cachedMessages) {
+      if (cachedMessages && hasLoadedCache) {
         const cachedCursor = messageCursorCacheRef.current.get(chat.id) ?? null;
         currentMessagesCursorRef.current = cachedCursor;
         setHasOlderInternalMessages(cachedCursor !== null);
       } else {
+        currentMessagesCursorRef.current = null;
         setHasOlderInternalMessages(false);
-        void api.current
-          .getChatMessagesPage(chat.id, 50)
-          .then((page) => {
-            const lookupMessages = [...page.messages, ...page.quotedMessages];
-            setMessages((previous) => ({ ...previous, [chat.id]: lookupMessages }));
-            activeMessagesCacheRef.current.set(chat.id, page.messages);
-            const evicted: number[] = [];
-            while (activeMessagesCacheRef.current.size > 3) {
-              const oldestKey = activeMessagesCacheRef.current.keys().next().value as
-                | number
-                | undefined;
-              if (oldestKey === undefined) break;
-              activeMessagesCacheRef.current.delete(oldestKey);
-              messageCursorCacheRef.current.delete(oldestKey);
-              evicted.push(oldestKey);
-            }
-            if (evicted.length) {
-              setMessages((previous) => {
-                const next = { ...previous };
-                for (const key of evicted) delete next[key];
-                return next;
-              });
-            }
-            messageCursorCacheRef.current.set(chat.id, page.nextCursor);
-            currentMessagesCursorRef.current = page.nextCursor;
-            setHasOlderInternalMessages(page.nextCursor !== null);
-            if (
-              currentChatRef.current?.chatType === "internal" &&
-              currentChatRef.current.id === chat.id
-            ) {
-              setCurrentChatMessages(page.messages);
-            }
-          })
-          .catch(() => toast.error("Falha ao carregar mensagens internas."));
+        void loadFirstInternalMessagePage(chat).catch(() => {
+          invalidateInternalMessageCache(chat.id);
+          toast.error("Falha ao carregar mensagens internas.");
+        });
       }
 
       if (markAsRead) {
@@ -265,43 +462,78 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         );
       }
     },
-    [setCurrentChat, setWppCurrMsgs, currentChatRef],
+    [
+      cacheInternalMessages,
+      invalidateInternalMessageCache,
+      loadFirstInternalMessagePage,
+      setCurrentChat,
+      setWppCurrMsgs,
+      currentChatRef,
+    ],
   );
 
   const loadOlderInternalMessages = useCallback(async () => {
     const chat = currentChatRef.current;
     const cursor = currentMessagesCursorRef.current;
     if (!chat || chat.chatType !== "internal" || !cursor) return 0;
+    const scopeGeneration = internalScopeGenerationRef.current;
+    const cacheEpoch = internalCacheEpochRef.current;
+    const cacheVersion = internalCacheVersionsRef.current.get(chat.id) ?? 0;
     const page = await api.current.getChatMessagesPage(chat.id, 50, cursor);
-    historyPrependRef.current = true;
-    setCurrentChatMessages((current) => [...page.messages, ...current]);
+    if (
+      scopeGeneration !== internalScopeGenerationRef.current ||
+      cacheEpoch !== internalCacheEpochRef.current ||
+      cacheVersion !== (internalCacheVersionsRef.current.get(chat.id) ?? 0) ||
+      removedInternalChatIdsRef.current.has(chat.id)
+    ) {
+      return 0;
+    }
     setMessages((previous) => ({
       ...previous,
-      [chat.id]: [...page.messages, ...page.quotedMessages, ...(previous[chat.id] ?? [])],
+      [chat.id]: mergeMessagesById(
+        [...page.messages, ...page.quotedMessages],
+        previous[chat.id] ?? [],
+      ),
     }));
-    const combined = [...page.messages, ...(activeMessagesCacheRef.current.get(chat.id) ?? [])];
-    activeMessagesCacheRef.current.delete(chat.id);
-    activeMessagesCacheRef.current.set(chat.id, combined);
-    currentMessagesCursorRef.current = page.nextCursor;
+    const combined = mergeMessagesById(
+      page.messages,
+      activeMessagesCacheRef.current.get(chat.id) ?? [],
+    );
+    loadedInternalChatIdsRef.current.add(chat.id);
+    cacheInternalMessages(chat.id, combined);
     messageCursorCacheRef.current.set(chat.id, page.nextCursor);
+
+    if (currentChatRef.current?.chatType !== "internal" || currentChatRef.current.id !== chat.id) {
+      return 0;
+    }
+
+    historyPrependRef.current = true;
+    setCurrentChatMessages((current) => mergeMessagesById(page.messages, current));
+    currentMessagesCursorRef.current = page.nextCursor;
     setHasOlderInternalMessages(page.nextCursor !== null);
     return page.messages.length;
-  }, [currentChatRef]);
+  }, [cacheInternalMessages, currentChatRef]);
   const openInternalChatRef = useRef(openInternalChat);
   openInternalChatRef.current = openInternalChat;
 
-  useEffect(() => {
-    const chat = currentChatRef.current;
-    if (!chat || chat.chatType !== "internal") return;
-    activeMessagesCacheRef.current.delete(chat.id);
-    activeMessagesCacheRef.current.set(chat.id, currentInternalChatMessages);
-  }, [currentChatRef, currentInternalChatMessages]);
   const deleteInternalChat = async (id: number) => {
     if (api.current) {
       try {
         await api.current.deleteInternalChat(id);
+        removedInternalChatIdsRef.current.add(id);
+        realtimeStartedInternalChatIdsRef.current.delete(id);
+        invalidateInternalMessageCache(id);
         toast.success("Chat deletado com sucesso!");
         setInternalChats((prev) => prev.filter((chat) => chat.id !== id));
+        setMessages((previous) => {
+          const next = { ...previous };
+          delete next[id];
+          return next;
+        });
+        if (currentChatRef.current?.chatType === "internal" && currentChatRef.current.id === id) {
+          setCurrentChat(null);
+          setCurrentChatMessages([]);
+        }
       } catch {
         toast.error("Erro ao deletar Chat");
       }
@@ -312,14 +544,16 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       if (!token) return;
       api.current.setAuth(token);
       await api.current.ax.post(`/api/internal/chats/${id}/finish`);
+      removedInternalChatIdsRef.current.add(id);
+      realtimeStartedInternalChatIdsRef.current.delete(id);
+      invalidateInternalMessageCache(id);
 
       toast.success("Chat finalizado com sucesso!");
 
-      setMessages((prev) => {
-        if (prev[id]) {
-          delete prev[id];
-        }
-        return { ...prev };
+      setMessages((previous) => {
+        const next = { ...previous };
+        delete next[id];
+        return next;
       });
 
       if (currentChatRef.current?.chatType === "internal" && currentChatRef.current.id === id) {
@@ -333,6 +567,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const sendInternalMessage = useCallback(
     async (data: InternalSendMessageData) => {
       if (token) {
+        const scopeGeneration = internalScopeGenerationRef.current;
         api.current.setAuth(token);
 
         if (data.file) {
@@ -363,15 +598,26 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           });
 
           try {
-            await api.current.ax.post(`/api/internal/chats/${data.chatId}/messages`, formData, {
-              headers: {
-                "Content-Type": "multipart/form-data",
-                "x-upload-trace-id": traceId,
+            const response = await api.current.ax.post(
+              `/api/internal/chats/${data.chatId}/messages`,
+              formData,
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                  "x-upload-trace-id": traceId,
+                },
+                timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
+                maxBodyLength: Infinity,
+                maxContentLength: Infinity,
               },
-              timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
-              maxBodyLength: Infinity,
-              maxContentLength: Infinity,
-            });
+            );
+
+            const sentMessage = response.data?.data ?? response.data;
+            await reconcileInternalMessageSend(
+              data.chatId,
+              sentMessage as InternalMessage,
+              scopeGeneration,
+            );
 
             logFileUploadTrace(traceId, "frontend.internal.send-file.success", {
               elapsedMs: Date.now() - requestStartedAt,
@@ -388,10 +634,11 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           return;
         }
 
-        await api.current.sendMessageToInternalChat(data);
+        const sentMessage = await api.current.sendMessageToInternalChat(data);
+        await reconcileInternalMessageSend(data.chatId, sentMessage, scopeGeneration);
       }
     },
-    [token],
+    [reconcileInternalMessageSend, token],
   );
 
   useEffect(() => {
@@ -433,6 +680,69 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     };
   }, [cacheScope, token]);
 
+  const loadInternalChats = useCallback(async () => {
+    if (!token || !user || !usersLoaded || users.length === 0) return;
+
+    removedInternalChatIdsRef.current.clear();
+    const requestId = ++internalChatsRequestRef.current;
+    api.current.setAuth(token);
+    const payload = await api.current.getInternalChatsBySession(null, !isHybridCacheEnabled());
+    if (requestId !== internalChatsRequestRef.current) return;
+
+    const chats = Array.isArray(payload?.chats) ? payload.chats : [];
+    const loadedMessages = Array.isArray(payload?.messages) ? payload.messages : [];
+    const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
+      user.CODIGO,
+      users,
+      chats,
+      loadedMessages,
+    );
+    const availableChats = detailedChats.filter(
+      (chat) => !removedInternalChatIdsRef.current.has(chat.id),
+    );
+
+    setInternalChats((currentChats) => {
+      const snapshotIds = new Set(availableChats.map((chat) => chat.id));
+      const mergedSnapshot = availableChats.map((snapshotChat) => {
+        realtimeStartedInternalChatIdsRef.current.delete(snapshotChat.id);
+        const currentChat = currentChats.find((chat) => chat.id === snapshotChat.id);
+        if (!currentChat) return snapshotChat;
+
+        const currentTimestamp = Number(currentChat.lastMessage?.timestamp ?? 0);
+        const snapshotTimestamp = Number(snapshotChat.lastMessage?.timestamp ?? 0);
+        return currentTimestamp > snapshotTimestamp
+          ? {
+              ...snapshotChat,
+              lastMessage: currentChat.lastMessage,
+              isUnread: currentChat.isUnread,
+            }
+          : snapshotChat;
+      });
+      const realtimeOnlyChats = currentChats.filter(
+        (chat) =>
+          realtimeStartedInternalChatIdsRef.current.has(chat.id) &&
+          !snapshotIds.has(chat.id) &&
+          !removedInternalChatIdsRef.current.has(chat.id),
+      );
+      return [...realtimeOnlyChats, ...mergedSnapshot];
+    });
+    setMessages((currentMessages) => {
+      const mergedMessages = { ...chatsMessages };
+      for (const [chatId, realtimeMessages] of Object.entries(currentMessages)) {
+        const numericChatId = Number(chatId);
+        const shouldKeepMessages =
+          availableChats.some((chat) => chat.id === numericChatId) ||
+          realtimeStartedInternalChatIdsRef.current.has(numericChatId);
+        if (!shouldKeepMessages) continue;
+        mergedMessages[numericChatId] = mergeMessagesById(
+          mergedMessages[numericChatId] ?? [],
+          realtimeMessages,
+        );
+      }
+      return mergedMessages;
+    });
+  }, [token, user, users, usersLoaded]);
+
   useEffect(() => {
     if (token && user && usersLoaded && users.length > 0) {
       api.current.setAuth(token);
@@ -442,24 +752,18 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           if (active && cachedContacts) setContacts(cachedContacts);
         });
       }
-      wppApi.current.getContacts().then((res) => {
-        const loadedContacts = Array.isArray(res) ? res.map(projectDirectoryContact) : [];
-        if (active) setContacts(loadedContacts);
-        if (cacheScope) void hybridCache.set(cacheScope, "contacts", loadedContacts);
-      });
-      api.current.getInternalChatsBySession(null, !isHybridCacheEnabled()).then((payload) => {
-        const chats = Array.isArray(payload?.chats) ? payload.chats : [];
-        const messages = Array.isArray(payload?.messages) ? payload.messages : [];
-
-        const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
-          user!.CODIGO,
-          users,
-          chats,
-          messages,
-        );
-
-        setInternalChats(detailedChats || []);
-        setMessages(chatsMessages || []);
+      void wppApi.current
+        .getContacts()
+        .then((res) => {
+          const loadedContacts = Array.isArray(res) ? res.map(projectDirectoryContact) : [];
+          if (active) setContacts(loadedContacts);
+          if (cacheScope) void hybridCache.set(cacheScope, "contacts", loadedContacts);
+        })
+        .catch(() => {
+          if (active) setContacts([]);
+        });
+      void loadInternalChats().catch((error) => {
+        console.error("Falha ao carregar conversas internas", error);
       });
       return () => {
         active = false;
@@ -468,7 +772,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     setInternalChats([]);
     setMessages({});
-  }, [cacheScope, token, user, usersLoaded, users, wppApi]);
+  }, [cacheScope, loadInternalChats, token, user, usersLoaded, users, wppApi]);
 
   const startDirectChat = useCallback(
     (userId: number) => {
@@ -501,13 +805,25 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     }
   }, [token, api.current, user, users]);
 
+  const loadInternalMonitorMessages = useCallback(
+    async (chatId: number) => {
+      if (!token) return [];
+      api.current.setAuth(token);
+      const { messages: loadedMessages } = await api.current.getInternalChatsMonitor();
+      return (loadedMessages ?? []).filter((message) => message.internalChatId === chatId);
+    },
+    [token],
+  );
+
   useEffect(() => {
-    if (socket && user && users.length > 0) {
+    if (socket && user) {
       const unsubscribers: Array<() => void> = [];
       // Evento de nova conversa
       unsubscribers.push(
-        socket.subscribe(SocketEventType.InternalChatStarted, (data: any) =>
-          InternalChatStartedHandler(
+        socket.subscribe(SocketEventType.InternalChatStarted, (data: any) => {
+          removedInternalChatIdsRef.current.delete(data.chat.id);
+          realtimeStartedInternalChatIdsRef.current.add(data.chat.id);
+          return InternalChatStartedHandler(
             socket,
             usersRef.current,
             setInternalChats,
@@ -532,78 +848,77 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
                 icon: HorizontalLogo.src,
               });
             },
-          )(data),
-        ),
+          )(data);
+        }),
       );
 
       unsubscribers.push(
-        socket.subscribe(SocketEventType.InternalChatFinished, (data: any) =>
-          InternalChatFinishedHandler(
+        socket.subscribe(SocketEventType.InternalChatFinished, (data: { chatId: number }) => {
+          realtimeStartedInternalChatIdsRef.current.delete(data.chatId);
+          removedInternalChatIdsRef.current.add(data.chatId);
+          invalidateInternalMessageCache(data.chatId);
+          return InternalChatFinishedHandler(
             socket,
-            internalChatsRef.current,
             currentChatRef,
             setMessages,
             setInternalChats,
             setCurrentChat,
             setCurrentChatMessages,
-          )(data),
-        ),
+          )(data);
+        }),
       );
 
       // Evento de nova mensagem
       unsubscribers.push(
-        socket.subscribe(SocketEventType.InternalMessage, (data: any) =>
-          InternalReceiveMessageHandler(
-            api.current,
-            setMessages,
-            setCurrentChatMessages,
-            setInternalChats,
-            currentChatRef,
-            usersRef.current,
-            contactsRef.current,
-            user!,
-            phoneNameMapRef.current,
-            whatsappSenderNameMapRef.current,
-            ({ event, title, body, isChatFocused }) => {
-              const preferences = notificationPreferencesRef.current;
-              if (
-                !shouldDispatchNotification(preferences, {
-                  event,
-                  isChatFocused,
-                })
-              ) {
-                return;
-              }
+        socket.subscribe(SocketEventType.InternalMessage, (data: { message: InternalMessage }) => {
+          upsertInternalMessage(data.message);
+        }),
+      );
 
-              dispatchConfiguredNotification(preferences, event, {
-                title,
-                body,
-                icon: HorizontalLogo.src,
-              });
-            },
-          )(data),
-        ),
+      unsubscribers.push(
+        socket.subscribe("connect", () => {
+          invalidateAllInternalMessageCaches();
+          void loadInternalChats().catch((error) => {
+            console.error("Falha ao reconciliar conversas internas", error);
+          });
+
+          const activeChat = currentChatRef.current;
+          if (activeChat?.chatType === "internal") {
+            void loadFirstInternalMessagePage(activeChat).catch(() => {
+              invalidateInternalMessageCache(activeChat.id);
+            });
+          }
+        }),
       );
 
       // Evento de edição de mensagem
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.InternalMessageEdit,
-          InternalMessageEditHandler(setMessages, setCurrentChatMessages, currentChatRef),
+          (data: { internalMessageId: number; newText: string; chatId: number }) => {
+            InternalMessageEditHandler(setMessages, setCurrentChatMessages, currentChatRef)(data);
+            invalidateInternalMessageCache(data.chatId);
+          },
         ),
       );
 
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.WppMessageReaction,
-          InternalMessageReactionHandler(setMessages, setCurrentChatMessages),
+          (data: { messageId: number; reaction: string }) => {
+            InternalMessageReactionHandler(setMessages, setCurrentChatMessages)(data);
+            invalidateInternalCacheByMessage(data.messageId);
+          },
         ),
       );
 
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.InternalMessageDelete,
-          InternalMessageDeleteHandler(setMessages, setCurrentChatMessages),
+          (data: { internalMessageId: number; chatId: number }) => {
+            InternalMessageDeleteHandler(setMessages, setCurrentChatMessages)(data);
+            invalidateInternalMessageCache(data.chatId);
+          },
         ),
       );
 
@@ -611,7 +926,14 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       unsubscribers.push(
         socket.subscribe(
           SocketEventType.InternalMessageStatus,
-          InternalMessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef),
+          (data: {
+            internalMessageId: number;
+            chatId: number;
+            status: InternalMessage["status"];
+          }) => {
+            InternalMessageStatusHandler(setMessages, setCurrentChatMessages, currentChatRef)(data);
+            invalidateInternalMessageCache(data.chatId);
+          },
         ),
       );
 
@@ -619,7 +941,16 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         for (const unsubscribe of unsubscribers) unsubscribe();
       };
     }
-  }, [socket, user, users.length]);
+  }, [
+    socket,
+    user,
+    invalidateInternalCacheByMessage,
+    invalidateAllInternalMessageCaches,
+    invalidateInternalMessageCache,
+    loadFirstInternalMessagePage,
+    loadInternalChats,
+    upsertInternalMessage,
+  ]);
 
   const chatListValue = useMemo(
     () => ({
@@ -645,6 +976,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         contacts,
         monitorInternalChats,
         getInternalChatsMonitor,
+        loadInternalMonitorMessages,
         monitorMessages,
         deleteInternalChat,
         finishInternalChat,

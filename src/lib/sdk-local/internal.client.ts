@@ -161,13 +161,14 @@ export default class InternalChatClient extends ApiClient {
     if (data.mentions && data.mentions.length > 0) {
       formData.append("mentions", JSON.stringify(data.mentions));
     }
-    await this.ax.post<DataResponse<InternalMessage>>(url, formData, {
+    const { data: res } = await this.ax.post<DataResponse<InternalMessage>>(url, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
         ...(data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
       },
       timeout: data.file ? ApiClient.UPLOAD_TIMEOUT_MS : ApiClient.DEFAULT_TIMEOUT_MS,
     });
+    return res.data;
   }
 
   public async updateInternalGroup(

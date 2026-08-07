@@ -3,6 +3,8 @@ import { Formatter, Logger } from "@in.pulse-crm/utils";
 import { Dispatch, RefObject, SetStateAction, startTransition } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import mergeMessageUpdate from "@/lib/merge-message-update";
+import mergeMessagesById, { compareMessageChronology } from "@/lib/merge-messages-by-id";
 
 interface ReceiveMessageCallbackProps {
   message: WppMessage;
@@ -16,6 +18,15 @@ const types: Record<string, string> = {
   document: "Enviou um documento.",
   file: "Enviou um arquivo.",
 };
+
+function isMessageForWppChat(
+  chat: DetailedChat | DetailedInternalChat | null,
+  message: WppMessage,
+) {
+  if (!chat || chat.chatType !== "wpp") return false;
+  if (message.chatId != null) return chat.id === message.chatId;
+  return message.contactId != null && chat.contactId === message.contactId;
+}
 
 export default function ReceiveMessageHandler(
   api: WhatsappClient,
@@ -33,9 +44,7 @@ export default function ReceiveMessageHandler(
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
-      const matchedChat = chats.find((chat) => {
-        return chat.contactId === message.contactId;
-      });
+      const matchedChat = chats.find((chat) => isMessageForWppChat(chat, message));
       const parts = message.from.split(":");
       let raw = "";
       if (parts.length === 3) {
@@ -47,8 +56,7 @@ export default function ReceiveMessageHandler(
       const contactName = matchedChat?.contact?.name;
 
       const isTextMsg = ["chat", "text"].includes(message.type);
-      const isCurrentWppChat =
-        chatRef.current?.chatType === "wpp" && chatRef.current.contactId === message.contactId;
+      const isCurrentWppChat = isMessageForWppChat(chatRef.current, message);
 
       notify?.({
         event: "new_message",
@@ -62,49 +70,50 @@ export default function ReceiveMessageHandler(
 
     startTransition(() => {
       setMessages((prev) => {
-        const contactId = message.contactId || 0;
-        const isCurrentChat =
-          chatRef.current?.chatType === "wpp" && chatRef.current.contactId === contactId;
+        const current = chatRef.current;
+        const contactId =
+          message.contactId ??
+          (isMessageForWppChat(current, message) && current?.chatType === "wpp"
+            ? current.contactId
+            : null);
+        if (!contactId) return prev;
+        const isCurrentChat = isMessageForWppChat(current, message);
         if (!(contactId in prev) && !isCurrentChat) return prev;
         const newMessages = { ...prev };
 
-        const contactMessages = [...(prev[contactId] ?? [])];
-        const findIndex = contactMessages.findIndex((m) => m.id === message.id);
-        if (findIndex === -1) {
-          contactMessages.push(message);
-        } else {
-          contactMessages[findIndex] = message;
-        }
+        const contactMessages = mergeMessagesById(
+          prev[contactId] ?? [],
+          [message],
+          mergeMessageUpdate,
+        );
         newMessages[contactId] = contactMessages;
 
         return newMessages;
       });
 
       setChats((prev) => {
-        const index = prev.findIndex((chat) => chat.contactId === message.contactId);
+        const index = prev.findIndex((chat) => isMessageForWppChat(chat, message));
         if (index === -1) return prev;
         const chat = prev[index]!;
-        const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
+        const isCurrentWppChat = isMessageForWppChat(x, message);
+        const lastMessage =
+          !chat.lastMessage || compareMessageChronology(message, chat.lastMessage) >= 0
+            ? chat.lastMessage?.id === message.id
+              ? mergeMessageUpdate(chat.lastMessage, message)
+              : message
+            : chat.lastMessage;
         const updated = {
           ...chat,
           isUnread: !isCurrentWppChat && !message.from.startsWith("me"),
-          lastMessage: message,
+          lastMessage,
         };
         return [updated, ...prev.slice(0, index), ...prev.slice(index + 1)];
       });
     });
 
-    if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
+    if (isMessageForWppChat(x, message)) {
       setCurrentChatMessages((prev) => {
-        const newMessages = [...prev];
-        const i = newMessages.findIndex((m) => m.id === message.id);
-        if (i === -1) {
-          newMessages.push(message);
-        } else {
-          newMessages[i] = message;
-        }
-
-        return newMessages;
+        return mergeMessagesById(prev, [message], mergeMessageUpdate);
       });
 
       // TODO: Change the logic to only update the received message;

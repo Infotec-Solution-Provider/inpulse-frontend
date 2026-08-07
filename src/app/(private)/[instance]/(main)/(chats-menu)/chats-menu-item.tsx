@@ -1,7 +1,7 @@
 import { AuthContext } from "@/app/auth-context";
 import { Avatar } from "@mui/material";
 import { ReactNode, useContext, useMemo } from "react";
-import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
+import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { InternalChatContext } from "../../internal-context";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
 
@@ -35,7 +35,7 @@ export default function ChatsMenuItem({
 }: ChatsMenuItemProps) {
   const { user } = useContext(AuthContext);
   const { users } = useContext(InternalChatContext);
-  const { state } = useContext(ContactsContext);
+  const { state } = useContactsContext();
 
   const lastMessageDateText = useMemo(() => {
     if (!messageDate) {
@@ -128,7 +128,7 @@ export default function ChatsMenuItem({
         </div>
         <div className="flex flex-col gap-1 truncate">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold truncate text-sm leading-none text-gray-900 dark:text-slate-100">
+            <p className="truncate text-sm font-semibold leading-none text-gray-900 dark:text-slate-100">
               {name}
             </p>
             <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 group-aria-busy:dark:text-orange-200">
@@ -146,7 +146,7 @@ export default function ChatsMenuItem({
             </div>
           </div>
           {customer && (
-            <p className="font-semibold truncate text-xs leading-none text-gray-900 dark:text-slate-100">
+            <p className="truncate text-xs font-semibold leading-none text-gray-900 dark:text-slate-100">
               {customer}
             </p>
           )}

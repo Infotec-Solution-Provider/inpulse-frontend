@@ -47,9 +47,12 @@ interface ICustomersContext {
   ) => Promise<Customer[]>;
 }
 
-export const CustomersContext = createContext<ICustomersContext>({} as ICustomersContext);
+export const CustomersContext = createContext<ICustomersContext | undefined>(undefined);
 export const useCustomersContext = () => {
   const context = useContext(CustomersContext);
+  if (!context) {
+    throw new Error("useCustomersContext must be used within a CustomersProvider");
+  }
   return context;
 };
 

@@ -14,6 +14,7 @@ import { useWhatsappSession } from "./whatsapp-session-context";
 import { AuthContext } from "@/app/auth-context";
 import CacheWarmup from "./cache-warmup";
 import ContactsProvider from "./(cruds)/contacts/contacts-context";
+import CustomersProvider from "./(cruds)/customers/customers-context";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -28,18 +29,16 @@ function AppModal({ modal, setModal }: AppModalProps) {
   if (!modal) return null;
 
   return (
-    <ContactsProvider>
-      <Modal
-        open
-        onClose={(_, reason) => {
-          if (reason === "backdropClick") return;
-          setModal(null);
-        }}
-        className="flex items-center justify-center"
-      >
-        <div>{modal as ReactElement}</div>
-      </Modal>
-    </ContactsProvider>
+    <Modal
+      open
+      onClose={(_, reason) => {
+        if (reason === "backdropClick") return;
+        setModal(null);
+      }}
+      className="flex items-center justify-center"
+    >
+      <div>{modal as ReactElement}</div>
+    </Modal>
   );
 }
 
@@ -117,15 +116,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <WhatsappProvider>
             <CacheWarmup />
             <InternalChatProvider>
-              <ThemeProvider>
-                <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
-                  <Header />
-                  <main className="min-h-0 overflow-y-auto">
-                    <RouteFeatureGate>{children}</RouteFeatureGate>
-                  </main>
-                  <AppModal modal={modal} setModal={setModal} />
-                </div>
-              </ThemeProvider>
+              <CustomersProvider>
+                <ContactsProvider>
+                  <ThemeProvider>
+                    <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
+                      <Header />
+                      <main className="min-h-0 overflow-y-auto">
+                        <RouteFeatureGate>{children}</RouteFeatureGate>
+                      </main>
+                      <AppModal modal={modal} setModal={setModal} />
+                    </div>
+                  </ThemeProvider>
+                </ContactsProvider>
+              </CustomersProvider>
             </InternalChatProvider>
           </WhatsappProvider>
         </SocketProvider>
