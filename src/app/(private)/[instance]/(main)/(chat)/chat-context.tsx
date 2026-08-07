@@ -13,13 +13,14 @@ import ChatReducer, {
   SendMessageDataState,
 } from "@/app/(private)/[instance]/(main)/(chat)/chat-reducer";
 import { InternalChatContext } from "../../internal-context";
-import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import { toast } from "react-toastify";
 
 interface IChatContext {
   state: SendMessageDataState;
   dispatch: React.Dispatch<ChangeMessageDataAction>;
   sendMessage: () => void;
+  applySuggestedText: (text: string) => void;
   isReadOnlyMode: boolean;
   getMessageById: (
     chatId: number,
@@ -62,6 +63,50 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const [quotedMessage, setQuotedMessage] = useState<WppMessage | InternalMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<WppMessage | InternalMessage | null>(null);
 
+  const resolveContactAddress = useCallback(
+    (contactId: number, fallbackPhone?: string | null): string | null => {
+      const fromContactPhone = fallbackPhone?.trim() || "";
+      if (fromContactPhone) {
+        return fromContactPhone;
+      }
+
+      const history = whatsappMsgs[contactId] || [];
+      for (let i = history.length - 1; i >= 0; i--) {
+        const msg = history[i];
+        if (!msg) continue;
+
+        if (!msg.from.startsWith("me:") && !msg.from.startsWith("system:")) {
+          return msg.from.replace(/^me:/, "").split("@")[0] || null;
+        }
+
+        if (msg.to && !msg.to.startsWith("me:")) {
+          return msg.to.replace(/^me:/, "").split("@")[0] || null;
+        }
+      }
+
+      return null;
+    },
+    [whatsappMsgs],
+  );
+
+  const applySuggestedText = useCallback(
+    (text: string) => {
+      if (isReadOnlyMode) {
+        toast.info("Esta conversa esta em modo somente leitura.");
+        return;
+      }
+
+      setEditingMessage(null);
+      dispatch({ type: "set-mentions", mentions: [] });
+      dispatch({ type: "change-text", text });
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("chat:focus-composer"));
+      }
+    },
+    [dispatch, isReadOnlyMode],
+  );
+
   const handleSendMessage = () => {
     if (isReadOnlyMode) {
       toast.info("Esta conversa esta em modo somente leitura.");
@@ -69,8 +114,20 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     }
 
     if (currentChat && currentChat.chatType === "wpp" && currentChat.contact && !editingMessage) {
+      const contactAddress = resolveContactAddress(
+        currentChat.contact.id,
+        (currentChat.contact as unknown as { phone?: string | null; whatsappId?: string | null }).phone ||
+          (currentChat.contact as unknown as { phone?: string | null; whatsappId?: string | null }).whatsappId ||
+          null,
+      );
+
+      if (!contactAddress) {
+        toast.error("Nao foi possivel identificar o destino do contato para envio.");
+        return;
+      }
+
       try {
-        sendMessage(currentChat.contact.phone, {
+        sendMessage(contactAddress, {
           ...state,
           contactId: currentChat.contact.id,
           chatId: currentChat.id,
@@ -172,6 +229,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
         dispatch,
         isReadOnlyMode,
         sendMessage: handleSendMessage,
+        applySuggestedText,
         getMessageById,
         handleQuoteMessage,
         handleQuoteMessageRemove,

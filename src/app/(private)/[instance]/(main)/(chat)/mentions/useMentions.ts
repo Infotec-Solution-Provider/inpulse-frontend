@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Formatter } from "@in.pulse-crm/utils";
-import { User, WppContact } from "@in.pulse-crm/sdk";
+import { User, WppContact } from "@/lib/sdk-local";
 
 export interface MentionableUser {
   userId: number;
   name: string;
+  // Campo legado para compatibilidade de payload.
+  // O backend resolve o destino da notificação por userId -> WHATSAPP do operador.
   phone: string;
 }
 

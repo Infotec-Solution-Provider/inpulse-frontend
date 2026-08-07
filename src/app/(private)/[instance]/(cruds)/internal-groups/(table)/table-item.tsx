@@ -1,5 +1,5 @@
-import { Delete, Edit } from "@mui/icons-material";
-import { InternalGroup, User } from "@in.pulse-crm/sdk";
+import { Delete, Edit, PeopleAlt, WhatsApp } from "@mui/icons-material";
+import { InternalGroup, User, WhatsappGroup } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { IconButton, TableCell, TableRow } from "@mui/material";
 import { INTERNAL_GROUPS_TABLE_COLUMNS } from "./table-config";
@@ -7,6 +7,7 @@ import { INTERNAL_GROUPS_TABLE_COLUMNS } from "./table-config";
 interface InternalGroupsTableItemProps {
   group: InternalGroup;
   users: User[];
+  wppGroups: WhatsappGroup[];
   openEditModalHandler: (group: InternalGroup) => void;
   openDeleteModalHandler: (group: InternalGroup) => void;
 }
@@ -19,12 +20,15 @@ function getCreator(users: User[], creatorId: number) {
 export default function InternalGroupsTableItem({
   group,
   users,
+  wppGroups,
   openEditModalHandler,
   openDeleteModalHandler,
 }: InternalGroupsTableItemProps) {
+  const linkedWhatsappGroup = wppGroups.find((wppGroup) => wppGroup.id === group.wppGroupId);
+
   return (
     <TableRow
-      className="even:bg-indigo-700/5 transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      className="transition-colors even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
       sx={{
         "& .MuiTableCell-root": {
           borderBottom: "1px solid",
@@ -76,9 +80,29 @@ export default function InternalGroupsTableItem({
           minWidth: INTERNAL_GROUPS_TABLE_COLUMNS.PARTICIPANTS_COUNT.width,
         }}
       >
-        <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
-          {group.participants?.length || 0}
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
+          <PeopleAlt sx={{ fontSize: 15 }} />
+          {group.participants?.length || 0} usuários
         </span>
+      </TableCell>
+      <TableCell
+        className="px-3 py-3"
+        sx={{
+          width: INTERNAL_GROUPS_TABLE_COLUMNS.WHATSAPP_GROUP.width,
+          minWidth: INTERNAL_GROUPS_TABLE_COLUMNS.WHATSAPP_GROUP.width,
+        }}
+      >
+        {group.wppGroupId ? (
+          <span
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+            title={linkedWhatsappGroup?.name || group.wppGroupId}
+          >
+            <WhatsApp sx={{ fontSize: 15 }} />
+            <span className="truncate">{linkedWhatsappGroup?.name || "Grupo vinculado"}</span>
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400 dark:text-slate-500">Não vinculado</span>
+        )}
       </TableCell>
       <TableCell
         className="px-3 py-3"

@@ -1,8 +1,6 @@
-import { WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
-import { safeNotification } from "@/lib/utils/notifications";
+import { WhatsappClient, WppMessage } from "@/lib/sdk-local";
 import { Formatter, Logger } from "@in.pulse-crm/utils";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
-import { Dispatch, RefObject, SetStateAction } from "react";
+import { Dispatch, RefObject, SetStateAction, startTransition } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 
@@ -26,6 +24,12 @@ export default function ReceiveMessageHandler(
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
   chats: DetailedChat[],
+  notify?: (payload: {
+    event: "new_message";
+    title: string;
+    body: string;
+    isChatFocused: boolean;
+  }) => void,
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
@@ -43,67 +47,56 @@ export default function ReceiveMessageHandler(
       const contactName = matchedChat?.contact?.name;
 
       const isTextMsg = ["chat", "text"].includes(message.type);
-      safeNotification(contactName || Formatter.phone(phone), {
+      const isCurrentWppChat =
+        chatRef.current?.chatType === "wpp" && chatRef.current.contactId === message.contactId;
+
+      notify?.({
+        event: "new_message",
+        title: contactName || Formatter.phone(phone),
         body: isTextMsg ? message.body : types[message.type] || "Enviou um arquivo",
-        icon: HorizontalLogo.src,
+        isChatFocused: !!isCurrentWppChat,
       });
-
-      // Tocar som de notificação (client-side only)
-      if (typeof window !== "undefined") {
-        const audio = new Audio("/notification-sound.wav");
-        audio.volume = 0.5;
-        audio.play().catch((error) => {
-          console.log("Não foi possível tocar o som da notificação:", error);
-        });
-      }
     }
-
-    setMessages((prev) => {
-      const newMessages = { ...prev };
-      const contactId = message.contactId || 0;
-
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = [];
-      }
-
-      const previousLength = newMessages[contactId].length;
-      const findIndex = newMessages[contactId].findIndex((m) => m.id === message.id);
-      if (findIndex === -1) {
-        newMessages[contactId].push(message);
-      } else {
-        newMessages[contactId][findIndex] = message;
-      }
-
-      return newMessages;
-    });
 
     const x = chatRef.current;
 
-    setChats((prev) =>
-      prev
-        .map((chat) => {
-          if (chat.contactId === message.contactId) {
-            const isCurrentWppChat =
-              x?.chatType === "wpp" && x.contactId === message.contactId;
+    startTransition(() => {
+      setMessages((prev) => {
+        const contactId = message.contactId || 0;
+        const isCurrentChat =
+          chatRef.current?.chatType === "wpp" && chatRef.current.contactId === contactId;
+        if (!(contactId in prev) && !isCurrentChat) return prev;
+        const newMessages = { ...prev };
 
-            return {
-              ...chat,
-              isUnread: !isCurrentWppChat,
-              lastMessage: message,
-            };
-          }
+        const contactMessages = [...(prev[contactId] ?? [])];
+        const findIndex = contactMessages.findIndex((m) => m.id === message.id);
+        if (findIndex === -1) {
+          contactMessages.push(message);
+        } else {
+          contactMessages[findIndex] = message;
+        }
+        newMessages[contactId] = contactMessages;
 
-          return chat;
-        })
-        .sort((a, b) =>
-          (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
-        ),
-    );
+        return newMessages;
+      });
+
+      setChats((prev) => {
+        const index = prev.findIndex((chat) => chat.contactId === message.contactId);
+        if (index === -1) return prev;
+        const chat = prev[index]!;
+        const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
+        const updated = {
+          ...chat,
+          isUnread: !isCurrentWppChat && !message.from.startsWith("me"),
+          lastMessage: message,
+        };
+        return [updated, ...prev.slice(0, index), ...prev.slice(index + 1)];
+      });
+    });
 
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
         const newMessages = [...prev];
-        const previousLength = newMessages.length;
         const i = newMessages.findIndex((m) => m.id === message.id);
         if (i === -1) {
           newMessages.push(message);
@@ -116,12 +109,13 @@ export default function ReceiveMessageHandler(
 
       // TODO: Change the logic to only update the received message;
       if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        api
-          .markContactMessagesAsRead(message.contactId || 0)
-          .catch((error) => {
-            Logger.error(`[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`, error);
-          });
+        api.markContactMessagesAsRead(message.contactId || 0).catch((error) => {
+          Logger.error(
+            `[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`,
+            error,
+          );
+        });
       }
-    };
-  }
+    }
+  };
 }

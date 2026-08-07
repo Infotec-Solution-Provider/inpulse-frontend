@@ -1,7 +1,7 @@
 "use client";
 
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import { AppNotification, WppChatWithDetailsAndMessages, WppContact } from "@in.pulse-crm/sdk";
+import { AppNotification, WppChatWithDetailsAndMessages, WppContact } from "@/lib/sdk-local";
 import ChatIcon from "@mui/icons-material/Chat";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import {
@@ -19,7 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import ContactModal from "./contact-modal-detail";
 
 const NOTIFICATIONS_PER_PAGE = 15;
@@ -155,7 +155,7 @@ const useNotificationHandler = () => {
   };
 };
 
-export default function NotificationsDropdown() {
+export default function NotificationsDropdown({ openOnMount = false }: { openOnMount?: boolean }) {
   const theme = useTheme();
   const {
     isLoading,
@@ -177,6 +177,17 @@ export default function NotificationsDropdown() {
   const [selectedChat, setSelectedChat] = useState<WppChatWithDetailsAndMessages | null>(null);
   const [isContactLoading, setIsContactLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const didOpenOnMount = useRef(false);
+
+  useEffect(() => {
+    if (!openOnMount || didOpenOnMount.current) return;
+    didOpenOnMount.current = true;
+    const button = document.querySelector<HTMLElement>("[aria-label='notificações']");
+    if (button) {
+      setAnchorEl(button);
+      void fetchNotifications(1, false);
+    }
+  }, [fetchNotifications, openOnMount]);
 
   const handleOpen = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {

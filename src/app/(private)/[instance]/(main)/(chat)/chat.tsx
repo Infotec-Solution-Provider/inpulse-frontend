@@ -47,8 +47,8 @@ export default function Chat({
   };
 
   return (
-    <div className="relative h-full overflow-hidden rounded-md bg-white text-black shadow-md dark:bg-slate-900 dark:text-white md:grid md:grid-rows-[auto_1fr_auto]">
-      <div className="fixed inset-x-0 top-0 z-50 md:static">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-black shadow-md dark:bg-slate-900 dark:text-white md:rounded-md">
+      <div className="sticky top-0 z-30">
         <div className="relative">
           <ChatHeader
             avatarUrl={avatarUrl}
@@ -70,7 +70,7 @@ export default function Chat({
       </div>
 
       <div
-        className="h-full overflow-y-auto pb-[80px] pt-[68px] md:row-start-2 md:row-end-3 md:pb-0 md:pt-0"
+        className="min-h-0 flex-1 overflow-y-auto"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onPaste={handlePaste}
@@ -81,14 +81,9 @@ export default function Chat({
         )}
       </div>
       {!isReadOnlyMode && (!state?.file || state.sendAsAudio) && (
-        <>
-          <div className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-            <ChatSendMessageArea />
-          </div>
-          <div className="hidden md:block">
-            <ChatSendMessageArea />
-          </div>
-        </>
+        <div className="sticky bottom-0 z-30 border-t border-slate-300/70 bg-slate-200/95 backdrop-blur dark:border-slate-700/70 dark:bg-slate-800/95 md:static md:bg-transparent md:backdrop-blur-none dark:md:bg-transparent">
+          <ChatSendMessageArea />
+        </div>
       )}
     </div>
   );

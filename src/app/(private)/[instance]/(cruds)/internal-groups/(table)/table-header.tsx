@@ -167,6 +167,19 @@ export default function InternalGroupsTableHeader() {
         <TableCell
           className="px-3"
           sx={{
+            width: INTERNAL_GROUPS_TABLE_COLUMNS.WHATSAPP_GROUP.width,
+            minWidth: INTERNAL_GROUPS_TABLE_COLUMNS.WHATSAPP_GROUP.width,
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              {INTERNAL_GROUPS_TABLE_COLUMNS.WHATSAPP_GROUP.label}
+            </label>
+          </div>
+        </TableCell>
+        <TableCell
+          className="px-3"
+          sx={{
             width: INTERNAL_GROUPS_TABLE_COLUMNS.ACTIONS.width,
             minWidth: INTERNAL_GROUPS_TABLE_COLUMNS.ACTIONS.width,
           }}

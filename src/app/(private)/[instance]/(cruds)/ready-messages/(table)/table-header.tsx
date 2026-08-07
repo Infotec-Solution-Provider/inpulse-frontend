@@ -11,7 +11,7 @@ import {
   Theme,
   Tooltip,
 } from "@mui/material";
-import { ReadyMessage } from "@in.pulse-crm/sdk";
+import { ReadyMessage } from "@/lib/sdk-local";
 import { useReadyMessagesContext } from "../ready-messages-context";
 import { READY_MESSAGES_TABLE_COLUMNS } from "./table-config";
 

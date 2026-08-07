@@ -1,5 +1,5 @@
 import { Dispatch, RefObject, SetStateAction } from "react";
-import { InternalMessage, InternalMessageEditEventData } from "@in.pulse-crm/sdk";
+import { InternalMessage, InternalMessageEditEventData } from "@/lib/sdk-local";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 

@@ -1,5 +1,5 @@
 "use client";
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup } from "@/lib/sdk-local";
 import {
   Button,
   CircularProgress,
@@ -23,7 +23,7 @@ import InternalGroupsTableItem from "./table-item";
 export default function InternalGroupsTable() {
   const { openModal } = useContext(AppContext);
   const { users } = useContext(InternalChatContext);
-  const { state, dispatch, loadInternalGroups } = useInternalGroupsContext();
+  const { state, dispatch, loadInternalGroups, wppGroups } = useInternalGroupsContext();
 
   function openEditInternalGroupModal(group: InternalGroup) {
     openModal(<EditInternalGroupModal group={group} />);
@@ -49,6 +49,24 @@ export default function InternalGroupsTable() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Grupos internos</h1>
+          <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+            Gerencie quem acessa cada conversa no sistema e, separadamente, o grupo conectado pelo
+            WhatsApp.
+          </p>
+        </div>
+        <Button
+          onClick={openCreateInternalGroupModal}
+          variant="contained"
+          color="primary"
+          size="medium"
+          className="w-full whitespace-nowrap sm:w-auto"
+        >
+          + Cadastrar grupo
+        </Button>
+      </div>
       <TableContainer
         className="scrollbar-whatsapp mx-auto overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
         sx={{
@@ -67,7 +85,7 @@ export default function InternalGroupsTable() {
             {state.isLoading && (
               <TableRow sx={{ height: "300px" }}>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="border-0"
                   sx={{
                     textAlign: "center",
@@ -86,7 +104,7 @@ export default function InternalGroupsTable() {
             {!state.isLoading && state.internalGroups.length === 0 && (
               <TableRow sx={{ height: "300px" }}>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="border-0"
                   sx={{
                     textAlign: "center",
@@ -107,6 +125,7 @@ export default function InternalGroupsTable() {
                   key={group.id}
                   group={group}
                   users={users}
+                  wppGroups={wppGroups}
                   openEditModalHandler={openEditInternalGroupModal}
                   openDeleteModalHandler={openDeleteInternalGroupModal}
                 />
@@ -114,16 +133,7 @@ export default function InternalGroupsTable() {
           </TableBody>
         </Table>
       </TableContainer>
-      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
-        <Button
-          onClick={openCreateInternalGroupModal}
-          variant="contained"
-          color="primary"
-          size="medium"
-          className="w-full sm:w-auto"
-        >
-          + Cadastrar Grupo
-        </Button>
+      <div className="flex justify-end rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <TablePagination
           component="div"
           count={state.totalRows}

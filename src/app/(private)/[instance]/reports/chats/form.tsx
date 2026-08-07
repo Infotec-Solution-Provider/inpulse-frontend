@@ -1,5 +1,5 @@
 "use client";
-import { ChatsReportFormat } from "@in.pulse-crm/sdk";
+import { ChatsReportFormat } from "@/lib/sdk-local";
 import ArrowRightAltIcon from "@mui/icons-material/ArrowRightAlt";
 import { FormEventHandler, useCallback, useContext, useState } from "react";
 import { ChatsReportContext, GenerateReportParams } from "./chats-reports-context";

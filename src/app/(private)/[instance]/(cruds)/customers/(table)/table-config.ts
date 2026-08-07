@@ -30,7 +30,7 @@ export const CUSTOMERS_TABLE_COLUMNS = {
   },
   CPF_CNPJ: {
     label: "CPF/CNPJ",
-    width: "8rem",
+    width: "12rem",
     placeholder: "000.000.000-00",
   },
   CIDADE: {
@@ -42,6 +42,10 @@ export const CUSTOMERS_TABLE_COLUMNS = {
     label: "Cód. ERP",
     width: "8rem",
     placeholder: "Código...",
+  },
+  TAGS: {
+    label: "Tags",
+    width: "24rem",
   },
   ACTIONS: {
     label: "Ações",

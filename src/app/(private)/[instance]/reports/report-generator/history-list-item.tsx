@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { SqlReportsContext } from "./sql-reports-context";
-import { SqlReport } from "@in.pulse-crm/sdk";
+import { SqlReport } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import Tooltip from "@mui/material/Tooltip";

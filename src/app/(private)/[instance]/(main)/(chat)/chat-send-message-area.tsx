@@ -1,5 +1,5 @@
 import SendTemplateModal from "@/lib/components/send-template-modal";
-import { WppMessage } from "@in.pulse-crm/sdk";
+import { WppMessage } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { Close } from "@mui/icons-material";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
@@ -8,8 +8,10 @@ import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined
 import SendIcon from "@mui/icons-material/Send";
 import TryIcon from "@mui/icons-material/Try";
 import { IconButton, Modal, TextField } from "@mui/material";
-import EmojiPicker, { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
+import type { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
+import dynamic from "next/dynamic";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useAppContext } from "../../app-context";
@@ -19,6 +21,14 @@ import AudioRecorder from "./audio-recorder";
 import ChannelSelect from "./channels-select";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
+  ssr: false,
+  loading: () => null,
+});
+const EMOJI_THEME = "auto" as Theme;
+const EMOJI_STYLE = "facebook" as EmojiStyle;
+const EMOJI_SUGGESTION_MODE = "frequent" as SuggestionMode;
 
 function getDefaultSelectedChannel(currentChatMessages: WppMessage[], channels: WppClient[]) {
   const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
@@ -139,6 +149,27 @@ export default function ChatSendMessageArea() {
     return () => textarea.removeEventListener("paste", handlePaste);
   }, [isDisabled]);
 
+  useEffect(() => {
+    const handleFocusComposer = () => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        textarea.focus();
+        const nextLength = textarea.value.length;
+        textarea.setSelectionRange(nextLength, nextLength);
+      });
+    };
+
+    window.addEventListener("chat:focus-composer", handleFocusComposer);
+
+    return () => {
+      window.removeEventListener("chat:focus-composer", handleFocusComposer);
+    };
+  }, []);
+
   const openQuickMessages = () => setQuickMessageOpen(true);
   const openQuickTemplate = () => {
     if (isDisabled) return;
@@ -146,8 +177,15 @@ export default function ChatSendMessageArea() {
       openModal(
         <SendTemplateModal
           onClose={closeModal}
-          onSendTemplate={(data) => {
-            wppApi.current.ax.post(`/api/whatsapp/${globalChannel.current?.id}/templates/send`, {
+          onSendTemplate={async (data) => {
+            const channelId = selectedChannel?.id ?? globalChannel.current?.id;
+
+            if (!channelId) {
+              toast.error("Nenhum canal WhatsApp disponível para enviar template.");
+              return;
+            }
+
+            await wppApi.current.ax.post(`/api/whatsapp/${channelId}/templates/send`, {
               to: currentChat.contact?.phone,
               chatId: currentChat.id,
               contactId: currentChat.contactId,
@@ -219,6 +257,7 @@ export default function ChatSendMessageArea() {
   }, [isDisabled, state.text, state.file]);
 
   const refMessage = isReadOnlyMode ? null : quotedMessage || editingMessage || null;
+  const mentionCount = state.mentions?.length || 0;
 
   useEffect(() => {
     if (editingMessage) {
@@ -230,186 +269,202 @@ export default function ChatSendMessageArea() {
   }, [editingMessage]);
 
   return (
-    <div className="mb-6 flex max-h-36 items-center gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400 md:mb-0">
+    <div
+      className="flex w-full flex-col gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
+    >
       <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-      <div className="flex items-center gap-2">
-        {parameters["is_official"] === "true" && (
-          <IconButton
-            size="small"
-            onClick={openQuickTemplate}
-            color="success"
-            title="Enviar template"
-            disabled={isDisabled}
-          >
-            <TryIcon />
-          </IconButton>
-        )}
-        <IconButton
-          size="small"
-          onClick={openQuickMessages}
-          color="info"
-          title="Enviar mensagem rápida"
-          disabled={isDisabled}
-        >
-          <ChatBubbleIcon />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={openAttachFile}
-          color="secondary"
-          title="Anexar arquivo"
-          disabled={isDisabled}
-        >
-          <AttachFileIcon />
-        </IconButton>
-        <div className="relative hidden md:block">
-          <IconButton
-            size="small"
-            className="bg-white/20 dark:text-indigo-400"
-            onClick={toggleEmojiPicker}
-            disabled={isDisabled}
-          >
-            <EmojiEmotionsOutlinedIcon />
-          </IconButton>
-          <div className="absolute bottom-full">
-            <EmojiPicker
-              onEmojiClick={handleEmojiClick}
-              theme={Theme.AUTO}
-              emojiStyle={EmojiStyle.FACEBOOK}
-              lazyLoadEmojis
-              suggestedEmojisMode={SuggestionMode.FREQUENT}
-              open={state.isEmojiMenuOpen}
-              reactionsDefaultOpen={false}
-            />
-          </div>
-        </div>
-        {currentChat && currentChat.chatType === "wpp" && channels.length > 0 && (
-          <ChannelSelect
-            channels={channels}
-            selectedChannel={selectedChannel!}
-            onChange={onChangeChannel}
-          />
-        )}
-      </div>
 
-      <div className="flex w-full flex-col gap-2">
-        {refMessage && (
-          <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
-            <div className="text-sm text-black dark:text-slate-300">
-              {refMessage.body.split("\n").map((line, index) => (
-                <p key={index} className="break-words text-sm">
-                  {line}
-                </p>
-              ))}
-              {refMessage.fileId && (
-                <span className="text-xs text-slate-400 dark:text-slate-500">
-                  {refMessage.fileName || "Arquivo anexado"}
-                </span>
-              )}
-            </div>
-            {quotedMessage && (
-              <IconButton
-                size="small"
-                className="bg-white/20 dark:text-indigo-400"
-                onClick={handleQuoteMessageRemove}
-              >
-                <Close />
-              </IconButton>
+      {refMessage && (
+        <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
+          <div className="min-w-0 text-sm text-black dark:text-slate-300">
+            {refMessage.body.split("\n").map((line, index) => (
+              <p key={index} className="break-words text-sm">
+                {line}
+              </p>
+            ))}
+            {refMessage.fileId && (
+              <span className="text-xs text-slate-400 dark:text-slate-500">
+                {refMessage.fileName || "Arquivo anexado"}
+              </span>
             )}
           </div>
-        )}
-
-        {state.sendAsAudio && state.file ? (
-          <div className="flex w-full items-center justify-center gap-2">
-            <audio
-              controls
-              src={URL.createObjectURL(state.file)}
-              className="h-8 max-w-[35rem] flex-grow"
-            />
-            <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
+          {quotedMessage && (
+            <IconButton
+              size="small"
+              className="bg-white/20 dark:text-indigo-400"
+              onClick={handleQuoteMessageRemove}
+            >
               <Close />
             </IconButton>
-          </div>
-        ) : (
-          <div className="relative w-full">
-            <TextField
-              multiline
-              fullWidth
-              maxRows={5}
-              size="small"
-              placeholder="Mensagem"
-              value={textWithNames}
-              onChange={(e) => handleTextChange(e.target.value)}
-              disabled={isDisabled}
-              inputRef={(ref) => {
-                textareaRef.current = ref;
-              }}
-            />
-
-            {showMentionList && (
-              <div className="absolute bottom-full left-0 z-50 mb-2 max-h-40 w-[20rem] overflow-auto rounded-md bg-white shadow-md">
-                {mentionCandidates.length === 0 ? (
-                  <div className="p-2 text-sm text-gray-500">Nenhum contato</div>
-                ) : (
-                  mentionCandidates.map((user: any) => (
-                    <div
-                      key={user.userId}
-                      className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-blue-100"
-                      onClick={() => {
-                        const result = selectMention(
-                          user,
-                          textWithNames,
-                          textareaRef.current?.selectionStart || 0,
-                        );
-                        setTimeout(() => {
-                          textareaRef.current?.setSelectionRange(
-                            result.cursorPosition,
-                            result.cursorPosition,
-                          );
-                          textareaRef.current?.focus();
-                        }, 0);
-                      }}
-                    >
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-300 text-xs font-semibold text-white">
-                        {user.name[0]}
-                      </div>
-                      <span className="text-sm text-gray-800">{user.name}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      {editingMessage && (
-        <IconButton
-          size="small"
-          className="bg-white/20 dark:text-indigo-400"
-          onClick={handleStopEditMessage}
-          title="Cancelar edição"
-        >
-          <Close />
-        </IconButton>
+          )}
+        </div>
       )}
 
-      <IconButton
-        size="small"
-        aria-hidden={textWithNames.length === 0 && !state.sendAsAudio}
-        className="bg-white/20 dark:text-indigo-400"
-        disabled={isDisabled}
-        onClick={sendMessages}
-      >
-        <SendIcon />
-      </IconButton>
+      {currentChat?.chatType === "internal" && mentionCount > 0 && (
+        <div className="text-xs text-slate-500 dark:text-slate-400">
+          Menções ativas: {mentionCount}. Usuários mencionados receberão notificação via WhatsApp.
+        </div>
+      )}
 
-      <div
-        className="aria-hidden:hidden"
-        aria-hidden={
-          isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage
-        }
-      >
-        <AudioRecorder onAudioRecorded={handleAudioRecord} />
+      <div className="flex w-full items-end gap-1">
+        <div className="flex shrink-0 items-center">
+          {parameters["is_official"] === "true" && (
+            <IconButton
+              size="small"
+              onClick={openQuickTemplate}
+              color="success"
+              title="Enviar template"
+              disabled={isDisabled}
+            >
+              <TryIcon />
+            </IconButton>
+          )}
+          <IconButton
+            size="small"
+            onClick={openQuickMessages}
+            color="info"
+            title="Enviar mensagem rápida"
+            disabled={isDisabled}
+          >
+            <ChatBubbleIcon />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={openAttachFile}
+            color="secondary"
+            title="Anexar arquivo"
+            disabled={isDisabled}
+          >
+            <AttachFileIcon />
+          </IconButton>
+          {currentChat && currentChat.chatType === "wpp" && channels.length > 0 && (
+            <ChannelSelect
+              channels={channels}
+              selectedChannel={selectedChannel!}
+              onChange={onChangeChannel}
+            />
+          )}
+        </div>
+
+        <div className="relative min-w-0 flex-1">
+          {state.sendAsAudio && state.file ? (
+            <div className="flex w-full items-center gap-2">
+              <audio
+                controls
+                src={URL.createObjectURL(state.file)}
+                className="h-8 min-w-0 flex-grow"
+              />
+              <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
+                <Close />
+              </IconButton>
+            </div>
+          ) : (
+            <>
+              <TextField
+                multiline
+                fullWidth
+                maxRows={5}
+                size="small"
+                placeholder="Mensagem"
+                value={textWithNames}
+                onChange={(e) => handleTextChange(e.target.value)}
+                disabled={isDisabled}
+                inputRef={(ref) => {
+                  textareaRef.current = ref;
+                }}
+              />
+
+              {showMentionList && (
+                <div className="absolute bottom-full left-0 z-50 mb-2 max-h-40 w-full max-w-[20rem] overflow-auto rounded-md bg-white shadow-md">
+                  {mentionCandidates.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">Nenhum contato</div>
+                  ) : (
+                    mentionCandidates.map((user: any) => (
+                      <div
+                        key={user.userId}
+                        className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-blue-100"
+                        onClick={() => {
+                          const result = selectMention(
+                            user,
+                            textWithNames,
+                            textareaRef.current?.selectionStart || 0,
+                          );
+                          setTimeout(() => {
+                            textareaRef.current?.setSelectionRange(
+                              result.cursorPosition,
+                              result.cursorPosition,
+                            );
+                            textareaRef.current?.focus();
+                          }, 0);
+                        }}
+                      >
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-300 text-xs font-semibold text-white">
+                          {user.name[0]}
+                        </div>
+                        <span className="text-sm text-gray-800">{user.name}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="flex shrink-0 items-center">
+          <div className="relative">
+            <IconButton
+              size="small"
+              className="bg-white/20 dark:text-indigo-400"
+              onClick={toggleEmojiPicker}
+              disabled={isDisabled}
+              title="Emojis"
+            >
+              <EmojiEmotionsOutlinedIcon />
+            </IconButton>
+            <div className="fixed bottom-20 right-2 z-[9999] sm:absolute sm:bottom-full sm:right-0 sm:z-50">
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                theme={EMOJI_THEME}
+                emojiStyle={EMOJI_STYLE}
+                lazyLoadEmojis
+                suggestedEmojisMode={EMOJI_SUGGESTION_MODE}
+                open={state.isEmojiMenuOpen}
+                reactionsDefaultOpen={false}
+              />
+            </div>
+          </div>
+          {editingMessage && (
+            <IconButton
+              size="small"
+              className="bg-white/20 dark:text-indigo-400"
+              onClick={handleStopEditMessage}
+              title="Cancelar edição"
+            >
+              <Close />
+            </IconButton>
+          )}
+
+          <IconButton
+            size="small"
+            aria-hidden={textWithNames.length === 0 && !state.sendAsAudio}
+            className="bg-white/20 aria-hidden:hidden dark:text-indigo-400"
+            disabled={isDisabled}
+            onClick={sendMessages}
+          >
+            <SendIcon />
+          </IconButton>
+
+          <div
+            className="aria-hidden:hidden"
+            aria-hidden={
+              isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage
+            }
+          >
+            <AudioRecorder onAudioRecorded={handleAudioRecord} />
+          </div>
+        </div>
       </div>
 
       {quickMessageOpen && !isDisabled && (

@@ -13,7 +13,7 @@ import {
   AutomaticResponseRule,
   AutomaticResponseRuleDTO,
   User
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { useAuthContext } from "@/app/auth-context";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";

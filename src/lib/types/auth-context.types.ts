@@ -1,4 +1,4 @@
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 
 export interface AuthSignForm {
     login: string;

@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "@in.pulse-crm/sdk";
+import { WppMessageStatus } from "@/lib/sdk-local";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
@@ -30,8 +30,11 @@ interface MessageProps {
   isForwarded?: boolean;
   isForwardMode?: boolean;
   isReadOnly?: boolean;
+  showMediaByDefault?: boolean;
+  showQuotedMediaByDefault?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
+  reaction?: string;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
@@ -58,8 +61,11 @@ export default function GroupMessage({
   mentionNameMap,
   isForwardMode,
   isReadOnly = false,
+  showMediaByDefault,
+  showQuotedMediaByDefault,
   isSelected,
   isEdited,
+  reaction,
   onSelect,
   onForward,
   onCopy,
@@ -162,6 +168,7 @@ export default function GroupMessage({
                   fileName={quotedMessage.fileName || ""}
                   fileType={quotedMessage.fileType || ""}
                   fileSize={0 || ""}
+                  showMediaByDefault={showQuotedMediaByDefault}
                 />
               )}
             </div>
@@ -180,6 +187,7 @@ export default function GroupMessage({
               fileName={fileName || ""}
               fileType={fileType || ""}
               fileSize={fileSize || ""}
+              showMediaByDefault={showMediaByDefault}
             />
           )}
           {/* --- CORREÇÃO: Utiliza visualText para renderizar a mensagem --- */}
@@ -194,6 +202,11 @@ export default function GroupMessage({
               ))
             )}
           </div>
+          {reaction && (
+            <span className="self-start rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
+              {reaction}
+            </span>
+          )}
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>

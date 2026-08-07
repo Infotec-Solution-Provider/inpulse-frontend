@@ -1,6 +1,4 @@
-import { SocketClient, WhatsappClient, WppChatType, WppMessage } from "@in.pulse-crm/sdk";
-import { safeNotification } from "@/lib/utils/notifications";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
+import { SocketClient, WhatsappClient, WppChatType, WppMessage } from "@/lib/sdk-local";
 import { Dispatch, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
@@ -18,22 +16,30 @@ export default function ChatStartedHandler(
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   userInitiatedChatContactId: React.RefObject<number | null>,
+  notify?: (payload: {
+    event: "new_conversation";
+    title: string;
+    body: string;
+    isChatFocused: boolean;
+  }) => void,
 ) {
   return async ({ chatId }: HandleChatStartedCallbackProps) => {
     const res = await api.getChatById(chatId);
     const { messages, ...chat } = res;
 
-    const isUnread = true;
-
+    
     const lastMessage = messages?.reduce((prev, current) => {
       return +prev.timestamp > +current.timestamp ? prev : current;
     }, messages[0]);
-
+    
+    const isUnread = !lastMessage.from.startsWith("me");
     socket.joinRoom(`chat:${chat.id}`);
 
-    safeNotification("Novo atendimento!", {
+    notify?.({
+      event: "new_conversation",
+      title: "Novo atendimento!",
       body: `Contato: ${chat.contact?.name || "Contato excluído"}`,
-      icon: HorizontalLogo.src,
+      isChatFocused: false,
     });
 
     const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage, chatType: "wpp" };

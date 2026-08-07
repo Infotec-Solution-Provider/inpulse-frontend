@@ -1,4 +1,4 @@
-import { SocketClient, WhatsappClient, WppMessage } from "@in.pulse-crm/sdk";
+import { SocketClient, WhatsappClient, WppMessage } from "@/lib/sdk-local";
 import { safeNotification } from "@/lib/utils/notifications";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { Dispatch, SetStateAction } from "react";

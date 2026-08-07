@@ -1,6 +1,6 @@
 import { AuthContext } from "@/app/auth-context";
 import ContactModal from "@/lib/components/contact-modal-detail";
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 import PersonIcon from "@mui/icons-material/Person";
 import { Avatar, Box, Button, Typography } from "@mui/material";
 import { useContext, useMemo, useState } from "react";

@@ -2,8 +2,9 @@
 
 import { useAuthContext } from "@/app/auth-context";
 import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
-import { InternalMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
+import shouldAutoScrollChat from "@/lib/chat-scroll-policy";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { InternalChatContext } from "../../internal-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
@@ -35,37 +36,88 @@ export default function RenderInternalGroupMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderInternalGroupMessagesProps) {
-  const { currentInternalChatMessages, users, phoneNameMap } = useContext(InternalChatContext);
+  const {
+    currentInternalChatMessages,
+    users,
+    phoneNameMap,
+    whatsappSenderNameMap,
+    hasOlderInternalMessages,
+    loadOlderInternalMessages,
+    historyPrependRef,
+  } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
 
   const [visibleCount, setVisibleCount] = useState(30);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [visibleFileCount, setVisibleFileCount] = useState(10);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isSelectionMode && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView();
+    const isHistoryPrepend = historyPrependRef.current;
+    if (isHistoryPrepend) {
+      historyPrependRef.current = false;
     }
-  }, [currentInternalChatMessages, isSelectionMode]);
+    if (shouldAutoScrollChat(isHistoryPrepend, isSelectionMode) && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [currentInternalChatMessages, historyPrependRef, isSelectionMode]);
 
   const visibleMessages = useMemo(
     () => (currentInternalChatMessages ?? []).slice(-visibleCount),
     [currentInternalChatMessages, visibleCount],
   );
+
+  const visibleMessageFileIds = useMemo(
+    () =>
+      visibleMessages
+        .filter((msg) => typeof msg.fileId === "number")
+        .map((msg) => msg.fileId as number),
+    [visibleMessages],
+  );
+
+  const autoVisibleFileIdSet = useMemo(
+    () => new Set(visibleMessageFileIds.slice(-visibleFileCount)),
+    [visibleMessageFileIds, visibleFileCount],
+  );
+
+  const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
+
   return (
-    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
-      {visibleCount < (currentInternalChatMessages?.length ?? 0) && (
+    <div
+      ref={scrollContainerRef}
+      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+    >
+      {(visibleCount < (currentInternalChatMessages?.length ?? 0) || hasOlderInternalMessages) && (
+        <div className="mb-2 flex justify-center">
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={async () => {
+              const total = currentInternalChatMessages?.length ?? 0;
+              if (visibleCount < total) {
+                setVisibleCount((prev) => Math.min(prev + 30, total));
+                return;
+              }
+              const loaded = await loadOlderInternalMessages();
+              if (loaded > 0) setVisibleCount((prev) => prev + loaded);
+            }}
+          >
+            Carregar mais
+          </Button>
+        </div>
+      )}
+
+      {hiddenFilesCount > 0 && (
         <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
             onClick={() =>
-              setVisibleCount((prev) =>
-                Math.min(prev + 30, currentInternalChatMessages?.length ?? prev),
-              )
+              setVisibleFileCount((prev) => Math.min(prev + 10, visibleMessageFileIds.length))
             }
           >
-            Carregar mais
+            Carregar arquivos antigos ({hiddenFilesCount})
           </Button>
         </div>
       )}
@@ -82,14 +134,21 @@ export default function RenderInternalGroupMessages({
                 findQuoted,
                 getInternalMessageStyle(findQuoted, user?.CODIGO),
                 users ?? [],
-                null,
+                [],
+                undefined,
                 phoneNameMap,
+                whatsappSenderNameMap,
               )
             : null;
 
           const prev = i > 0 ? arr[i - 1] : null;
           const groupFirst = !prev || prev.from !== m.from;
-          const senderName = getInternalMessageAuthor(m.from, phoneNameMap, users, m.id === 43810);
+          const senderName = getInternalMessageAuthor(
+            m.from,
+            phoneNameMap,
+            users,
+            whatsappSenderNameMap,
+          );
           const isMine = user?.CODIGO != null && m.from === `user:${user.CODIGO}`;
 
           return (
@@ -108,12 +167,17 @@ export default function RenderInternalGroupMessages({
               fileType={m.fileType}
               fileSize={m.fileSize}
               quotedMessage={quotedMsg}
+              showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
+              showQuotedMediaByDefault={
+                !quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)
+              }
               isForwarded={m.isForwarded}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
               isForwardMode={isSelectionMode}
               isSelected={selectedMessageIds.has(m.id)}
               isEdited={m.isEdited}
+              reaction={m.reaction}
               onSelect={isReadOnlyMode ? undefined : () => toggleSelectMessage(m.id)}
               onForward={isReadOnlyMode ? undefined : () => openManualForward(m)}
               isReadOnly={isReadOnlyMode}
@@ -126,7 +190,7 @@ export default function RenderInternalGroupMessages({
             />
           );
         })}
-        <div ref={messagesEndRef} className="h-1" />
+        <div className="h-1" />
       </ul>
     </div>
   );

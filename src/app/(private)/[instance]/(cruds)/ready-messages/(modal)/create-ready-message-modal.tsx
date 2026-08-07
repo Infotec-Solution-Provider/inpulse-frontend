@@ -1,5 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
-import { CreateReadyMessageDto } from "@in.pulse-crm/sdk";
+import { CreateReadyMessageDto } from "@/lib/sdk-local";
 import {
   Button,
   List,

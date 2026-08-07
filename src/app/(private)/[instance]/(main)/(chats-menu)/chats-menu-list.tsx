@@ -1,11 +1,16 @@
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
+import { isExternalOperator } from "@/lib/permissions/operator-access";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
+import { replaceMentions } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
-import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
-import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
+import { DetailedInternalChat } from "../../internal-context";
+import { DetailedChat } from "../../whatsapp-context";
+import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
+import { useInternalChatList } from "../../internal-chat-list-context";
 import ChatsMenuItem from "./chats-menu-item";
+import { Virtuoso } from "react-virtuoso";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
@@ -41,33 +46,14 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 
 export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
-  const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
-  const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
+  const isExternal = isExternalOperator(user?.NIVEL);
+  const { chats, openChat, currentChat, chatFilters } = useWhatsappChatList();
+  const { internalChats, openInternalChat, users } = useInternalChatList();
   const { state } = useContext(ContactsContext);
-
-  const mentionNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const user of users) {
-      const phone = user.WHATSAPP?.replace(/\D/g, "");
-      if (phone) {
-        map.set(phone, user.NOME);
-      }
-    }
-    for (const contact of state.contacts) {
-      const phone = contact.phone?.replace(/\D/g, "");
-      if (phone && !map.has(phone)) {
-        map.set(phone, contact.name);
-      }
-    }
-    return map;
-  }, [users, state.contacts]);
-
-  const replaceMentionsWpp = (text: string): string => {
-    return text.replace(/@(\d{6,})/g, (match, phone) => {
-      const name = mentionNameMap.get(phone);
-      return name ? `@${name}` : match;
-    });
-  };
+  const userNameById = useMemo(
+    () => new Map(users.map((directoryUser) => [directoryUser.CODIGO, directoryUser.NOME])),
+    [users],
+  );
 
   const filteredChats = useMemo(() => {
     const validChats = Array.isArray(chats) ? chats : [];
@@ -79,6 +65,14 @@ export default function ChatsMenuList() {
     ];
 
     return combinedChats.filter((chat) => {
+      if (isExternal && chat.chatType !== "internal") {
+        return false;
+      }
+
+      if (isExternal && chat.chatType === "internal" && chat.isGroup) {
+        return false;
+      }
+
       if (chatFilters.showingType === "scheduled" && !("schedule" in chat)) {
         return false;
       }
@@ -93,20 +87,20 @@ export default function ChatsMenuList() {
       }
       return chatFilters.search.length === 0 || matchesFilter(chat, chatFilters.search);
     });
-  }, [chats, internalChats, chatFilters]);
+  }, [chats, internalChats, chatFilters, isExternal]);
 
   const sortedChats = useMemo(() => {
     const getUserCreatorName = (chat: CombinedChat): string => {
       if (chat.chatType === "wpp") {
         // For WhatsApp chats, prefer assigned user name via userId
         const uid = (chat as any).userId as number | undefined;
-        const assigned = uid ? users.find((u) => u.CODIGO === uid)?.NOME : undefined;
+        const assigned = uid ? userNameById.get(uid) : undefined;
         return String(assigned || "").toLowerCase();
       }
       // Internal chats: use creatorId if available, else first participant's name
       const internal = chat as DetailedInternalChat;
       const creatorId = (internal as any).creatorId as number | undefined;
-      const creator = creatorId ? users.find((u) => u.CODIGO === creatorId)?.NOME : undefined;
+      const creator = creatorId ? userNameById.get(creatorId) : undefined;
       return String(creator || internal.users?.[0]?.NOME || "").toLowerCase();
     };
 
@@ -152,11 +146,15 @@ export default function ChatsMenuList() {
       const blt = getDate(b, "lastMessage");
       return blt - alt;
     });
-  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder]);
+  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder, userNameById]);
 
   return (
-    <menu className="scrollbar-whatsapp flex flex-col gap-2 bg-slate-300/5 p-3 dark:bg-slate-800/50">
-      {sortedChats.map((chat) => {
+    <Virtuoso
+      className="scrollbar-whatsapp h-full bg-slate-300/5 dark:bg-slate-800/50"
+      data={sortedChats}
+      increaseViewportBy={240}
+      computeItemKey={(_, chat) => `${chat.chatType}:${chat.id}`}
+      itemContent={(_, chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
@@ -182,9 +180,9 @@ export default function ChatsMenuList() {
               name={names}
               message={
                 chat.lastMessage
-                  ? chat.lastMessage.type !== "chat"
+                  ? !["template", "text", "system", "chat"].includes(chat.lastMessage.type)
                     ? getTypeTextIcon(chat.lastMessage.type)
-                    : replaceMentionsWpp(chat.lastMessage.body)
+                    : replaceMentions(chat.lastMessage.body, users ?? [], state.contacts ?? [])
                   : "Nenhuma mensagem"
               }
               messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}
@@ -214,7 +212,7 @@ export default function ChatsMenuList() {
             onClick={() => openChat(chat)}
           />
         );
-      })}
-    </menu>
+      }}
+    />
   );
 }

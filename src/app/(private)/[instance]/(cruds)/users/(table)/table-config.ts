@@ -29,6 +29,7 @@ export const USERS_TABLE_COLUMNS = {
       { value: "ATIVO", label: "Ativo" },
       { value: "RECEPTIVO", label: "Receptivo" },
       { value: "AMBOS", label: "Ambos" },
+      { value: "EXTERNO", label: "Externo" },
     ],
   },
   SETOR: {

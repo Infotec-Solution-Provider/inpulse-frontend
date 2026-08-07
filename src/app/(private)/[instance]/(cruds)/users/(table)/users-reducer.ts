@@ -1,4 +1,4 @@
-import { RequestFilters, UpdateUserDTO, User } from "@in.pulse-crm/sdk";
+import { RequestFilters, UpdateUserDTO, User } from "@/lib/sdk-local";
 
 // State Type
 export interface UsersContextState {

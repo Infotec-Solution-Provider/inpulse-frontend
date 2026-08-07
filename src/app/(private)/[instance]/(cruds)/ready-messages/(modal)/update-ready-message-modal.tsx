@@ -1,6 +1,6 @@
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
-import { ReadyMessage, UpdateReadyMessageDto } from "@in.pulse-crm/sdk";
+import { ReadyMessage, UpdateReadyMessageDto } from "@/lib/sdk-local";
 import {
   Button,
   List,

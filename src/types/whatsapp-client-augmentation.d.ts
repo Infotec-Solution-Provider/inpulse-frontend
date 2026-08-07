@@ -1,6 +1,6 @@
-import { WhatsappClient } from "@in.pulse-crm/sdk";
+import { WhatsappClient } from "@/lib/sdk-local";
 
-declare module "@in.pulse-crm/sdk" {
+declare module "@/lib/sdk-local" {
   interface WhatsappClient {
     searchMonitorData(params: {
       page?: number;

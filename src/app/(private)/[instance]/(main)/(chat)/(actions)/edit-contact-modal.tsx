@@ -5,7 +5,7 @@ import { AppContext } from "../../../app-context";
 import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
 import { toast } from "react-toastify";
 import SelectCustomerInput from "@/lib/components/select-customer-input";
-import { Customer } from "@in.pulse-crm/sdk";
+import { Customer } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 
 export default function EditContactModal() {

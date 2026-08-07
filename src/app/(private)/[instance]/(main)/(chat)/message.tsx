@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "@in.pulse-crm/sdk";
+import { WppMessageStatus } from "@/lib/sdk-local";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -11,9 +11,18 @@ import ErrorIcon from "@mui/icons-material/Error";
 import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
-import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import SmartToyIcon from "@mui/icons-material/SmartToy";
+import {
+  Checkbox,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
-import { useWhatsappContext } from "../../whatsapp-context";
+import { useWhatsappSession } from "../../whatsapp-session-context";
 import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
@@ -44,9 +53,13 @@ export interface MessageProps {
   isForwarded?: boolean;
   isForwardMode?: boolean;
   isReadOnly?: boolean;
+  showMediaByDefault?: boolean;
+  showQuotedMediaByDefault?: boolean;
   isSelected?: boolean;
   isEdited?: boolean;
+  reaction?: string;
   channelId?: number | null;
+  agentId?: number | null;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
@@ -77,7 +90,7 @@ export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   REVOKED: <DeleteIcon className="text-slate-300" />,
 };
 
-export default function Message({
+function Message({
   id,
   style,
   type,
@@ -91,11 +104,15 @@ export default function Message({
   quotedMessage,
   onQuote,
   isEdited = false,
+  reaction,
   isForwarded = false,
   isForwardMode = false,
   isReadOnly = false,
+  showMediaByDefault,
+  showQuotedMediaByDefault,
   isSelected = false,
   channelId,
+  agentId,
   onSelect,
   onForward,
   onCopy,
@@ -103,7 +120,7 @@ export default function Message({
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-  const { parameters, channels } = useWhatsappContext();
+  const { parameters, channels } = useWhatsappSession();
 
   const channelName = useMemo(() => {
     if (!channelId || channels.length <= 1) return null;
@@ -183,7 +200,7 @@ export default function Message({
       )}
 
       <div
-        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
+        className={`flex w-max max-w-[86%] flex-col items-center gap-2 rounded-md p-2 sm:max-w-[76%] lg:max-w-[66%] ${msgStyleVariants[style]}`}
       >
         {quotedMessage && (
           <div
@@ -222,7 +239,7 @@ export default function Message({
                 fileName={quotedMessage.fileName || ""}
                 fileType={quotedMessage.fileType || ""}
                 fileSize={fileSize || ""}
-                showMediaByDefault={isMessageFromToday}
+                showMediaByDefault={showQuotedMediaByDefault ?? isMessageFromToday}
               />
             )}
           </div>
@@ -242,7 +259,7 @@ export default function Message({
               fileName={fileName || ""}
               fileType={fileType || ""}
               fileSize={fileSize || ""}
-              showMediaByDefault={isMessageFromToday}
+              showMediaByDefault={showMediaByDefault ?? isMessageFromToday}
             />
           )}
           <div className="w-full text-slate-900 dark:text-slate-200">
@@ -256,6 +273,11 @@ export default function Message({
               ))
             )}
           </div>
+          {reaction && (
+            <span className="self-start rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
+              {reaction}
+            </span>
+          )}
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {channelName && channelColor && (
               <span className="font-semibold" style={{ color: channelColor }}>
@@ -264,6 +286,11 @@ export default function Message({
             )}
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
+            {agentId && (
+              <Tooltip title="Mensagem gerada por Agente de IA">
+                <SmartToyIcon sx={{ fontSize: "0.85rem", color: "#8b5cf6" }} />
+              </Tooltip>
+            )}
             {style !== "system" && status && statusComponents[status]}
           </div>
         </div>
@@ -272,7 +299,7 @@ export default function Message({
       {style !== "system" && !isForwardMode && !isReadOnly && (
         <>
           <IconButton
-            className="invisible group-hover:visible"
+            className="visible shrink-0 md:invisible md:group-hover:visible"
             size="small"
             title="Mais opções"
             onClick={handleMenuClick}
@@ -326,3 +353,35 @@ export default function Message({
     </li>
   );
 }
+
+function areMessagePropsEqual(previous: MessageProps, next: MessageProps) {
+  return (
+    previous.id === next.id &&
+    previous.style === next.style &&
+    previous.text === next.text &&
+    previous.type === next.type &&
+    previous.date.getTime() === next.date.getTime() &&
+    previous.status === next.status &&
+    previous.fileId === next.fileId &&
+    previous.fileName === next.fileName &&
+    previous.fileType === next.fileType &&
+    previous.fileSize === next.fileSize &&
+    previous.isForwarded === next.isForwarded &&
+    previous.isForwardMode === next.isForwardMode &&
+    previous.isReadOnly === next.isReadOnly &&
+    previous.showMediaByDefault === next.showMediaByDefault &&
+    previous.showQuotedMediaByDefault === next.showQuotedMediaByDefault &&
+    previous.isSelected === next.isSelected &&
+    previous.isEdited === next.isEdited &&
+    previous.reaction === next.reaction &&
+    previous.channelId === next.channelId &&
+    previous.agentId === next.agentId &&
+    previous.quotedMessage?.id === next.quotedMessage?.id &&
+    previous.quotedMessage?.text === next.quotedMessage?.text &&
+    Boolean(previous.onQuote) === Boolean(next.onQuote) &&
+    Boolean(previous.onForward) === Boolean(next.onForward) &&
+    Boolean(previous.onEdit) === Boolean(next.onEdit)
+  );
+}
+
+export default React.memo(Message, areMessagePropsEqual);

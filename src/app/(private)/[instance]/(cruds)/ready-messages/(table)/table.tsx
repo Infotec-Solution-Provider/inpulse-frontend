@@ -1,5 +1,5 @@
 "use client";
-import { ReadyMessage } from "@in.pulse-crm/sdk";
+import { ReadyMessage } from "@/lib/sdk-local";
 import {
   Button,
   CircularProgress,

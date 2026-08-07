@@ -17,7 +17,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import BusinessIcon from "@mui/icons-material/Business";
 import ArticleIcon from "@mui/icons-material/Article";
 import BadgeIcon from "@mui/icons-material/Badge";
-import { WppChatWithDetailsAndMessages, WppContact } from "@in.pulse-crm/sdk";
+import { WppChatWithDetailsAndMessages, WppContact } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { useMemo, useState, useEffect } from "react";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";

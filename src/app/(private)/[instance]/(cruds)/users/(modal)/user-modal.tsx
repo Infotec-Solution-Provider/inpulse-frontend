@@ -2,8 +2,7 @@
 import { useAuthContext } from "@/app/auth-context";
 import AvatarInput from "@/lib/components/avatar-input";
 import filesService from "@/lib/services/files.service";
-import { CreateUserDTO, FileDirType, User, UserRole } from "@in.pulse-crm/sdk";
-import axios from "axios";
+import { CreateUserDTO, FileDirType, User, UserRole } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import SaveIcon from "@mui/icons-material/Save";
 import Visibility from "@mui/icons-material/Visibility";
@@ -11,8 +10,6 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { Button, Dialog, IconButton, InputAdornment, MenuItem, TextField } from "@mui/material";
 import { useState } from "react";
 import { useUsersContext } from "../users-context";
-
-const FILES_BASE_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "http://localhost:8003";
 
 interface UserModalProps {
   user?: User;
@@ -50,18 +47,13 @@ export default function UserModal({ user }: UserModalProps) {
       let AVATAR_ID: number | null = user?.AVATAR_ID ?? null;
 
       if (avatar) {
-        const uploadFormData = new FormData();
-        uploadFormData.append("instance", instance);
-        uploadFormData.append("dirType", FileDirType.PUBLIC);
-        uploadFormData.append("file", avatar, avatar.name);
-
-        const { data: uploadResponse } = await axios.post(`${FILES_BASE_URL}/api/files`, uploadFormData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+        const uploadedAvatar = await filesService.uploadBrowserFile({
+          instance,
+          dirType: FileDirType.PUBLIC,
+          file: avatar,
         });
 
-        AVATAR_ID = uploadResponse.data.id;
+        AVATAR_ID = uploadedAvatar.id;
       }
 
       if (isEdit) {
@@ -200,10 +192,11 @@ export default function UserModal({ user }: UserModalProps) {
                 onChange={(e) => handleFormChange("NIVEL", e.target.value as UserRole)}
                 className="bg-white dark:bg-slate-700"
               >
-                <MenuItem value="ADMIN">Administrador</MenuItem>
-                <MenuItem value="ATIVO">Usuário (Ativo)</MenuItem>
-                <MenuItem value="RECEP">Usuário (Recep)</MenuItem>
-                <MenuItem value="AMBOS">Usuário (Ambos)</MenuItem>
+                <MenuItem value={UserRole.ADMIN}>Administrador</MenuItem>
+                <MenuItem value={UserRole.ACTIVE}>Usuário (Ativo)</MenuItem>
+                <MenuItem value={UserRole.RECEPTIONIST}>Usuário (Recep)</MenuItem>
+                <MenuItem value={UserRole.BOTH}>Usuário (Ambos)</MenuItem>
+                <MenuItem value={UserRole.EXTERNAL}>Operador Externo</MenuItem>
               </TextField>
             </div>
 

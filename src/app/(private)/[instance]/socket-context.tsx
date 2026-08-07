@@ -1,9 +1,8 @@
 "use client";
-import { SocketClient, SocketEventType } from "@in.pulse-crm/sdk";
+import { SocketClient, SocketEventType } from "@/lib/sdk-local";
 import { ReactNode, createContext, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../../auth-context";
 import { AppContext } from "./app-context";
-import QRModal from "./(main)/qr-modal";
 import { toast } from "react-toastify";
 
 interface ISocketContext {
@@ -34,22 +33,49 @@ export default function SocketProvider({ children }: SocketProviderProps) {
 
   useEffect(() => {
     const socketClient = socket.current;
+    const unsubscribers: Array<() => void> = [];
 
-    socketClient.on(SocketEventType.WwebjsQr, ({ qr, phone }) => {
-      openModal(<QRModal qr={qr} phone={phone} />);
-    });
+    unsubscribers.push(
+      socketClient.subscribe(
+        SocketEventType.WwebjsQr,
+        async ({ qr, phone }: { qr: string; phone: string }) => {
+          const { default: QRModal } = await import("./(main)/qr-modal");
+          openModal(<QRModal qr={qr} phone={phone} />);
+        },
+      ),
+    );
 
-    socketClient.on(SocketEventType.WwebjsAuth, ({ phone, success, message }) => {
-      if (success) {
-        toast.success(`Número ${phone} autenticado com sucesso!`);
-      } else {
-        toast.error(`Erro ao autenticar número ${phone}: ${message}`);
-      }
-    });
+    unsubscribers.push(
+      socketClient.subscribe(
+        SocketEventType.WwebjsAuth,
+        ({ phone, success, message }: { phone: string; success: boolean; message?: string }) => {
+          if (success) {
+            toast.success(`Número ${phone} autenticado com sucesso!`);
+          } else {
+            toast.error(`Erro ao autenticar número ${phone}: ${message}`);
+          }
+        },
+      ),
+    );
+
+    // Telefonia: chamada receptiva recebida via AMI.
+    // Usa string literal ate `@/lib/sdk-local` ser republicada com TelephonyCallReceived.
+    unsubscribers.push(
+      socketClient.subscribe(
+        "telephony_call_received",
+        (data: { callerNumber: string; callerName: string | null; ramal: string }) => {
+          const who = data.callerName
+            ? `${data.callerName} (${data.callerNumber})`
+            : data.callerNumber;
+          toast.info(`Chamada recebida de ${who} no ramal ${data.ramal}`, {
+            autoClose: 8000,
+          });
+        },
+      ),
+    );
 
     return () => {
-      socketClient.off(SocketEventType.WwebjsQr);
-      socketClient.off(SocketEventType.WwebjsAuth);
+      for (const unsubscribe of unsubscribers) unsubscribe();
     };
   }, [socket, closeModal, openModal]);
 

@@ -7,8 +7,12 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import usersService from "../lib/services/users.service";
+import { createCacheScope } from "@/lib/cache/cache-scope";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
+
+const LAST_TENANT_STORAGE_KEY = "@inpulse/last-tenant";
 
 export const AuthContext = createContext({} as AuthContextProps);
 
@@ -23,7 +27,8 @@ export function useAuthContext() {
 export default function AuthProvider({ children }: ProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const instanceRef = useRef(pathname.split("/")[1]);
+  const getInstanceFromPath = (path: string) => path.split("/").filter(Boolean)[0] ?? "";
+  const instanceRef = useRef(getInstanceFromPath(pathname));
 
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -33,6 +38,7 @@ export default function AuthProvider({ children }: ProviderProps) {
       try {
         const session = await authService.login(instance, login, password);
         localStorage.setItem(`@inpulse/${instance}/token`, session.token);
+        localStorage.setItem(LAST_TENANT_STORAGE_KEY, instance);
 
         instanceRef.current = instance;
 
@@ -49,16 +55,40 @@ export default function AuthProvider({ children }: ProviderProps) {
   );
 
   const signOut = useCallback(() => {
+    if (user && instanceRef.current) {
+      void hybridCache.clearScope(createCacheScope(instanceRef.current, user.CODIGO));
+    }
     setToken(null);
-    localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
-    router.replace(`/${instanceRef.current}/login`);
+    if (instanceRef.current) {
+      localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+      router.replace(`/${instanceRef.current}/login`);
+      setUser(null);
+      return;
+    }
+
+    router.replace("/");
     setUser(null);
-  }, [router]);
+  }, [router, user]);
 
   useEffect(() => {
-    const instance = pathname.split("/")[1];
+    window.addEventListener("inpulse:unauthorized", signOut);
+    return () => window.removeEventListener("inpulse:unauthorized", signOut);
+  }, [signOut]);
+
+  useEffect(() => {
+    const instance = getInstanceFromPath(pathname);
     instanceRef.current = instance;
-    const prevToken = localStorage.getItem(`@inpulse/${instanceRef.current}/token`);
+    if (instanceRef.current) {
+      localStorage.setItem(LAST_TENANT_STORAGE_KEY, instanceRef.current);
+    }
+    const prevToken = instanceRef.current
+      ? localStorage.getItem(`@inpulse/${instanceRef.current}/token`)
+      : null;
+    const startedAt = Date.now();
+    const isRootPath = pathname === "/";
+    const isLoginPath = pathname.includes("/login");
+    const requiresAuth = !isRootPath && !isLoginPath;
+
     setToken(prevToken);
 
     if (prevToken) {
@@ -69,26 +99,29 @@ export default function AuthProvider({ children }: ProviderProps) {
         .then(async (session) => {
           instanceRef.current = session.instance;
           axios.defaults.headers["authorization"] = `Bearer ${prevToken}`;
-          usersService.setAuth(`Bearer ${prevToken}`);
+          usersService.setAuth(prevToken);
           const user = await usersService.getUserById(session.userId);
           setUser(user);
 
-          if (pathname.includes("login")) {
+          if (isLoginPath) {
             router.replace(`/${instanceRef.current}`);
           }
         })
         .catch((err) => {
           toast.error(err.message || "Sessão expirada, faça o login novamente!");
-          localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+          if (instanceRef.current) {
+            localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+            void hybridCache.clearInstance(instanceRef.current);
+          }
           setUser(null);
 
-          if (!pathname.includes("login")) {
+          if (requiresAuth && instanceRef.current) {
             router.replace(`/${instanceRef.current}/login`);
           }
         });
     }
 
-    if (!prevToken && !pathname.includes("login")) {
+    if (!prevToken && requiresAuth && instanceRef.current) {
       router.replace(`/${instanceRef.current}/login`);
     }
   }, [pathname, router]);

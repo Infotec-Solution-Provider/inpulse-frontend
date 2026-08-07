@@ -7,13 +7,14 @@ export default async function DashboardReportsPage({
   searchParams,
 }: {
   params: Promise<{ instance: string }>;
-  searchParams?: { report?: string } | Promise<{ report?: string }>;
+  searchParams?: Promise<{ report?: string }>;
 }) {
   const resolvedParams = await Promise.resolve(params);
   const instance = resolvedParams.instance;
   
   // Apenas adicionar satisfactionSurvey se for a instância exatron
   const allowedReports = new Set<string>([
+    "salesFunnel",
     "contactsAwaitingReturn",
     "messagesPerUser",
     "messagesPerContact",
@@ -26,6 +27,7 @@ export default async function DashboardReportsPage({
   const initialSelectedReport =
     resolvedSearchParams?.report && allowedReports.has(resolvedSearchParams.report)
       ? (resolvedSearchParams.report as
+          | "salesFunnel"
           | "contactsAwaitingReturn"
           | "messagesPerUser"
           | "messagesPerContact"

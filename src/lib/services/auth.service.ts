@@ -1,4 +1,4 @@
-import { AuthClient } from "@in.pulse-crm/sdk";
+import { AuthClient } from "@/lib/sdk-local";
 
 const AUTH_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
 

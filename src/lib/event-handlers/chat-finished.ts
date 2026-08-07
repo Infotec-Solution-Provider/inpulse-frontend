@@ -2,7 +2,7 @@ import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-contex
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { safeNotification } from "@/lib/utils/notifications";
-import { SocketClient, WppMessage } from "@in.pulse-crm/sdk";
+import { SocketClient, WppMessage } from "@/lib/sdk-local";
 import { Dispatch, SetStateAction } from "react";
 
 interface HandleChatStartedCallbackProps {

@@ -1,15 +1,22 @@
-import { Edit } from "@mui/icons-material";
-import { User } from "@in.pulse-crm/sdk";
+import { Edit, SettingsPhone } from "@mui/icons-material";
+import { User } from "@/lib/sdk-local";
 import { IconButton, TableCell, TableRow } from "@mui/material";
 import { useUsersContext } from "../users-context";
 import { USERS_TABLE_COLUMNS } from "./table-config";
 
 interface UsersTableItemProps {
   user: User;
+  canUseSipConfig: boolean;
   openEditModalHandler: (user: User) => void;
+  openSipConfigModalHandler: (user: User) => void;
 }
 
-export default function UsersTableItem({ user, openEditModalHandler }: UsersTableItemProps) {
+export default function UsersTableItem({
+  user,
+  canUseSipConfig,
+  openEditModalHandler,
+  openSipConfigModalHandler,
+}: UsersTableItemProps) {
   const { sectors } = useUsersContext();
   const sector = sectors.find((s) => s.id === user.SETOR);
 
@@ -23,6 +30,8 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         return "Recepção";
       case "AMBOS":
         return "Ambos";
+      case "EXTERNO":
+        return "Externo";
       default:
         return "N/D";
     }
@@ -86,6 +95,8 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
           className={`rounded-full px-2 py-1 text-xs font-semibold ${
             user.NIVEL === "ADMIN"
               ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+              : user.NIVEL === "EXTERNO"
+                ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
               : user.NIVEL === "ATIVO" || user.NIVEL === "RECEP" || user.NIVEL === "AMBOS"
                 ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                 : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
@@ -111,6 +122,16 @@ export default function UsersTableItem({ user, openEditModalHandler }: UsersTabl
         }}
       >
         <div className="flex items-center gap-1">
+          {canUseSipConfig && (
+            <IconButton
+              title="Configurar SIP"
+              onClick={() => openSipConfigModalHandler(user)}
+              size="small"
+              className="text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+            >
+              <SettingsPhone fontSize="small" />
+            </IconButton>
+          )}
           <IconButton
             title="Editar Usuário"
             onClick={() => openEditModalHandler(user)}

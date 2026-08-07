@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ActionDispatch,
   createContext,
@@ -16,14 +18,18 @@ import {
   CustomersClient,
   RequestFilters,
   UpdateCustomerDTO,
-} from "@in.pulse-crm/sdk";
+} from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
+import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import customersReducer, {
   ChangeCustomersStateAction,
+  CustomerListFilters,
   CustomersContextState,
   MultipleActions,
 } from "./(table)/customers-reducer";
+import { createCacheScope } from "@/lib/cache/cache-scope";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
 
 interface ICustomersProviderProps {
   children: ReactNode;
@@ -52,7 +58,8 @@ const CUSTOMERS_BASE_URL: string =
 
 export default function CustomersProvider({ children }: ICustomersProviderProps) {
   const api = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
-  const { token } = useAuthContext();
+  const { token, user, instance } = useAuthContext();
+  const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
 
   const [state, dispatch] = useReducer(customersReducer, {
     customers: [],
@@ -69,6 +76,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       try {
         if (token) {
           await api.current.createCustomer(data);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "customer-page");
           toast.success("Cliente cadastrado com sucesso!");
         }
       } catch (err) {
@@ -76,14 +84,20 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         toast.error("Falha ao cadastrar cliente!");
       }
     },
-    [token],
+    [cacheScope, token],
   );
 
   const updateCustomer = useCallback(
     async (id: number, data: UpdateCustomerDTO) => {
+      if (isSystemDefaultCustomer(id)) {
+        toast.info("O cliente padrão do sistema não pode ser editado.");
+        return;
+      }
+
       try {
         if (token) {
           await api.current.updateCustomer(id, data);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "customer-page");
           dispatch({ type: "update-customer", id, data });
           toast.success("Cliente atualizado com sucesso!");
         }
@@ -92,7 +106,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         toast.error("Falha ao atualizar cliente!");
       }
     },
-    [token],
+    [cacheScope, token],
   );
 
   const loadCustomers = useCallback(async () => {
@@ -102,7 +116,25 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       if (!token) {
         return dispatch({ type: "change-loading", isLoading: false });
       }
-      const res = await api.current.getCustomers(state.filters);
+      const cacheKey = JSON.stringify(state.filters);
+      if (cacheScope) {
+        const cached = await hybridCache.get<{ data: Customer[]; page: { totalRows?: number } }>(
+          cacheScope,
+          "customer-page",
+          cacheKey,
+        );
+        if (cached) {
+          dispatch({
+            type: "multiple",
+            actions: [
+              { type: "change-total-rows", totalRows: cached.page.totalRows || 0 },
+              { type: "load-customers", customers: cached.data },
+            ],
+          });
+        }
+      }
+      const res = await api.current.getCustomers(state.filters as unknown as CustomerListFilters);
+      if (cacheScope) void hybridCache.set(cacheScope, "customer-page", res, cacheKey);
       dispatch({
         type: "multiple",
         actions: [
@@ -116,7 +148,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       Logger.error("Error loading customers", err as Error);
       toast.error("Falha ao carregar clientes!");
     }
-  }, [state.filters, token]);
+  }, [cacheScope, state.filters, token]);
 
   const searchCustomers = useCallback(
     async (term: string, filterBy: "RAZAO" | "COD_ERP" | "CODIGO" | "CPF_CNPJ" = "RAZAO") => {
@@ -137,8 +169,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
             filters.COD_ERP = trimmed;
           } else if (filterBy === "CODIGO") {
             filters.CODIGO = digitsOnly || trimmed;
-          }
-          else if (filterBy === "CPF_CNPJ") {
+          } else if (filterBy === "CPF_CNPJ") {
             filters.CPF_CNPJ = digitsOnly || trimmed;
           }
         }

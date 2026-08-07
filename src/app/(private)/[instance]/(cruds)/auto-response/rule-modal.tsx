@@ -9,7 +9,7 @@ import { X, Plus, Trash } from "lucide-react";
 import { toast } from "react-toastify";
 import { useEffect, useMemo, useState } from "react";
 import { useAutoResponseContext } from "./auto-response.context";
-import { AutomaticResponseRule } from "@in.pulse-crm/sdk";
+import { AutomaticResponseRule } from "@/lib/sdk-local";
 import useInternalChatContext from "../../internal-context";
 
 type Frequency = 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';

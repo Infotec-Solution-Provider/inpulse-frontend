@@ -3,12 +3,12 @@ import Chat from "./(chat)/chat";
 import ChatsMenu from "./(chats-menu)/chats-menu";
 import React, { useContext } from "react";
 import ChatProvider from "./(chat)/chat-context";
-import { WhatsappContext } from "../whatsapp-context";
+import { useWhatsappSelection } from "../whatsapp-selection-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 
 export default function Home() {
-  const { currentChat, setCurrentChat } = useContext(WhatsappContext);
+  const { currentChat, setCurrentChat } = useWhatsappSelection();
   const { user, instance } = useContext(AuthContext);
 
   // Handle browser/hardware back to close chat on mobile
@@ -28,18 +28,20 @@ export default function Home() {
 
   const handleCloseChat = () => {
     setCurrentChat(null);
-  }
+  };
 
   return (
     <ChatProvider>
       <div
-        className={`box-border grid h-auto w-full grid-rows-1 overflow-auto md:h-full md:gap-2 md:overflow-hidden md:p-2 ${currentChat ? "chat-open" : ""} grid-cols-1 md:grid-cols-[24rem_1fr]`}
+        className={`box-border grid h-full min-h-0 w-full grid-cols-1 grid-rows-1 overflow-hidden md:gap-2 md:p-2 ${currentChat ? "chat-open" : ""} md:grid-cols-[24rem_1fr]`}
       >
         <div className={`chats-menu ${currentChat ? "hidden" : "block"} md:block`}>
           {" "}
           <ChatsMenu />{" "}
         </div>
-        <div className="chat-panel-container flex h-full w-full flex-1 flex-col overflow-hidden">
+        <div
+          className={`chat-panel-container overflow-hidden ${currentChat ? "fixed inset-0 z-40 flex h-[100dvh] w-full flex-col bg-white dark:bg-slate-900" : "hidden"} md:static md:z-auto md:flex md:h-full md:min-h-0 md:w-full md:flex-col md:bg-transparent`}
+        >
           {/* mobile back handled by hardware/browser history */}
           {false && (
             <button

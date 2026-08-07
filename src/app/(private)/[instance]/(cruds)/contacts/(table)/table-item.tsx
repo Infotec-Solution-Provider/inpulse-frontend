@@ -1,6 +1,6 @@
 "use client";
 
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";

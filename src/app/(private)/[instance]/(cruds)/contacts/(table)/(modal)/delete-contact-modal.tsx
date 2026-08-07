@@ -3,7 +3,7 @@
 import { Button, IconButton, Typography } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { useContactsContext } from "../../contacts-context";
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 
 interface DeleteContactModalProps {

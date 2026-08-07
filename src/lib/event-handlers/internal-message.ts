@@ -1,11 +1,10 @@
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import HorizontalLogo from "@/assets/img/hlogodark.png";
-import { safeNotification } from "@/lib/utils/notifications";
-import { InternalChatClient, InternalMessage, User, WppContact } from "@in.pulse-crm/sdk";
+import { InternalChatClient, InternalMessage, User, WppContact } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import getInternalMessageAuthor from "../utils/get-internal-message-author";
 import { replaceMentions } from "../utils/message-mentions";
+import { isInternalMentionForUser } from "../utils/notification-preferences";
 
 interface InternalReceiveMessageCallbackProps {
   message: InternalMessage;
@@ -30,10 +29,21 @@ export default function InternalReceiveMessageHandler(
   contacts: WppContact[],
   loggedUser: User,
   phoneNameMap: Map<string, string>,
+  whatsappSenderNameMap: Map<string, string>,
+  notify?: (payload: {
+    event: "new_message" | "mention";
+    title: string;
+    body: string;
+    isChatFocused: boolean;
+  }) => void,
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
     if (notifiedMessages.has(message.id)) return;
     notifiedMessages.add(message.id);
+    if (notifiedMessages.size > 1000) {
+      const oldestId = notifiedMessages.values().next().value as number | undefined;
+      if (oldestId !== undefined) notifiedMessages.delete(oldestId);
+    }
     const isCurrentChat =
       chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
     const isCurrentUser = message.from === `user:${loggedUser.CODIGO}`;
@@ -52,32 +62,39 @@ export default function InternalReceiveMessageHandler(
     }
 
     if (message.from !== `user:${loggedUser.CODIGO}`) {
-      const author = getInternalMessageAuthor(message.from, phoneNameMap, users);
+      const author = getInternalMessageAuthor(
+        message.from,
+        phoneNameMap,
+        users,
+        whatsappSenderNameMap,
+      );
       const bodyFinal =
         message.type !== "chat"
           ? types[message.type] || "Enviou um arquivo"
           : replaceMentions(message.body || "", users, contacts);
+      const isMention = isInternalMentionForUser(message.body || "", loggedUser);
 
-      safeNotification(author, {
+      notify?.({
+        event: isMention ? "mention" : "new_message",
+        title: author,
         body: bodyFinal,
-        icon: HorizontalLogo.src,
+        isChatFocused: isCurrentChat,
       });
     }
 
     setMessages((prev) => {
-      const newMessages = { ...prev };
       const id = message.internalChatId;
+      if (!(id in prev) && !isCurrentChat) return prev;
+      const newMessages = { ...prev };
+      const chatMessages = [...(prev[id] ?? [])];
 
-      if (!newMessages[id]) {
-        newMessages[id] = [];
-      }
-
-      const findIndex = newMessages[id].findIndex((m) => m.id === message.id);
+      const findIndex = chatMessages.findIndex((m) => m.id === message.id);
       if (findIndex === -1) {
-        newMessages[id].push(message);
+        chatMessages.push(message);
       } else {
-        newMessages[id][findIndex] = message;
+        chatMessages[findIndex] = message;
       }
+      newMessages[id] = chatMessages;
 
       return newMessages;
     });

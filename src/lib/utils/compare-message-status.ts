@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "@in.pulse-crm/sdk";
+import { WppMessageStatus } from "@/lib/sdk-local";
 
 function compareMessageStatus(prevStatus: WppMessageStatus, newStatus: WppMessageStatus) {
   if (prevStatus === "PENDING") {

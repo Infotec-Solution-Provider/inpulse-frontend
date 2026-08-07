@@ -1,7 +1,7 @@
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { TableRow } from "@mui/material";
-import { WppWallet } from "@in.pulse-crm/sdk";
+import { WppWallet } from "@/lib/sdk-local";
 import { useContext } from "react";
 import { WalletsContext } from "../context";
 import { StyledTableCell } from "./styles-table";

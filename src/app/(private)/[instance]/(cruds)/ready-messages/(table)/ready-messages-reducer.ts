@@ -1,4 +1,4 @@
-import { ReadyMessage, RequestFilters } from "@in.pulse-crm/sdk";
+import { ReadyMessage, RequestFilters } from "@/lib/sdk-local";
 
 // State Type
 export interface ReadyMessagesContextState {

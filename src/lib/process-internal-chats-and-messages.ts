@@ -1,5 +1,5 @@
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
-import { InternalChat, InternalChatMember, InternalMessage, User } from "@in.pulse-crm/sdk";
+import { InternalChat, InternalChatMember, InternalMessage, User } from "@/lib/sdk-local";
 
 export default function processInternalChatsAndMessages(
   userId: number,
@@ -63,8 +63,10 @@ export default function processInternalChatsAndMessages(
   const detailedChats = chats.map((chat) => ({
     ...chat,
     chatType: "internal",
-    isUnread: messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
-    lastMessage: lastMessages[chat.id] || null,
+    isUnread:
+      chat.isUnread ??
+      messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
+    lastMessage: chat.lastMessage ?? (lastMessages[chat.id] || null),
     users: users.filter((user) => chat.participants.some((p) => p.userId === user.CODIGO)),
   })) as DetailedInternalChat[];
 

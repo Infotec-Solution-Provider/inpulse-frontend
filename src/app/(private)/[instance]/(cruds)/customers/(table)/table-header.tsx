@@ -1,8 +1,10 @@
 import { FilterAlt, FilterAltOff, Search } from "@mui/icons-material";
+import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import {
   Chip,
   IconButton,
   MenuItem,
+  Popover,
   SxProps,
   TableCell,
   TableHead,
@@ -11,9 +13,59 @@ import {
   Theme,
   Tooltip,
 } from "@mui/material";
+import { useMemo, useState } from "react";
 import { useCustomersContext } from "../customers-context";
 import { CUSTOMERS_TABLE_COLUMNS } from "./table-config";
-import { Customer } from "@in.pulse-crm/sdk";
+import {
+  CustomerAgeLevel,
+  CustomerInteractionLevel,
+  CustomerPurchaseInterestLevel,
+  CustomerProfileSummaryLevel,
+  CustomerPurchaseLevel,
+} from "@/lib/types/customer-profile-summary";
+import { CustomerListFilterKey } from "./customers-reducer";
+
+const PROFILE_LEVEL_OPTIONS: Array<{ value: CustomerProfileSummaryLevel | "{{all}}"; label: string }> = [
+  { value: "{{all}}", label: "Todos os perfis" },
+  { value: "potencial_de_compra", label: "Potencial de compra" },
+  { value: "consolidado", label: "Consolidado" },
+  { value: "precisa_mais_interacao", label: "Precisa mais interação" },
+  { value: "em_observacao", label: "Em observação" },
+];
+
+const INTERACTION_LEVEL_OPTIONS: Array<{ value: CustomerInteractionLevel | "{{all}}"; label: string }> = [
+  { value: "{{all}}", label: "Toda interação" },
+  { value: "sem_interacao", label: "Sem interação" },
+  { value: "pouca_interacao", label: "Pouca interação" },
+  { value: "interacao_media", label: "Interação média" },
+  { value: "interacao_alta", label: "Interação alta" },
+];
+
+const PURCHASE_LEVEL_OPTIONS: Array<{ value: CustomerPurchaseLevel | "{{all}}"; label: string }> = [
+  { value: "{{all}}", label: "Toda compra" },
+  { value: "sem_compras", label: "Sem compras" },
+  { value: "poucas_compras", label: "Poucas compras" },
+  { value: "compras_medias", label: "Compras médias" },
+  { value: "muitas_compras", label: "Muitas compras" },
+];
+
+const AGE_LEVEL_OPTIONS: Array<{ value: CustomerAgeLevel | "{{all}}"; label: string }> = [
+  { value: "{{all}}", label: "Toda idade" },
+  { value: "sem_data_cadastro", label: "Sem data cadastro" },
+  { value: "cliente_novo", label: "Cliente novo" },
+  { value: "ate_6_meses", label: "Até 6 meses" },
+  { value: "ate_12_meses", label: "Até 12 meses" },
+  { value: "mais_de_12_meses", label: "Mais de 12 meses" },
+];
+
+const PURCHASE_INTEREST_OPTIONS: Array<{ value: CustomerPurchaseInterestLevel | "{{all}}"; label: string }> = [
+  { value: "{{all}}", label: "Todo interesse" },
+  { value: "nao_analisado", label: "Não analisado pela IA" },
+  { value: "baixo_interesse", label: "Baixo interesse" },
+  { value: "interesse_moderado", label: "Interesse moderado" },
+  { value: "alto_interesse", label: "Alto interesse" },
+  { value: "pronto_para_compra", label: "Pronto para compra" },
+];
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {
@@ -21,23 +73,11 @@ const textFieldStlye: SxProps<Theme> = {
   },
 };
 
-const isKeyOfCustomer = (key: string): key is keyof Customer => {
-  const accepted: string[] = [
-    "CODIGO",
-    "ATIVO",
-    "PESSOA",
-    "RAZAO",
-    "CPF_CNPJ",
-    "CIDADE",
-    "COD_ERP",
-  ];
-  return accepted.includes(key);
-};
-
 const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 
 export default function ClientTableHeader() {
   const { dispatch, loadCustomers, state } = useCustomersContext();
+  const [profileFiltersAnchor, setProfileFiltersAnchor] = useState<HTMLButtonElement | null>(null);
 
   const activeFilters = Object.keys(state.filters).filter((k) => {
     const key = k as keyof typeof state.filters;
@@ -48,6 +88,21 @@ export default function ClientTableHeader() {
   });
 
   const activeFiltersCount = activeFilters.length;
+  const activeProfileFiltersCount = useMemo(() => {
+    return [
+      state.filters.profileLevel,
+      state.filters.interactionLevel,
+      state.filters.purchaseLevel,
+      state.filters.ageLevel,
+      state.filters.purchaseInterestLevel,
+    ].filter(Boolean).length;
+  }, [
+    state.filters.ageLevel,
+    state.filters.interactionLevel,
+    state.filters.profileLevel,
+    state.filters.purchaseLevel,
+    state.filters.purchaseInterestLevel,
+  ]);
 
   const onClickSearch = () => loadCustomers();
   const onClearFilters = () => dispatch({ type: "clear-filters" });
@@ -58,10 +113,14 @@ export default function ClientTableHeader() {
     }
   };
 
-  const handleChangeFilter = (key: string) => {
+  const handleChangeFilter = (key: CustomerListFilterKey) => {
     return (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!isKeyOfCustomer(key)) return;
-      const value = event.target.value || null;
+      const rawValue = event.target.value || null;
+      const value =
+        key === "CPF_CNPJ" && typeof rawValue === "string"
+          ? rawValue.replace(/\D/g, "").slice(0, 14)
+          : rawValue;
+
       if (value === null || value === "{{all}}") {
         dispatch({ type: "remove-filter", key });
       } else {
@@ -90,7 +149,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.CODIGO.width,
           }}
         >
@@ -113,7 +171,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.ATIVO.width,
           }}
         >
@@ -141,7 +198,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.PESSOA.width,
           }}
         >
@@ -169,7 +225,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.RAZAO.width,
           }}
         >
@@ -192,7 +247,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.width,
           }}
         >
@@ -204,7 +258,7 @@ export default function ClientTableHeader() {
               variant="outlined"
               size="small"
               placeholder={CUSTOMERS_TABLE_COLUMNS.CPF_CNPJ.placeholder}
-              value={state.filters.CPF_CNPJ || ""}
+              value={formatCpfCnpj(state.filters.CPF_CNPJ || "")}
               onChange={handleChangeFilter("CPF_CNPJ")}
               onKeyDown={handleKeyPress}
               className={textFieldClassName}
@@ -216,7 +270,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.CIDADE.width,
           }}
         >
@@ -239,7 +292,6 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
             minWidth: CUSTOMERS_TABLE_COLUMNS.COD_ERP.width,
           }}
         >
@@ -262,7 +314,110 @@ export default function ClientTableHeader() {
         <TableCell
           className="px-3"
           sx={{
-            width: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
+            minWidth: CUSTOMERS_TABLE_COLUMNS.TAGS.width,
+          }}
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+              {CUSTOMERS_TABLE_COLUMNS.TAGS.label}
+            </label>
+            <div className="flex min-h-[40px] items-center gap-2">
+              <Tooltip title="Filtros de perfil" arrow>
+                <IconButton
+                  onClick={(event) => setProfileFiltersAnchor(event.currentTarget)}
+                  size="small"
+                  color={activeProfileFiltersCount > 0 ? "primary" : "default"}
+                  className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600"
+                >
+                  <FilterAlt fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {activeProfileFiltersCount > 0 ? (
+                <Chip label={`${activeProfileFiltersCount} ativos`} size="small" color="primary" />
+              ) : (
+                <span className="text-xs text-slate-500 dark:text-slate-400">Sem filtros de perfil</span>
+              )}
+            </div>
+            <Popover
+              open={!!profileFiltersAnchor}
+              anchorEl={profileFiltersAnchor}
+              onClose={() => setProfileFiltersAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+            >
+              <div className="grid w-[22rem] gap-3 p-4">
+                <TextField
+                  select
+                  size="small"
+                  label="Perfil geral"
+                  value={state.filters.profileLevel || "{{all}}"}
+                  onChange={handleChangeFilter("profileLevel")}
+                >
+                  {PROFILE_LEVEL_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Interação"
+                  value={state.filters.interactionLevel || "{{all}}"}
+                  onChange={handleChangeFilter("interactionLevel")}
+                >
+                  {INTERACTION_LEVEL_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Compras"
+                  value={state.filters.purchaseLevel || "{{all}}"}
+                  onChange={handleChangeFilter("purchaseLevel")}
+                >
+                  {PURCHASE_LEVEL_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Idade do cliente"
+                  value={state.filters.ageLevel || "{{all}}"}
+                  onChange={handleChangeFilter("ageLevel")}
+                >
+                  {AGE_LEVEL_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Interesse de compra (IA)"
+                  value={state.filters.purchaseInterestLevel || "{{all}}"}
+                  onChange={handleChangeFilter("purchaseInterestLevel")}
+                >
+                  {PURCHASE_INTEREST_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </div>
+            </Popover>
+          </div>
+        </TableCell>
+        <TableCell
+          className="px-3"
+          sx={{
             minWidth: CUSTOMERS_TABLE_COLUMNS.ACTIONS.width,
           }}
         >

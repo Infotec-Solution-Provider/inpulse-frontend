@@ -1,4 +1,4 @@
-import { WppContact } from "@in.pulse-crm/sdk";
+import { WppContact } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { Cancel, Delete, Edit, Save } from "@mui/icons-material";
 import { IconButton, TextField } from "@mui/material";

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ActionDispatch,
   createContext,
@@ -10,29 +12,25 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { InternalGroup } from "@in.pulse-crm/sdk";
+import { InternalGroup, WhatsappGroup } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { InternalChatContext } from "../../internal-context";
-import { useWhatsappContext, WPP_BASE_URL } from "../../whatsapp-context";
+import { useWhatsappContext } from "../../whatsapp-context";
 import internalGroupsReducer, {
   ChangeInternalGroupsStateAction,
   InternalGroupsContextState,
 } from "./(table)/internal-groups-reducer";
+import { createCacheScope } from "@/lib/cache/cache-scope";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
 
 interface IInternalGroupsProviderProps {
   children: ReactNode;
 }
 
-export interface IWppGroup {
-  id: string;
-  name: string;
-}
-
 interface IInternalGroupsContext {
   state: InternalGroupsContextState;
-  wppGroups: IWppGroup[];
+  wppGroups: WhatsappGroup[];
   dispatch: ActionDispatch<[ChangeInternalGroupsStateAction]>;
   updateInternalGroup: (
     id: number,
@@ -59,9 +57,10 @@ export const useInternalGroupsContext = () => {
 
 export default function InternalGroupsProvider({ children }: IInternalGroupsProviderProps) {
   const { internalApi } = useContext(InternalChatContext);
-  const { globalChannel, loaded } = useWhatsappContext();
-  const { token } = useAuthContext();
-  const [wppGroups, setWppGroups] = useState<IWppGroup[]>([]);
+  const { globalChannel, loaded, wppApi } = useWhatsappContext();
+  const { token, user, instance } = useAuthContext();
+  const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
+  const [wppGroups, setWppGroups] = useState<WhatsappGroup[]>([]);
   const [state, dispatch] = useReducer(internalGroupsReducer, {
     internalGroups: [],
     totalRows: 0,
@@ -88,6 +87,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
             data.groupId,
             data.groupImage,
           );
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "internal-groups");
           dispatch({ type: "add-internal-group", data: created as InternalGroup });
           toast.success("Grupo criado com sucesso!");
         }
@@ -98,7 +98,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         loadInternalGroups({});
       }
     },
-    [token, internalApi],
+    [cacheScope, token, internalApi],
   );
 
   const updateInternalGroup = useCallback(
@@ -109,6 +109,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       try {
         if (token && internalApi.current) {
           const res = await internalApi.current.updateInternalGroup(id, data);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "internal-groups");
           dispatch({ type: "update-internal-group", id, data: res });
           toast.success("Grupo atualizado com sucesso!");
         }
@@ -117,7 +118,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         toast.error("Falha ao atualizar grupo!");
       }
     },
-    [token, internalApi],
+    [cacheScope, token, internalApi],
   );
 
   const updateInternalGroupImage = useCallback(
@@ -125,6 +126,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       try {
         if (token && internalApi.current) {
           const res = await internalApi.current.updateInternalGroupImage(id, file);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "internal-groups");
           dispatch({
             type: "update-internal-group",
             id,
@@ -137,7 +139,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         toast.error("Falha ao atualizar imagem do grupo!");
       }
     },
-    [token, internalApi],
+    [cacheScope, token, internalApi],
   );
 
   const deleteInternalGroup = useCallback(
@@ -145,6 +147,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       try {
         if (token && internalApi.current) {
           await internalApi.current.deleteInternalChat(id);
+          if (cacheScope) void hybridCache.invalidateResource(cacheScope, "internal-groups");
           dispatch({ type: "delete-internal-group", id });
           toast.success("Grupo deletado com sucesso!");
         }
@@ -153,7 +156,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         toast.error("Falha ao deletar grupo!");
       }
     },
-    [token, internalApi],
+    [cacheScope, token, internalApi],
   );
 
   const loadInternalGroups = useCallback(
@@ -165,7 +168,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
           const groups = await internalApi.current.getInternalGroups();
 
           // Apply client-side filtering if needed
-          let filteredGroups = groups;
+          let filteredGroups = Array.isArray(groups) ? groups : [];
           if (filters.groupName) {
             filteredGroups = filteredGroups.filter((g) =>
               g.groupName?.toLowerCase().includes(filters.groupName.toLowerCase()),
@@ -183,6 +186,7 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
               { type: "load-internal-groups", internalGroups: filteredGroups },
             ],
           });
+          if (cacheScope) void hybridCache.set(cacheScope, "internal-groups", filteredGroups);
         }
       } catch (err) {
         dispatch({ type: "change-loading", isLoading: false });
@@ -190,28 +194,50 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         toast.error("Falha ao carregar grupos internos!");
       }
     },
-    [internalApi],
+    [cacheScope, internalApi],
   );
 
   useEffect(() => {
-    if (!token || !internalApi.current || !loaded) return;
+    if (!token || !internalApi.current) return;
     internalApi.current.setAuth(token);
+    if (cacheScope) {
+      void hybridCache.get<InternalGroup[]>(cacheScope, "internal-groups").then((cached) => {
+        if (!cached) return;
+        dispatch({ type: "load-internal-groups", internalGroups: cached });
+        dispatch({ type: "change-total-rows", totalRows: cached.length });
+      });
+    }
     loadInternalGroups({});
+  }, [cacheScope, token, internalApi, loadInternalGroups]);
 
-    // Load WhatsApp groups
-    axios
-      .get(WPP_BASE_URL + `/api/whatsapp/${globalChannel.current!.id}/groups`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((res) => {
-        setWppGroups(res.data.data);
+  useEffect(() => {
+    if (!token || !loaded) {
+      setWppGroups([]);
+      return;
+    }
+
+    const channelId = globalChannel.current?.id;
+    if (!channelId) {
+      setWppGroups([]);
+      return;
+    }
+
+    let active = true;
+    wppApi.current.setAuth(token);
+    wppApi.current
+      .getGroups(channelId)
+      .then((groups) => {
+        if (active) setWppGroups(Array.isArray(groups) ? groups : []);
       })
       .catch((err) => {
+        if (active) setWppGroups([]);
         Logger.debug("Error loading WhatsApp groups", err as Error);
       });
-  }, [token, internalApi, loadInternalGroups, loaded]);
+
+    return () => {
+      active = false;
+    };
+  }, [globalChannel, loaded, token, wppApi]);
 
   return (
     <InternalGroupsContext.Provider

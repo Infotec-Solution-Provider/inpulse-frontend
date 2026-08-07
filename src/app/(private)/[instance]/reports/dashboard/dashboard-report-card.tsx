@@ -1,6 +1,7 @@
 "use client";
 
 import { ChartType } from "./dashboard-context";
+import DashboardLoadingIndicator from "./dashboard-loading-indicator";
 import { MenuItem, TextField } from "@mui/material";
 import { ReactNode } from "react";
 
@@ -33,9 +34,7 @@ export default function DashboardReportCard({
           <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isLoading && (
-            <span className="text-xs text-slate-500">Carregando...</span>
-          )}
+          {isLoading ? <DashboardLoadingIndicator label="Atualizando visualização" /> : null}
           {onExport && (
             <button
               onClick={onExport}
@@ -59,7 +58,8 @@ export default function DashboardReportCard({
           </TextField>
         </div>
       </header>
-      <div className="grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+      <div className="relative grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+        {isLoading ? <DashboardLoadingIndicator mode="overlay" label="Processando métricas do relatório" /> : null}
         <div className="min-h-[430px] rounded-md bg-slate-50 p-4 dark:bg-slate-800/40">
           {chart}
         </div>

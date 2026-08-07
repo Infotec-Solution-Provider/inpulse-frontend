@@ -1,5 +1,5 @@
 "use client";
-import { AutomaticResponseRule } from "@in.pulse-crm/sdk";
+import { AutomaticResponseRule } from "@/lib/sdk-local";
 import {
   Dialog,
   DialogTitle,

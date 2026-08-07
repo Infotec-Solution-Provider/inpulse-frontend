@@ -1,4 +1,4 @@
-import { WppMessage, WppMessageStatus } from "@in.pulse-crm/sdk";
+import { WppMessage, WppMessageStatus } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import compareMessageStatus from "../utils/compare-message-status";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
@@ -22,16 +22,17 @@ export default function MessageStatusHandler(
       if (!prev[contactId]) {
         return prev;
       }
-      const newMsgs = { ...prev };
-      const findIndex = newMsgs[contactId].findIndex((m) => m.id === messageId);
+      const contactMessages = [...prev[contactId]];
+      const findIndex = contactMessages.findIndex((m) => m.id === messageId);
 
       if (findIndex !== -1) {
-        newMsgs[contactId][findIndex].status = compareMessageStatus(
-          newMsgs[contactId][findIndex].status,
-          status,
-        );
+        const current = contactMessages[findIndex]!;
+        contactMessages[findIndex] = {
+          ...current,
+          status: compareMessageStatus(current.status, status),
+        };
       }
-      return newMsgs;
+      return { ...prev, [contactId]: contactMessages };
     });
 
     if (x && x.chatType === "wpp" && x.contactId === contactId) {

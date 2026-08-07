@@ -1,4 +1,4 @@
-import { ReadyMessage } from "@in.pulse-crm/sdk";
+import { ReadyMessage } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { Delete } from "@mui/icons-material";
 import SettingsIcon from "@mui/icons-material/Settings";

@@ -1,4 +1,4 @@
-import { IconButton, MenuItem, TextField, CircularProgress, Fade, Chip, Skeleton } from "@mui/material";
+import { IconButton, MenuItem, TextField, CircularProgress, Fade, Chip, Skeleton, Popover } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
@@ -8,12 +8,90 @@ import TagIcon from "@mui/icons-material/Tag";
 import BusinessCenterIcon from "@mui/icons-material/BusinessCenter";
 import DescriptionIcon from "@mui/icons-material/Description";
 import BusinessIcon from "@mui/icons-material/Business";
-import { ChangeEventHandler, useContext, useEffect, useState } from "react";
-import { WppContactWithCustomer } from "@in.pulse-crm/sdk";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import { ChangeEventHandler, useContext, useEffect, useMemo, useState } from "react";
+import { WppContactWithCustomer } from "@/lib/sdk-local";
 import { WhatsappContext } from "../../../whatsapp-context";
 import StartChatModalItem from "./start-chat-modal-item";
 import { Button } from "@mui/material";
-import { Logger } from "@in.pulse-crm/utils";
+import type {
+  CustomerAgeLevel,
+  CustomerInteractionLevel,
+  CustomerPurchaseInterestLevel,
+  CustomerProfileSummaryLevel,
+  CustomerProfileSummaryPayload,
+  CustomerPurchaseLevel,
+} from "@/lib/types/customer-profile-summary";
+
+type SummaryFilterValue<T extends string> = T | "all";
+
+type SummaryFiltersState = {
+  profileLevel: SummaryFilterValue<CustomerProfileSummaryLevel>;
+  interactionLevel: SummaryFilterValue<CustomerInteractionLevel>;
+  purchaseLevel: SummaryFilterValue<CustomerPurchaseLevel>;
+  ageLevel: SummaryFilterValue<CustomerAgeLevel>;
+  purchaseInterestLevel: SummaryFilterValue<CustomerPurchaseInterestLevel>;
+};
+
+const DEFAULT_SUMMARY_FILTERS: SummaryFiltersState = {
+  profileLevel: "all",
+  interactionLevel: "all",
+  purchaseLevel: "all",
+  ageLevel: "all",
+  purchaseInterestLevel: "all",
+};
+
+const SUMMARY_FILTER_OPTIONS: Array<{ value: SummaryFilterValue<CustomerProfileSummaryLevel>; label: string }> = [
+  { value: "all", label: "Todos os perfis" },
+  { value: "potencial_de_compra", label: "Potencial de compra" },
+  { value: "consolidado", label: "Consolidado" },
+  { value: "precisa_mais_interacao", label: "Precisa mais interação" },
+  { value: "em_observacao", label: "Em observação" },
+];
+
+const INTERACTION_FILTER_OPTIONS: Array<{ value: SummaryFilterValue<CustomerInteractionLevel>; label: string }> = [
+  { value: "all", label: "Toda interação" },
+  { value: "sem_interacao", label: "Sem interação" },
+  { value: "pouca_interacao", label: "Pouca interação" },
+  { value: "interacao_media", label: "Interação média" },
+  { value: "interacao_alta", label: "Interação alta" },
+];
+
+const PURCHASE_FILTER_OPTIONS: Array<{ value: SummaryFilterValue<CustomerPurchaseLevel>; label: string }> = [
+  { value: "all", label: "Toda compra" },
+  { value: "sem_compras", label: "Sem compras" },
+  { value: "poucas_compras", label: "Poucas compras" },
+  { value: "compras_medias", label: "Compras médias" },
+  { value: "muitas_compras", label: "Muitas compras" },
+];
+
+const AGE_FILTER_OPTIONS: Array<{ value: SummaryFilterValue<CustomerAgeLevel>; label: string }> = [
+  { value: "all", label: "Toda idade" },
+  { value: "sem_data_cadastro", label: "Sem data cadastro" },
+  { value: "cliente_novo", label: "Cliente novo" },
+  { value: "ate_6_meses", label: "Até 6 meses" },
+  { value: "ate_12_meses", label: "Até 12 meses" },
+  { value: "mais_de_12_meses", label: "Mais de 12 meses" },
+];
+
+const PURCHASE_INTEREST_FILTER_OPTIONS: Array<{
+  value: SummaryFilterValue<CustomerPurchaseInterestLevel>;
+  label: string;
+}> = [
+  { value: "all", label: "Todo interesse" },
+  { value: "nao_analisado", label: "Não analisado pela IA" },
+  { value: "baixo_interesse", label: "Baixo interesse" },
+  { value: "interesse_moderado", label: "Interesse moderado" },
+  { value: "alto_interesse", label: "Alto interesse" },
+  { value: "pronto_para_compra", label: "Pronto para compra" },
+];
+
+function getOptionLabel<T extends string>(
+  options: Array<{ value: SummaryFilterValue<T>; label: string }>,
+  value: SummaryFilterValue<T>
+) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
 
 function getSearchValue(value: string, key: string) {
   switch (key) {
@@ -35,6 +113,7 @@ function getSearchValue(value: string, key: string) {
 export default function StartChatModal({ onClose }: { onClose: () => void }) {
   const { wppApi } = useContext(WhatsappContext);
   const [contacts, setContacts] = useState<Array<WppContactWithCustomer>>([]);
+  const [profileSummaries, setProfileSummaries] = useState<Record<number, CustomerProfileSummaryPayload | null>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [searchField, setSearchField] = useState(() => {
@@ -47,8 +126,63 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [summaryFilters, setSummaryFilters] = useState<SummaryFiltersState>(DEFAULT_SUMMARY_FILTERS);
+  const [loadingProfileSummaries, setLoadingProfileSummaries] = useState(false);
+  const [advancedFiltersAnchor, setAdvancedFiltersAnchor] = useState<HTMLButtonElement | null>(null);
 
   const pageSize = 10;
+
+  const hasActiveSummaryFilters = useMemo(
+    () =>
+      [
+        summaryFilters.profileLevel,
+        summaryFilters.interactionLevel,
+        summaryFilters.purchaseLevel,
+        summaryFilters.ageLevel,
+        summaryFilters.purchaseInterestLevel === "nao_analisado" ? "all" : summaryFilters.purchaseInterestLevel,
+      ].some((value) => value !== "all"),
+    [summaryFilters]
+  );
+
+  const customerIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          contacts
+            .map((contact) => Number(contact.customerId))
+            .filter((customerId) => Number.isInteger(customerId) && customerId > 0)
+        )
+      ),
+    [contacts]
+  );
+
+  const activeSummaryFilterChips = useMemo(() => {
+    const chips: string[] = [];
+
+    if (summaryFilters.profileLevel !== "all") {
+      chips.push(getOptionLabel(SUMMARY_FILTER_OPTIONS, summaryFilters.profileLevel));
+    }
+
+    if (summaryFilters.interactionLevel !== "all") {
+      chips.push(getOptionLabel(INTERACTION_FILTER_OPTIONS, summaryFilters.interactionLevel));
+    }
+
+    if (summaryFilters.purchaseLevel !== "all") {
+      chips.push(getOptionLabel(PURCHASE_FILTER_OPTIONS, summaryFilters.purchaseLevel));
+    }
+
+    if (summaryFilters.ageLevel !== "all") {
+      chips.push(getOptionLabel(AGE_FILTER_OPTIONS, summaryFilters.ageLevel));
+    }
+
+    if (summaryFilters.purchaseInterestLevel !== "all") {
+      chips.push(getOptionLabel(PURCHASE_INTEREST_FILTER_OPTIONS, summaryFilters.purchaseInterestLevel));
+    }
+
+    return chips;
+  }, [summaryFilters]);
+
+  const isAdvancedFiltersOpen = Boolean(advancedFiltersAnchor);
 
   // Busca os contatos APENAS quando appliedSearchTerm ou page mudam
   // Não busca automaticamente ao digitar ou mudar filtro
@@ -112,6 +246,108 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
     fetchContacts();
   }, [page, appliedSearchTerm]);
 
+  useEffect(() => {
+    if (!wppApi.current || !customerIds.length) {
+      setLoadingProfileSummaries(false);
+      return;
+    }
+
+    const missingCustomerIds = customerIds.filter((customerId) => !(customerId in profileSummaries));
+    if (!missingCustomerIds.length) {
+      setLoadingProfileSummaries(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingProfileSummaries(true);
+
+    Promise.allSettled(
+      missingCustomerIds.map(async (customerId) => {
+        const response = await wppApi.current!.ax.get<{ message: string; data: CustomerProfileSummaryPayload }>(
+          `/api/whatsapp/customers/${customerId}/profile-tags/summary`
+        );
+
+        return {
+          customerId,
+          summary: response.data.data,
+        };
+      })
+    )
+      .then((results) => {
+        if (!isMounted) return;
+
+        setProfileSummaries((current) => {
+          const next = { ...current };
+
+          for (const result of results) {
+            if (result.status === "fulfilled") {
+              next[result.value.customerId] = result.value.summary;
+              continue;
+            }
+
+            const customerId = missingCustomerIds[results.indexOf(result)];
+            if (typeof customerId === "number") {
+              next[customerId] = null;
+            }
+          }
+
+          return next;
+        });
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingProfileSummaries(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [customerIds, profileSummaries, wppApi]);
+
+  const filteredContacts = useMemo(() => {
+    return contacts.filter((contact) => {
+      const summary = contact.customerId ? profileSummaries[contact.customerId] : null;
+
+      if (!hasActiveSummaryFilters) {
+        return true;
+      }
+
+      if (!summary) {
+        return false;
+      }
+
+      if (summaryFilters.profileLevel !== "all" && summary.profileLevel !== summaryFilters.profileLevel) {
+        return false;
+      }
+
+      if (
+        summaryFilters.interactionLevel !== "all" &&
+        summary.tags.interaction.tagValue !== summaryFilters.interactionLevel
+      ) {
+        return false;
+      }
+
+      if (summaryFilters.purchaseLevel !== "all" && summary.tags.purchase.tagValue !== summaryFilters.purchaseLevel) {
+        return false;
+      }
+
+      if (summaryFilters.ageLevel !== "all" && summary.tags.age.tagValue !== summaryFilters.ageLevel) {
+        return false;
+      }
+
+      if (
+        summaryFilters.purchaseInterestLevel !== "all" &&
+        summaryFilters.purchaseInterestLevel !== "nao_analisado" &&
+        summary.purchaseInterest.level !== summaryFilters.purchaseInterestLevel
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [contacts, hasActiveSummaryFilters, profileSummaries, summaryFilters]);
+
   const handleChangeTerm: ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (e) => {
     setSearchTerm(e.target.value);
   };
@@ -127,6 +363,23 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
     setAppliedSearchTerm("");
   };
 
+  const handleChangeSummaryFilter =
+    (key: keyof SummaryFiltersState): ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> =>
+    (e) => {
+      setSummaryFilters((current) => ({
+        ...current,
+        [key]: e.target.value as SummaryFiltersState[typeof key],
+      }));
+    };
+
+  const handleOpenAdvancedFilters = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAdvancedFiltersAnchor(event.currentTarget);
+  };
+
+  const handleCloseAdvancedFilters = () => {
+    setAdvancedFiltersAnchor(null);
+  };
+
   // Função que executa a busca ao clicar no botão ou pressionar Enter
   const handleSearch = () => {
     setAppliedSearchTerm(searchTerm);
@@ -134,9 +387,9 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="mx-3 my-4 flex h-[85vh] min-h-[38rem] max-h-[90vh] w-[60rem] flex-col overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto">
+    <div className="flex h-[100dvh] max-h-[100dvh] w-screen flex-col overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 shadow-2xl dark:from-slate-900 dark:to-slate-800 sm:mx-auto sm:my-4 sm:h-[85vh] sm:min-h-[38rem] sm:max-h-[90vh] sm:w-[60rem] sm:max-w-[calc(100vw-2rem)] sm:rounded-xl">
       {/* Header com gradiente */}
-      <header className="flex items-center justify-between rounded-t-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white shadow-lg">
+      <header className="flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-4 text-white shadow-lg sm:rounded-t-xl sm:px-6 sm:py-5">
         <div className="flex items-center gap-3">
           <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
             <ChatBubbleOutlineIcon className="text-2xl" />
@@ -159,10 +412,10 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
       </header>
 
       {/* Conteúdo principal */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:p-6">
         {/* Área de busca melhorada */}
-        <div className="mb-6 space-y-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-4 space-y-4 sm:mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
               <TextField
@@ -222,7 +475,8 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               value={searchField}
               onChange={handleChangeField}
               sx={{
-                minWidth: "200px",
+                width: { xs: "100%", sm: "auto" },
+                minWidth: { sm: "200px" },
                 "& .MuiOutlinedInput-root": {
                   borderRadius: "12px",
                   backgroundColor: "white",
@@ -280,6 +534,8 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                 textTransform: "none",
                 fontWeight: 600,
                 px: 3,
+                py: { xs: 1.25, sm: 0.75 },
+                width: { xs: "100%", sm: "auto" },
                 whiteSpace: "nowrap",
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 "&:hover": {
@@ -309,12 +565,169 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                   sx={{ borderRadius: "8px" }}
                 />
                 <span className="text-sm text-gray-500">
-                  {contacts.length} resultado{contacts.length !== 1 ? "s" : ""} encontrado
+                  {filteredContacts.length} de {contacts.length} resultado{contacts.length !== 1 ? "s" : ""} exibido
                   {contacts.length !== 1 ? "s" : ""}
                 </span>
               </div>
             </Fade>
           )}
+
+          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/40">
+            <div className="flex flex-wrap items-center gap-2">
+              <TextField
+                select
+                size="small"
+                label="Perfil"
+                value={summaryFilters.profileLevel}
+                onChange={handleChangeSummaryFilter("profileLevel")}
+                sx={{ minWidth: 170 }}
+              >
+                {SUMMARY_FILTER_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleOpenAdvancedFilters}
+                startIcon={<FilterAltIcon sx={{ fontSize: 16 }} />}
+                sx={{
+                  minWidth: 0,
+                  borderRadius: "999px",
+                  px: 1.5,
+                  textTransform: "none",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Avançado
+              </Button>
+
+              {loadingProfileSummaries && (
+                <Chip
+                  size="small"
+                  label="Atualizando"
+                  sx={{ height: 22, fontSize: "0.7rem", "& .MuiChip-label": { px: 1 } }}
+                />
+              )}
+
+              {activeSummaryFilterChips.map((label) => (
+                <Chip
+                  key={label}
+                  size="small"
+                  label={label}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ height: 22, fontSize: "0.7rem", "& .MuiChip-label": { px: 1 } }}
+                />
+              ))}
+
+              {hasActiveSummaryFilters && (
+                <Chip
+                  size="small"
+                  label={`${filteredContacts.length} aderente(s)`}
+                  sx={{ height: 22, fontSize: "0.7rem", fontWeight: 600, "& .MuiChip-label": { px: 1 } }}
+                />
+              )}
+
+              <Button
+                size="small"
+                onClick={() => setSummaryFilters(DEFAULT_SUMMARY_FILTERS)}
+                disabled={!hasActiveSummaryFilters}
+                sx={{ ml: "auto", minWidth: 0, textTransform: "none", fontWeight: 600, px: 1.25 }}
+              >
+                Limpar
+              </Button>
+            </div>
+
+            <Popover
+              open={isAdvancedFiltersOpen}
+              anchorEl={advancedFiltersAnchor}
+              onClose={handleCloseAdvancedFilters}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  width: 320,
+                  maxWidth: "calc(100vw - 24px)",
+                  borderRadius: 3,
+                  p: 2,
+                },
+              }}
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-slate-700">Filtros avançados</div>
+                <Button
+                  size="small"
+                  onClick={() => setSummaryFilters((current) => ({ ...current, interactionLevel: "all", purchaseLevel: "all", ageLevel: "all" }))}
+                  sx={{ minWidth: 0, textTransform: "none", px: 1 }}
+                >
+                  Limpar avançado
+                </Button>
+              </div>
+
+              <div className="grid gap-2">
+                <TextField
+                  select
+                  size="small"
+                  label="Interação"
+                  value={summaryFilters.interactionLevel}
+                  onChange={handleChangeSummaryFilter("interactionLevel")}
+                >
+                  {INTERACTION_FILTER_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+
+                <TextField
+                  select
+                  size="small"
+                  label="Compras"
+                  value={summaryFilters.purchaseLevel}
+                  onChange={handleChangeSummaryFilter("purchaseLevel")}
+                >
+                  {PURCHASE_FILTER_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+
+                <TextField
+                  select
+                  size="small"
+                  label="Tempo de cliente"
+                  value={summaryFilters.ageLevel}
+                  onChange={handleChangeSummaryFilter("ageLevel")}
+                >
+                  {AGE_FILTER_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Interesse de compra (IA)"
+                  value={summaryFilters.purchaseInterestLevel}
+                  onChange={handleChangeSummaryFilter("purchaseInterestLevel")}
+                >
+                  {PURCHASE_INTEREST_FILTER_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      {option.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </div>
+            </Popover>
+          </div>
         </div>
 
         {/* Lista de contatos com scroll suave */}
@@ -344,7 +757,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               </li>
             ) : (
               <>
-                {contacts.map((contact, index) => (
+                {filteredContacts.map((contact, index) => (
                   <li key={contact.id}>
                     <Fade in={!loading} style={{ transitionDelay: `${index * 50}ms` }}>
                       <div>
@@ -358,6 +771,8 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                           }
                           customer={contact.customer}
                           chatingWith={contact.chatingWith}
+                          profileSummary={contact.customerId ? profileSummaries[contact.customerId] ?? null : null}
+                          isProfileLoading={typeof contact.customerId === "number" && !(contact.customerId in profileSummaries)}
                           onSelect={onClose}
                         />
                       </div>
@@ -365,12 +780,16 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
                   </li>
                 ))}
 
-                {contacts.length === 0 && (
+                {filteredContacts.length === 0 && (
                   <li className="flex min-h-[12rem] flex-col items-center justify-center gap-3 py-8 text-gray-400 dark:text-gray-500">
                     <SearchIcon sx={{ fontSize: 64, opacity: 0.3 }} />
                     <div className="text-center">
                       <p className="text-lg font-medium">Nenhum contato encontrado</p>
-                      <p className="text-sm">Tente ajustar os filtros ou termos de busca</p>
+                      <p className="text-sm">
+                        {hasActiveSummaryFilters
+                          ? "Tente flexibilizar os filtros de qualificação"
+                          : "Tente ajustar os filtros ou termos de busca"}
+                      </p>
                     </div>
                   </li>
                 )}
@@ -380,7 +799,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Paginação moderna */}
-        <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 p-4 dark:from-indigo-950/30 dark:to-purple-950/30">
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 p-3 dark:from-indigo-950/30 dark:to-purple-950/30 sm:p-4">
           <Button
             variant="contained"
             size="medium"
@@ -390,7 +809,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               borderRadius: "10px",
               textTransform: "none",
               fontWeight: 600,
-              px: 3,
+              px: { xs: 1.5, sm: 3 },
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               "&:hover": {
                 background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",
@@ -427,7 +846,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               borderRadius: "10px",
               textTransform: "none",
               fontWeight: 600,
-              px: 3,
+              px: { xs: 1.5, sm: 3 },
               background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
               "&:hover": {
                 background: "linear-gradient(135deg, #5568d3 0%, #653a8b 100%)",

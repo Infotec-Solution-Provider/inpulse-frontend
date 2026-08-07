@@ -1,4 +1,4 @@
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useState } from "react";
 import { InternalChatContext } from "../../../internal-context";

@@ -1,10 +1,9 @@
 import { MessageTemplate, useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { useAuthContext } from "@/app/auth-context";
-import { Customer, WppContact } from "@in.pulse-crm/sdk";
+import { Customer, WppContact } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import { Autocomplete, Button, IconButton, TextField } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "react-toastify";
 import { TemplateVariables } from "../types/chats.types";
 import { getFirstName, getFullName } from "../utils/name";
 
@@ -26,13 +25,6 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
   const [selectedTemplate, setSelectedTemplate] = useState<MessageTemplate | null>(null);
   const [variables, setVariables] = useState<Record<number, string>>({});
   const { user } = useAuthContext();
-
-  const contactKey = useMemo(() => {
-    if (contact?.id) return `contact:${contact.id}`;
-    if (contact?.phone) return `phone:${contact.phone}`;
-    if (customer?.CPF_CNPJ) return `customer:${customer.CPF_CNPJ}`;
-    return null;
-  }, [contact?.id, contact?.phone, customer?.CPF_CNPJ]);
 
   const templateVariablesValues: TemplateVariables = useMemo(
     () => ({
@@ -93,26 +85,6 @@ export default function SendTemplateModal({ onClose, onSendTemplate, customer, c
   const disabled =
     !selectedTemplate ||
     (selectedTemplate.source !== "waba" && Object.values(variables).some((v) => !v));
-
-  const TEMPLATE_LIMIT = 2;
-  const WINDOW_MS = 24 * 60 * 60 * 1000;
-  const STORAGE_KEY = "template-send-history-v1";
-
-  const readHistory = (): Record<string, number[]> => {
-    if (typeof window === "undefined") return {};
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    try {
-      return JSON.parse(raw) as Record<string, number[]>;
-    } catch {
-      return {};
-    }
-  };
-
-  const saveHistory = (history: Record<string, number[]>) => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-  };
 
   const handleSend = () => {
     if (onSendTemplate && selectedTemplate && templateText) {

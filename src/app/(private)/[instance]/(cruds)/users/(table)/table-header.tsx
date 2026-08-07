@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { useUsersContext } from "../users-context";
 import { USERS_TABLE_COLUMNS } from "./table-config";
-import { User } from "@in.pulse-crm/sdk";
+import { User } from "@/lib/sdk-local";
 
 const textFieldStlye: SxProps<Theme> = {
   "& .MuiOutlinedInput-root": {

@@ -1,6 +1,6 @@
 "use client";
 
-import { InternalMessage, WppMessage } from "@in.pulse-crm/sdk";
+import { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import CloseIcon from "@mui/icons-material/Close";
 import GroupIcon from "@mui/icons-material/Group";
 import PersonIcon from "@mui/icons-material/Person";

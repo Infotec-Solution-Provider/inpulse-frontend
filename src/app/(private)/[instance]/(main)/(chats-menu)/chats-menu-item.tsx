@@ -1,6 +1,6 @@
 import { AuthContext } from "@/app/auth-context";
 import { Avatar } from "@mui/material";
-import { ReactNode, useContext, useEffect, useMemo, useRef } from "react";
+import { ReactNode, useContext, useMemo } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { InternalChatContext } from "../../internal-context";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
@@ -59,56 +59,9 @@ export default function ChatsMenuItem({
     });
   }, [messageDate]);
 
-  // Referência para o elemento do chat
-  const chatItemRef = useRef<HTMLDivElement>(null);
-
-  // Função para lidar com cliques de mouse
   const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
     e.stopPropagation();
-
-    // Feedback visual
-    const target = e.currentTarget as HTMLElement;
-    target.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
-    setTimeout(() => {
-      target.style.backgroundColor = "";
-    }, 150);
-
-    if (typeof onClick === "function") {
-      try {
-        onClick();
-      } catch (error) {
-        console.error("Error executing onClick handler:", error);
-      }
-    } else {
-      console.warn("No valid onClick handler provided:", onClick);
-    }
-  };
-
-  // Função para lidar com eventos de toque
-  const handleTouchStart = (e: React.TouchEvent) => {
-    // Adiciona feedback visual imediato
-    const target = e.currentTarget as HTMLElement;
-    target.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
-    target.style.transform = "scale(0.98)";
-  };
-
-  // Função para lidar com o fim do toque
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    // Remove o feedback visual
-    const target = e.currentTarget as HTMLElement;
-    target.style.backgroundColor = "";
-    target.style.transform = "";
-
-    if (typeof onClick === "function") {
-      try {
-        onClick();
-      } catch (error) {
-        console.error("Error executing onClick handler:", error);
-      }
-    } else {
-      console.warn("No valid onClick handler provided:", onClick);
-    }
+    onClick?.();
   };
 
   function wasMentioned(text: string): boolean {
@@ -144,40 +97,6 @@ export default function ChatsMenuItem({
     return mentionedPhones.some((p) => userPhones.has(p));
   }
 
-  // Função para lidar com o movimento do toque (evita scroll)
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Previne scroll durante o toque no item
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  // Adiciona listeners de eventos diretamente ao DOM para maior compatibilidade
-  useEffect(() => {
-    const element = chatItemRef.current;
-    if (!element) return;
-
-    // Função para forçar o clique
-    const forceClick = () => {
-      if (typeof onClick === "function") {
-        try {
-          onClick();
-        } catch (error) {
-          console.error("Error executing onClick handler:", error);
-        }
-      }
-    };
-
-    // Adiciona listeners nativos
-    element.addEventListener("click", forceClick);
-    element.addEventListener("touchend", forceClick);
-
-    // Cleanup
-    return () => {
-      element.removeEventListener("click", forceClick);
-      element.removeEventListener("touchend", forceClick);
-    };
-  }, [onClick]);
-
   return (
     <li
       aria-busy={Boolean(isUnread)}
@@ -185,12 +104,8 @@ export default function ChatsMenuItem({
       className="chat-list-item group relative"
     >
       <div
-        ref={chatItemRef}
-        className="chat-item-clickable grid h-full w-full cursor-pointer touch-manipulation select-none grid-cols-[74px_1fr] rounded-md p-3 hover:bg-indigo-500 hover:bg-opacity-20 active:bg-indigo-500 active:bg-opacity-30 aria-selected:bg-white/10"
+        className="chat-item-clickable grid h-full w-full cursor-pointer touch-manipulation select-none grid-cols-[58px_minmax(0,1fr)] rounded-md px-3 py-2.5 transition-colors hover:bg-indigo-500/10 active:bg-indigo-500/20 aria-selected:bg-white/10 sm:grid-cols-[66px_minmax(0,1fr)] sm:p-3"
         onClick={handleClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -201,22 +116,15 @@ export default function ChatsMenuItem({
             }
           }
         }}
-        style={{
-          WebkitTapHighlightColor: "transparent",
-          WebkitTouchCallout: "none",
-          WebkitUserSelect: "none",
-          userSelect: "none",
-          touchAction: "manipulation",
-          transition: "all 0.15s ease",
-          position: "relative",
-          zIndex: 10,
-          pointerEvents: "auto",
-        }}
         data-testid="chat-menu-item"
         data-clickable="true"
       >
         <div className="flex items-center">
-          <Avatar alt={name} src={avatar || ""} sx={{ width: 64, height: 64 }} />
+          <Avatar
+            alt={name}
+            src={avatar || ""}
+            sx={{ width: { xs: 48, sm: 56 }, height: { xs: 48, sm: 56 } }}
+          />
         </div>
         <div className="flex flex-col gap-1 truncate">
           <div className="flex items-center justify-between gap-2">

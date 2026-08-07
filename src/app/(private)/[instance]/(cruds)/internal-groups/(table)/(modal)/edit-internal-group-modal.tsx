@@ -1,29 +1,16 @@
 import filesService from "@/lib/services/files.service";
-import { InternalGroup } from "@in.pulse-crm/sdk";
-import { PersonAdd } from "@mui/icons-material";
+import { InternalGroup, WhatsappGroup } from "@/lib/sdk-local";
 import ImageIcon from "@mui/icons-material/Image";
-import PersonRemoveIcon from "@mui/icons-material/PersonRemove";
 import CloseIcon from "@mui/icons-material/Close";
-import {
-  Autocomplete,
-  Button,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  TextField,
-} from "@mui/material";
+import { Button, IconButton, TextField } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAppContext } from "../../../../app-context";
 import { InternalChatContext } from "../../../../internal-context";
 import { useInternalGroupsContext } from "../../internal-groups-context";
+import GroupMembershipFields, { InternalGroupUser } from "./group-membership-fields";
 
-type UnifiedContact = {
-  name: string;
-  phone: string | null;
-  userId?: number;
-};
+type UnifiedContact = InternalGroupUser;
 
 const getParticipantKey = (participant: UnifiedContact) => {
   if (participant.userId !== undefined) {
@@ -58,19 +45,27 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
   const { updateInternalGroup, updateInternalGroupImage, wppGroups } = useInternalGroupsContext();
-
-  const availableWppGroups = wppGroups ?? [];
+  const safeWppGroups = Array.isArray(wppGroups) ? wppGroups : [];
 
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string } | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<WhatsappGroup | null>(() =>
+    group.wppGroupId ? { id: group.wppGroupId, name: group.wppGroupId } : null,
+  );
 
   useEffect(() => {
-    if (availableWppGroups.length > 0 && group.wppGroupId) {
-      const match = availableWppGroups.find((g) => g.id === group.wppGroupId) || null;
-      setSelectedGroup(match);
+    if (!group.wppGroupId) {
+      setSelectedGroup(null);
+      return;
     }
-  }, [availableWppGroups, group.wppGroupId]);
+
+    setSelectedGroup(
+      safeWppGroups.find((wppGroup) => wppGroup.id === group.wppGroupId) ?? {
+        id: group.wppGroupId,
+        name: group.wppGroupId,
+      },
+    );
+  }, [group.wppGroupId, wppGroups]);
 
   const mergedContacts: UnifiedContact[] = useMemo(() => {
     const map = new Map<string, UnifiedContact>();
@@ -128,7 +123,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
 
   const handleSubmit = async () => {
     if (!name || participants.length === 0) {
-      toast.error("Nome e participantes são obrigatórios!");
+      toast.error("Nome e ao menos um usuário do sistema são obrigatórios!");
       return;
     }
 
@@ -139,7 +134,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
     await updateInternalGroup(group.id, {
       name,
       participants: participantIds,
-      wppGroupId: selectedGroup?.id || null,
+      wppGroupId: selectedGroup?.id ?? null,
     });
 
     if (groupImageRef.current) {
@@ -212,9 +207,16 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
 
   return (
     <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}>
-      <aside className="flex h-full w-[40rem] flex-col gap-6 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+      <aside className="flex max-h-[calc(100vh-2rem)] w-[min(58rem,calc(100vw-2rem))] flex-col gap-6 overflow-y-auto rounded-xl bg-white p-6 shadow-xl dark:bg-slate-800">
         <header className="flex w-full items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
-          <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Editar Grupo</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-slate-800 dark:text-white">
+              Editar grupo interno
+            </h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Defina os acessos internos e o vínculo externo separadamente.
+            </p>
+          </div>
           <IconButton
             onClick={closeModal}
             className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -224,145 +226,71 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
         </header>
 
         <div className="flex flex-col gap-6">
-          <div className="flex gap-4">
-            <div>
-              <button
-                className="h-32 w-32 overflow-hidden rounded-lg border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 dark:border-slate-600 dark:hover:bg-indigo-950/20"
-                onClick={() => groupImageInputRef.current?.click()}
-              >
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="h-full w-full rounded-lg object-cover"
-                  />
-                ) : (
-                  <ImageIcon className="text-gray-400 dark:text-gray-500" fontSize="large" />
-                )}
-              </button>
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={handleImageChange}
-                ref={groupImageInputRef}
-              />
-            </div>
-            <div className="flex w-full flex-col gap-4">
-              <TextField
-                label="Nome do Grupo"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                fullWidth
-                required
-                variant="outlined"
-                className="bg-white dark:bg-slate-700"
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: (theme) =>
-                      theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
-                  },
-                }}
-              />
-              <Autocomplete
-                options={availableWppGroups}
-                getOptionLabel={(option) => option.name}
-                getOptionKey={option => option.id}
-                isOptionEqualToValue={(option, value) => option.id === value.id}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Vincular Grupo WhatsApp"
-                    className="bg-white dark:bg-slate-700"
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        backgroundColor: (theme) =>
-                          theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
-                      },
-                    }}
-                  />
-                )}
-                value={selectedGroup}
-                onChange={(_, groupOption) => setSelectedGroup(groupOption)}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-2">
-              <Autocomplete
-                options={userOptions}
-                getOptionLabel={(option) => `${option.name} (ID: ${option.userId ?? option.phone})`}
-                getOptionKey={(option) =>
-                  option.userId ? "user:" + option.userId : "phone:" + option.phone
-                }
-                fullWidth
-                value={selectedUser}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Adicionar Participante"
-                    className="bg-white dark:bg-slate-700"
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        backgroundColor: (theme) =>
-                          theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
-                      },
-                    }}
-                  />
-                )}
-                onChange={(_, userOption) => setSelectedUser(userOption)}
-              />
-              <IconButton
-                color="success"
-                onClick={handleAddUser}
-                className="hover:bg-green-50 dark:hover:bg-green-950/30"
-              >
-                <PersonAdd fontSize="large" />
-              </IconButton>
-            </div>
-
-            <div className="flex min-h-0 flex-col rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-              <h2 className="mb-3 border-b border-slate-200 pb-2 font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300">
-                Participantes ({participants.length})
-              </h2>
-              <div className="scrollbar-whatsapp max-h-60 overflow-y-auto">
-                <List dense className="h-60">
-                  {participants.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      Nenhum participante adicionado
-                    </p>
+          <section className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              Informações do grupo
+            </h2>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="shrink-0">
+                <button
+                  type="button"
+                  className="h-32 w-32 overflow-hidden rounded-lg border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 dark:border-slate-600 dark:hover:bg-indigo-950/20"
+                  onClick={() => groupImageInputRef.current?.click()}
+                  aria-label="Selecionar imagem do grupo"
+                >
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Imagem do grupo"
+                      className="h-full w-full rounded-lg object-cover"
+                    />
                   ) : (
-                    participants.map((participant, index) => {
-                      const participantKey =
-                        getParticipantKey(participant) ?? `participant-${index}`;
-
-                      return (
-                        <ListItem
-                          key={participantKey}
-                          className="rounded hover:bg-slate-50 dark:hover:bg-slate-700/50"
-                          divider
-                        >
-                          <ListItemText
-                            primary={participant.name}
-                            secondary={`ID: ${participant.userId ?? participant.phone}`}
-                          />
-                          <IconButton
-                            color="error"
-                            size="small"
-                            onClick={handleRemoveUser(participantKey)}
-                            className="hover:bg-red-50 dark:hover:bg-red-950/30"
-                          >
-                            <PersonRemoveIcon />
-                          </IconButton>
-                        </ListItem>
-                      );
-                    })
+                    <ImageIcon className="text-gray-400 dark:text-gray-500" fontSize="large" />
                   )}
-                </List>
+                </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleImageChange}
+                  ref={groupImageInputRef}
+                />
+              </div>
+              <div className="flex w-full flex-col gap-2">
+                <TextField
+                  label="Nome do grupo interno"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  fullWidth
+                  required
+                  variant="outlined"
+                  className="bg-white dark:bg-slate-700"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: (theme) =>
+                        theme.palette.mode === "dark" ? "rgb(51 65 85)" : "white",
+                    },
+                  }}
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Este é o nome exibido para os usuários dentro do sistema.
+                </p>
               </div>
             </div>
-          </div>
+          </section>
+
+          <GroupMembershipFields
+            participants={participants}
+            selectedUser={selectedUser}
+            userOptions={userOptions}
+            selectedGroup={selectedGroup}
+            wppGroups={safeWppGroups}
+            getParticipantKey={getParticipantKey}
+            onSelectedUserChange={setSelectedUser}
+            onAddUser={handleAddUser}
+            onRemoveUser={(participantKey) => handleRemoveUser(participantKey)()}
+            onSelectedGroupChange={setSelectedGroup}
+          />
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
