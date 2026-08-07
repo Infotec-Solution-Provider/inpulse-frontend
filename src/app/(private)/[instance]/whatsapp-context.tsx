@@ -813,12 +813,24 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
-      api.current.getChatsBySession(!isHybridCacheEnabled(), true).then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+      api.current
+        .getChatsBySession(!isHybridCacheEnabled(), true)
+        .then(({ chats, messages }) => {
+          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
-        setChats(detailedChats);
-        setMessages(chatsMessages);
-      });
+          Logger.debug("Chats loaded for current session", {
+            chatCount: detailedChats.length,
+            messageCount: messages.length,
+            includesMessages: !isHybridCacheEnabled(),
+          });
+
+          setChats(detailedChats);
+          setMessages(chatsMessages);
+        })
+        .catch((error) => {
+          Logger.error("Failed to load chats", error as Error);
+          toast.error("Falha ao carregar as conversas.");
+        });
     } else {
       setChats([]);
       setMessages({});
@@ -864,6 +876,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           if (cachedSectors && cachedChannels && cachedParameters) setLoaded(true);
         });
       }
+      getChats();
       api.current.getSectors().then((res) => {
         const secs = Array.isArray(res)
           ? (res as SectorData[])
@@ -873,15 +886,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         setSectors(secs);
         if (cacheScope) void hybridCache.set(cacheScope, "sectors", secs);
-
-        api.current.getChatsBySession(!isHybridCacheEnabled(), true).then((payload) => {
-          const chats = Array.isArray(payload?.chats) ? payload.chats : [];
-          const messages = Array.isArray(payload?.messages) ? payload.messages : [];
-
-          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-          setChats(detailedChats);
-          setMessages(chatsMessages);
-        });
 
         const sector = secs.find((s) => s.id === user.SETOR);
 
@@ -934,7 +938,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       };
     }
     // Removendo api.current das dependências para evitar loop infinito
-  }, [cacheScope, token, instance, user, refreshNotificationPreferences]);
+  }, [cacheScope, token, instance, user, refreshNotificationPreferences, getChats]);
 
   useEffect(() => {
     if (socket) {

@@ -2,7 +2,6 @@
 import filesService from "@/lib/services/files.service";
 import toDateString from "@/lib/utils/date-string";
 import { User } from "@/lib/sdk-local";
-import { Formatter } from "@in.pulse-crm/utils";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
@@ -177,17 +176,34 @@ function getChatCustomerDocument(chat: DetailedInternalChat | DetailedChat | Det
   return null;
 }
 
+function safeFormatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+
+  if (!/^\d{10,13}$/.test(digits)) {
+    return phone;
+  }
+
+  switch (digits.length) {
+    case 13:
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits[4]} ${digits.slice(5, 9)}-${digits.slice(9, 13)}`;
+    case 12:
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8, 12)}`;
+    case 11:
+      return `(${digits.slice(0, 2)}) ${digits[2]} ${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+    case 10:
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6, 10)}`;
+    default:
+      return phone;
+  }
+}
+
 function getChatContactNumber(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
   if (!("chatType" in chat) || chat.chatType === "wpp") {
     if (!chat.contact?.phone) {
       return "Whatsapp não encontrado";
     }
-    try {
-      return Formatter.phone(chat.contact.phone);
-    } catch (error) {
-      console.error("Erro ao formatar telefone:", chat.contact.phone, error);
-      return chat.contact.phone; // Retorna o telefone sem formatação em caso de erro
-    }
+
+    return safeFormatPhone(chat.contact.phone);
   }
   return null;
 }
