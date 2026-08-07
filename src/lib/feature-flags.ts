@@ -3,6 +3,7 @@ export const FEATURE_FLAGS = {
   aiAgents: "feature_ai_agents_enabled",
   aiSupervisor: "feature_ai_supervisor_enabled",
   aiSettings: "feature_ai_settings_enabled",
+  chatExport: "feature_chat_export_enabled",
   customerProfileTags: "feature_customer_profile_tags_enabled",
   funnels: "feature_funnels_enabled",
   massMessages: "feature_mass_messages_enabled",

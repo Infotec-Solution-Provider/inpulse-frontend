@@ -106,10 +106,13 @@ const reportsRoutes = (params: Record<string, string>, instance: string) => {
       { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
       { title: "Motivos de Perda", href: "/reports/lost-reasons" },
       { title: "Performance Operadores", href: "/reports/operator-performance" },
-      { title: "Conversas", href: "/reports/chats" },
       //{ title: "Análise de Mailing", href: "/reports/mailing-analysis" },
       //{ title: "Régua por Carteira (Sintético) + WhatsApp", href: "/reports/regua-carteira-sintetico-whatsapp" },
     );
+  }
+
+  if (isFeatureEnabled(params, FEATURE_FLAGS.chatExport)) {
+    routes.push({ title: "Conversas", href: "/reports/chats" });
   }
 
   if (instance === "exatron") {
