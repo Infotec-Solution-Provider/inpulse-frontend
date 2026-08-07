@@ -13,9 +13,34 @@ import WhatsappProvider from "./whatsapp-context";
 import { useWhatsappSession } from "./whatsapp-session-context";
 import { AuthContext } from "@/app/auth-context";
 import CacheWarmup from "./cache-warmup";
+import ContactsProvider from "./(cruds)/contacts/contacts-context";
 
 interface AppLayoutProps {
   children: ReactNode;
+}
+
+interface AppModalProps {
+  modal: ReactNode;
+  setModal: (modal: ReactNode | null) => void;
+}
+
+function AppModal({ modal, setModal }: AppModalProps) {
+  if (!modal) return null;
+
+  return (
+    <ContactsProvider>
+      <Modal
+        open
+        onClose={(_, reason) => {
+          if (reason === "backdropClick") return;
+          setModal(null);
+        }}
+        className="flex items-center justify-center"
+      >
+        <div>{modal as ReactElement}</div>
+      </Modal>
+    </ContactsProvider>
+  );
 }
 
 const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
@@ -98,16 +123,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <main className="min-h-0 overflow-y-auto">
                     <RouteFeatureGate>{children}</RouteFeatureGate>
                   </main>
-                  <Modal
-                    open={!!modal}
-                    onClose={(_, r) => {
-                      if (r === "backdropClick") return;
-                      setModal(null);
-                    }}
-                    className="flex items-center justify-center"
-                  >
-                    <div>{modal as ReactElement}</div>
-                  </Modal>
+                  <AppModal modal={modal} setModal={setModal} />
                 </div>
               </ThemeProvider>
             </InternalChatProvider>
