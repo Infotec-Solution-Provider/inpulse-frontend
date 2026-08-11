@@ -35,7 +35,12 @@ export default function RenderInternalGroupMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderInternalGroupMessagesProps) {
-  const { currentInternalChatMessages, users, phoneNameMap } = useContext(InternalChatContext);
+  const {
+    currentInternalChatMessages,
+    users,
+    phoneNameMap,
+    whatsappSenderNameMap,
+  } = useContext(InternalChatContext);
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
 
@@ -120,12 +125,18 @@ export default function RenderInternalGroupMessages({
                 [],
                 undefined,
                 phoneNameMap,
+                whatsappSenderNameMap,
               )
             : null;
 
           const prev = i > 0 ? arr[i - 1] : null;
           const groupFirst = !prev || prev.from !== m.from;
-          const senderName = getInternalMessageAuthor(m.from, phoneNameMap, users, m.id === 43810);
+          const senderName = getInternalMessageAuthor(
+            m.from,
+            phoneNameMap,
+            users,
+            whatsappSenderNameMap,
+          );
           const isMine = user?.CODIGO != null && m.from === `user:${user.CODIGO}`;
 
           return (

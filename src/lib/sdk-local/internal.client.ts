@@ -5,6 +5,9 @@ import {
 	InternalChatMember,
 	InternalGroup,
 	InternalMessage,
+	InternalWhatsappSenderName,
+	PaginatedInternalWhatsappSenderMessages,
+	PaginatedInternalWhatsappSenders,
 	InternalSendMessageData,
 } from "./types/internal.types";
 import FormData from "form-data";
@@ -99,6 +102,45 @@ export default class InternalChatClient extends ApiClient {
 		}
 
 		return Array.isArray(response?.data) ? response.data : [];
+	}
+
+	public async getUnidentifiedWhatsappSenders(input: {
+		page?: number;
+		perPage?: number;
+		search?: string;
+	}) {
+		const params = new URLSearchParams();
+		if (input.page) params.set("page", String(input.page));
+		if (input.perPage) params.set("perPage", String(input.perPage));
+		if (input.search) params.set("search", input.search);
+		const { data: res } = await this.ax.get<DataResponse<PaginatedInternalWhatsappSenders>>(
+			`/api/internal/whatsapp-senders?${params.toString()}`,
+		);
+		return res.data;
+	}
+
+	public async getWhatsappSenderNames() {
+		const { data: res } = await this.ax.get<DataResponse<InternalWhatsappSenderName[]>>(
+			"/api/internal/whatsapp-senders/names",
+		);
+		return res.data;
+	}
+
+	public async getWhatsappSenderMessages(senderId: string, limit = 50, beforeId?: number | null) {
+		const params = new URLSearchParams({ senderId, limit: String(limit) });
+		if (beforeId) params.set("beforeId", String(beforeId));
+		const { data: res } = await this.ax.get<
+			DataResponse<PaginatedInternalWhatsappSenderMessages>
+		>(`/api/internal/whatsapp-senders/messages?${params.toString()}`);
+		return res.data;
+	}
+
+	public async assignWhatsappSenderName(senderId: string, name: string) {
+		const { data: res } = await this.ax.put<DataResponse<InternalWhatsappSenderName>>(
+			"/api/internal/whatsapp-senders/name",
+			{ senderId, name },
+		);
+		return res.data;
 	}
 
 	public async sendMessageToInternalChat(data: InternalSendMessageData) {

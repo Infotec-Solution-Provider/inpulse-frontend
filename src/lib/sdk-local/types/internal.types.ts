@@ -34,6 +34,45 @@ export interface InternalChat {
 	groupImageFileId: number | null;
 }
 
+export interface InternalWhatsappSenderMessage {
+  id: number;
+  body: string;
+  timestamp: string;
+  type: string;
+  fileName: string | null;
+  chat: {
+    id: number;
+    groupName: string | null;
+    wppGroupId: string | null;
+  } | null;
+}
+
+export interface InternalWhatsappSenderSummary {
+  senderId: string;
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+  lastMessage: Omit<InternalWhatsappSenderMessage, "fileName"> | null;
+}
+
+export interface PaginatedInternalWhatsappSenders {
+  items: InternalWhatsappSenderSummary[];
+  page: number;
+  perPage: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PaginatedInternalWhatsappSenderMessages {
+  messages: InternalWhatsappSenderMessage[];
+  nextCursor: number | null;
+}
+
+export interface InternalWhatsappSenderName {
+  senderId: string;
+  displayName: string;
+}
+
 export interface InternalGroup {
 	id: number;
 	instance: string;

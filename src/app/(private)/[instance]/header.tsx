@@ -56,6 +56,7 @@ const crudsRoutes = (
     }
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
+    arr.push({ title: "Identificar remetentes", href: "/whatsapp-senders" });
   }
 
   if (canAccessInternalGroups(params, role)) {
