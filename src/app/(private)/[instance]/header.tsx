@@ -89,7 +89,10 @@ const aiRoutes = (params: Record<string, string>) => {
 };
 
 const reportsRoutes = (params: Record<string, string>, instance: string) => {
-  const routes = [{ title: "Relatórios", href: "/reports/dashboard" }];
+  const routes = [
+    { title: "Relatórios", href: "/reports/dashboard" },
+    { title: "Conversas", href: "/reports/chats" },
+  ];
 
   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsAdvanced)) {
     routes.push(
@@ -99,7 +102,7 @@ const reportsRoutes = (params: Record<string, string>, instance: string) => {
       { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
       { title: "Motivos de Perda", href: "/reports/lost-reasons" },
       { title: "Performance Operadores", href: "/reports/operator-performance" },
-      { title: "Conversas", href: "/reports/chats" },
+
       //{ title: "Análise de Mailing", href: "/reports/mailing-analysis" },
       //{ title: "Régua por Carteira (Sintético) + WhatsApp", href: "/reports/regua-carteira-sintetico-whatsapp" },
     );
