@@ -10,6 +10,8 @@ import type {
   AiUsageSummary,
   CreateAiAgentInput,
   PaginatedActionLogs,
+  SendSupervisorAiMessageRequest,
+  SendSupervisorAiMessageResponse,
   UpdateAiAgentInput,
 } from "@/lib/types/sdk-local.types";
 
@@ -23,6 +25,69 @@ class FrontendAiService extends AiClient {
       },
     };
   }
+
+  public async streamSupervisorMessage(
+		sessionId: number,
+		data: SendSupervisorAiMessageRequest,
+		token: string,
+		options: { signal: AbortSignal; onDelta: (text: string) => void },
+	): Promise<SendSupervisorAiMessageResponse> {
+		const baseUrl = String(this.ax.defaults.baseURL ?? "").replace(/\/$/, "");
+		const response = await fetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
+			},
+			body: JSON.stringify(data),
+			signal: options.signal,
+		});
+
+		if (!response.ok) {
+			const errorBody = await response.json().catch(() => null) as { message?: string } | null;
+			throw new Error(errorBody?.message || `Falha ao iniciar streaming (${response.status}).`);
+		}
+
+		if (!response.body) {
+			throw new Error("O navegador não disponibilizou o fluxo da resposta.");
+		}
+
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = "";
+		let result: SendSupervisorAiMessageResponse | null = null;
+
+		const processBlock = (block: string) => {
+			let event = "message";
+			const dataLines: string[] = [];
+			for (const line of block.split("\n")) {
+				if (line.startsWith("event:")) event = line.slice(6).trim();
+				if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+			}
+			if (dataLines.length === 0) return;
+			const payload = JSON.parse(dataLines.join("\n")) as Record<string, unknown>;
+			if (event === "delta" && typeof payload.text === "string") options.onDelta(payload.text);
+			if (event === "result") result = payload as unknown as SendSupervisorAiMessageResponse;
+			if (event === "error") throw new Error(typeof payload.message === "string" ? payload.message : "Falha no streaming da IA.");
+		};
+
+		while (true) {
+			const { done, value } = await reader.read();
+			buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n");
+			let boundary = buffer.indexOf("\n\n");
+			while (boundary >= 0) {
+				const block = buffer.slice(0, boundary);
+				buffer = buffer.slice(boundary + 2);
+				if (block.trim()) processBlock(block);
+				boundary = buffer.indexOf("\n\n");
+			}
+			if (done) break;
+		}
+
+		if (buffer.trim()) processBlock(buffer);
+		if (!result) throw new Error("O streaming terminou sem confirmar a resposta persistida.");
+		return result;
+	}
 
   public async listAgents(token: string) {
     const response = await this.ax.get<{ message: string; data: AiAgent[] }>(

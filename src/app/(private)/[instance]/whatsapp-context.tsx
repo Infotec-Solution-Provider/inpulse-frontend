@@ -87,6 +87,7 @@ interface SendMessageOptions {
   quotedId?: number | null;
   chatId?: number | null;
   file?: File;
+  readyMessageId?: number;
   sendAsDocument: boolean;
   sendAsAudio: boolean;
 }

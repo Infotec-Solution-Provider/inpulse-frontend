@@ -43,13 +43,9 @@ export const CUSTOMERS_TABLE_COLUMNS = {
     width: "8rem",
     placeholder: "Código...",
   },
-  TAGS: {
-    label: "Tags",
-    width: "24rem",
-  },
   ACTIONS: {
     label: "Ações",
-    width: "8rem",
+    width: "12rem",
   },
 } as const;
 

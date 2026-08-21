@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Dashboard, Metric, TableMeta, ReportJob } from '@/types/reports';
+import type { GeneratedReportArtifact, GeneratedReportBlock, GeneratedReportExecution } from '@/types/generated-reports';
 
 const BASE_URL = process.env.NEXT_PUBLIC_REPORTS_API_URL ?? 'http://localhost:8006';
 
@@ -64,3 +65,38 @@ export const executeDashboard = (
     method: 'POST',
     body: JSON.stringify({ filters }),
   });
+
+export const listGeneratedReports = () => fetchApi<GeneratedReportArtifact[]>('/generated');
+
+export const getGeneratedReport = (id: string) => fetchApi<GeneratedReportArtifact>(`/generated/${id}`);
+
+export const executeGeneratedReport = (id: string, filters: Record<string, unknown>) =>
+  fetchApi<GeneratedReportExecution>(`/generated/${id}/execute`, { method: 'POST', body: JSON.stringify({ filters }) });
+
+export const saveGeneratedReport = (id: string) =>
+  fetchApi<GeneratedReportArtifact>(`/generated/${id}/save`, { method: 'POST', body: '{}' });
+
+export const copyGeneratedReport = (id: string) =>
+  fetchApi<GeneratedReportArtifact>(`/generated/${id}/copy`, { method: 'POST', body: '{}' });
+
+export const updateGeneratedReportLayout = (id: string, blocks: GeneratedReportBlock[]) =>
+  fetchApi<GeneratedReportArtifact>(`/generated/${id}/layout`, { method: 'PATCH', body: JSON.stringify({ blocks }) });
+
+export async function exportGeneratedReport(id: string, body: { format: 'pdf' | 'csv' | 'png'; filters: Record<string, unknown>; datasetId?: string; blockId?: string }): Promise<void> {
+  const authHeader = axios.defaults.headers['authorization'] as string | undefined;
+  const response = await fetch(`${BASE_URL}/api/reports/generated/${id}/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(authHeader ? { Authorization: authHeader } : {}) },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error((await response.json().catch(() => null) as { message?: string } | null)?.message ?? `HTTP ${response.status}`);
+  const blob = await response.blob();
+  const disposition = response.headers.get('content-disposition');
+  const filename = disposition?.match(/filename="([^"]+)"/)?.[1] ?? `relatorio.${body.format}`;
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}

@@ -33,9 +33,15 @@ export interface AnalyzeCustomerResponse {
 
 export type SupervisorAiSessionStatus = "ACTIVE" | "ARCHIVED";
 
+export type SupervisorAiChatMode = "STANDARD" | "REPORTS";
+
 export type SupervisorAiMessageRole = "USER" | "ASSISTANT";
 
-export type SupervisorAiReportFormat = "csv" | "pdf" | "txt";
+export type SupervisorAiActionType = "START_WHATSAPP_CHAT";
+
+export type SupervisorAiActionStatus = "PENDING" | "EXECUTING" | "EXECUTED" | "CANCELLED" | "FAILED";
+
+export type SupervisorAiReportFormat = "csv" | "pdf" | "png" | "txt";
 
 export interface SupervisorAiContextInput {
 	chatId?: number;
@@ -48,7 +54,7 @@ export interface SupervisorAiContextInput {
 }
 
 export interface SupervisorAiSource {
-	type: "action" | "chat" | "contact" | "customer" | "metrics" | "session" | "sql";
+	type: "action" | "chat" | "contact" | "customer" | "metrics" | "report" | "session" | "sql";
 	label: string;
 	entityId?: number;
 	metadata?: Record<string, unknown>;
@@ -62,10 +68,33 @@ export interface SupervisorAiReportPreview {
 	availableFormats: SupervisorAiReportFormat[];
 }
 
+export interface SupervisorAiGeneratedReportArtifact {
+	id: string;
+	status: "DRAFT" | "SAVED";
+	title: string;
+	description?: string;
+	schemaVersion: number;
+	createdByUserId: number;
+	createdByUserName: string;
+	summary?: string;
+	findings: string[];
+	limitations: string[];
+	sources: string[];
+	filters: Array<Record<string, unknown>>;
+	datasets: Array<{ id: string; label: string; columns?: string[] }>;
+	blocks: Array<Record<string, unknown>>;
+	createdAt: string;
+	updatedAt: string;
+	savedAt?: string;
+}
+
 export interface SupervisorAiMessageMetadata {
+	mode?: SupervisorAiChatMode;
 	context?: SupervisorAiContextInput;
 	sources?: SupervisorAiSource[];
 	reportPreview?: SupervisorAiReportPreview | null;
+	reportArtifact?: SupervisorAiGeneratedReportArtifact | null;
+	interrupted?: boolean;
 }
 
 export interface SupervisorAiSession {
@@ -74,6 +103,7 @@ export interface SupervisorAiSession {
 	userId: number;
 	title: string;
 	status: SupervisorAiSessionStatus;
+	mode: SupervisorAiChatMode;
 	createdAt: string;
 	updatedAt: string;
 	lastMessageAt: string | null;
@@ -88,8 +118,35 @@ export interface SupervisorAiMessage {
 	createdAt: string;
 }
 
+export interface SupervisorAiAction {
+	id: number;
+	sessionId: number;
+	assistantMessageId: number | null;
+	instance: string;
+	requestedByUserId: number;
+	decidedByUserId: number | null;
+	decidedByUserName: string | null;
+	type: SupervisorAiActionType;
+	status: SupervisorAiActionStatus;
+	label: string;
+	payload: Record<string, unknown>;
+	result: Record<string, unknown> | null;
+	errorMessage: string | null;
+	confirmedAt: string | null;
+	cancelledAt: string | null;
+	executedAt: string | null;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface CreateSupervisorAiSessionRequest {
 	title?: string;
+	mode?: SupervisorAiChatMode;
+}
+
+export interface UpdateSupervisorAiSessionRequest {
+	status?: SupervisorAiSessionStatus;
+	mode?: SupervisorAiChatMode;
 }
 
 export interface SupervisorAiFileContext {
@@ -97,10 +154,13 @@ export interface SupervisorAiFileContext {
 	content: string;
 }
 
+export type SupervisorAiReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
+
 export interface SendSupervisorAiMessageRequest {
 	message: string;
 	context?: SupervisorAiContextInput;
 	model?: string;
+	reasoningEffort?: SupervisorAiReasoningEffort;
 	fileContext?: SupervisorAiFileContext[];
 }
 
@@ -108,13 +168,21 @@ export interface SendSupervisorAiMessageResponse {
 	session: SupervisorAiSession;
 	userMessage: SupervisorAiMessage;
 	assistantMessage: SupervisorAiMessage;
+	actions: SupervisorAiAction[];
 	sources: SupervisorAiSource[];
 	reportPreview: SupervisorAiReportPreview | null;
+	reportArtifact?: SupervisorAiGeneratedReportArtifact | null;
+	interrupted?: boolean;
 }
 
 export interface SupervisorAiSessionDetail {
 	session: SupervisorAiSession;
 	messages: SupervisorAiMessage[];
+	actions: SupervisorAiAction[];
+}
+
+export interface DecideSupervisorAiActionRequest {
+	decision: "CONFIRM" | "CANCEL";
 }
 
 export interface AiFeatureModels {

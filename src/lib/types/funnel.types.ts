@@ -1,5 +1,28 @@
 export type FunnelSnapshotStatus = "idle" | "processing" | "done" | "failed";
 export type FunnelType = "AUTOMATIC" | "MANUAL";
+export type FunnelAudienceMode = "ALL_CUSTOMERS" | "TRIGGERED";
+
+export type FunnelTriggerSource =
+  | { type: "READY_MESSAGE"; readyMessageId: number; label: string }
+  | {
+      type: "WHATSAPP_TEMPLATE";
+      templateSource: "waba" | "gupshup";
+      templateName: string;
+      templateLanguage: string;
+      label: string;
+    };
+
+export interface FunnelTriggerBinding {
+  id: number;
+  sourceType: "READY_MESSAGE" | "WHATSAPP_TEMPLATE";
+  sourceKey: string;
+  sourceLabel: string;
+  sourceData: FunnelTriggerSource | null;
+  funnelId: number;
+  funnelName: string;
+  stageId: number;
+  stageName: string;
+}
 
 export interface FunnelCard {
   entryId?: number; // only present for manual funnel cards
@@ -40,6 +63,7 @@ export interface FunnelDef {
   instance: string;
   name: string;
   type: FunnelType;
+  audienceMode: FunnelAudienceMode;
   createdAt: string;
   stages?: FunnelStageDef[];
 }
@@ -156,9 +180,11 @@ export interface FunnelConfigResult {
     id: number;
     name: string;
     type: FunnelType;
+    audienceMode: FunnelAudienceMode;
     stages: FunnelStageWithConditions[];
   };
   resultados: { id: number; nome: string }[];
   templates: ConditionTemplate[];
+  triggerBindings: FunnelTriggerBinding[];
 }
 

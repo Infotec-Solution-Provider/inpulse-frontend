@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
+import { AI_MODEL_CATALOG } from "@/lib/ai-model-catalog";
 import aiService from "@/lib/services/ai.service";
 import usersService from "@/lib/services/users.service";
 import type {
@@ -43,24 +44,12 @@ import {
 	YAxis,
 } from "recharts";
 
-// ─── Model catalogue (current as of 2026-04) ─────────────────────────────────
+// Catálogo compartilhado entre configurações, Assistente IA e agentes.
 
-const KNOWN_MODELS: { value: string; label: string; tier: "flagship" | "mini" | "reasoning" | "legacy" }[] = [
-	// GPT-5 family
-	{ value: "gpt-5.5",      label: "GPT-5.5",      tier: "flagship" },
-	{ value: "gpt-5.4",      label: "GPT-5.4",      tier: "flagship" },
-	{ value: "gpt-5.4-mini", label: "GPT-5.4 Mini", tier: "mini" },
-	{ value: "gpt-5.4-nano", label: "GPT-5.4 Nano", tier: "mini" },
-	// GPT-4o family (previous gen)
-	{ value: "gpt-4o",       label: "GPT-4o",       tier: "legacy" },
-	{ value: "gpt-4o-mini",  label: "GPT-4o Mini",  tier: "legacy" },
-	// Reasoning models
-	{ value: "o4-mini",      label: "o4 Mini",      tier: "reasoning" },
-	{ value: "o3-mini",      label: "o3 Mini",      tier: "reasoning" },
-	{ value: "o3",           label: "o3",            tier: "reasoning" },
-];
+const KNOWN_MODELS = AI_MODEL_CATALOG;
 
 const TIER_LABELS: Record<string, string> = {
+	gpt56:     "GPT-5.6",
 	flagship:  "Flagship",
 	mini:      "Mini / Nano",
 	reasoning: "Raciocínio",

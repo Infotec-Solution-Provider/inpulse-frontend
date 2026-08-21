@@ -3,30 +3,33 @@ import ApiClient from "./api-client";
 import { RequestFilters } from "./types";
 import { DataResponse, MessageResponse } from "./types/response.types";
 import {
-	AppNotification,
-	AutomaticResponseRule,
-	AutomaticResponseRuleDTO,
-	CustomerProfileManualOverrides,
-	CustomerProfileSummaryBatchRequest,
-	CustomerProfileSummaryFilters,
-	CustomerProfileSummaryPayload,
-	CreateScheduleDTO,
-	ForwardMessagesData,
-	PaginatedContactsResponse,
-	PaginatedNotificationsResponse,
-	SendFileMessageData,
-	SendMessageData,
-	UnifiedSchedule,
-	UnifiedScheduleFilters,
-	UnifiedSchedulesResponse,
-	WhatsappGroup,
-	WppChatsAndMessages,
-	WppChatWithDetailsAndMessages,
-	WppContact,
-	WppMessage,
-	WppSchedule,
-	UpdateCustomerProfileManualOverridesInput,
-	WppWallet,
+  AppNotification,
+  AutomaticResponseRule,
+  AutomaticResponseRuleDTO,
+  ContactActionOutcome,
+  ContactActionRequestStatus,
+  ContactActionRequestType,
+  CustomerProfileManualOverrides,
+  CustomerProfileSummaryBatchRequest,
+  CustomerProfileSummaryFilters,
+  CustomerProfileSummaryPayload,
+  CreateScheduleDTO,
+  ForwardMessagesData,
+  PaginatedContactsResponse,
+  PaginatedNotificationsResponse,
+  SendFileMessageData,
+  SendMessageData,
+  UnifiedSchedule,
+  UnifiedScheduleFilters,
+  UnifiedSchedulesResponse,
+  WhatsappGroup,
+  WppChatsAndMessages,
+  WppChatWithDetailsAndMessages,
+  WppContact,
+  WppMessage,
+  WppSchedule,
+  UpdateCustomerProfileManualOverridesInput,
+  WppWallet,
 } from "./types/whatsapp.types";
 
 type GetChatsResponse = DataResponse<WppChatsAndMessages>;
@@ -37,546 +40,539 @@ type MarkChatAsReadResponse = DataResponse<WppMessage[]>;
 type GetNotificationsResponse = DataResponse<PaginatedNotificationsResponse>;
 
 interface FetchMessagesFilters {
-	minDate: string;
-	maxDate: string;
-	userId?: number | null;
+  minDate: string;
+  maxDate: string;
+  userId?: number | null;
 }
 
 export default class WhatsappClient extends ApiClient {
-	private normalizeChatsPayload(
-		response:
-			| GetChatsResponse
-			| WppChatsAndMessages
-			| null
-			| undefined,
-	): WppChatsAndMessages {
-		const payload = Array.isArray((response as GetChatsResponse | undefined)?.data?.chats)
-			|| Array.isArray((response as GetChatsResponse | undefined)?.data?.messages)
-			? (response as GetChatsResponse).data
-			: (response as WppChatsAndMessages | null | undefined);
+  private normalizeChatsPayload(
+    response: GetChatsResponse | WppChatsAndMessages | null | undefined,
+  ): WppChatsAndMessages {
+    const payload =
+      Array.isArray((response as GetChatsResponse | undefined)?.data?.chats) ||
+      Array.isArray((response as GetChatsResponse | undefined)?.data?.messages)
+        ? (response as GetChatsResponse).data
+        : (response as WppChatsAndMessages | null | undefined);
 
-		return {
-			chats: Array.isArray(payload?.chats) ? payload.chats : [],
-			messages: Array.isArray(payload?.messages) ? payload.messages : [],
-		};
-	}
+    return {
+      chats: Array.isArray(payload?.chats) ? payload.chats : [],
+      messages: Array.isArray(payload?.messages) ? payload.messages : [],
+    };
+  }
 
-	private normalizeNotificationsPayload(
-		response:
-			| GetNotificationsResponse
-			| PaginatedNotificationsResponse
-			| null
-			| undefined,
-	): PaginatedNotificationsResponse {
-		const payload = Array.isArray(
-			(response as GetNotificationsResponse | undefined)?.data?.notifications,
-		)
-			? (response as GetNotificationsResponse).data
-			: (response as PaginatedNotificationsResponse | null | undefined);
+  private normalizeNotificationsPayload(
+    response: GetNotificationsResponse | PaginatedNotificationsResponse | null | undefined,
+  ): PaginatedNotificationsResponse {
+    const payload = Array.isArray(
+      (response as GetNotificationsResponse | undefined)?.data?.notifications,
+    )
+      ? (response as GetNotificationsResponse).data
+      : (response as PaginatedNotificationsResponse | null | undefined);
 
-		return {
-			notifications: Array.isArray(payload?.notifications)
-				? payload.notifications
-				: [],
-			totalCount:
-				typeof payload?.totalCount === "number" ? payload.totalCount : 0,
-		};
-	}
+    return {
+      notifications: Array.isArray(payload?.notifications) ? payload.notifications : [],
+      totalCount: typeof payload?.totalCount === "number" ? payload.totalCount : 0,
+    };
+  }
 
-	public async getGroups(clientId: number) {
-		const { data: res } = await this.ax.get<DataResponse<WhatsappGroup[]>>(
-			`/api/whatsapp/${clientId}/groups`,
-		);
-		return res.data;
-	}
+  public async getGroups(clientId: number) {
+    const { data: res } = await this.ax.get<DataResponse<WhatsappGroup[]>>(
+      `/api/whatsapp/${clientId}/groups`,
+    );
+    return Array.isArray(res.data) ? res.data : [];
+  }
 
-	public async getChatsBySession(
-		messages = false,
-		contact = false,
-		token: string | null = null,
-	) {
-		const headers = token
-			? { Authorization: `Bearer ${token}` }
-			: undefined;
-		const url = `/api/whatsapp/session/chats?messages=${messages}&contact=${contact}`;
-		const { data: response } = await this.ax.get<GetChatsResponse | WppChatsAndMessages>(url, {
-			headers,
-		});
-		return this.normalizeChatsPayload(response);
-	}
+  public async getChatsBySession(messages = false, contact = false, token: string | null = null) {
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    const url = `/api/whatsapp/session/chats?messages=${messages}&contact=${contact}`;
+    const { data: response } = await this.ax.get<GetChatsResponse | WppChatsAndMessages>(url, {
+      headers,
+    });
+    return this.normalizeChatsPayload(response);
+  }
 
-	public async getChatById(id: number) {
-		const { data: res } = await this.ax.get<GetChatResponse>(
-			`/api/whatsapp/chats/${id}`,
-		);
-		return res.data;
-	}
+  public async getChatById(id: number) {
+    const { data: res } = await this.ax.get<GetChatResponse>(`/api/whatsapp/chats/${id}`);
+    return res.data;
+  }
 
-	public async getMessageById(id: string) {
-		const { data: res } = await this.ax.get<GetMessageResponse>(
-			`/api/whatsapp/messages/${id}`,
-		);
-		return res.data;
-	}
+  public async getMessageById(id: string) {
+    const { data: res } = await this.ax.get<GetMessageResponse>(`/api/whatsapp/messages/${id}`);
+    return res.data;
+  }
 
-	public async getUserWallets(instance: string, userId: number) {
-		const { data: res } = await this.ax.get<DataResponse<WppWallet[]>>(
-			`/api/wallets?instance=${instance}&userId=${userId}`,
-		);
-		return res.data;
-	}
+  public async getUserWallets(instance: string, userId: number) {
+    const { data: res } = await this.ax.get<DataResponse<WppWallet[]>>(
+      `/api/wallets?instance=${instance}&userId=${userId}`,
+    );
+    return res.data;
+  }
 
-	public async markContactMessagesAsRead(contactId: number) {
-		const url = `/api/whatsapp/messages/mark-as-read`;
-		const body = { contactId };
-		const { data: res } = await this.ax.patch<MarkChatAsReadResponse>(
-			url,
-			body,
-		);
-		return res.data;
-	}
+  public async markContactMessagesAsRead(contactId: number) {
+    const url = `/api/whatsapp/messages/mark-as-read`;
+    const body = { contactId };
+    const { data: res } = await this.ax.patch<MarkChatAsReadResponse>(url, body);
+    return res.data;
+  }
 
-	public async sendMessage(
-		clientId: string,
-		to: string,
-		data: SendMessageData | SendFileMessageData,
-	) {
-		const url = `/api/whatsapp/${clientId}/messages`;
-		const formData = new FormData();
-		formData.append("to", to);
-		formData.append("text", data.text);
-		formData.append("contactId", String(data.contactId));
-		
-		("quotedId" in data) && data.quotedId && formData.append("quotedId", String(data.quotedId));
-		("chatId" in data) && data.chatId && formData.append("chatId", String(data.chatId));
-		("fileId" in data) && data.fileId && formData.append("fileId", String(data.fileId));
-		("sendAsAudio" in data) && data.sendAsAudio && formData.append("sendAsAudio", "true");
-		("sendAsDocument" in data) && data.sendAsDocument && formData.append("sendAsDocument", "true");
-		("sendAsChatOwner" in data) && data.sendAsChatOwner && formData.append("sendAsChatOwner", String(data.sendAsChatOwner));
-		("traceId" in data) && data.traceId && formData.append("traceId", data.traceId);
+  public async sendMessage(
+    clientId: string,
+    to: string,
+    data: SendMessageData | SendFileMessageData,
+  ) {
+    const url = `/api/whatsapp/${clientId}/messages`;
+    const formData = new FormData();
+    formData.append("to", to);
+    formData.append("text", data.text);
+    formData.append("contactId", String(data.contactId));
 
-		const { data: res } = await this.ax.post<DataResponse<WppMessage>>(
-			url,
-			formData,
-			{
-				headers: {
-					"Content-Type": "multipart/form-data",
-					...(("traceId" in data) && data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
-				},
-				timeout: ("fileId" in data) && data.fileId
-					? ApiClient.UPLOAD_TIMEOUT_MS
-					: ApiClient.DEFAULT_TIMEOUT_MS,
-			},
-		);
-		return res.data;
-	}
+    "quotedId" in data && data.quotedId && formData.append("quotedId", String(data.quotedId));
+    "chatId" in data && data.chatId && formData.append("chatId", String(data.chatId));
+    "fileId" in data && data.fileId && formData.append("fileId", String(data.fileId));
+    "sendAsAudio" in data && data.sendAsAudio && formData.append("sendAsAudio", "true");
+    "sendAsDocument" in data && data.sendAsDocument && formData.append("sendAsDocument", "true");
+    "sendAsChatOwner" in data &&
+      data.sendAsChatOwner &&
+      formData.append("sendAsChatOwner", String(data.sendAsChatOwner));
+    "traceId" in data && data.traceId && formData.append("traceId", data.traceId);
+    "readyMessageId" in data &&
+      data.readyMessageId &&
+      formData.append("readyMessageId", String(data.readyMessageId));
 
-	public async editMessage(
-		clientId: string,
-		messageId: string,
-		newText: string,
-		isInternal = false,
-	) {
-		const type = isInternal ? "internal" : "whatsapp";
-		const url = `/api/${type}/${clientId}/messages/${messageId}`;
-		const body = { newText };
-		await this.ax.put(url, body);
-	}
+    const { data: res } = await this.ax.post<DataResponse<WppMessage>>(url, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        ...("traceId" in data && data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
+      },
+      timeout:
+        "fileId" in data && data.fileId
+          ? ApiClient.UPLOAD_TIMEOUT_MS
+          : ApiClient.DEFAULT_TIMEOUT_MS,
+    });
+    return res.data;
+  }
 
-	public async finishChatById(
-		id: number,
-		resultId: number,
-		scheduleDate?: Date | null,
-	) {
-		const url = `/api/whatsapp/chats/${id}/finish`;
-		const body = { resultId, scheduleDate };
-		await this.ax.post<MessageResponse>(url, body);
-	}
+  public async editMessage(
+    clientId: string,
+    messageId: string,
+    newText: string,
+    isInternal = false,
+  ) {
+    const type = isInternal ? "internal" : "whatsapp";
+    const url = `/api/${type}/${clientId}/messages/${messageId}`;
+    const body = { newText };
+    await this.ax.put(url, body);
+  }
 
-	public async startChatByContactId(contactId: number, template?: any) {
-		const url = `/api/whatsapp/chats`;
-		const body = { contactId, template };
-		await this.ax.post<DataResponse<WppChatWithDetailsAndMessages>>(
-			url,
-			body,
-		);
-	}
+  public async finishChatById(id: number, resultId: number, scheduleDate?: Date | null) {
+    const url = `/api/whatsapp/chats/${id}/finish`;
+    const body = { resultId, scheduleDate };
+    await this.ax.post<MessageResponse>(url, body);
+  }
 
-	public async getResults() {
-		const url = `/api/whatsapp/results`;
-		const { data: res } =
-			await this.ax.get<DataResponse<{ id: number; name: string }[]>>(
-				url,
-			);
-		return res.data;
-	}
+  public async startChatByContactId(contactId: number, template?: any) {
+    const url = `/api/whatsapp/chats`;
+    const body = { contactId, template };
+    await this.ax.post<DataResponse<WppChatWithDetailsAndMessages>>(url, body);
+  }
 
-	public async getCustomerContacts(customerId: number) {
-		const url = `/api/whatsapp/customer/${customerId}/contacts`;
-		const { data: res } =
-			await this.ax.get<DataResponse<WppContact[]>>(url);
-		return res.data;
-	}
+  public async getResults() {
+    const url = `/api/whatsapp/results`;
+    const { data: res } = await this.ax.get<DataResponse<{ id: number; name: string }[]>>(url);
+    return res.data;
+  }
 
-	public async getCustomerProfileSummary(customerId: number) {
-		const { data: res } = await this.ax.get<DataResponse<CustomerProfileSummaryPayload>>(
-			`/api/whatsapp/customers/${customerId}/profile-tags/summary`,
-		);
-		return res.data;
-	}
+  public async getCustomerContacts(customerId: number) {
+    const url = `/api/whatsapp/customer/${customerId}/contacts`;
+    const { data: res } = await this.ax.get<DataResponse<WppContact[]>>(url);
+    return res.data;
+  }
 
-	public async getCustomerProfileManualOverrides(customerId: number) {
-		const { data: res } = await this.ax.get<DataResponse<CustomerProfileManualOverrides | null>>(
-			`/api/whatsapp/customers/${customerId}/profile-tags/manual-overrides`,
-		);
-		return res.data;
-	}
+  public async getCustomerProfileSummary(customerId: number) {
+    const { data: res } = await this.ax.get<DataResponse<CustomerProfileSummaryPayload>>(
+      `/api/whatsapp/customers/${customerId}/profile-tags/summary`,
+    );
+    return res.data;
+  }
 
-	public async updateCustomerProfileManualOverrides(
-		customerId: number,
-		data: UpdateCustomerProfileManualOverridesInput,
-	) {
-		const { data: res } = await this.ax.put<DataResponse<CustomerProfileSummaryPayload>>(
-			`/api/whatsapp/customers/${customerId}/profile-tags/manual-overrides`,
-			data,
-		);
-		return res.data;
-	}
+  public async getCustomerProfileManualOverrides(customerId: number) {
+    const { data: res } = await this.ax.get<DataResponse<CustomerProfileManualOverrides | null>>(
+      `/api/whatsapp/customers/${customerId}/profile-tags/manual-overrides`,
+    );
+    return res.data;
+  }
 
-	public async getCustomerProfileSummaries(data: CustomerProfileSummaryBatchRequest) {
-		const { data: res } = await this.ax.post<DataResponse<CustomerProfileSummaryPayload[]>>(
-			`/api/whatsapp/customers/profile-tags/summary/batch`,
-			data,
-		);
-		return res.data;
-	}
+  public async updateCustomerProfileManualOverrides(
+    customerId: number,
+    data: UpdateCustomerProfileManualOverridesInput,
+  ) {
+    const { data: res } = await this.ax.put<DataResponse<CustomerProfileSummaryPayload>>(
+      `/api/whatsapp/customers/${customerId}/profile-tags/manual-overrides`,
+      data,
+    );
+    return res.data;
+  }
 
-	public async findCustomerIdsByProfileFilters(filters: CustomerProfileSummaryFilters) {
-		const params = new URLSearchParams();
+  public async getCustomerProfileSummaries(data: CustomerProfileSummaryBatchRequest) {
+    const { data: res } = await this.ax.post<DataResponse<CustomerProfileSummaryPayload[]>>(
+      `/api/whatsapp/customers/profile-tags/summary/batch`,
+      data,
+    );
+    return res.data;
+  }
 
-		if (filters.profileLevel) params.append("profileLevel", filters.profileLevel);
-		if (filters.interactionLevel) params.append("interactionLevel", filters.interactionLevel);
-		if (filters.purchaseLevel) params.append("purchaseLevel", filters.purchaseLevel);
-		if (filters.ageLevel) params.append("ageLevel", filters.ageLevel);
-		if (filters.purchaseInterestLevel) params.append("purchaseInterestLevel", filters.purchaseInterestLevel);
+  public async findCustomerIdsByProfileFilters(filters: CustomerProfileSummaryFilters) {
+    const params = new URLSearchParams();
 
-		const queryString = params.toString();
-		const url = queryString
-			? `/api/whatsapp/customers/profile-tags/customer-ids?${queryString}`
-			: `/api/whatsapp/customers/profile-tags/customer-ids`;
+    if (filters.profileLevel) params.append("profileLevel", filters.profileLevel);
+    if (filters.interactionLevel) params.append("interactionLevel", filters.interactionLevel);
+    if (filters.purchaseLevel) params.append("purchaseLevel", filters.purchaseLevel);
+    if (filters.ageLevel) params.append("ageLevel", filters.ageLevel);
+    if (filters.purchaseInterestLevel)
+      params.append("purchaseInterestLevel", filters.purchaseInterestLevel);
 
-		const { data: res } = await this.ax.get<DataResponse<number[]>>(url);
-		return res.data;
-	}
+    const queryString = params.toString();
+    const url = queryString
+      ? `/api/whatsapp/customers/profile-tags/customer-ids?${queryString}`
+      : `/api/whatsapp/customers/profile-tags/customer-ids`;
 
-	public async getContactsWithCustomer(filters?: {
-		name?: string;
-		phone?: string;
-		customerId?: number;
-		customerErp?: string;
-		customerCnpj?: string;
-		customerName?: string;
-		hasCustomer?: boolean;
-		page?: number;
-		perPage?: number;
-	}) {
-		let url = `/api/whatsapp/contacts/customer`;
-		if (filters) {
-			const params = new URLSearchParams();
-			if (filters.name) params.append("name", filters.name);
-			if (filters.phone) params.append("phone", filters.phone);
-			if (filters.customerId !== undefined)
-				params.append("customerId", String(filters.customerId));
-			if (filters.customerErp)
-				params.append("customerErp", filters.customerErp);
-			if (filters.customerCnpj)
-				params.append("customerCnpj", filters.customerCnpj);
-			if (filters.customerName)
-				params.append("customerName", filters.customerName);
-			if (filters.hasCustomer !== undefined)
-				params.append("hasCustomer", String(filters.hasCustomer));
-			if (filters.page !== undefined)
-				params.append("page", String(filters.page));
-			if (filters.perPage !== undefined)
-				params.append("perPage", String(filters.perPage));
-			const queryString = params.toString();
-			if (queryString) url += `?${queryString}`;
-		}
-		const res = await this.ax.get<PaginatedContactsResponse>(url);
-		return res.data;
-	}
+    const { data: res } = await this.ax.get<DataResponse<number[]>>(url);
+    return res.data;
+  }
 
-	public async getContacts() {
-		const url = `/api/whatsapp/contacts`;
-		const { data: res } =
-			await this.ax.get<DataResponse<WppContact[]>>(url);
-		return res.data;
-	}
+  public async getContactsWithCustomer(filters?: {
+    name?: string;
+    phone?: string;
+    customerId?: number;
+    customerErp?: string;
+    customerCnpj?: string;
+    customerName?: string;
+    hasCustomer?: boolean;
+    purchaseStatus?: "with_purchases" | "without_purchases";
+    purchaseFrom?: string;
+    purchaseTo?: string;
+    campaignIds?: number[];
+    segmentIds?: number[];
+    registeredFrom?: string;
+    registeredTo?: string;
+    loyaltyOperatorIds?: number[];
+    page?: number;
+    perPage?: number;
+  }) {
+    let url = `/api/whatsapp/contacts/customer`;
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.name) params.append("name", filters.name);
+      if (filters.phone) params.append("phone", filters.phone);
+      if (filters.customerId !== undefined) params.append("customerId", String(filters.customerId));
+      if (filters.customerErp) params.append("customerErp", filters.customerErp);
+      if (filters.customerCnpj) params.append("customerCnpj", filters.customerCnpj);
+      if (filters.customerName) params.append("customerName", filters.customerName);
+      if (filters.hasCustomer !== undefined)
+        params.append("hasCustomer", String(filters.hasCustomer));
+      if (filters.purchaseStatus) params.append("purchaseStatus", filters.purchaseStatus);
+      if (filters.purchaseFrom) params.append("purchaseFrom", filters.purchaseFrom);
+      if (filters.purchaseTo) params.append("purchaseTo", filters.purchaseTo);
+      if (filters.campaignIds?.length) params.append("campaignIds", filters.campaignIds.join(","));
+      if (filters.segmentIds?.length) params.append("segmentIds", filters.segmentIds.join(","));
+      if (filters.registeredFrom) params.append("registeredFrom", filters.registeredFrom);
+      if (filters.registeredTo) params.append("registeredTo", filters.registeredTo);
+      if (filters.loyaltyOperatorIds?.length)
+        params.append("loyaltyOperatorIds", filters.loyaltyOperatorIds.join(","));
+      if (filters.page !== undefined) params.append("page", String(filters.page));
+      if (filters.perPage !== undefined) params.append("perPage", String(filters.perPage));
+      const queryString = params.toString();
+      if (queryString) url += `?${queryString}`;
+    }
+    const res = await this.ax.get<PaginatedContactsResponse>(url);
+    return res.data;
+  }
 
-	public async createContact(
-		name: string,
-		phone: string,
-		customerId?: number,
-		sectorIds?: number[],
-	) {
-		const baseUrl = `/api/whatsapp`;
-		const url = customerId
-			? `${baseUrl}/customers/${customerId}/contacts`
-			: `${baseUrl}/contacts`;
-		const body: Record<string, any> = { name, phone };
-		if (sectorIds !== undefined) body["sectorIds"] = sectorIds;
-		const { data: res } = await this.ax.post<DataResponse<WppContact>>(
-			url,
-			body,
-		);
-		return res.data;
-	}
+  public async getContacts() {
+    const url = `/api/whatsapp/contacts`;
+    const { data: res } = await this.ax.get<DataResponse<WppContact[]>>(url);
+    return res.data;
+  }
 
-	public async forwardMessages(clientId: string, data: ForwardMessagesData) {
-		const url = `/api/whatsapp/${clientId}/messages/forward`;
-		const body = data;
-		await this.ax.post<MessageResponse>(url, body);
-	}
+  public async createContact(
+    name: string,
+    phone: string,
+    customerId?: number,
+    sectorIds?: number[],
+    overwriteExisting = false,
+  ) {
+    const baseUrl = `/api/whatsapp`;
+    const url = customerId ? `${baseUrl}/customers/${customerId}/contacts` : `${baseUrl}/contacts`;
+    const body: Record<string, any> = { name, phone };
+    if (sectorIds !== undefined) body["sectorIds"] = sectorIds;
+    if (overwriteExisting) body["overwriteExisting"] = true;
+    const { data: res } = await this.ax.post<DataResponse<WppContact>>(url, body);
+    return res.data;
+  }
 
-	public async updateContact(
-		contactId: number,
-		name?: string,
-		customerId?: number | null,
-		sectorIds?: number[] | null,
-	) {
-		const url = `/api/whatsapp/contacts/${contactId}`;
-		const body: Record<string, any> = {};
-		if (name !== undefined) body["name"] = name;
-		if (customerId !== undefined) body["customerId"] = customerId;
-		if (sectorIds !== undefined) body["sectorIds"] = sectorIds;
-		const { data: res } = await this.ax.put<DataResponse<WppContact>>(
-			url,
-			body,
-		);
-		return res.data;
-	}
+  public async getDeletedContacts(page = 1, perPage = 20) {
+    const { data: res } = await this.ax.get(`/api/whatsapp/contacts/deleted`, {
+      params: { page, perPage },
+    });
+    return res;
+  }
 
-	public async addSectorToContact(contactId: number, sectorId: number) {
-		const url = `/api/whatsapp/contacts/${contactId}/sectors`;
-		const body = { sectorId };
-		const { data: res } = await this.ax.post<DataResponse<WppContact>>(
-			url,
-			body,
-		);
-		return res.data;
-	}
+  public async reactivateContact(
+    contactId: number,
+    data?: { name?: string; customerId?: number | null; sectorIds?: number[] },
+  ) {
+    const { data: res } = await this.ax.post<DataResponse<ContactActionOutcome>>(
+      `/api/whatsapp/contacts/${contactId}/reactivate`,
+      data,
+    );
+    return res.data;
+  }
 
-	public async deleteContact(contactId: number) {
-		const url = `/api/whatsapp/contacts/${contactId}`;
-		await this.ax.delete<MessageResponse>(url);
-	}
+  public async getContactActionRequests(filters?: {
+    status?: ContactActionRequestStatus;
+    action?: ContactActionRequestType;
+  }) {
+    const { data: res } = await this.ax.get(`/api/whatsapp/contact-action-requests`, {
+      params: filters,
+    });
+    return res.data;
+  }
 
-	public async getSectors() {
-		const url = `/api/whatsapp/sectors`;
-		const { data: res } =
-			await this.ax.get<DataResponse<{ id: number; name: string }[]>>(
-				url,
-			);
-		return res.data;
-	}
+  public async decideContactActionRequest(
+    requestId: number,
+    decision: "APPROVE" | "REJECT",
+    reviewNote?: string,
+  ) {
+    const { data: res } = await this.ax.patch(
+      `/api/whatsapp/contact-action-requests/${requestId}/decision`,
+      { decision, reviewNote },
+    );
+    return res.data;
+  }
 
-	public setAuth(token: string) {
-		this.ax.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-	}
+  public async forwardMessages(clientId: string, data: ForwardMessagesData) {
+    const url = `/api/whatsapp/${clientId}/messages/forward`;
+    const body = data;
+    await this.ax.post<MessageResponse>(url, body);
+  }
 
-	public async getChatsMonitor() {
-		const url = `/api/whatsapp/session/monitor`;
-		const { data: response } = await this.ax.get<GetChatsResponse | WppChatsAndMessages>(url);
-		return this.normalizeChatsPayload(response);
-	}
+  public async updateContact(
+    contactId: number,
+    name?: string,
+    customerId?: number | null,
+    sectorIds?: number[] | null,
+  ) {
+    const url = `/api/whatsapp/contacts/${contactId}`;
+    const body: Record<string, any> = {};
+    if (name !== undefined) body["name"] = name;
+    if (customerId !== undefined) body["customerId"] = customerId;
+    if (sectorIds !== undefined) body["sectorIds"] = sectorIds;
+    const { data: res } = await this.ax.put<DataResponse<WppContact>>(url, body);
+    return res.data;
+  }
 
-	public async transferAttendance(id: number, userId: number) {
-		const url = `/api/whatsapp/chats/${id}/transfer`;
-		const body = { userId };
-		await this.ax.post<MessageResponse>(url, body);
-	}
-	/**
-	 * Busca as notificações do usuário de forma paginada.
-	 */
-	public async getNotifications(params: { page: number; pageSize: number }) {
-		const searchParams = new URLSearchParams({
-			page: String(params.page),
-			pageSize: String(params.pageSize),
-		});
-		const url = `/api/whatsapp/notifications?${searchParams.toString()}`;
-		const { data: response } =
-			await this.ax.get<GetNotificationsResponse | PaginatedNotificationsResponse>(
-				url,
-			);
+  public async addSectorToContact(contactId: number, sectorId: number) {
+    const url = `/api/whatsapp/contacts/${contactId}/sectors`;
+    const body = { sectorId };
+    const { data: res } = await this.ax.post<DataResponse<WppContact>>(url, body);
+    return res.data;
+  }
 
-		const normalized = this.normalizeNotificationsPayload(response);
-		return {
-			data: normalized,
-		} as GetNotificationsResponse;
-	}
+  public async deleteContact(contactId: number) {
+    const url = `/api/whatsapp/contacts/${contactId}`;
+    const { data: res } = await this.ax.delete<DataResponse<ContactActionOutcome>>(url);
+    return res.data;
+  }
 
-	/**
-	 * Marca todas as notificações do usuário como lidas.
-	 */
-	public async markAllAsReadNotification() {
-		const url = `/api/whatsapp/notifications/mark-all-read`;
-		const { data: res } = await this.ax.patch<MessageResponse>(url);
-		return res;
-	}
+  public async getSectors() {
+    const url = `/api/whatsapp/sectors`;
+    const { data: res } = await this.ax.get<DataResponse<{ id: number; name: string }[]>>(url);
+    return res.data;
+  }
 
-	/**
-	 * Marca uma notificação específica como lida.
-	 * @param notificationId - O ID (numérico) da notificação a ser marcada.
-	 */
-	public async markOneAsReadNotification(notificationId: number) {
-		const url = `/api/whatsapp/notifications/${notificationId}/read`;
-		const { data: res } =
-			await this.ax.patch<DataResponse<AppNotification>>(url);
-		return res;
-	}
+  public setAuth(token: string) {
+    this.ax.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  }
 
-	/**
-	 * Obtém os detalhes de um agendamento.
-	 * @param filters - keys de WppSchedule.
-	 * @param userId/sectorId filtrar por usúario/setor
-	 * @returns Uma Promise que resolve para um array de objetos wppSchedule.
-	 */
-	public async getSchedules(
-		userId?: string,
-		sectorId?: string,
-		filters?: RequestFilters<WppSchedule>,
-	) {
-		let baseUrl = `/api/whatsapp/schedules`;
-		const params = new URLSearchParams(filters);
-		if (params.toString()) {
-			if (userId && sectorId) {
-				baseUrl += `?userId=${userId}&sectorId=${sectorId}&${params.toString()}`;
-			} else if (userId) {
-				baseUrl += `?userId=${userId}&${params.toString()}`;
-			} else if (sectorId) {
-				baseUrl += `?sectorId=${sectorId}&${params.toString()}`;
-			} else {
-				baseUrl += `?${params.toString()}`;
-			}
-		} else if (userId || sectorId) {
-			if (userId && sectorId) {
-				baseUrl += `?userId=${userId}&sectorId=${sectorId}`;
-			} else if (userId) {
-				baseUrl += `?userId=${userId}`;
-			} else if (sectorId) {
-				baseUrl += `?sectorId=${sectorId}`;
-			}
-		}
-		const response = await this.ax.get(baseUrl);
-		return response.data;
-	}
+  public async getChatsMonitor() {
+    const url = `/api/whatsapp/session/monitor`;
+    const { data: response } = await this.ax.get<GetChatsResponse | WppChatsAndMessages>(url);
+    return this.normalizeChatsPayload(response);
+  }
 
-	public async getUnifiedSchedules(filters?: UnifiedScheduleFilters) {
-		let baseUrl = `/api/whatsapp/schedules/unified`;
-		const params = new URLSearchParams(
-			Object.entries(filters ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
-				if (value !== undefined && value !== null) {
-					acc[key] = String(value);
-				}
+  public async transferAttendance(id: number, userId: number) {
+    const url = `/api/whatsapp/chats/${id}/transfer`;
+    const body = { userId };
+    await this.ax.post<MessageResponse>(url, body);
+  }
+  /**
+   * Busca as notificações do usuário de forma paginada.
+   */
+  public async getNotifications(params: { page: number; pageSize: number }) {
+    const searchParams = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
+    const url = `/api/whatsapp/notifications?${searchParams.toString()}`;
+    const { data: response } = await this.ax.get<
+      GetNotificationsResponse | PaginatedNotificationsResponse
+    >(url);
 
-				return acc;
-			}, {}),
-		);
+    const normalized = this.normalizeNotificationsPayload(response);
+    return {
+      data: normalized,
+    } as GetNotificationsResponse;
+  }
 
-		if (params.toString()) {
-			baseUrl += `?${params.toString()}`;
-		}
+  /**
+   * Marca todas as notificações do usuário como lidas.
+   */
+  public async markAllAsReadNotification() {
+    const url = `/api/whatsapp/notifications/mark-all-read`;
+    const { data: res } = await this.ax.patch<MessageResponse>(url);
+    return res;
+  }
 
-		const response = await this.ax.get<UnifiedSchedulesResponse>(baseUrl);
-		return response.data;
-	}
+  /**
+   * Marca uma notificação específica como lida.
+   * @param notificationId - O ID (numérico) da notificação a ser marcada.
+   */
+  public async markOneAsReadNotification(notificationId: number) {
+    const url = `/api/whatsapp/notifications/${notificationId}/read`;
+    const { data: res } = await this.ax.patch<DataResponse<AppNotification>>(url);
+    return res;
+  }
 
-	/**
-	 * Cria um novo agendamento.
-	 * @param scheduleData - Os dados do agendamento, keys de wppSchedule.
-	 * @returns Uma Promise que resolve para um objeto wppSchedule.
-	 */
-	public async createSchedule(data: CreateScheduleDTO) {
-		const response = await this.ax.post(`/api/whatsapp/schedules`, data);
-		return response.data;
-	}
+  /**
+   * Obtém os detalhes de um agendamento.
+   * @param filters - keys de WppSchedule.
+   * @param userId/sectorId filtrar por usúario/setor
+   * @returns Uma Promise que resolve para um array de objetos wppSchedule.
+   */
+  public async getSchedules(
+    userId?: string,
+    sectorId?: string,
+    filters?: RequestFilters<WppSchedule>,
+  ) {
+    let baseUrl = `/api/whatsapp/schedules`;
+    const params = new URLSearchParams(filters);
+    if (params.toString()) {
+      if (userId && sectorId) {
+        baseUrl += `?userId=${userId}&sectorId=${sectorId}&${params.toString()}`;
+      } else if (userId) {
+        baseUrl += `?userId=${userId}&${params.toString()}`;
+      } else if (sectorId) {
+        baseUrl += `?sectorId=${sectorId}&${params.toString()}`;
+      } else {
+        baseUrl += `?${params.toString()}`;
+      }
+    } else if (userId || sectorId) {
+      if (userId && sectorId) {
+        baseUrl += `?userId=${userId}&sectorId=${sectorId}`;
+      } else if (userId) {
+        baseUrl += `?userId=${userId}`;
+      } else if (sectorId) {
+        baseUrl += `?sectorId=${sectorId}`;
+      }
+    }
+    const response = await this.ax.get(baseUrl);
+    return response.data;
+  }
 
-	/**
-	 * Edita um agendamento existente.
-	 * @param scheduleId - O ID do agendamento a ser editado.
-	 * @param updatedData - Os dados atualizados do agendamento.
-	 * @returns Uma Promise que resolve para um objeto wppSchedule.
-	 */
-	public async updateSchedule(
-		scheduleId: number,
-		updatedData: Record<string, WppSchedule>,
-	) {
-		const response = await this.ax.patch(
-			`/api/whatsapp/schedules/${scheduleId}`,
-			updatedData,
-		);
-		return response.data;
-	}
+  public async getUnifiedSchedules(filters?: UnifiedScheduleFilters) {
+    let baseUrl = `/api/whatsapp/schedules/unified`;
+    const params = new URLSearchParams(
+      Object.entries(filters ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
+        if (value !== undefined && value !== null) {
+          acc[key] = String(value);
+        }
 
-	/**
-	 * Exclui um agendamento.
-	 * @param scheduleId - O ID do agendamento a ser excluído.
-	 * @returns Uma Promise que resolve para um objeto wppSchedule.
-	 */
-	public async deleteSchedule(scheduleId: number) {
-		const response = await this.ax.delete(
-			`/api/whatsapp/schedules/${scheduleId}`,
-		);
-		return response.data;
-	}
+        return acc;
+      }, {}),
+    );
 
-	public async getMessages(token: string, filters: FetchMessagesFilters) {
-		const params = new URLSearchParams(
-			Object.entries(filters)
-				.filter(([_, v]) => v !== undefined && v !== null)
-				.reduce<Record<string, string>>((acc, [k, v]) => {
-					acc[k] = String(v);
-					return acc;
-				}, {}),
-		);
-		const url = `/api/whatsapp/messages?${params.toString()}`;
-		const { data: res } = await this.ax.get<
-			DataResponse<(WppMessage & { WppContact: WppContact | null })[]>
-		>(url, {
-			headers: {
-				Authorization: `Bearer ${token}`,
-			},
-		});
-		return res.data;
-	}
-	public async getAutoResponseRules() {
-		const url = `/api/auto-response-rules`;
-		const { data: res } =
-			await this.ax.get<DataResponse<AutomaticResponseRule[]>>(url);
-		return res.data;
-	}
+    if (params.toString()) {
+      baseUrl += `?${params.toString()}`;
+    }
 
-	public async createAutoResponseRule(ruleData: AutomaticResponseRuleDTO) {
-		const url = `/api/auto-response-rules`;
-		const { data: res } = await this.ax.post<
-			DataResponse<AutomaticResponseRule>
-		>(url, ruleData);
-		return res.data;
-	}
+    const response = await this.ax.get<UnifiedSchedulesResponse>(baseUrl);
+    return response.data;
+  }
 
-	public async updateAutoResponseRule(
-		id: number,
-		ruleData: Omit<AutomaticResponseRuleDTO, "instance">,
-	) {
-		const url = `/api/auto-response-rules/${id}`;
-		const { data: res } = await this.ax.put<
-			DataResponse<AutomaticResponseRule>
-		>(url, ruleData);
-		return res.data;
-	}
+  /**
+   * Cria um novo agendamento.
+   * @param scheduleData - Os dados do agendamento, keys de wppSchedule.
+   * @returns Uma Promise que resolve para um objeto wppSchedule.
+   */
+  public async createSchedule(data: CreateScheduleDTO) {
+    const response = await this.ax.post(`/api/whatsapp/schedules`, data);
+    return response.data;
+  }
 
-	public async deleteAutoResponseRule(id: number) {
-		const url = `/api/auto-response-rules/${id}`;
-		await this.ax.delete<MessageResponse>(url);
-	}
+  /**
+   * Edita um agendamento existente.
+   * @param scheduleId - O ID do agendamento a ser editado.
+   * @param updatedData - Os dados atualizados do agendamento.
+   * @returns Uma Promise que resolve para um objeto wppSchedule.
+   */
+  public async updateSchedule(scheduleId: number, updatedData: Record<string, WppSchedule>) {
+    const response = await this.ax.patch(`/api/whatsapp/schedules/${scheduleId}`, updatedData);
+    return response.data;
+  }
+
+  /**
+   * Exclui um agendamento.
+   * @param scheduleId - O ID do agendamento a ser excluído.
+   * @returns Uma Promise que resolve para um objeto wppSchedule.
+   */
+  public async deleteSchedule(scheduleId: number) {
+    const response = await this.ax.delete(`/api/whatsapp/schedules/${scheduleId}`);
+    return response.data;
+  }
+
+  public async getMessages(token: string, filters: FetchMessagesFilters) {
+    const params = new URLSearchParams(
+      Object.entries(filters)
+        .filter(([_, v]) => v !== undefined && v !== null)
+        .reduce<Record<string, string>>((acc, [k, v]) => {
+          acc[k] = String(v);
+          return acc;
+        }, {}),
+    );
+    const url = `/api/whatsapp/messages?${params.toString()}`;
+    const { data: res } = await this.ax.get<
+      DataResponse<(WppMessage & { WppContact: WppContact | null })[]>
+    >(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return res.data;
+  }
+  public async getAutoResponseRules() {
+    const url = `/api/auto-response-rules`;
+    const { data: res } = await this.ax.get<DataResponse<AutomaticResponseRule[]>>(url);
+    return res.data;
+  }
+
+  public async createAutoResponseRule(ruleData: AutomaticResponseRuleDTO) {
+    const url = `/api/auto-response-rules`;
+    const { data: res } = await this.ax.post<DataResponse<AutomaticResponseRule>>(url, ruleData);
+    return res.data;
+  }
+
+  public async updateAutoResponseRule(
+    id: number,
+    ruleData: Omit<AutomaticResponseRuleDTO, "instance">,
+  ) {
+    const url = `/api/auto-response-rules/${id}`;
+    const { data: res } = await this.ax.put<DataResponse<AutomaticResponseRule>>(url, ruleData);
+    return res.data;
+  }
+
+  public async deleteAutoResponseRule(id: number) {
+    const url = `/api/auto-response-rules/${id}`;
+    await this.ax.delete<MessageResponse>(url);
+  }
 }

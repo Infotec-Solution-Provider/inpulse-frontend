@@ -37,12 +37,17 @@ import Typography from "@mui/material/Typography";
 import SearchIcon from "@mui/icons-material/Search";
 import { toast } from "react-toastify";
 import { AuthContext } from "@/app/auth-context";
+import { type MessageTemplate, useWhatsappContext } from "../../../../whatsapp-context";
+import { useReadyMessagesContext } from "../../../ready-messages/ready-messages-context";
 import funnelApiService from "@/lib/services/funnel.service";
 import type {
   AgendamentoParams,
   CompraParams,
   ConditionTemplate,
+  FunnelAudienceMode,
   FunnelStageWithConditions,
+  FunnelTriggerBinding,
+  FunnelTriggerSource,
   MinContatosParams,
   NoContactParams,
   ResultadoParams,
@@ -990,9 +995,21 @@ export default function FunnelConfigPage() {
   const router = useRouter();
   const params = useParams<{ instance: string; funnelId: string }>();
   const funnelId = parseInt(params.funnelId, 10);
+  const { readyMessages, fetchReadyMessages } = useReadyMessagesContext();
+  const { channels, wppApi } = useWhatsappContext();
 
   const [funnelName, setFunnelName] = useState("");
   const [funnelType, setFunnelType] = useState<"AUTOMATIC" | "MANUAL">("AUTOMATIC");
+  const [audienceMode, setAudienceMode] = useState<FunnelAudienceMode>("ALL_CUSTOMERS");
+  const [triggerBindings, setTriggerBindings] = useState<FunnelTriggerBinding[]>([]);
+  const [officialTemplates, setOfficialTemplates] = useState<MessageTemplate[]>([]);
+  const [readyMessagesLoaded, setReadyMessagesLoaded] = useState(false);
+  const [officialTemplatesLoaded, setOfficialTemplatesLoaded] = useState(false);
+  const [triggerSourceType, setTriggerSourceType] = useState<"READY_MESSAGE" | "WHATSAPP_TEMPLATE">("READY_MESSAGE");
+  const [selectedTriggerKey, setSelectedTriggerKey] = useState("");
+  const [triggerStageId, setTriggerStageId] = useState<number | "">("");
+  const [savingTrigger, setSavingTrigger] = useState(false);
+  const [deletingTriggerId, setDeletingTriggerId] = useState<number | null>(null);
   const [stages, setStages] = useState<FunnelStageWithConditions[]>([]);
   const [resultados, setResultados] = useState<Resultado[]>([]);
   const [templates, setTemplates] = useState<ConditionTemplate[]>([]);
@@ -1013,12 +1030,14 @@ export default function FunnelConfigPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const { funnel, resultados: res, templates: tpls } = await funnelApiService.getConfig(
+      const { funnel, resultados: res, templates: tpls, triggerBindings: bindings } = await funnelApiService.getConfig(
         token,
         funnelId,
       );
       setFunnelName(funnel.name);
       setFunnelType(funnel.type);
+      setAudienceMode(funnel.audienceMode);
+      setTriggerBindings(bindings ?? []);
       setStages(funnel.stages as FunnelStageWithConditions[]);
       setResultados(res);
       setTemplates(tpls);
@@ -1030,6 +1049,102 @@ export default function FunnelConfigPage() {
   }, [token, funnelId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReadyMessagesLoaded(false);
+    void fetchReadyMessages()
+      .then(() => {
+        if (!cancelled) setReadyMessagesLoaded(true);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [fetchReadyMessages]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setOfficialTemplatesLoaded(false);
+    const officialChannels = channels.filter((channel) => channel.type === "WABA" || channel.type === "GUPSHUP");
+    Promise.allSettled(
+      officialChannels.map((channel) =>
+        wppApi.current.ax.get<{ templates?: MessageTemplate[] }>(`/api/whatsapp/${channel.id}/templates`),
+      ),
+    ).then((results) => {
+      if (cancelled) return;
+      const deduplicated = new Map<string, MessageTemplate>();
+      for (const result of results) {
+        if (result.status !== "fulfilled") continue;
+        for (const template of result.value.data.templates ?? []) {
+          if (template.source !== "waba" && template.source !== "gupshup") continue;
+          const key = [template.source, template.name.trim().toLowerCase(), template.language.trim().toLowerCase()].join(":");
+          if (!deduplicated.has(key)) deduplicated.set(key, template);
+        }
+      }
+      setOfficialTemplates([...deduplicated.values()]);
+      setOfficialTemplatesLoaded(results.every((result) => result.status === "fulfilled"));
+    });
+    return () => { cancelled = true; };
+  }, [channels, wppApi]);
+
+  const triggerOptions: Array<{ key: string; label: string; source: FunnelTriggerSource }> =
+    triggerSourceType === "READY_MESSAGE"
+      ? readyMessages.map((message) => ({
+          key: `ready-message:${message.id}`,
+          label: message.title,
+          source: { type: "READY_MESSAGE", readyMessageId: message.id, label: message.title },
+        }))
+      : officialTemplates.map((template) => ({
+          key: ["template", template.source.trim().toLowerCase(), template.name.trim().toLowerCase(), template.language.trim().toLowerCase()].join(":"),
+          label: `${template.name} (${template.language}, ${template.source.toUpperCase()})`,
+          source: {
+            type: "WHATSAPP_TEMPLATE",
+            templateSource: template.source as "waba" | "gupshup",
+            templateName: template.name,
+            templateLanguage: template.language,
+            label: `${template.name} (${template.language}, ${template.source.toUpperCase()})`,
+          },
+        }));
+  const catalogSourceKeys = new Set([
+    ...readyMessages.map((message) => `ready-message:${message.id}`),
+    ...officialTemplates.map((template) =>
+      ["template", template.source.trim().toLowerCase(), template.name.trim().toLowerCase(), template.language.trim().toLowerCase()].join(":"),
+    ),
+  ]);
+  const currentTriggerBindings = triggerBindings.filter((binding) => binding.funnelId === funnelId);
+  const usedSourceKeys = new Set(triggerBindings.map((binding) => binding.sourceKey));
+  const bindingBySourceKey = new Map(triggerBindings.map((binding) => [binding.sourceKey, binding]));
+
+  const handleAddTrigger = async () => {
+    if (!token || !triggerStageId || !selectedTriggerKey) return;
+    const option = triggerOptions.find((item) => item.key === selectedTriggerKey);
+    if (!option) return;
+    setSavingTrigger(true);
+    try {
+      const created = await funnelApiService.createTriggerBinding(token, funnelId, triggerStageId, option.source);
+      setTriggerBindings((current) => [...current, created]);
+      if (funnelType === "AUTOMATIC") setAudienceMode("TRIGGERED");
+      setSelectedTriggerKey("");
+      toast.success("Gatilho de entrada criado.");
+    } catch {
+      toast.error("Não foi possível criar o gatilho. Verifique se a origem já está vinculada.");
+    } finally {
+      setSavingTrigger(false);
+    }
+  };
+
+  const handleDeleteTrigger = async (bindingId: number) => {
+    if (!token) return;
+    setDeletingTriggerId(bindingId);
+    try {
+      await funnelApiService.deleteTriggerBinding(token, funnelId, bindingId);
+      setTriggerBindings((current) => current.filter((binding) => binding.id !== bindingId));
+      toast.success("Gatilho removido. Os clientes já incluídos foram preservados.");
+    } catch {
+      toast.error("Não foi possível remover o gatilho.");
+    } finally {
+      setDeletingTriggerId(null);
+    }
+  };
 
   const handleAddStage = async () => {
     if (!token || !stageName.trim()) return;
@@ -1125,6 +1240,85 @@ export default function FunnelConfigPage() {
             Defina os estágios e as condições de classificação dos clientes.
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Gatilhos de entrada
+          </h2>
+          <p className="mt-1 text-xs text-slate-400">
+            Inclua o cliente depois do envio bem-sucedido de uma mensagem pronta ou template.
+          </p>
+          {funnelType === "AUTOMATIC" && audienceMode === "TRIGGERED" && (
+            <p className="mt-2 rounded bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              Este pipeline usa somente clientes que entraram por gatilhos. A reavaliação mantém uma etapa por cliente e apenas avança na ordem visual.
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr_1fr_auto]">
+          <TextField
+            select size="small" label="Origem" value={triggerSourceType}
+            onChange={(event) => {
+              setTriggerSourceType(event.target.value as "READY_MESSAGE" | "WHATSAPP_TEMPLATE");
+              setSelectedTriggerKey("");
+            }}
+          >
+            <MenuItem value="READY_MESSAGE">Mensagem pronta</MenuItem>
+            <MenuItem value="WHATSAPP_TEMPLATE">Template oficial</MenuItem>
+          </TextField>
+          <TextField
+            select size="small" label="Mensagem ou template" value={selectedTriggerKey}
+            onChange={(event) => setSelectedTriggerKey(event.target.value)}
+          >
+            {triggerOptions.map((option) => (
+              <MenuItem key={option.key} value={option.key} disabled={usedSourceKeys.has(option.key)}>
+                {option.label}{bindingBySourceKey.has(option.key)
+                  ? ` — ${bindingBySourceKey.get(option.key)?.funnelName} / ${bindingBySourceKey.get(option.key)?.stageName}`
+                  : ""}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select size="small" label="Etapa de entrada" value={triggerStageId}
+            onChange={(event) => setTriggerStageId(Number(event.target.value))}
+          >
+            {stages.map((stage) => <MenuItem key={stage.id} value={stage.id}>{stage.name}</MenuItem>)}
+          </TextField>
+          <Button
+            variant="contained" size="small" onClick={handleAddTrigger}
+            disabled={savingTrigger || !selectedTriggerKey || !triggerStageId}
+          >
+            {savingTrigger ? <CircularProgress size={16} color="inherit" /> : "Adicionar"}
+          </Button>
+        </div>
+
+        {currentTriggerBindings.length === 0 ? (
+          <p className="text-xs text-slate-400">Nenhum gatilho configurado.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {currentTriggerBindings.map((binding) => {
+              const stage = stages.find((item) => item.id === binding.stageId);
+              const catalogLoaded = binding.sourceType === "READY_MESSAGE" ? readyMessagesLoaded : officialTemplatesLoaded;
+              const unavailable = catalogLoaded && !catalogSourceKeys.has(binding.sourceKey);
+              return (
+                <div key={binding.id} className="flex items-center justify-between gap-3 rounded border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-700 dark:text-slate-200">{binding.sourceLabel}</p>
+                    <p className="text-xs text-slate-400">
+                      {binding.sourceType === "READY_MESSAGE" ? "Mensagem pronta" : "Template oficial"} → {stage?.name ?? "Etapa removida"}
+                      {unavailable ? " · origem indisponível" : ""}
+                    </p>
+                  </div>
+                  <IconButton size="small" color="error" disabled={deletingTriggerId === binding.id} onClick={() => handleDeleteTrigger(binding.id)}>
+                    {deletingTriggerId === binding.id ? <CircularProgress size={14} /> : <DeleteIcon fontSize="small" />}
+                  </IconButton>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Stages section ───────────────────────────────────────────────────────────────────────── */}

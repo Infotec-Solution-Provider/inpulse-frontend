@@ -11,11 +11,13 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import { Avatar, IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AppContext } from "../../app-context";
 import { useWhatsappContext } from "../../whatsapp-context";
@@ -27,6 +29,7 @@ import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
+import { useAuthContext } from "@/app/auth-context";
 
 const safeFormatPhone = (phone: string | null): string => {
   try {
@@ -60,6 +63,8 @@ export default function ChatHeader({
   customerId,
   onClose,
 }: ChatContactInfoProps) {
+	const { instance } = useAuthContext();
+	const router = useRouter();
   const { openModal, closeModal } = useContext(AppContext);
   const { currentChat, currentChatMessages, parameters } = useWhatsappContext();
   const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
@@ -69,16 +74,28 @@ export default function ChatHeader({
     currentChat?.chatType === "wpp" &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiSupervisor);
+  const canOpenSupervisorAssistant =
+    currentChat?.chatType === "wpp" &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.aiSupervisor);
   const canOpenCustomerDetail = currentChat?.chatType === "wpp" && !!customerId;
   const hasAiAgent =
     currentChat?.chatType === "wpp" &&
     !!(currentChat as { agentId?: number | null }).agentId &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
-  const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || hasAiAgent || canInteract;
+  const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || canOpenSupervisorAssistant || hasAiAgent || canInteract;
 
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
   const [mobileActionsAnchor, setMobileActionsAnchor] = useState<null | HTMLElement>(null);
+
+  const openSupervisorAssistant = () => {
+    const query = new URLSearchParams();
+    if (currentChat?.id) query.set("chatId", String(currentChat.id));
+    if (customerId) query.set("customerId", String(customerId));
+    const suffix = query.toString();
+    router.push(`/${instance}/ai-supervisor${suffix ? `?${suffix}` : ""}`);
+  };
 
   const lastMessageBody = useMemo(() => {
     const lastMessage = [...currentChatMessages].reverse().find((message) => message.body?.trim());
@@ -186,6 +203,13 @@ export default function ChatHeader({
         )}
       </div>
       <div className="hidden items-center md:flex">
+		{canOpenSupervisorAssistant && (
+			<Tooltip title={<h3 className="text-base dark:text-white">Abrir no Assistente</h3>}>
+				<IconButton onClick={openSupervisorAssistant}>
+					<SmartToyOutlinedIcon sx={{ color: "#0ea5e9" }} />
+				</IconButton>
+			</Tooltip>
+		)}
         {hasAiAgent && (
           <Tooltip title={<h3 className="text-base dark:text-white">Logs do Agente de IA</h3>}>
             <IconButton onClick={() => setAuditDrawerOpen(true)}>
@@ -302,6 +326,11 @@ export default function ChatHeader({
               <AutoAwesomeIcon className="mr-3" color="info" /> Sugerir resposta
             </MenuItem>
           )}
+		  {canOpenSupervisorAssistant && (
+			<MenuItem onClick={() => { setMobileActionsAnchor(null); openSupervisorAssistant(); }}>
+				<SmartToyOutlinedIcon className="mr-3" color="primary" /> Abrir no Assistente
+			</MenuItem>
+		  )}
           {hasAiAgent && (
             <MenuItem onClick={() => { setMobileActionsAnchor(null); setAuditDrawerOpen(true); }}>
               <ManageAccountsIcon className="mr-3" color="secondary" /> Logs do agente

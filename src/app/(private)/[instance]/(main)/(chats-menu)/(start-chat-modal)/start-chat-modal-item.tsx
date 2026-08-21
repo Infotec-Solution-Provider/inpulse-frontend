@@ -17,14 +17,11 @@ import { toast } from "react-toastify";
 import { useAuthContext } from "../../../../../auth-context";
 import { getShortenedName } from "../../../../../../lib/utils/shorten-name";
 import CustomerCrmDetailModal from "./customer-crm-detail-modal";
-import type { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";
 
 interface StartChatModalItemProps {
   contact: WppContact;
   customer?: Customer | null;
   chatingWith?: string | null;
-  profileSummary?: CustomerProfileSummaryPayload | null;
-  isProfileLoading?: boolean;
   onSelect: () => void;
 }
 
@@ -32,8 +29,6 @@ export default function StartChatModalItem({
   contact,
   customer = null,
   chatingWith = null,
-  profileSummary = null,
-  isProfileLoading = false,
   onSelect,
 }: StartChatModalItemProps) {
   const {
@@ -47,7 +42,7 @@ export default function StartChatModalItem({
     wppApi,
   } = useContext(WhatsappContext);
   const { openModal, closeModal } = useAppContext();
-  const { pathname, instance, user } = useAuthContext()
+  const { pathname, instance, user } = useAuthContext();
 
   const shouldShowViewOnly = useMemo(() => {
     if (instance === "karsten") return true;
@@ -56,7 +51,6 @@ export default function StartChatModalItem({
   }, [instance, user]);
 
   const isCustomerDetailEnabled = parameters["customer_detail_modal_enabled"] === "true";
-
 
   const handleClickStart = useCallback(() => {
     prepareReadOnlyOpen(false);
@@ -80,7 +74,16 @@ export default function StartChatModalItem({
       startChatByContactId(contact.id);
       onSelect();
     }
-  }, [contact.id, customer, onSelect, parameters, prepareReadOnlyOpen, startChatByContactId, openModal, closeModal]);
+  }, [
+    contact.id,
+    customer,
+    onSelect,
+    parameters,
+    prepareReadOnlyOpen,
+    startChatByContactId,
+    openModal,
+    closeModal,
+  ]);
 
   const handleClickViewOnly = async () => {
     const normalizedPhone = contact.phone?.replace(/\D/g, "") || "";
@@ -170,7 +173,7 @@ export default function StartChatModalItem({
         customerId={customer.CODIGO}
         onClose={closeModal}
         canEdit={canEditCustomerDetail}
-      />
+      />,
     );
   }, [customer, openModal, closeModal, parameters]);
 
@@ -185,40 +188,6 @@ export default function StartChatModalItem({
       return phone;
     }
   };
-
-  const qualificationChips = useMemo(() => {
-    if (!profileSummary) {
-      return [];
-    }
-
-    return [
-      {
-        key: "summary",
-        label: profileSummary.label,
-        color: profileSummary.color,
-      },
-      {
-		key: "purchase-interest",
-		label: profileSummary.purchaseInterest.label,
-		color: profileSummary.purchaseInterest.color,
-	  },
-      {
-        key: "interaction",
-        label: profileSummary.tags.interaction.label,
-        color: profileSummary.tags.interaction.color,
-      },
-      {
-        key: "purchase",
-        label: profileSummary.tags.purchase.label,
-        color: profileSummary.tags.purchase.color,
-      },
-      {
-        key: "age",
-        label: profileSummary.tags.age.label,
-        color: profileSummary.tags.age.color,
-      },
-    ];
-  }, [profileSummary]);
 
   return (
     <div
@@ -286,35 +255,6 @@ export default function StartChatModalItem({
                   </span>
                 </div>
               )}
-
-              {isProfileLoading ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Chip
-                    size="small"
-                    label="Qualificando..."
-                    sx={{ height: 20, fontSize: "0.68rem", fontWeight: 600, "& .MuiChip-label": { px: 0.75 } }}
-                  />
-                </div>
-              ) : qualificationChips.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {qualificationChips.map((chip, index) => (
-                    <Chip
-                      key={chip.key}
-                      size="small"
-                      label={chip.label}
-                      sx={{
-                        height: 20,
-                        fontSize: "0.68rem",
-                        fontWeight: index === 0 ? 700 : 600,
-                        color: chip.color,
-                        border: `1px solid ${chip.color}`,
-                        backgroundColor: `${chip.color}14`,
-                        "& .MuiChip-label": { px: 0.75 },
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : null}
             </div>
           ) : (
             <div className="flex h-full min-h-[64px] items-center border-l-2 border-gray-200 pl-4 dark:border-gray-700">
@@ -368,7 +308,8 @@ export default function StartChatModalItem({
               >
                 <VisibilityIcon />
               </IconButton>
-            </Tooltip>)}
+            </Tooltip>
+          )}
           {chatingWith ? (
             <Tooltip title={`Em conversa com ${chatingWith}`} arrow>
               <Chip

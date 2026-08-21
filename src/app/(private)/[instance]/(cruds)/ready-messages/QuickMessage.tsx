@@ -89,6 +89,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
           chatId: chat.id,
           contactId: chat.contactId ?? 0,
           text,
+          readyMessageId: selectedMessage.id,
           ...(selectedMessage.fileId
             ? {
                 fileId: selectedMessage.fileId,

@@ -10,6 +10,8 @@ import type {
   FunnelSnapshotStatusResponse,
   FunnelStageDef,
   FunnelType,
+  FunnelTriggerBinding,
+  FunnelTriggerSource,
   StageCondition,
   StageConditionType,
 } from "../types/funnel.types";
@@ -73,6 +75,26 @@ async function createFunnel(token: string, name: string, type: FunnelType = "AUT
 
 async function deleteFunnel(token: string, funnelId: number): Promise<void> {
   await axios.delete(`${base}/api/marketing/funnels/${funnelId}`, {
+    headers: authHeader(token),
+  });
+}
+
+async function createTriggerBinding(
+  token: string,
+  funnelId: number,
+  stageId: number,
+  source: FunnelTriggerSource,
+): Promise<FunnelTriggerBinding> {
+  const res = await axios.post<{ data: FunnelTriggerBinding }>(
+    `${base}/api/marketing/funnels/${funnelId}/triggers`,
+    { stageId, source },
+    { headers: authHeader(token) },
+  );
+  return res.data.data;
+}
+
+async function deleteTriggerBinding(token: string, funnelId: number, bindingId: number): Promise<void> {
+  await axios.delete(`${base}/api/marketing/funnels/${funnelId}/triggers/${bindingId}`, {
     headers: authHeader(token),
   });
 }
@@ -320,6 +342,8 @@ const funnelApiService = {
   getFunnel,
   createFunnel,
   deleteFunnel,
+  createTriggerBinding,
+  deleteTriggerBinding,
   createStage,
   deleteStage,
   getConfig,

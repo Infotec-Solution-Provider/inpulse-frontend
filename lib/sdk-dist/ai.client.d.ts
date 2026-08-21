@@ -1,5 +1,5 @@
 import ApiClient from "./api-client";
-import type { AiAgentConfig, AiTenantConfig, AnalyzeCustomerRequest, AnalyzeCustomerResponse, CreateSupervisorAiSessionRequest, SuggestResponseRequest, SuggestResponseResponse, SupervisorAiSession, SupervisorAiSessionDetail, SummarizeChatRequest, SummarizeChatResponse, AiAgent, AiAgentChatSession, CreateAiAgentInput, UpdateAiAgentInput, AiAgentAudienceInput, AiAgentKnowledgeEntryInput, AiAgentActionLogFilters, PaginatedActionLogs, AiAgentAudiencePreview, SendSupervisorAiMessageRequest, SendSupervisorAiMessageResponse, AiUsageSummary } from "./types/ai.types";
+import type { AiAgentConfig, AiTenantConfig, AnalyzeCustomerRequest, AnalyzeCustomerResponse, CreateSupervisorAiSessionRequest, DecideSupervisorAiActionRequest, SuggestResponseRequest, SuggestResponseResponse, SupervisorAiAction, SupervisorAiSession, SupervisorAiSessionDetail, SummarizeChatRequest, SummarizeChatResponse, AiAgent, AiAgentChatSession, CreateAiAgentInput, UpdateAiAgentInput, AiAgentAudienceInput, AiAgentKnowledgeEntryInput, AiAgentActionLogFilters, PaginatedActionLogs, AiAgentAudiencePreview, SendSupervisorAiMessageRequest, SendSupervisorAiMessageResponse, AiUsageSummary, UpdateSupervisorAiSessionRequest } from "./types/ai.types";
 export default class AiClient extends ApiClient {
     private authHeader;
     suggestResponse(data: SuggestResponseRequest, token: string): Promise<SuggestResponseResponse>;
@@ -8,8 +8,10 @@ export default class AiClient extends ApiClient {
     listSupervisorSessions(token: string, status?: "ACTIVE" | "ARCHIVED"): Promise<SupervisorAiSession[]>;
     createSupervisorSession(data: CreateSupervisorAiSessionRequest | undefined, token: string): Promise<SupervisorAiSession>;
     patchSupervisorSessionStatus(sessionId: number, status: "ACTIVE" | "ARCHIVED", token: string): Promise<SupervisorAiSession>;
+    patchSupervisorSession(sessionId: number, data: UpdateSupervisorAiSessionRequest, token: string): Promise<SupervisorAiSession>;
     getSupervisorSession(sessionId: number, token: string): Promise<SupervisorAiSessionDetail>;
     sendSupervisorMessage(sessionId: number, data: SendSupervisorAiMessageRequest, token: string): Promise<SendSupervisorAiMessageResponse>;
+    decideSupervisorAction(sessionId: number, actionId: number, data: DecideSupervisorAiActionRequest, token: string): Promise<SupervisorAiAction>;
     getTenantConfig(instance: string, token: string): Promise<AiTenantConfig>;
     upsertTenantConfig(instance: string, data: Partial<AiTenantConfig>, token: string): Promise<AiTenantConfig>;
     getAgentConfig(instance: string, token: string): Promise<AiAgentConfig | null>;

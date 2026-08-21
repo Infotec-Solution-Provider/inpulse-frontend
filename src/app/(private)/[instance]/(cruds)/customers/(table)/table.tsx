@@ -10,17 +10,13 @@ import {
   TablePagination,
   TableRow,
 } from "@mui/material";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext } from "react";
 import { AppContext } from "../../../app-context";
 import { CustomersContext } from "../customers-context";
-import { WhatsappContext } from "../../../whatsapp-context";
-import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
-import { CustomerProfileSummaryPayload } from "@/lib/types/customer-profile-summary";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import { toast } from "react-toastify";
 import ContactsModal from "./(modal)/contacts-modal";
 import CreateCustomerModal from "./(modal)/create-customer-modal";
-import EditCustomerProfileTagsModal from "./(modal)/edit-customer-profile-tags-modal";
 import EditCustomerModal from "./(modal)/edit-customer-modal";
 import ClientTableHeader from "./table-header";
 import CustomersTableItem from "./table-item";
@@ -28,93 +24,6 @@ import CustomersTableItem from "./table-item";
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
   const { state, dispatch } = useContext(CustomersContext);
-  const { parameters, wppApi } = useContext(WhatsappContext);
-  const canUseProfileTags = isFeatureEnabled(parameters, FEATURE_FLAGS.customerProfileTags);
-  const [profileSummaries, setProfileSummaries] = useState<Record<number, CustomerProfileSummaryPayload | null>>({});
-  const [isLoadingProfileSummaries, setIsLoadingProfileSummaries] = useState(false);
-
-  const customerIds = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          state.customers
-            .map((customer) => Number(customer.CODIGO))
-            .filter((customerId) => Number.isInteger(customerId) && customerId > 0),
-        ),
-      ),
-    [state.customers],
-  );
-
-  useEffect(() => {
-    if (!canUseProfileTags || !wppApi.current || !customerIds.length) {
-      setIsLoadingProfileSummaries(false);
-      return;
-    }
-
-    const missingCustomerIds = customerIds.filter((customerId) => !(customerId in profileSummaries));
-    if (!missingCustomerIds.length) {
-      setIsLoadingProfileSummaries(false);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoadingProfileSummaries(true);
-
-    wppApi.current.ax
-      .post<{ message: string; data: CustomerProfileSummaryPayload[] }>(
-        "/api/whatsapp/customers/profile-tags/summary/batch",
-        { customerIds: missingCustomerIds },
-      )
-      .then((response) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setProfileSummaries((current) => {
-          const next = { ...current };
-          const resolvedCustomerIds = new Set<number>();
-
-          for (const summary of response.data.data) {
-            next[summary.customerId] = summary;
-            resolvedCustomerIds.add(summary.customerId);
-          }
-
-          for (const customerId of missingCustomerIds) {
-            if (!resolvedCustomerIds.has(customerId)) {
-              next[customerId] = null;
-            }
-          }
-
-          return next;
-        });
-      })
-      .catch((error) => {
-        console.error("Erro ao carregar tags de perfil dos clientes:", error);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setProfileSummaries((current) => {
-          const next = { ...current };
-
-          for (const customerId of missingCustomerIds) {
-            next[customerId] = null;
-          }
-
-          return next;
-        });
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingProfileSummaries(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [canUseProfileTags, customerIds, profileSummaries, wppApi]);
 
   function openEditCustomerModal(customer: Customer) {
     if (isSystemDefaultCustomer(customer.CODIGO)) {
@@ -131,21 +40,6 @@ export default function CustomersTable() {
 
   function openContactModal(customer: Customer) {
     openModal(<ContactsModal customer={customer} />);
-  }
-
-  function openEditProfileTagsModal(customer: Customer) {
-    openModal(
-      <EditCustomerProfileTagsModal
-        customer={customer}
-        profileSummary={profileSummaries[customer.CODIGO] ?? null}
-        onSaved={(summary) => {
-          setProfileSummaries((current) => ({
-            ...current,
-            [customer.CODIGO]: summary,
-          }));
-        }}
-      />,
-    );
   }
 
   const onChangePage = (page: number) => {
@@ -167,7 +61,11 @@ export default function CustomersTable() {
           width: "100%",
         }}
       >
-        <Table className="scrollbar-whatsapp" stickyHeader sx={{ width: "100%", minWidth: "100%", tableLayout: "auto" }}>
+        <Table
+          className="scrollbar-whatsapp"
+          stickyHeader
+          sx={{ width: "100%", minWidth: "100%", tableLayout: "auto" }}
+        >
           <ClientTableHeader />
           <TableBody
             sx={{
@@ -177,7 +75,7 @@ export default function CustomersTable() {
             {state.isLoading && (
               <TableRow sx={{ height: "300px" }}>
                 <TableCell
-                  colSpan={9}
+                  colSpan={8}
                   className="border-0"
                   sx={{
                     textAlign: "center",
@@ -196,7 +94,7 @@ export default function CustomersTable() {
             {!state.isLoading && state.customers.length === 0 && (
               <TableRow className="h-[30rem]">
                 <TableCell
-                  colSpan={9}
+                  colSpan={8}
                   align="center"
                   sx={{
                     borderBottom: "none",
@@ -215,10 +113,6 @@ export default function CustomersTable() {
                 <CustomersTableItem
                   key={`${client.CODIGO}`}
                   customer={client}
-                  profileSummary={profileSummaries[client.CODIGO] ?? null}
-                  isProfileLoading={isLoadingProfileSummaries && !(client.CODIGO in profileSummaries)}
-                  canUseProfileTags={canUseProfileTags}
-                  openEditProfileTagsHandler={openEditProfileTagsModal}
                   openEditModalHandler={openEditCustomerModal}
                   openContactModalHandler={openContactModal}
                 />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
+import { AI_MODEL_CATALOG } from "@/lib/ai-model-catalog";
 import filesService from "@/lib/services/files.service";
 import type {
   AiAgent,
@@ -160,7 +161,7 @@ const DEFAULT_MESSAGE_DURING_HOURS_TRIGGER_CONFIG = {
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-const MODEL_OPTIONS = ["gpt-5.4", "gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"];
+const MODEL_OPTIONS = AI_MODEL_CATALOG.map((model) => model.value);
 
 const PROFILE_LEVEL_OPTIONS: { value: CustomerProfileSummaryLevel; label: string }[] = [
   { value: "potencial_de_compra", label: "Potencial de compra" },

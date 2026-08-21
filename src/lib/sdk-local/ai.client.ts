@@ -6,9 +6,11 @@ import type {
 	AnalyzeCustomerRequest,
 	AnalyzeCustomerResponse,
 	CreateSupervisorAiSessionRequest,
+	DecideSupervisorAiActionRequest,
 	SuggestResponseRequest,
 	SuggestResponseResponse,
 	SupervisorAiSession,
+	SupervisorAiAction,
 	SupervisorAiSessionDetail,
 	SummarizeChatRequest,
 	SummarizeChatResponse,
@@ -17,6 +19,7 @@ import type {
 	AiAgentActionLog,
 	CreateAiAgentInput,
 	UpdateAiAgentInput,
+	UpdateSupervisorAiSessionRequest,
 	AiAgentAudienceInput,
 	AiAgentKnowledgeEntryInput,
 	AiAgentActionLogFilters,
@@ -86,9 +89,17 @@ export default class AiClient extends ApiClient {
 		status: "ACTIVE" | "ARCHIVED",
 		token: string,
 	): Promise<SupervisorAiSession> {
+		return this.patchSupervisorSession(sessionId, { status }, token);
+	}
+
+	async patchSupervisorSession(
+		sessionId: number,
+		data: UpdateSupervisorAiSessionRequest,
+		token: string,
+	): Promise<SupervisorAiSession> {
 		const { data: res } = await this.ax.patch<DataResponse<SupervisorAiSession>>(
 			`/api/ai/supervisor-chat/sessions/${sessionId}`,
-			{ status },
+			data,
 			{ headers: this.authHeader(token) },
 		);
 		return res.data;
@@ -109,6 +120,20 @@ export default class AiClient extends ApiClient {
 	): Promise<SendSupervisorAiMessageResponse> {
 		const { data: res } = await this.ax.post<DataResponse<SendSupervisorAiMessageResponse>>(
 			`/api/ai/supervisor-chat/sessions/${sessionId}/messages`,
+			data,
+			{ headers: this.authHeader(token) },
+		);
+		return res.data;
+	}
+
+	async decideSupervisorAction(
+		sessionId: number,
+		actionId: number,
+		data: DecideSupervisorAiActionRequest,
+		token: string,
+	): Promise<SupervisorAiAction> {
+		const { data: res } = await this.ax.post<DataResponse<SupervisorAiAction>>(
+			`/api/ai/supervisor-chat/sessions/${sessionId}/actions/${actionId}/decision`,
 			data,
 			{ headers: this.authHeader(token) },
 		);

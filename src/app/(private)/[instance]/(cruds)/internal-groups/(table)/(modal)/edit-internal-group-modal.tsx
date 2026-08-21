@@ -45,6 +45,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
   const { updateInternalGroup, updateInternalGroupImage, wppGroups } = useInternalGroupsContext();
+  const safeWppGroups = Array.isArray(wppGroups) ? wppGroups : [];
 
   const [name, setName] = useState(group.groupName);
   const [selectedUser, setSelectedUser] = useState<UnifiedContact | null>(null);
@@ -59,7 +60,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
     }
 
     setSelectedGroup(
-      wppGroups.find((wppGroup) => wppGroup.id === group.wppGroupId) ?? {
+      safeWppGroups.find((wppGroup) => wppGroup.id === group.wppGroupId) ?? {
         id: group.wppGroupId,
         name: group.wppGroupId,
       },
@@ -283,7 +284,7 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
             selectedUser={selectedUser}
             userOptions={userOptions}
             selectedGroup={selectedGroup}
-            wppGroups={wppGroups}
+            wppGroups={safeWppGroups}
             getParticipantKey={getParticipantKey}
             onSelectedUserChange={setSelectedUser}
             onAddUser={handleAddUser}

@@ -40,6 +40,7 @@ type LoadContactsAction = {
 };
 type UpdateContactAction = { type: "update-contact"; id: number; name: string };
 type AddContactAction = { type: "add-contact"; data: ContactWithSectors };
+type UpsertContactAction = { type: "upsert-contact"; data: ContactWithSectors };
 type DeleteContactAction = { type: "delete-contact"; id: number };
 
 type PaginationActions = ChangePageAction | ChangePerPageAction | ChangeTotalRowsAction;
@@ -48,6 +49,7 @@ type ContactActions =
   | LoadContactsAction
   | UpdateContactAction
   | AddContactAction
+  | UpsertContactAction
   | DeleteContactAction;
 
 export type MultipleActions = {
@@ -139,6 +141,16 @@ export default function contactsReducer(
         contacts: [action.data, ...prev.contacts],
         totalRows: prev.totalRows + 1,
       };
+    case "upsert-contact": {
+      const exists = prev.contacts.some((contact) => contact.id === action.data.id);
+      return {
+        ...prev,
+        contacts: exists
+          ? prev.contacts.map((contact) => (contact.id === action.data.id ? action.data : contact))
+          : [action.data, ...prev.contacts],
+        totalRows: exists ? prev.totalRows : prev.totalRows + 1,
+      };
+    }
     case "delete-contact":
       return {
         ...prev,

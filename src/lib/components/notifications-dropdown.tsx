@@ -19,6 +19,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ContactModal from "./contact-modal-detail";
 
@@ -157,6 +158,8 @@ const useNotificationHandler = () => {
 
 export default function NotificationsDropdown() {
   const theme = useTheme();
+  const router = useRouter();
+  const params = useParams<{ instance: string }>();
   const {
     isLoading,
     hasMore,
@@ -192,14 +195,20 @@ export default function NotificationsDropdown() {
   const handleNotificationClick = useCallback(
     async (notif: AppNotification) => {
       handleClose();
-      setIsModalOpen(true);
-      setIsContactLoading(true);
-      setSelectedContact(null);
-      setSelectedChat(null);
 
       if (!notif.read) {
         markSingleAsReadNotification(notif.id as number);
       }
+
+      if (notif.actionUrl) {
+        router.push(`/${params.instance}${notif.actionUrl}`);
+        return;
+      }
+
+      setIsModalOpen(true);
+      setIsContactLoading(true);
+      setSelectedContact(null);
+      setSelectedChat(null);
 
       try {
         if (notif.chatId == null) {
@@ -222,7 +231,7 @@ export default function NotificationsDropdown() {
         setIsContactLoading(false);
       }
     },
-    [getChatById, handleClose, markSingleAsReadNotification],
+    [getChatById, handleClose, markSingleAsReadNotification, params.instance, router],
   );
 
   const filteredNotifications = useMemo(() => {

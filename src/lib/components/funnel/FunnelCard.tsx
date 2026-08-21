@@ -48,9 +48,15 @@ export default function FunnelCard({ card, stageId, isDragging = false }: Props)
   const { funnelType, removeManualEntry } = useFunnelContext();
   const isManual = funnelType === "MANUAL";
 
-  const draggableId = card.entryId !== undefined ? `${card.entryId}:${stageId}` : `static:${card.ccId}`;
-  const { attributes, listeners, setNodeRef, transform, isDragging: isDraggingHook } =
-    useDraggable({ id: draggableId, disabled: !isManual || card.entryId === undefined });
+  const draggableId =
+    card.entryId !== undefined ? `${card.entryId}:${stageId}` : `static:${card.ccId}`;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging: isDraggingHook,
+  } = useDraggable({ id: draggableId, disabled: !isManual || card.entryId === undefined });
 
   const style = transform
     ? { transform: CSS.Translate.toString(transform), opacity: isDraggingHook ? 0.4 : 1 }
@@ -69,6 +75,12 @@ export default function FunnelCard({ card, stageId, isDragging = false }: Props)
   };
 
   const totalVendas = card.totalVendas ?? 0;
+  const initials = card.nome
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 
   return (
     <div ref={setNodeRef} style={style} className="relative">
@@ -83,23 +95,52 @@ export default function FunnelCard({ card, stageId, isDragging = false }: Props)
         </span>
       )}
 
-      <button
+      <div
+        role="link"
+        tabIndex={0}
         onClick={handleClick}
-        className={`group w-full rounded-lg border border-slate-200 bg-white p-2.5 text-left shadow-sm transition-all hover:border-slate-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600 ${isManual ? "pl-5" : ""}`}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleClick();
+          }
+        }}
+        aria-label={`Abrir cliente ${card.nome}`}
+        className={`group w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-3 text-left shadow-sm outline-none transition-all hover:-translate-y-px hover:border-blue-200 hover:shadow-md focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-blue-700 ${isManual ? "pl-6" : ""}`}
       >
         {/* Row 1: Name + delete */}
-        <div className="flex items-start justify-between gap-1.5">
-          <span className="text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100">
-            {card.nome}
-          </span>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+              {initials || "?"}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100">
+                {card.nome}
+              </p>
+              {card.fone1 && (
+                <p className="mt-0.5 truncate text-[10px] text-slate-400 dark:text-slate-500">
+                  {card.fone1}
+                </p>
+              )}
+            </div>
+          </div>
           {isManual && !isDragging && card.entryId !== undefined && (
             <IconButton
               size="small"
               onClick={handleRemove}
-              className="shrink-0 opacity-0 group-hover:opacity-100"
-              sx={{ width: 18, height: 18, mt: "-1px", color: "error.main" }}
+              aria-label={`Remover ${card.nome} desta etapa`}
+              className="shrink-0 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
+              sx={{
+                width: 24,
+                height: 24,
+                mt: "-2px",
+                color: "text.secondary",
+                "&:hover": { color: "error.main" },
+              }}
             >
-              <DeleteOutlineIcon style={{ fontSize: 12 }} />
+              <DeleteOutlineIcon style={{ fontSize: 15 }} />
             </IconButton>
           )}
         </div>
@@ -110,13 +151,13 @@ export default function FunnelCard({ card, stageId, isDragging = false }: Props)
             {card.groupName && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/25 dark:text-blue-300">
                 <GroupsIcon style={{ fontSize: 9 }} />
-                {card.groupName}
+                <span className="max-w-28 truncate">{card.groupName}</span>
               </span>
             )}
             {card.segmentName && (
               <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-900/25 dark:text-violet-300">
                 <LabelIcon style={{ fontSize: 9 }} />
-                {card.segmentName}
+                <span className="max-w-28 truncate">{card.segmentName}</span>
               </span>
             )}
           </div>
@@ -173,8 +214,7 @@ export default function FunnelCard({ card, stageId, isDragging = false }: Props)
             </span>
           ) : null}
         </div>
-      </button>
+      </div>
     </div>
   );
 }
-

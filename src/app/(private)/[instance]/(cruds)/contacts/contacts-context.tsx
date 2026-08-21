@@ -10,7 +10,7 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { Customer, WppContact } from "@/lib/sdk-local";
+import { ContactRegistrationConflict, Customer, WppContact } from "@/lib/sdk-local";
 import { Logger } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
@@ -19,6 +19,7 @@ import useInternalChatContext from "../../internal-context";
 import { useWhatsappContext } from "../../whatsapp-context";
 import ContactModal from "./(table)/(modal)/contact-modal";
 import DeleteContactModal from "./(table)/(modal)/delete-contact-modal";
+import ContactRegistrationConflictModal from "./(table)/(modal)/contact-registration-conflict-modal";
 import contactsReducer, {
   ChangeContactsStateAction,
   ContactWithSectors,
@@ -61,6 +62,14 @@ interface IContactsContext {
   sectorMap: Map<number, string>;
 }
 
+const getRegistrationConflict = (error: unknown): ContactRegistrationConflict | null => {
+  const payload = (error as any)?.cause?.response?.data;
+  if (payload?.code !== "CONTACT_ALREADY_EXISTS") {
+    return null;
+  }
+  return payload as ContactRegistrationConflict;
+};
+
 export const ContactsContext = createContext<IContactsContext>({} as IContactsContext);
 export const useContactsContext = () => {
   const context = useContext(ContactsContext);
@@ -75,8 +84,10 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     filters: { page: "1", perPage: "10", sectorIds: [] as ContactsFilters["sectorIds"] },
     isLoading: false,
   });
-  const [contactsWithCustomers, /* setContactsWithCustomers */] = useState<ContactWithCustomer[]>([]);
-  const [contactSectors, /* setContactSectors */] = useState<
+  const [contactsWithCustomers /* setContactsWithCustomers */] = useState<ContactWithCustomer[]>(
+    [],
+  );
+  const [contactSectors /* setContactSectors */] = useState<
     Map<number, Array<{ contactId: number; sectorId: number }>>
   >(new Map());
   const { users } = useInternalChatContext();
@@ -124,7 +135,6 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     contactSectors.forEach((sectors) => {
       sectors.forEach((sector) => {
         if (sector.sectorId) {
-
           map.set(sector.sectorId, `Setor ${sector.sectorId}`);
         }
       });
@@ -153,10 +163,13 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     async (id: number) => {
       try {
         if (token) {
-          await wppApi.current.deleteContact(id);
-          dispatch({ type: "delete-contact", id });
-
-          toast.success("Contato deletado com sucesso!");
+          const result = await wppApi.current.deleteContact(id);
+          if (result.outcome === "EXECUTED") {
+            dispatch({ type: "delete-contact", id });
+            toast.success("Contato deletado com sucesso!");
+          } else {
+            toast.success("Solicitação de exclusão enviada ao supervisor!");
+          }
         }
       } catch (err) {
         Logger.error("Error deleting contact", err as Error);
@@ -168,10 +181,10 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
 
   const createContact = useCallback(
     async (name: string, phone: string, sectorIds?: number[], customerId?: number) => {
+      const cleanedPhone = phone.replace(/\D/g, "");
       try {
         if (!token) return null;
 
-        const cleanedPhone = phone.replace(/\D/g, "");
         const newContact = await wppApi.current.createContact(
           name,
           cleanedPhone,
@@ -184,12 +197,60 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         closeModal();
         return newContact;
       } catch (err) {
+        const conflict = getRegistrationConflict(err);
+        if (conflict?.existingContact) {
+          const proposal = {
+            name,
+            customerId: customerId ?? null,
+            sectorIds: sectorIds ?? [],
+          };
+          openModal(
+            <ContactRegistrationConflictModal
+              conflict={conflict}
+              onCancel={closeModal}
+              onConfirm={async () => {
+                try {
+                  if (conflict.existingContact.isDeleted) {
+                    const result = await wppApi.current.reactivateContact(
+                      conflict.existingContact.id,
+                      proposal,
+                    );
+                    if (result.outcome === "EXECUTED") {
+                      dispatch({ type: "upsert-contact", data: result.contact });
+                      toast.success("Contato reativado e atualizado com sucesso!");
+                    } else {
+                      toast.success("Solicitação enviada ao supervisor!");
+                    }
+                  } else {
+                    const updated = await wppApi.current.createContact(
+                      name,
+                      cleanedPhone,
+                      customerId,
+                      sectorIds,
+                      true,
+                    );
+                    dispatch({ type: "upsert-contact", data: updated });
+                    toast.success("Cadastro sobrescrito com sucesso!");
+                  }
+                  closeModal();
+                } catch (confirmationError) {
+                  Logger.error("Error resolving contact conflict", confirmationError as Error);
+                  toast.error(
+                    (confirmationError as Error).message || "Falha ao processar cadastro.",
+                  );
+                  throw confirmationError;
+                }
+              }}
+            />,
+          );
+          return null;
+        }
         Logger.error("Error criar contact", err as Error);
-        toast.error("Falha ao atualizar cliente!");
+        toast.error((err as Error).message || "Falha ao cadastrar contato!");
         return null;
       }
     },
-    [closeModal, token, wppApi],
+    [closeModal, openModal, token, wppApi],
   );
 
   const openContactModal = useCallback(
@@ -272,7 +333,6 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       }
 
       let response: any;
-
 
       if (params.id !== undefined) {
         const entries = Object.entries(params).filter(([, v]) => v !== undefined);

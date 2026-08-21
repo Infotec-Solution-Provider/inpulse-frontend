@@ -1,8 +1,8 @@
 import { Customer, RequestFilters, UpdateCustomerDTO } from "@/lib/sdk-local";
-import { CustomerProfileSummaryFilters } from "@/lib/types/customer-profile-summary";
+import { CustomerBusinessQueryFilters } from "@/lib/types/customer-business-filters";
 
-export type CustomerListFilters = RequestFilters<Customer> & CustomerProfileSummaryFilters;
-export type CustomerListFilterKey = keyof Customer | keyof CustomerProfileSummaryFilters;
+export type CustomerListFilters = RequestFilters<Customer> & CustomerBusinessQueryFilters;
+export type CustomerListFilterKey = keyof Customer | keyof CustomerBusinessQueryFilters;
 
 // State Type
 export interface CustomersContextState {

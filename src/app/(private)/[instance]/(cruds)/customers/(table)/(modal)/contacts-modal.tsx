@@ -1,5 +1,5 @@
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import { Customer, WppContact } from "@/lib/sdk-local";
+import { ContactRegistrationConflict, Customer, WppContact } from "@/lib/sdk-local";
 import { Button, IconButton, TextField } from "@mui/material";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import ContactItem from "./contact-item";
@@ -7,13 +7,14 @@ import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { Add, Close } from "@mui/icons-material";
 import { AppContext } from "@/app/(private)/[instance]/app-context";
+import ContactRegistrationConflictModal from "../../../contacts/(table)/(modal)/contact-registration-conflict-modal";
 
 interface ContactModalProps {
   customer: Customer;
 }
 
 export default function ContactsModal({ customer }: ContactModalProps) {
-  const { closeModal } = useContext(AppContext);
+  const { closeModal, openModal } = useContext(AppContext);
   const { wppApi, updateChatContact } = useContext(WhatsappContext);
   const [contacts, setContacts] = useState<WppContact[]>([]);
   const [filter, setFilter] = useState<{ name: string; phone: string }>({ name: "", phone: "" });
@@ -77,10 +78,13 @@ export default function ContactsModal({ customer }: ContactModalProps) {
   const handleDelete = useCallback(async (contactId: number) => {
     if (wppApi.current) {
       try {
-        await wppApi.current.deleteContact(contactId);
-        toast.success("Contato deletado com sucesso!");
-        // Remove the contact from the state
-        setContacts((prevContacts) => prevContacts.filter((c) => c.id !== contactId));
+        const result = await wppApi.current.deleteContact(contactId);
+        if (result.outcome === "EXECUTED") {
+          toast.success("Contato deletado com sucesso!");
+          setContacts((prevContacts) => prevContacts.filter((c) => c.id !== contactId));
+        } else {
+          toast.success("Solicitação de exclusão enviada ao supervisor!");
+        }
       } catch (err) {
         toast.error("Falha ao deletar contato:\n" + sanitizeErrorMessage(err));
       }
@@ -105,6 +109,45 @@ export default function ContactsModal({ customer }: ContactModalProps) {
           toast.success("Contato cadastrado com sucesso!");
         })
         .catch((error) => {
+          const conflict = (error as any)?.cause?.response?.data as
+            | ContactRegistrationConflict
+            | undefined;
+          if (conflict?.existingContact && conflict.code === "CONTACT_ALREADY_EXISTS") {
+            openModal(
+              <ContactRegistrationConflictModal
+                conflict={conflict}
+                onCancel={closeModal}
+                onConfirm={async () => {
+                  if (conflict.existingContact.isDeleted) {
+                    const result = await wppApi.current.reactivateContact(
+                      conflict.existingContact.id,
+                      {
+                        name: form.name,
+                        customerId: customer.CODIGO,
+                        sectorIds: [],
+                      },
+                    );
+                    toast.success(
+                      result.outcome === "EXECUTED"
+                        ? "Contato reativado e atualizado com sucesso!"
+                        : "Solicitação enviada ao supervisor!",
+                    );
+                  } else {
+                    await wppApi.current.createContact(
+                      form.name,
+                      form.phone,
+                      customer.CODIGO,
+                      [],
+                      true,
+                    );
+                    toast.success("Cadastro sobrescrito com sucesso!");
+                  }
+                  closeModal();
+                }}
+              />,
+            );
+            return;
+          }
           toast.error("Falha ao cadastrar contato:\n" + sanitizeErrorMessage(error));
         });
     }
