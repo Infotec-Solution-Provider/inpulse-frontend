@@ -23,17 +23,19 @@ export default function ReceiveMessageHandler(
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
-  chats: DetailedChat[],
+  chats: DetailedChat[] | RefObject<DetailedChat[]>,
   notify?: (payload: {
     event: "new_message";
     title: string;
     body: string;
     isChatFocused: boolean;
   }) => void,
+  skipRedundantChatSort = false,
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
+    const currentChats = Array.isArray(chats) ? chats : chats.current;
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
-      const matchedChat = chats.find((chat) => {
+      const matchedChat = currentChats.find((chat) => {
         return chat.contactId === message.contactId;
       });
       const parts = message.from.split(":");
@@ -58,6 +60,7 @@ export default function ReceiveMessageHandler(
       });
     }
 
+    const x = chatRef.current;
     setMessages((prev) => {
       const newMessages = { ...prev };
       const contactId = message.contactId || 0;
@@ -76,30 +79,28 @@ export default function ReceiveMessageHandler(
       return newMessages;
     });
 
-    const x = chatRef.current;
+    setChats((prev) => {
+      const updatedChats = prev.map((chat) => {
+        if (chat.contactId === message.contactId) {
+          const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
+          const isFromMe = message.from.startsWith("me");
+          const isUnread = !isCurrentWppChat && !isFromMe;
 
-    setChats((prev) =>
-      prev
-        .map((chat) => {
-          if (chat.contactId === message.contactId) {
-            const isCurrentWppChat =
-              x?.chatType === "wpp" && x.contactId === message.contactId;
-            const isFromMe = message.from.startsWith("me");
-            const isUnread = !isCurrentWppChat && !isFromMe;
+          return {
+            ...chat,
+            isUnread: isUnread,
+            lastMessage: message,
+          };
+        }
 
-            return {
-              ...chat,
-              isUnread: isUnread,
-              lastMessage: message,
-            };
-          }
+        return chat;
+      });
 
-          return chat;
-        })
-        .sort((a, b) =>
-          (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
-        ),
-    );
+      if (skipRedundantChatSort) return updatedChats;
+      return updatedChats.sort((a, b) =>
+        (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
+      );
+    });
 
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
       setCurrentChatMessages((prev) => {
@@ -116,12 +117,13 @@ export default function ReceiveMessageHandler(
 
       // TODO: Change the logic to only update the received message;
       if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        api
-          .markContactMessagesAsRead(message.contactId || 0)
-          .catch((error) => {
-            Logger.error(`[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`, error);
-          });
+        api.markContactMessagesAsRead(message.contactId || 0).catch((error) => {
+          Logger.error(
+            `[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`,
+            error,
+          );
+        });
       }
-    };
-  }
+    }
+  };
 }

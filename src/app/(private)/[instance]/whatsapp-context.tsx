@@ -195,13 +195,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { socket } = useContext(SocketContext);
 
   const [channels, setChannels] = useState<WppClient[]>([]);
+  const channelsRef = useRef<WppClient[]>([]);
   const globalChannel = useRef<WppClient | null>(null);
   const chatsChannels = useRef(new Map<number, number>());
   const userInitiatedChatContactId = useRef<number | null>(null);
   const [chats, setChats] = useState<DetailedChat[]>([]);
+  const chatsRef = useRef<DetailedChat[]>([]);
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
-  const currentChatRef = useRef<DetailedChat | null>(null);
+  const currentChatRef = useRef<DetailedChat | DetailedInternalChat | null>(null);
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
   const currentChatMessagesRef = useRef<WppMessage[]>([]);
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
@@ -221,6 +223,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     parameters,
     FEATURE_FLAGS.paginatedChatHistory,
   );
+  const stableSocketListenersEnabled = isFeatureEnabled(
+    parameters,
+    FEATURE_FLAGS.stableSocketListeners,
+  );
+  chatsRef.current = chats;
+  channelsRef.current = channels;
+  currentChatRef.current = currentChat;
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
   const [notificationPreferences, setNotificationPreferences] =
     useState<UserNotificationPreferences>(createDefaultNotificationPreferences());
@@ -981,8 +990,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         SocketEventType.WppChatFinished,
         ChatFinishedHandler(
           socket,
-          chats,
-          currentChat,
+          stableSocketListenersEnabled ? chatsRef : chats,
+          stableSocketListenersEnabled ? currentChatRef : currentChat,
           setMessages,
           setChats,
           setCurrentChat,
@@ -995,8 +1004,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         ChatTransferHandler(
           api.current,
           socket,
-          chats,
-          currentChat,
+          stableSocketListenersEnabled ? chatsRef : chats,
+          stableSocketListenersEnabled ? currentChatRef : currentChat,
           setMessages,
           setChats,
           setCurrentChat,
@@ -1009,22 +1018,25 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setUniqueCurrentChatMessages,
         setChats,
         currentChatRef,
-        chats,
+        stableSocketListenersEnabled ? chatsRef : chats,
         emitPolicyNotification,
+        stableSocketListenersEnabled,
       );
       socket.on(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
         handleMessage(data);
         // Auto-update per-chat channel based on incoming message
         const { message } = data;
         if (message.clientId) {
-          const matchedChat = chats.find((c) => c.contactId === message.contactId);
+          const currentChats = stableSocketListenersEnabled ? chatsRef.current : chats;
+          const matchedChat = currentChats.find((c) => c.contactId === message.contactId);
           if (matchedChat) {
             chatsChannels.current.set(matchedChat.id, message.clientId);
           }
 
           const current = currentChatRef.current;
           if (current && current.chatType === "wpp" && current.contactId === message.contactId) {
-            const channel = channels.find((ch) => ch.id === message.clientId);
+            const currentChannels = stableSocketListenersEnabled ? channelsRef.current : channels;
+            const channel = currentChannels.find((ch) => ch.id === message.clientId);
             if (channel) {
               setSelectedChannel(channel);
             }
@@ -1058,9 +1070,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         socket.off(SocketEventType.WppMessageEdit);
         socket.off(SocketEventType.WppMessageReaction);
         socket.off(SocketEventType.WppMessageDelete);
+        socket.off(SocketEventType.WppChatFinished);
+        socket.off(SocketEventType.WppChatTransfer);
+        socket.off(SocketEventType.WppMessageStatus);
       };
     }
-  }, [socket, chats, currentChat, emitPolicyNotification]);
+  }, [
+    socket,
+    stableSocketListenersEnabled ? null : chats,
+    stableSocketListenersEnabled ? null : currentChat,
+    stableSocketListenersEnabled,
+    emitPolicyNotification,
+  ]);
 
   return (
     <WhatsappContext.Provider

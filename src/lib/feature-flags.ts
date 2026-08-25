@@ -13,6 +13,7 @@ export const FEATURE_FLAGS = {
   telephonyDialer: "feature_telephony_dialer_enabled",
   frontendPerformanceTelemetry: "feature_frontend_performance_telemetry_enabled",
   paginatedChatHistory: "feature_perf_paginated_chat_history_enabled",
+  stableSocketListeners: "feature_perf_stable_socket_listeners_enabled",
   virtualizedChatList: "feature_perf_virtualized_chat_list_enabled",
   whatsappSessionMonitoring: "feature_whatsapp_session_monitoring_enabled",
 } as const;
