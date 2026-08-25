@@ -300,6 +300,12 @@ export type WppChatWithDetailsAndMessages = WppChatWithDetails & {
   messages: WppMessage[];
 };
 
+export interface PaginatedWppMessages {
+  messages: WppMessage[];
+  quotedMessages: WppMessage[];
+  nextCursor: number | null;
+}
+
 export interface SendMessageData {
   text: string;
   contactId: number;

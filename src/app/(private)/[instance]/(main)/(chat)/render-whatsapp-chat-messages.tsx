@@ -5,6 +5,7 @@ import { AuthContext } from "@/app/auth-context";
 import { WppMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
@@ -40,22 +41,61 @@ export default function RenderWhatsappChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
-  const { currentChatMessages } = useWhatsappContext();
+  const {
+    currentChat,
+    currentChatMessages,
+    hasOlderMessages,
+    historyPrependRef,
+    loadOlderMessages,
+  } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { instance } = useContext(AuthContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setVisibleCount(30);
+  }, [currentChat?.id, currentChat?.chatType]);
+
+  useEffect(() => {
+    if (historyPrependRef.current) {
+      historyPrependRef.current = false;
+      return;
+    }
     if (!isSelectionMode && messagesEndRef.current) {
       const timer = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentChatMessages, isSelectionMode]);
+  }, [currentChatMessages, historyPrependRef, isSelectionMode]);
+
+  const handleLoadMore = async () => {
+    if (visibleCount < messagesToRender.length) {
+      setVisibleCount((previous) => Math.min(previous + 30, messagesToRender.length));
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const previousHeight = container?.scrollHeight ?? 0;
+    const previousTop = container?.scrollTop ?? 0;
+    setLoadingOlder(true);
+    try {
+      const loaded = await loadOlderMessages();
+      if (loaded > 0) setVisibleCount((previous) => previous + loaded);
+      requestAnimationFrame(() => {
+        if (container) container.scrollTop = previousTop + container.scrollHeight - previousHeight;
+      });
+    } catch {
+      toast.error("Falha ao carregar mensagens antigas.");
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   const messagesToRender = useMemo(
     () =>
@@ -98,15 +138,19 @@ export default function RenderWhatsappChatMessages({
   const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
 
   return (
-    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
-      {visibleCount < messagesToRender.length && (
+    <div
+      ref={scrollContainerRef}
+      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+    >
+      {(visibleCount < messagesToRender.length || hasOlderMessages) && (
         <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
-            onClick={() => setVisibleCount((prev) => Math.min(prev + 30, messagesToRender.length))}
+            disabled={loadingOlder}
+            onClick={() => void handleLoadMore()}
           >
-            Carregar mais
+            {loadingOlder ? "Carregando..." : "Carregar mais"}
           </Button>
         </div>
       )}
@@ -130,12 +174,7 @@ export default function RenderWhatsappChatMessages({
           const findQuoted = m.contactId && m.quotedId && getMessageById(m.contactId, m.quotedId);
           const quotedMsgProps =
             findQuoted && "to" in findQuoted
-              ? getQuotedMsgProps(
-                  findQuoted,
-                  getWppMessageStyle(findQuoted),
-                  [],
-                  [],
-                )
+              ? getQuotedMsgProps(findQuoted, getWppMessageStyle(findQuoted), [], [])
               : null;
 
           return (

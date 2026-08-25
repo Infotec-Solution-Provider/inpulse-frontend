@@ -5,6 +5,7 @@ import {
 	InternalChatMember,
 	InternalGroup,
 	InternalMessage,
+	PaginatedInternalMessages,
 	InternalWhatsappSenderName,
 	PaginatedInternalWhatsappSenderMessages,
 	PaginatedInternalWhatsappSenders,
@@ -78,8 +79,8 @@ export default class InternalChatClient extends ApiClient {
 		await this.ax.delete<DataResponse<InternalChat>>(url);
 	}
 
-	public async getInternalChatsBySession(token: string | null = null) {
-		const url = `/api/internal/session/chats`;
+	public async getInternalChatsBySession(token: string | null = null, messages = true) {
+		const url = `/api/internal/session/chats?messages=${messages}`;
 
 		const headers = token
 			? { Authorization: `Bearer ${token}` }
@@ -90,6 +91,15 @@ export default class InternalChatClient extends ApiClient {
 		});
 
 		return this.normalizeChatsPayload(response);
+	}
+
+	public async getChatMessagesPage(id: number, limit = 50, beforeId?: number | null) {
+		const params = new URLSearchParams({ limit: String(limit) });
+		if (beforeId) params.set("beforeId", String(beforeId));
+		const { data: res } = await this.ax.get<DataResponse<PaginatedInternalMessages>>(
+			`/api/internal/chats/${id}/messages?${params.toString()}`,
+		);
+		return res.data;
 	}
 
 	public async getInternalGroups() {

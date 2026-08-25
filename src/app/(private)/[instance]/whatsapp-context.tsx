@@ -64,6 +64,7 @@ import getFileSHA256 from "../../../lib/utils/get-file-sha256";
 import FrontendPerformanceProvider from "@/lib/performance/frontend-performance-provider";
 import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -146,6 +147,9 @@ interface IWhatsappContext {
   setSelectedChannel: Dispatch<SetStateAction<WppClient | null>>;
   isReadOnlyMode: boolean;
   prepareReadOnlyOpen: (enabled: boolean) => void;
+  hasOlderMessages: boolean;
+  loadOlderMessages: () => Promise<number>;
+  historyPrependRef: React.RefObject<boolean>;
 }
 
 interface WhatsappProviderProps {
@@ -199,7 +203,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
   const currentChatRef = useRef<DetailedChat | null>(null);
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
+  const currentChatMessagesRef = useRef<WppMessage[]>([]);
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const currentMessagesCursorRef = useRef<number | null>(null);
+  const messageCursorCacheRef = useRef(new Map<number, number | null>());
+  const historyPrependRef = useRef(false);
+  const activeMessagesCacheRef = useRef(new Map<number, WppMessage[]>());
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
@@ -207,6 +217,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
+  const paginatedChatHistoryEnabled = isFeatureEnabled(
+    parameters,
+    FEATURE_FLAGS.paginatedChatHistory,
+  );
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
   const [notificationPreferences, setNotificationPreferences] =
     useState<UserNotificationPreferences>(createDefaultNotificationPreferences());
@@ -327,9 +341,68 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         }
       }
 
+      currentChatMessagesRef.current = deduped;
       return deduped;
     });
   }
+
+  const cacheActiveMessages = useCallback(
+    (contactId: number, loadedMessages: WppMessage[], cursor: number | null) => {
+      const deduplicated = Array.from(
+        new Map(loadedMessages.map((message) => [message.id, message])).values(),
+      );
+      const boundedMessages = deduplicated.slice(-300);
+      const effectiveCursor =
+        deduplicated.length > boundedMessages.length ? (boundedMessages[0]?.id ?? cursor) : cursor;
+      const cache = activeMessagesCacheRef.current;
+
+      cache.delete(contactId);
+      cache.set(contactId, boundedMessages);
+      messageCursorCacheRef.current.set(contactId, effectiveCursor);
+
+      const evicted: number[] = [];
+      while (cache.size > 5) {
+        const oldestKey = cache.keys().next().value as number | undefined;
+        if (oldestKey === undefined) break;
+        cache.delete(oldestKey);
+        messageCursorCacheRef.current.delete(oldestKey);
+        evicted.push(oldestKey);
+      }
+
+      if (evicted.length) {
+        setMessages((previous) => {
+          const next = { ...previous };
+          for (const key of evicted) delete next[key];
+          return next;
+        });
+      }
+
+      return effectiveCursor;
+    },
+    [],
+  );
+
+  const loadFirstMessagePage = useCallback(
+    async (chat: DetailedChat) => {
+      if (!chat.contactId) return [];
+      const page = await api.current.getChatMessagesPage(chat.id, 50);
+      const lookupMessages = Array.from(
+        new Map(
+          [...page.messages, ...page.quotedMessages].map((message) => [message.id, message]),
+        ).values(),
+      );
+      setMessages((previous) => ({ ...previous, [chat.contactId!]: lookupMessages }));
+      cacheActiveMessages(chat.contactId, page.messages, page.nextCursor);
+
+      if (currentChatRef.current?.chatType === "wpp" && currentChatRef.current.id === chat.id) {
+        currentMessagesCursorRef.current = page.nextCursor;
+        setHasOlderMessages(page.nextCursor !== null);
+        setUniqueCurrentChatMessages(page.messages);
+      }
+      return page.messages;
+    },
+    [cacheActiveMessages],
+  );
 
   const [chatFilters, changeChatFilters] = useReducer(chatsFilterReducer, {
     search: "",
@@ -344,14 +417,41 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setCurrentChat(chat);
         // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
 
-        const messagesToUse =
-          preloadedMessages !== undefined ? preloadedMessages : messages[chat.contactId || 0] || [];
-
-        setUniqueCurrentChatMessages(messagesToUse);
         currentChatRef.current = chat;
 
+        if (!paginatedChatHistoryEnabled) {
+          const messagesToUse =
+            preloadedMessages !== undefined
+              ? preloadedMessages
+              : messages[chat.contactId || 0] || [];
+          setUniqueCurrentChatMessages(messagesToUse);
+        } else {
+          const contactId = chat.contactId || 0;
+          const cachedMessages = activeMessagesCacheRef.current.get(contactId);
+          const messagesToUse = preloadedMessages ?? cachedMessages ?? [];
+          setUniqueCurrentChatMessages(messagesToUse);
+
+          if (preloadedMessages !== undefined) {
+            const cachedCursor = messageCursorCacheRef.current.get(contactId) ?? null;
+            const cursor = cacheActiveMessages(contactId, preloadedMessages, cachedCursor);
+            currentMessagesCursorRef.current = cursor;
+            setHasOlderMessages(cursor !== null);
+          } else if (cachedMessages) {
+            const cursor = messageCursorCacheRef.current.get(contactId) ?? null;
+            currentMessagesCursorRef.current = cursor;
+            setHasOlderMessages(cursor !== null);
+          } else {
+            currentMessagesCursorRef.current = null;
+            setHasOlderMessages(false);
+            void loadFirstMessagePage(chat).catch((error) => {
+              Logger.error("Failed to load chat messages", error as Error);
+              toast.error("Falha ao carregar mensagens da conversa.");
+            });
+          }
+        }
+
         if (chat.contactId && globalChannel.current) {
-          api.current.markContactMessagesAsRead(chat.contactId);
+          void api.current.markContactMessagesAsRead(chat.contactId);
 
           setChats((prev) =>
             prev.map((c) => {
@@ -367,8 +467,39 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         }
       });
     },
-    [messages],
+    [cacheActiveMessages, loadFirstMessagePage, messages, paginatedChatHistoryEnabled],
   );
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!paginatedChatHistoryEnabled) return 0;
+    const activeChat = currentChatRef.current;
+    const cursor = currentMessagesCursorRef.current;
+    if (!activeChat || activeChat.chatType !== "wpp" || !activeChat.contactId || !cursor) return 0;
+
+    const page = await api.current.getChatMessagesPage(activeChat.id, 50, cursor);
+    if (currentChatRef.current?.id !== activeChat.id) return 0;
+
+    historyPrependRef.current = true;
+    const currentMessages = currentChatMessagesRef.current;
+    setUniqueCurrentChatMessages([...page.messages, ...currentMessages]);
+    setMessages((previous) => ({
+      ...previous,
+      [activeChat.contactId!]: Array.from(
+        new Map(
+          [
+            ...page.messages,
+            ...page.quotedMessages,
+            ...(previous[activeChat.contactId!] ?? []),
+          ].map((message) => [message.id, message]),
+        ).values(),
+      ),
+    }));
+    const combined = [...page.messages, ...currentMessages];
+    cacheActiveMessages(activeChat.contactId, combined, page.nextCursor);
+    currentMessagesCursorRef.current = page.nextCursor;
+    setHasOlderMessages(page.nextCursor !== null);
+    return page.messages.length;
+  }, [cacheActiveMessages, paginatedChatHistoryEnabled]);
 
   const updateChatContact = useCallback(
     (contactId: number, newName: string, newCustomer: Customer | null, newPhone?: string) => {
@@ -668,17 +799,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [user],
   );
 
-  const loadChatMessages = useCallback(async (chat: DetailedChat) => {
-    if (!chat.id) return [];
+  const loadChatMessages = useCallback(
+    async (chat: DetailedChat) => {
+      if (!chat.id || !chat.contactId) return [];
+      if (paginatedChatHistoryEnabled) return loadFirstMessagePage(chat);
 
-    if (chat.contactId) {
       const res = await api.current.getChatById(chat.id);
       const loadedMessages = res.messages || [];
       setMessages((prev) => ({ ...prev, [chat.contactId || 0]: loadedMessages }));
       return loadedMessages;
-    }
-    return [];
-  }, []);
+    },
+    [loadFirstMessagePage, paginatedChatHistoryEnabled],
+  );
 
   const getChatById = useCallback(async (chatId: number) => {
     if (!chatId) return;
@@ -712,17 +844,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
-      api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+      api.current
+        .getChatsBySession(!paginatedChatHistoryEnabled, true)
+        .then(({ chats, messages }) => {
+          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
-        setChats(detailedChats);
-        setMessages(chatsMessages);
-      });
+          setChats(detailedChats);
+          setMessages(chatsMessages);
+        });
     } else {
       setChats([]);
       setMessages({});
     }
-  }, [token, api.current]);
+  }, [paginatedChatHistoryEnabled, token]);
 
   const startChatByContactId = useCallback(
     async (contactId: number, template?: SendTemplateData) => {
@@ -751,7 +885,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.setAuth(token);
       usersService.setAuth(token);
       refreshNotificationPreferences();
-      api.current.getSectors().then((res) => {
+      api.current.getSectors().then(async (res) => {
         const secs = Array.isArray(res)
           ? (res as SectorData[])
           : Array.isArray((res as { data?: SectorData[] })?.data)
@@ -760,7 +894,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         setSectors(secs);
 
-        api.current.getChatsBySession(true, true).then((payload) => {
+        const parametersResponse = await api.current.ax.get("/api/whatsapp/session/parameters");
+        const loadedParameters: Record<string, string> = parametersResponse.data["parameters"];
+        const paginationEnabled = isFeatureEnabled(
+          loadedParameters,
+          FEATURE_FLAGS.paginatedChatHistory,
+        );
+        setParameters(loadedParameters);
+
+        api.current.getChatsBySession(!paginationEnabled, true).then((payload) => {
           const chats = Array.isArray(payload?.chats) ? payload.chats : [];
           const messages = Array.isArray(payload?.messages) ? payload.messages : [];
 
@@ -786,9 +928,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           globalChannel.current = activeChannel;
           setSelectedChannel((current) => current ?? activeChannel);
 
-          const parametersResponse = await api.current.ax.get("/api/whatsapp/session/parameters");
-          const parameters: Record<string, string> = parametersResponse.data["parameters"];
-          if (parameters["is_official"] === "true" && activeChannel?.id) {
+          if (loadedParameters["is_official"] === "true" && activeChannel?.id) {
             const templatesResponse = await api.current.ax.get(
               `/api/whatsapp/${activeChannel.id}/templates`,
             );
@@ -796,8 +936,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           } else {
             setTemplates([]);
           }
-          setParameters(parameters);
-          console.log("Loaded parameters:", parameters);
+          console.log("Loaded parameters:", loadedParameters);
 
           setChannels(channelsData);
           setLoaded(true);
@@ -971,6 +1110,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setSelectedChannel,
         isReadOnlyMode,
         prepareReadOnlyOpen,
+        hasOlderMessages,
+        loadOlderMessages,
+        historyPrependRef,
       }}
     >
       <FrontendPerformanceProvider

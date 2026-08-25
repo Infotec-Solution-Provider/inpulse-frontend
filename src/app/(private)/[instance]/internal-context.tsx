@@ -40,6 +40,7 @@ import { dispatchConfiguredNotification } from "../../../lib/utils/notification-
 import { shouldDispatchNotification } from "../../../lib/utils/notification-preferences";
 import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -69,6 +70,9 @@ interface InternalChatContextType {
 
   users: User[];
   contacts: WppContact[];
+  hasOlderInternalMessages: boolean;
+  loadOlderInternalMessages: () => Promise<number>;
+  historyPrependRef: React.RefObject<boolean>;
 }
 
 const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
@@ -96,6 +100,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     chats: wppChats,
     wppApi,
     notificationPreferences,
+    parameters,
   } = useWhatsappContext();
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
@@ -128,9 +133,23 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   }, [users, contacts]);
 
   const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
+  const currentInternalChatMessagesRef = useRef<InternalMessage[]>([]);
+  const [hasOlderInternalMessages, setHasOlderInternalMessages] = useState(false);
+  const currentMessagesCursorRef = useRef<number | null>(null);
+  const messageCursorCacheRef = useRef(new Map<number, number | null>());
+  const activeMessagesCacheRef = useRef(new Map<number, InternalMessage[]>());
+  const historyPrependRef = useRef(false);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
   const userInitiatedInternalChat = useRef<boolean>(false);
   const { token, user } = useContext(AuthContext);
+  const paginatedChatHistoryEnabled = isFeatureEnabled(
+    parameters,
+    FEATURE_FLAGS.paginatedChatHistory,
+  );
+
+  useEffect(() => {
+    currentInternalChatMessagesRef.current = currentInternalChatMessages;
+  }, [currentInternalChatMessages]);
 
   const refreshWhatsappSenderNames = useCallback(async () => {
     if (!token) {
@@ -171,16 +190,99 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     };
   }, [internalChats, wppChats]);
 
+  const cacheActiveMessages = useCallback(
+    (chatId: number, loadedMessages: InternalMessage[], cursor: number | null) => {
+      const deduplicated = Array.from(
+        new Map(loadedMessages.map((message) => [message.id, message])).values(),
+      );
+      const boundedMessages = deduplicated.slice(-300);
+      const effectiveCursor =
+        deduplicated.length > boundedMessages.length ? (boundedMessages[0]?.id ?? cursor) : cursor;
+      const cache = activeMessagesCacheRef.current;
+
+      cache.delete(chatId);
+      cache.set(chatId, boundedMessages);
+      messageCursorCacheRef.current.set(chatId, effectiveCursor);
+
+      const evicted: number[] = [];
+      while (cache.size > 5) {
+        const oldestKey = cache.keys().next().value as number | undefined;
+        if (oldestKey === undefined) break;
+        cache.delete(oldestKey);
+        messageCursorCacheRef.current.delete(oldestKey);
+        evicted.push(oldestKey);
+      }
+
+      if (evicted.length) {
+        setMessages((previous) => {
+          const next = { ...previous };
+          for (const key of evicted) delete next[key];
+          return next;
+        });
+      }
+
+      return effectiveCursor;
+    },
+    [],
+  );
+
+  const loadFirstMessagePage = useCallback(
+    async (chat: DetailedInternalChat) => {
+      const page = await api.current.getChatMessagesPage(chat.id, 50);
+      const lookupMessages = Array.from(
+        new Map(
+          [...page.messages, ...page.quotedMessages].map((message) => [message.id, message]),
+        ).values(),
+      );
+      setMessages((previous) => ({ ...previous, [chat.id]: lookupMessages }));
+      cacheActiveMessages(chat.id, page.messages, page.nextCursor);
+
+      if (
+        currentChatRef.current?.chatType === "internal" &&
+        currentChatRef.current.id === chat.id
+      ) {
+        currentMessagesCursorRef.current = page.nextCursor;
+        setHasOlderInternalMessages(page.nextCursor !== null);
+        setCurrentChatMessages(page.messages);
+      }
+      return page.messages;
+    },
+    [cacheActiveMessages, currentChatRef],
+  );
+
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat, markAsRead: boolean = true) => {
       return measureFrontendInteraction("open_chat", () => {
         setCurrentChat(chat);
-        setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
+        if (!paginatedChatHistoryEnabled) {
+          setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
+        } else {
+          const monitorChatMessages = monitorMessages[chat.id];
+          const cachedMessages = activeMessagesCacheRef.current.get(chat.id);
+          const messagesToUse = monitorChatMessages ?? cachedMessages ?? [];
+          setCurrentChatMessages(messagesToUse);
+
+          if (monitorChatMessages) {
+            const cursor = cacheActiveMessages(chat.id, monitorChatMessages, null);
+            currentMessagesCursorRef.current = cursor;
+            setHasOlderInternalMessages(cursor !== null);
+          } else if (cachedMessages) {
+            const cursor = messageCursorCacheRef.current.get(chat.id) ?? null;
+            currentMessagesCursorRef.current = cursor;
+            setHasOlderInternalMessages(cursor !== null);
+          } else {
+            currentMessagesCursorRef.current = null;
+            setHasOlderInternalMessages(false);
+            void loadFirstMessagePage(chat).catch(() =>
+              toast.error("Falha ao carregar mensagens internas."),
+            );
+          }
+        }
         setWppCurrMsgs([]);
         currentChatRef.current = chat as unknown as DetailedChat;
 
         if (markAsRead) {
-          api.current.markChatMessagesAsRead(chat.id);
+          void api.current.markChatMessagesAsRead(chat.id);
 
           setInternalChats((prev) =>
             prev.map((c) => {
@@ -196,8 +298,43 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         }
       });
     },
-    [messages],
+    [
+      cacheActiveMessages,
+      loadFirstMessagePage,
+      messages,
+      monitorMessages,
+      paginatedChatHistoryEnabled,
+    ],
   );
+
+  const loadOlderInternalMessages = useCallback(async () => {
+    if (!paginatedChatHistoryEnabled) return 0;
+    const activeChat = currentChatRef.current;
+    const cursor = currentMessagesCursorRef.current;
+    if (!activeChat || activeChat.chatType !== "internal" || !cursor) return 0;
+
+    const page = await api.current.getChatMessagesPage(activeChat.id, 50, cursor);
+    if (currentChatRef.current?.id !== activeChat.id) return 0;
+
+    historyPrependRef.current = true;
+    const currentMessages = currentInternalChatMessagesRef.current;
+    setCurrentChatMessages([...page.messages, ...currentMessages]);
+    setMessages((previous) => ({
+      ...previous,
+      [activeChat.id]: Array.from(
+        new Map(
+          [...page.messages, ...page.quotedMessages, ...(previous[activeChat.id] ?? [])].map(
+            (message) => [message.id, message],
+          ),
+        ).values(),
+      ),
+    }));
+    const combined = [...page.messages, ...currentMessages];
+    cacheActiveMessages(activeChat.id, combined, page.nextCursor);
+    currentMessagesCursorRef.current = page.nextCursor;
+    setHasOlderInternalMessages(page.nextCursor !== null);
+    return page.messages.length;
+  }, [cacheActiveMessages, currentChatRef, paginatedChatHistoryEnabled]);
   const deleteInternalChat = async (id: number) => {
     if (api.current) {
       try {
@@ -317,12 +454,18 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   }, [token]);
 
   useEffect(() => {
+    const paginationFlagLoaded = Object.prototype.hasOwnProperty.call(
+      parameters,
+      FEATURE_FLAGS.paginatedChatHistory,
+    );
+    if (token && !paginationFlagLoaded) return;
+
     if (token && user && usersLoaded && users.length > 0) {
       api.current.setAuth(token);
       wppApi.current.getContacts().then((res) => {
         setContacts(Array.isArray(res) ? res : []);
       });
-      api.current.getInternalChatsBySession().then((payload) => {
+      api.current.getInternalChatsBySession(null, !paginatedChatHistoryEnabled).then((payload) => {
         const chats = Array.isArray(payload?.chats) ? payload.chats : [];
         const messages = Array.isArray(payload?.messages) ? payload.messages : [];
 
@@ -341,7 +484,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     setInternalChats([]);
     setMessages({});
-  }, [token, user, usersLoaded, users]);
+  }, [paginatedChatHistoryEnabled, parameters, token, user, usersLoaded, users]);
 
   const startDirectChat = useCallback(
     (userId: number) => {
@@ -515,6 +658,9 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         phoneNameMap,
         whatsappSenderNameMap,
         refreshWhatsappSenderNames,
+        hasOlderInternalMessages,
+        loadOlderInternalMessages,
+        historyPrependRef,
       }}
     >
       {children}

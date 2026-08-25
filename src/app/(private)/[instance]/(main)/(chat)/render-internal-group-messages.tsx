@@ -5,7 +5,9 @@ import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
 import { InternalMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import { InternalChatContext } from "../../internal-context";
+import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import GroupMessage from "./group-message";
@@ -40,19 +42,33 @@ export default function RenderInternalGroupMessages({
     users,
     phoneNameMap,
     whatsappSenderNameMap,
+    hasOlderInternalMessages,
+    historyPrependRef,
+    loadOlderInternalMessages,
   } = useContext(InternalChatContext);
+  const { currentChat } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setVisibleCount(30);
+  }, [currentChat?.id, currentChat?.chatType]);
+
+  useEffect(() => {
+    if (historyPrependRef.current) {
+      historyPrependRef.current = false;
+      return;
+    }
     if (!isSelectionMode && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView();
     }
-  }, [currentInternalChatMessages, isSelectionMode]);
+  }, [currentInternalChatMessages, historyPrependRef, isSelectionMode]);
 
   const visibleMessages = useMemo(
     () => (currentInternalChatMessages ?? []).slice(-visibleCount),
@@ -78,20 +94,44 @@ export default function RenderInternalGroupMessages({
 
   const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
 
+  const handleLoadMore = async () => {
+    const total = currentInternalChatMessages?.length ?? 0;
+    if (visibleCount < total) {
+      setVisibleCount((previous) => Math.min(previous + 30, total));
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const previousHeight = container?.scrollHeight ?? 0;
+    const previousTop = container?.scrollTop ?? 0;
+    setLoadingOlder(true);
+    try {
+      const loaded = await loadOlderInternalMessages();
+      if (loaded > 0) setVisibleCount((previous) => previous + loaded);
+      requestAnimationFrame(() => {
+        if (container) container.scrollTop = previousTop + container.scrollHeight - previousHeight;
+      });
+    } catch {
+      toast.error("Falha ao carregar mensagens internas antigas.");
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
   return (
-    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
-      {visibleCount < (currentInternalChatMessages?.length ?? 0) && (
+    <div
+      ref={scrollContainerRef}
+      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+    >
+      {(visibleCount < (currentInternalChatMessages?.length ?? 0) || hasOlderInternalMessages) && (
         <div className="mb-2 flex justify-center">
           <Button
             variant="outlined"
             size="small"
-            onClick={() =>
-              setVisibleCount((prev) =>
-                Math.min(prev + 30, currentInternalChatMessages?.length ?? prev),
-              )
-            }
+            disabled={loadingOlder}
+            onClick={() => void handleLoadMore()}
           >
-            Carregar mais
+            {loadingOlder ? "Carregando..." : "Carregar mais"}
           </Button>
         </div>
       )}
@@ -156,7 +196,9 @@ export default function RenderInternalGroupMessages({
               fileSize={m.fileSize}
               quotedMessage={quotedMsg}
               showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
-              showQuotedMediaByDefault={!quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)}
+              showQuotedMediaByDefault={
+                !quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)
+              }
               isForwarded={m.isForwarded}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}

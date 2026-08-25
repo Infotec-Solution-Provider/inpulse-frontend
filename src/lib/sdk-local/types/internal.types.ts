@@ -34,6 +34,12 @@ export interface InternalChat {
 	groupImageFileId: number | null;
 }
 
+export interface PaginatedInternalMessages {
+	messages: InternalMessage[];
+	quotedMessages: InternalMessage[];
+	nextCursor: number | null;
+}
+
 export interface InternalWhatsappSenderMessage {
   id: number;
   body: string;

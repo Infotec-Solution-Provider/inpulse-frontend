@@ -16,6 +16,7 @@ import {
   CreateScheduleDTO,
   ForwardMessagesData,
   PaginatedContactsResponse,
+  PaginatedWppMessages,
   PaginatedNotificationsResponse,
   SendFileMessageData,
   SendMessageData,
@@ -94,6 +95,15 @@ export default class WhatsappClient extends ApiClient {
 
   public async getChatById(id: number) {
     const { data: res } = await this.ax.get<GetChatResponse>(`/api/whatsapp/chats/${id}`);
+    return res.data;
+  }
+
+  public async getChatMessagesPage(id: number, limit = 50, beforeId?: number | null) {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (beforeId) params.set("beforeId", String(beforeId));
+    const { data: res } = await this.ax.get<DataResponse<PaginatedWppMessages>>(
+      `/api/whatsapp/chats/${id}/messages?${params.toString()}`,
+    );
     return res.data;
   }
 
