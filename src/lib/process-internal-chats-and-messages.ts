@@ -1,27 +1,36 @@
-import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
-import { InternalChat, InternalChatMember, InternalMessage, User } from "@/lib/sdk-local";
+import type { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import type { InternalChat, InternalChatMember, InternalMessage, User } from "@/lib/sdk-local";
+
+type InternalChatWithSummary = InternalChat & {
+  participants: InternalChatMember[];
+  isUnread?: boolean;
+  lastMessage?: InternalMessage | null;
+};
 
 export default function processInternalChatsAndMessages(
   userId: number,
   users: User[],
-  chats: (InternalChat & { participants: InternalChatMember[] })[],
+  chats: InternalChatWithSummary[],
   messages: InternalMessage[],
 ) {
-  // Criar um mapa de chats por `internalChatId` para acesso rápido
-  const chatsMap = new Map<number, InternalChat & { participants: InternalChatMember[] }>();
-  chats.forEach((chat) => chatsMap.set(chat.id, chat));
+  const currentParticipantByChat = new Map(
+    chats.map((chat) => [
+      chat.id,
+      chat.participants.find((participant) => participant.userId === userId),
+    ]),
+  );
+  const userById = new Map(users.map((user) => [user.CODIGO, user]));
 
   // Ordenar mensagens por timestamp
   messages.sort((a, b) => ((a.timestamp || 0) < (b.timestamp || 0) ? -1 : 1));
 
   const lastMessages: Record<number, InternalMessage> = {};
   const chatsMessages: Record<number, InternalMessage[]> = {};
+  const unreadChatIds = new Set<number>();
 
   for (const message of messages) {
-    // Atualizar status de leitura com base no `lastReadAt`'
-    const chat = chatsMap.get(message.internalChatId);
-    // Encontra o participante que cooresponde ao usuário logado
-    const userParticipant = chat?.participants.find((p) => p.userId === userId);
+    // Atualizar status de leitura com base no `lastReadAt`.
+    const userParticipant = currentParticipantByChat.get(message.internalChatId);
 
     // Caso o o participante tenha o `lastReadAt` definido
     // Atualiza o status da mensagem para "READ" se a mensagem for mais antiga que o `lastReadAt`
@@ -50,22 +59,20 @@ export default function processInternalChatsAndMessages(
     ) {
       lastMessages[message.internalChatId] = message;
     }
+
+    if (message.from !== `user:${userId}` && message.status !== "READ") {
+      unreadChatIds.add(message.internalChatId);
+    }
   }
-
-  const isFromMe = (message: InternalMessage) => {
-    return message.from === `user:${userId}`;
-  };
-
-  const isFromChat = (message: InternalMessage, chat: InternalChat) => {
-    return chat.id === message.internalChatId;
-  };
 
   const detailedChats = chats.map((chat) => ({
     ...chat,
     chatType: "internal",
-    isUnread: messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
-    lastMessage: lastMessages[chat.id] || null,
-    users: users.filter((user) => chat.participants.some((p) => p.userId === user.CODIGO)),
+    isUnread: chat.isUnread ?? unreadChatIds.has(chat.id),
+    lastMessage: chat.lastMessage ?? (lastMessages[chat.id] || null),
+    users: chat.participants
+      .map((participant) => userById.get(participant.userId))
+      .filter((user): user is User => !!user),
   })) as DetailedInternalChat[];
 
   detailedChats.sort((a, b) =>

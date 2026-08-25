@@ -1,15 +1,27 @@
-import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
-import { WppChatWithDetails, WppMessage } from "@/lib/sdk-local";
+import type { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
+import type { WppChatWithDetails, WppMessage } from "@/lib/sdk-local";
+
+type ChatWithSummary = WppChatWithDetails & {
+  isUnread?: boolean;
+  lastMessage?: WppMessage | null;
+};
 
 export default function processChatsAndMessages(
   /* socketClient: SocketClient, */
-  chats: WppChatWithDetails[],
+  chats: ChatWithSummary[],
   messages: WppMessage[],
 ) {
   messages.sort((a, b) => ((a.timestamp || 0) < (b.timestamp || 0) ? -1 : 1));
 
   const lastMessages: Record<number, WppMessage> = {};
   const chatsMessages: Record<number, WppMessage[]> = {};
+  const unreadContactIds = new Set<number>();
+
+  const isFromUs = (message: WppMessage) =>
+    message.from.startsWith("me:") ||
+    message.from.startsWith("system:") ||
+    message.from.startsWith("bot") ||
+    message.from.startsWith("thirdparty");
 
   for (const message of messages) {
     const contactIdOrZero = message.contactId || 0;
@@ -25,17 +37,9 @@ export default function processChatsAndMessages(
     ) {
       lastMessages[contactIdOrZero] = message;
     }
+
+    if (message.status !== "READ" && !isFromUs(message)) unreadContactIds.add(contactIdOrZero);
   }
-
-  const isFromUs = (message: WppMessage) => {
-    const bool =
-      message.from.startsWith("me:") ||
-      message.from.startsWith("system:") ||
-      message.from.startsWith("bot") ||
-      message.from.startsWith("thirdparty");
-
-    return bool;
-  };
 
   const detailedChats: DetailedChat[] = [];
 
@@ -43,10 +47,9 @@ export default function processChatsAndMessages(
     const detailedChat: DetailedChat = {
       ...chat,
       chatType: "wpp",
-      isUnread: messages.some(
-        (m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m),
-      ),
-      lastMessage: chat.contactId ? lastMessages[chat.contactId] || null : null,
+      isUnread: chat.isUnread ?? (!!chat.contactId && unreadContactIds.has(chat.contactId)),
+      lastMessage:
+        chat.lastMessage ?? (chat.contactId ? lastMessages[chat.contactId] || null : null),
     };
 
     // Se tem uma mensagem do contato, que status seja diferente de "READ" e que não seja nossa
