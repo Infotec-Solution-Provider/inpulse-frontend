@@ -12,8 +12,10 @@ import RenderInternalChatMessages from "./render-internal-chat-messages";
 import RenderInternalGroupMessages from "./render-internal-group-messages";
 import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
 import { ChatContext } from "./chat-context";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 export default function ChatMessagesList() {
+  useFrontendRenderMetric("ChatMessagesList");
   const { currentChat, currentChatMessages, chats, forwardMessages } = useContext(WhatsappContext);
   const { users, internalChats, currentInternalChatMessages } = useContext(InternalChatContext);
   const { isReadOnlyMode } = useContext(ChatContext);
@@ -66,14 +68,17 @@ export default function ChatMessagesList() {
     return [...wppTargets, ...userTargets, ...groupTargets];
   }, [chats, users, internalChats]);
 
-  const toggleSelectMessage = useCallback((id: string | number) => {
-    if (isReadOnlyMode) return;
-    setSelectedMessageIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
-      return newSet;
-    });
-  }, [isReadOnlyMode]);
+  const toggleSelectMessage = useCallback(
+    (id: string | number) => {
+      if (isReadOnlyMode) return;
+      setSelectedMessageIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+        return newSet;
+      });
+    },
+    [isReadOnlyMode],
+  );
   const clearSelection = () => setSelectedMessageIds(new Set());
   const openManualForward = (msg: ForwardableMessage) => {
     if (isReadOnlyMode) return;

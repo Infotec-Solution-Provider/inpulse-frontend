@@ -61,6 +61,9 @@ import {
   logFileUploadTraceError,
 } from "../../../lib/utils/file-upload-trace";
 import getFileSHA256 from "../../../lib/utils/get-file-sha256";
+import FrontendPerformanceProvider from "@/lib/performance/frontend-performance-provider";
+import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -176,11 +179,13 @@ interface SectorData {
 }
 
 export const WPP_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
-export const FILES_BASE_URL = process.env["NEXT_PUBLIC_FILES_URL"] || "https://inpulse.infotecrs.inf.br";
+export const FILES_BASE_URL =
+  process.env["NEXT_PUBLIC_FILES_URL"] || "https://inpulse.infotecrs.inf.br";
 export const NOTIFICATIONS_PER_PAGE = 15;
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
+  useFrontendRenderMetric("WhatsappProvider");
   const renderStartedAt = Date.now();
   const { token, instance, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
@@ -203,9 +208,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
-  const [notificationPreferences, setNotificationPreferences] = useState<UserNotificationPreferences>(
-    createDefaultNotificationPreferences(),
-  );
+  const [notificationPreferences, setNotificationPreferences] =
+    useState<UserNotificationPreferences>(createDefaultNotificationPreferences());
   const notificationPreferencesRef = useRef<UserNotificationPreferences>(
     createDefaultNotificationPreferences(),
   );
@@ -336,30 +340,32 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const openChat = useCallback(
     (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
-      setCurrentChat(chat);
-      // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
+      return measureFrontendInteraction("open_chat", () => {
+        setCurrentChat(chat);
+        // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
 
-      const messagesToUse =
-        preloadedMessages !== undefined ? preloadedMessages : messages[chat.contactId || 0] || [];
+        const messagesToUse =
+          preloadedMessages !== undefined ? preloadedMessages : messages[chat.contactId || 0] || [];
 
-      setUniqueCurrentChatMessages(messagesToUse);
-      currentChatRef.current = chat;
+        setUniqueCurrentChatMessages(messagesToUse);
+        currentChatRef.current = chat;
 
-      if (chat.contactId && globalChannel.current) {
-        api.current.markContactMessagesAsRead(chat.contactId);
+        if (chat.contactId && globalChannel.current) {
+          api.current.markContactMessagesAsRead(chat.contactId);
 
-        setChats((prev) =>
-          prev.map((c) => {
-            if (c.id === chat.id) {
-              return {
-                ...c,
-                isUnread: false,
-              };
-            }
-            return c;
-          }),
-        );
-      }
+          setChats((prev) =>
+            prev.map((c) => {
+              if (c.id === chat.id) {
+                return {
+                  ...c,
+                  isUnread: false,
+                };
+              }
+              return c;
+            }),
+          );
+        }
+      });
     },
     [messages],
   );
@@ -416,7 +422,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions) => {
-	  let traceId: string | null = null;
+      let traceId: string | null = null;
       try {
         Logger.debug("Attempting to send message", { to, data });
         if (!instance) {
@@ -455,7 +461,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           sha256,
         });
 
-		const dedupeStartedAt = Date.now();
+        const dedupeStartedAt = Date.now();
         const res = await filesService.getFileByHash(instance, sha256);
         logFileUploadTrace(traceId, "frontend.whatsapp.dedupe.checked", {
           elapsedMs: Date.now() - dedupeStartedAt,
@@ -476,16 +482,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             traceId,
           };
 
-		  logFileUploadTrace(traceId, "frontend.whatsapp.send-message.start", {
-			  mode: "dedupe-hit",
-			  fileId: res.file.id,
-			  elapsedMs: Date.now() - flowStartedAt,
-		  });
-      await sendTracedFileMessage(selectedChannel.id, to, sendFileData);
-		  logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
-			  mode: "dedupe-hit",
-			  elapsedMs: Date.now() - flowStartedAt,
-		  });
+          logFileUploadTrace(traceId, "frontend.whatsapp.send-message.start", {
+            mode: "dedupe-hit",
+            fileId: res.file.id,
+            elapsedMs: Date.now() - flowStartedAt,
+          });
+          await sendTracedFileMessage(selectedChannel.id, to, sendFileData);
+          logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
+            mode: "dedupe-hit",
+            elapsedMs: Date.now() - flowStartedAt,
+          });
 
           return;
         }
@@ -497,17 +503,17 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           contentHash: sha256,
           traceId,
         });
-		logFileUploadTrace(traceId, "frontend.whatsapp.upload.completed", {
-		  elapsedMs: Date.now() - flowStartedAt,
-		  uploadedFileId: uploadedFile.id,
-		  uploadedFileSize: uploadedFile.size,
-		});
+        logFileUploadTrace(traceId, "frontend.whatsapp.upload.completed", {
+          elapsedMs: Date.now() - flowStartedAt,
+          uploadedFileId: uploadedFile.id,
+          uploadedFileSize: uploadedFile.size,
+        });
 
-		logFileUploadTrace(traceId, "frontend.whatsapp.send-message.start", {
-		  mode: "uploaded",
-		  fileId: uploadedFile.id,
-		  elapsedMs: Date.now() - flowStartedAt,
-		});
+        logFileUploadTrace(traceId, "frontend.whatsapp.send-message.start", {
+          mode: "uploaded",
+          fileId: uploadedFile.id,
+          elapsedMs: Date.now() - flowStartedAt,
+        });
         await sendTracedFileMessage(selectedChannel.id, to, {
           contactId: data.contactId,
           text: data.text,
@@ -519,13 +525,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           sendAsDocument: !data.sendAsDocument,
           traceId,
         });
-		logFileUploadTrace(traceId, "frontend.whatsapp.send-file.success", {
-		  elapsedMs: Date.now() - flowStartedAt,
-		  fileId: uploadedFile.id,
-		});
-
+        logFileUploadTrace(traceId, "frontend.whatsapp.send-file.success", {
+          elapsedMs: Date.now() - flowStartedAt,
+          fileId: uploadedFile.id,
+        });
       } catch (err) {
-		traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
+        traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
         toast.error(sanitizeErrorMessage(err));
       }
     },
@@ -611,9 +616,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         ? notificationsData.notifications
         : [];
       const totalCount =
-        typeof notificationsData?.totalCount === "number"
-          ? notificationsData.totalCount
-          : 0;
+        typeof notificationsData?.totalCount === "number" ? notificationsData.totalCount : 0;
 
       if (page === 1) {
         setNotifications(newNotifications);
@@ -970,6 +973,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         prepareReadOnlyOpen,
       }}
     >
+      <FrontendPerformanceProvider
+        enabled={parameters["feature_frontend_performance_telemetry_enabled"] === "true"}
+        token={token || ""}
+        endpoint={WPP_BASE_URL}
+      />
       {children}
     </WhatsappContext.Provider>
   );

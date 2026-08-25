@@ -5,6 +5,7 @@ import {
 	UnlistenSocketEventFn,
 } from "./types/socket-events.types";
 import { JoinRoomFn } from "./types";
+import { recordFrontendPerformanceMetric } from "@/lib/performance/frontend-performance";
 
 /**
  * A client for interacting with a WebSocket server.
@@ -65,8 +66,30 @@ export default class SocketClient {
 			this.ws.off(event, oldListener);
 		}
 
-		this.ws.on(event, callback);
-		this.listeners.set(event, callback);
+		const measuredCallback = (data: unknown) => {
+			const startedAt = performance.now();
+			recordFrontendPerformanceMetric({
+				name: "socket.event_count",
+				value: 1,
+				unit: "count",
+				tags: { event: String(event).slice(0, 96) },
+				detailed: true,
+			});
+			try {
+				return callback(data as never);
+			} finally {
+				recordFrontendPerformanceMetric({
+					name: "socket.handler_duration",
+					value: performance.now() - startedAt,
+					unit: "ms",
+					tags: { event: String(event).slice(0, 96) },
+					detailed: true,
+				});
+			}
+		};
+
+		this.ws.on(event, measuredCallback);
+		this.listeners.set(event, measuredCallback);
 	};
 
 	/**

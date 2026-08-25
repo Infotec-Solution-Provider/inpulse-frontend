@@ -38,6 +38,8 @@ import {
 } from "../../../lib/utils/file-upload-trace";
 import { dispatchConfiguredNotification } from "../../../lib/utils/notification-dispatch";
 import { shouldDispatchNotification } from "../../../lib/utils/notification-preferences";
+import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -70,9 +72,7 @@ interface InternalChatContextType {
 }
 
 const INTENAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
-const INTERNAL_UPLOAD_TIMEOUT_MS = Number(
-  process.env["NEXT_PUBLIC_UPLOAD_TIMEOUT_MS"] || "300000",
-);
+const INTERNAL_UPLOAD_TIMEOUT_MS = Number(process.env["NEXT_PUBLIC_UPLOAD_TIMEOUT_MS"] || "300000");
 
 export const InternalChatContext = createContext({} as InternalChatContextType);
 
@@ -86,6 +86,7 @@ export default function useInternalChatContext() {
 }
 
 export function InternalChatProvider({ children }: { children: React.ReactNode }) {
+  useFrontendRenderMetric("InternalChatProvider");
   const { socket } = useContext(SocketContext);
 
   const {
@@ -172,26 +173,28 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat, markAsRead: boolean = true) => {
-      setCurrentChat(chat);
-      setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
-      setWppCurrMsgs([]);
-      currentChatRef.current = chat as unknown as DetailedChat;
+      return measureFrontendInteraction("open_chat", () => {
+        setCurrentChat(chat);
+        setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
+        setWppCurrMsgs([]);
+        currentChatRef.current = chat as unknown as DetailedChat;
 
-      if (markAsRead) {
-        api.current.markChatMessagesAsRead(chat.id);
+        if (markAsRead) {
+          api.current.markChatMessagesAsRead(chat.id);
 
-        setInternalChats((prev) =>
-          prev.map((c) => {
-            if (c.id === chat.id) {
-              return {
-                ...c,
-                isUnread: false,
-              };
-            }
-            return c;
-          }),
-        );
-      }
+          setInternalChats((prev) =>
+            prev.map((c) => {
+              if (c.id === chat.id) {
+                return {
+                  ...c,
+                  isUnread: false,
+                };
+              }
+              return c;
+            }),
+          );
+        }
+      });
     },
     [messages],
   );
@@ -252,41 +255,37 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
             formData.append("mentions", JSON.stringify(data.mentions));
           }
 
-      logFileUploadTrace(traceId, "frontend.internal.send-file.start", {
-        chatId: data.chatId,
-        fileName: data.file.name,
-        fileSize: data.file.size,
-        fileType: data.file.type,
-        sendAsAudio: data.sendAsAudio,
-        sendAsDocument: data.sendAsDocument,
-      });
+          logFileUploadTrace(traceId, "frontend.internal.send-file.start", {
+            chatId: data.chatId,
+            fileName: data.file.name,
+            fileSize: data.file.size,
+            fileType: data.file.type,
+            sendAsAudio: data.sendAsAudio,
+            sendAsDocument: data.sendAsDocument,
+          });
 
-      try {
-        await api.current.ax.post(
-              `/api/internal/chats/${data.chatId}/messages`,
-              formData,
-              {
-                headers: {
-                  "Content-Type": "multipart/form-data",
-          "x-upload-trace-id": traceId,
-                },
-                timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
-                maxBodyLength: Infinity,
-                maxContentLength: Infinity,
+          try {
+            await api.current.ax.post(`/api/internal/chats/${data.chatId}/messages`, formData, {
+              headers: {
+                "Content-Type": "multipart/form-data",
+                "x-upload-trace-id": traceId,
               },
-            );
+              timeout: INTERNAL_UPLOAD_TIMEOUT_MS,
+              maxBodyLength: Infinity,
+              maxContentLength: Infinity,
+            });
 
-        logFileUploadTrace(traceId, "frontend.internal.send-file.success", {
-          elapsedMs: Date.now() - requestStartedAt,
-          chatId: data.chatId,
-        });
-      } catch (error) {
-        logFileUploadTraceError(traceId, "frontend.internal.send-file.error", error, {
-          elapsedMs: Date.now() - requestStartedAt,
-          chatId: data.chatId,
-        });
-        throw error;
-      }
+            logFileUploadTrace(traceId, "frontend.internal.send-file.success", {
+              elapsedMs: Date.now() - requestStartedAt,
+              chatId: data.chatId,
+            });
+          } catch (error) {
+            logFileUploadTraceError(traceId, "frontend.internal.send-file.error", error, {
+              elapsedMs: Date.now() - requestStartedAt,
+              chatId: data.chatId,
+            });
+            throw error;
+          }
 
           return;
         }
