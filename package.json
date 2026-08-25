@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "vitest run src",
-    "test:e2e": "playwright test --project=chromium"
+    "test:e2e": "playwright test --project=chromium",
+    "test:performance": "playwright test tests/performance.spec.ts --project=chromium-performance"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.7",
