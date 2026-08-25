@@ -12,6 +12,8 @@ export const FEATURE_FLAGS = {
   sipConfig: "feature_sip_config_enabled",
   telephonyDialer: "feature_telephony_dialer_enabled",
   frontendPerformanceTelemetry: "feature_frontend_performance_telemetry_enabled",
+  paginatedChatHistory: "feature_perf_paginated_chat_history_enabled",
+  virtualizedChatList: "feature_perf_virtualized_chat_list_enabled",
   whatsappSessionMonitoring: "feature_whatsapp_session_monitoring_enabled",
 } as const;
 
