@@ -1,4 +1,4 @@
-const performancePort = Number.parseInt(process.env.PERFORMANCE_PORT || "3003", 10);
+const performancePort = Number.parseInt(process.env.PERFORMANCE_PORT || "3004", 10);
 
 if (!Number.isInteger(performancePort) || performancePort < 1 || performancePort > 65535) {
     throw new Error("PERFORMANCE_PORT must be a valid TCP port");
