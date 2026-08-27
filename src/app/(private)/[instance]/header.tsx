@@ -36,6 +36,7 @@ import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import HeaderNavItem from "./header-nav-item";
 import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 const crudsRoutes = (
   params: Record<string, string>,
@@ -298,6 +299,7 @@ const MobileMenu = ({
 };
 
 export default function Header() {
+  useFrontendRenderMetric("Header");
   const { currentChat, parameters } = useContext(WhatsappContext);
   const { signOut, user, instance } = useContext(AuthContext);
   const [mobileOpen, setMobileOpen] = useState(false);

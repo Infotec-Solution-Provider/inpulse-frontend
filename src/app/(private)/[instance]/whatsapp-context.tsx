@@ -62,7 +62,12 @@ import {
 } from "../../../lib/utils/file-upload-trace";
 import getFileSHA256 from "../../../lib/utils/get-file-sha256";
 import FrontendPerformanceProvider from "@/lib/performance/frontend-performance-provider";
-import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
+import {
+  cancelFrontendInteraction,
+  completeFrontendInteractionAfterPaint,
+  measureFrontendInteraction,
+  startFrontendInteraction,
+} from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 export interface DetailedChat extends WppChatWithDetails {
@@ -204,6 +209,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
   const currentChatRef = useRef<DetailedChat | DetailedInternalChat | null>(null);
+  const openChatReadyInteractionRef = useRef<string | null>(null);
   const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
   const currentChatMessagesRef = useRef<WppMessage[]>([]);
   const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
@@ -422,6 +428,35 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const openChat = useCallback(
     (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
+      cancelFrontendInteraction(openChatReadyInteractionRef.current);
+      const readyInteraction = startFrontendInteraction("open_chat_ready", {
+        source: "whatsapp",
+      });
+      openChatReadyInteractionRef.current = readyInteraction;
+      const completeReadyInteraction = () => {
+        if (openChatReadyInteractionRef.current !== readyInteraction) {
+          cancelFrontendInteraction(readyInteraction);
+          return;
+        }
+        if (
+          currentChatRef.current?.chatType !== "wpp" ||
+          currentChatRef.current.id !== chat.id
+        ) {
+          cancelFrontendInteraction(readyInteraction);
+          return;
+        }
+        completeFrontendInteractionAfterPaint(
+          readyInteraction,
+          () =>
+            currentChatRef.current?.chatType === "wpp" && currentChatRef.current.id === chat.id,
+        );
+      };
+      const cancelReadyInteraction = () => {
+        if (openChatReadyInteractionRef.current === readyInteraction) {
+          openChatReadyInteractionRef.current = null;
+        }
+        cancelFrontendInteraction(readyInteraction);
+      };
       return measureFrontendInteraction("open_chat", () => {
         setCurrentChat(chat);
         // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
@@ -434,6 +469,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               ? preloadedMessages
               : messages[chat.contactId || 0] || [];
           setUniqueCurrentChatMessages(messagesToUse);
+          completeReadyInteraction();
         } else {
           const contactId = chat.contactId || 0;
           const cachedMessages = activeMessagesCacheRef.current.get(contactId);
@@ -445,17 +481,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             const cursor = cacheActiveMessages(contactId, preloadedMessages, cachedCursor);
             currentMessagesCursorRef.current = cursor;
             setHasOlderMessages(cursor !== null);
+            completeReadyInteraction();
           } else if (cachedMessages) {
             const cursor = messageCursorCacheRef.current.get(contactId) ?? null;
             currentMessagesCursorRef.current = cursor;
             setHasOlderMessages(cursor !== null);
+            completeReadyInteraction();
           } else {
             currentMessagesCursorRef.current = null;
             setHasOlderMessages(false);
-            void loadFirstMessagePage(chat).catch((error) => {
-              Logger.error("Failed to load chat messages", error as Error);
-              toast.error("Falha ao carregar mensagens da conversa.");
-            });
+            void loadFirstMessagePage(chat)
+              .then(completeReadyInteraction)
+              .catch((error) => {
+                cancelReadyInteraction();
+                Logger.error("Failed to load chat messages", error as Error);
+                toast.error("Falha ao carregar mensagens da conversa.");
+              });
           }
         }
 
@@ -486,7 +527,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (!activeChat || activeChat.chatType !== "wpp" || !activeChat.contactId || !cursor) return 0;
 
     const page = await api.current.getChatMessagesPage(activeChat.id, 50, cursor);
-    if (currentChatRef.current?.id !== activeChat.id) return 0;
+    if (
+      currentChatRef.current?.chatType !== "wpp" ||
+      currentChatRef.current.id !== activeChat.id
+    ) {
+      return 0;
+    }
 
     historyPrependRef.current = true;
     const currentMessages = currentChatMessagesRef.current;
@@ -686,7 +732,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         return;
       }
 
-      api.current.editMessage(String(channelId), messageId, newText, isInternal);
+      await api.current.editMessage(String(channelId), messageId, newText, isInternal);
     },
     [selectedChannel],
   );

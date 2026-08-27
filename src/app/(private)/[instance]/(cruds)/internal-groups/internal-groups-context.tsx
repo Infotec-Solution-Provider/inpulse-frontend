@@ -19,6 +19,7 @@ import internalGroupsReducer, {
   ChangeInternalGroupsStateAction,
   InternalGroupsContextState,
 } from "./(table)/internal-groups-reducer";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface IInternalGroupsProviderProps {
   children: ReactNode;
@@ -52,6 +53,7 @@ export const useInternalGroupsContext = () => {
 };
 
 export default function InternalGroupsProvider({ children }: IInternalGroupsProviderProps) {
+  useFrontendRenderMetric("InternalGroupsProvider");
   const { internalApi } = useContext(InternalChatContext);
   const { globalChannel, loaded, wppApi } = useWhatsappContext();
   const { token } = useAuthContext();

@@ -25,6 +25,7 @@ import readyMessagesReducer, {
   MultipleActions,
   ReadyMessagesContextState,
 } from "./(table)/ready-messages-reducer";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface IReadyMessagesProviderProps {
   children: ReactNode;
@@ -75,6 +76,7 @@ export const useReadyMessagesContext = () => {
 const INTERNAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://localhost:8005";
 
 export default function ReadyMessagesProvider({ children }: IReadyMessagesProviderProps) {
+  useFrontendRenderMetric("ReadyMessagesProvider");
   const { token } = useContext(AuthContext);
   const { wppApi } = useContext(WhatsappContext);
 

@@ -10,6 +10,7 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import Message from "./message";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
 
@@ -41,6 +42,7 @@ export default function RenderWhatsappChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
+  useFrontendRenderMetric("RenderWhatsappChatMessages");
   const {
     currentChat,
     currentChatMessages,

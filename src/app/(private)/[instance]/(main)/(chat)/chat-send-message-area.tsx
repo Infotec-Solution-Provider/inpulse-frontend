@@ -20,6 +20,7 @@ import AudioRecorder from "./audio-recorder";
 import ChannelSelect from "./channels-select";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 function getDefaultSelectedChannel(currentChatMessages: WppMessage[], channels: WppClient[]) {
   const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
@@ -32,6 +33,7 @@ function getDefaultSelectedChannel(currentChatMessages: WppMessage[], channels: 
 }
 
 export default function ChatSendMessageArea() {
+  useFrontendRenderMetric("ChatSendMessageArea");
   const {
     currentChat,
     wppApi,

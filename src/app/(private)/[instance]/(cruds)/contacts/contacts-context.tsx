@@ -27,6 +27,7 @@ import contactsReducer, {
   ContactsFilters,
   MultipleActions,
 } from "./(table)/contacts-reducer";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface ContactWithCustomer extends ContactWithSectors {
   customerId?: number;
@@ -77,6 +78,7 @@ export const useContactsContext = () => {
 };
 
 export default function ContactsProvider({ children }: IContactsProviderProps) {
+  useFrontendRenderMetric("ContactsProvider");
   const { token } = useAuthContext();
   const [state, dispatch] = useReducer(contactsReducer, {
     contacts: [],

@@ -1,13 +1,17 @@
 import axios from 'axios';
 import { Dashboard, Metric, TableMeta, ReportJob } from '@/types/reports';
 import type { GeneratedReportArtifact, GeneratedReportBlock, GeneratedReportExecution } from '@/types/generated-reports';
+import {
+  completeMeasuredFrontendFetch,
+  measuredFrontendFetch,
+} from '@/lib/performance/frontend-performance';
 
 const BASE_URL = process.env.NEXT_PUBLIC_REPORTS_API_URL ?? 'http://localhost:8006';
 
 async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const authHeader = axios.defaults.headers['authorization'] as string | undefined;
 
-  const res = await fetch(`${BASE_URL}/api/reports${path}`, {
+  const res = await measuredFrontendFetch(`${BASE_URL}/api/reports${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -16,18 +20,22 @@ async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? err.message ?? `HTTP ${res.status}`);
-  }
+  try {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error ?? err.message ?? `HTTP ${res.status}`);
+    }
 
-  if (res.status === 204) return undefined as T;
+    if (res.status === 204) return undefined as T;
 
-  const body = await res.json().catch(() => null);
-  if (body && typeof body === 'object' && 'data' in body) {
-    return (body as { data: T }).data;
+    const body = await res.json().catch(() => null);
+    if (body && typeof body === 'object' && 'data' in body) {
+      return (body as { data: T }).data;
+    }
+    return body as T;
+  } finally {
+    completeMeasuredFrontendFetch(res);
   }
-  return body as T;
 }
 
 export const getTables = () => fetchApi<TableMeta[]>('/metric-tables');
@@ -84,19 +92,23 @@ export const updateGeneratedReportLayout = (id: string, blocks: GeneratedReportB
 
 export async function exportGeneratedReport(id: string, body: { format: 'pdf' | 'csv' | 'png'; filters: Record<string, unknown>; datasetId?: string; blockId?: string }): Promise<void> {
   const authHeader = axios.defaults.headers['authorization'] as string | undefined;
-  const response = await fetch(`${BASE_URL}/api/reports/generated/${id}/export`, {
+  const response = await measuredFrontendFetch(`${BASE_URL}/api/reports/generated/${id}/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(authHeader ? { Authorization: authHeader } : {}) },
     body: JSON.stringify(body),
   });
-  if (!response.ok) throw new Error((await response.json().catch(() => null) as { message?: string } | null)?.message ?? `HTTP ${response.status}`);
-  const blob = await response.blob();
-  const disposition = response.headers.get('content-disposition');
-  const filename = disposition?.match(/filename="([^"]+)"/)?.[1] ?? `relatorio.${body.format}`;
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  try {
+    if (!response.ok) throw new Error((await response.json().catch(() => null) as { message?: string } | null)?.message ?? `HTTP ${response.status}`);
+    const blob = await response.blob();
+    const disposition = response.headers.get('content-disposition');
+    const filename = disposition?.match(/filename="([^"]+)"/)?.[1] ?? `relatorio.${body.format}`;
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    completeMeasuredFrontendFetch(response);
+  }
 }

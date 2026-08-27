@@ -1,4 +1,8 @@
 import { AiClient } from "@/lib/sdk-local";
+import {
+  completeMeasuredFrontendFetch,
+  measuredFrontendFetch,
+} from "@/lib/performance/frontend-performance";
 import type {
   AiAgent,
   AiAgentAudienceInput,
@@ -33,7 +37,7 @@ class FrontendAiService extends AiClient {
 		options: { signal: AbortSignal; onDelta: (text: string) => void },
 	): Promise<SendSupervisorAiMessageResponse> {
 		const baseUrl = String(this.ax.defaults.baseURL ?? "").replace(/\/$/, "");
-		const response = await fetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
+		const response = await measuredFrontendFetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -42,7 +46,9 @@ class FrontendAiService extends AiClient {
 			body: JSON.stringify(data),
 			signal: options.signal,
 		});
+		let completionStatus: "cancelled" | "network_error" | undefined;
 
+		try {
 		if (!response.ok) {
 			const errorBody = await response.json().catch(() => null) as { message?: string } | null;
 			throw new Error(errorBody?.message || `Falha ao iniciar streaming (${response.status}).`);
@@ -87,6 +93,16 @@ class FrontendAiService extends AiClient {
 		if (buffer.trim()) processBlock(buffer);
 		if (!result) throw new Error("O streaming terminou sem confirmar a resposta persistida.");
 		return result;
+		} catch (error) {
+			completionStatus = options.signal.aborted
+				? "cancelled"
+				: error instanceof TypeError
+					? "network_error"
+					: undefined;
+			throw error;
+		} finally {
+			completeMeasuredFrontendFetch(response, completionStatus);
+		}
 	}
 
   public async listAgents(token: string) {

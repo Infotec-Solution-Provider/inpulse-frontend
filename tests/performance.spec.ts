@@ -1,4 +1,6 @@
 import { expect, Page, test, WebSocketRoute } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 const user = {
   CODIGO: 1,
@@ -15,6 +17,8 @@ const user = {
 
 const chatCount = Number(process.env.PERF_CHAT_COUNT || "500");
 const cpuRate = Number(process.env.PERF_CPU_RATE || "4");
+const telemetryEnabled = process.env.PERF_TELEMETRY_ENABLED !== "false";
+const performanceArtifactKey = `chats-${chatCount}-cpu-${cpuRate}-telemetry-${telemetryEnabled ? "on" : "off"}`;
 
 const chats = Array.from({ length: chatCount }, (_, index) => {
   const id = index + 1;
@@ -70,7 +74,9 @@ function messages(chatId: number, start: number, end: number) {
 }
 
 async function mockApis(page: Page) {
-  const socket: { route?: WebSocketRoute } = {};
+  const socket: { route?: WebSocketRoute; telemetryBatches: string[] } = {
+    telemetryBatches: [],
+  };
   await page.routeWebSocket(/localhost:8004/, (webSocket) => {
     socket.route = webSocket;
     webSocket.send(
@@ -107,6 +113,10 @@ async function mockApis(page: Page) {
   await page.route("http://localhost:8005/**", async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
+    if (path === "/api/whatsapp/frontend-performance/batches") {
+      socket.telemetryBatches.push(route.request().postData() ?? "");
+      return route.fulfill({ status: 202, json: { accepted: 1, duplicate: false } });
+    }
     if (path === "/api/whatsapp/sectors") {
       return route.fulfill({
         json: { data: [{ id: 1, name: "Atendimento", defaultClientId: 1 }] },
@@ -122,6 +132,7 @@ async function mockApis(page: Page) {
       return route.fulfill({
         json: {
           parameters: {
+            feature_frontend_performance_telemetry_enabled: String(telemetryEnabled),
             feature_perf_paginated_chat_history_enabled: "true",
             feature_perf_stable_socket_listeners_enabled: "true",
             feature_perf_virtualized_chat_list_enabled: "true",
@@ -157,7 +168,11 @@ async function mockApis(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("@inpulse/test/token", "test-token"));
+  await page.addInitScript(() => {
+    localStorage.setItem("@inpulse/test/token", "test-token");
+    Object.defineProperty(navigator, "hardwareConcurrency", { configurable: true, get: () => 4 });
+    Object.defineProperty(navigator, "deviceMemory", { configurable: true, get: () => 4 });
+  });
 });
 
 test(`virtualiza ${chatCount} conversas e preserva o comportamento do Carregar mais`, async ({
@@ -181,15 +196,10 @@ test(`virtualiza ${chatCount} conversas e preserva o comportamento do Carregar m
   expect(await messageScroller.evaluate((element) => element.scrollHeight)).toBeGreaterThan(0);
 });
 
-test(`mantém evento-render p95 abaixo de 200 ms sob CPU ${cpuRate}x`, async ({ page }) => {
+test(`mantém evento-render p95 abaixo de 200 ms sob CPU ${cpuRate}x com telemetria ${telemetryEnabled ? "on" : "off"}`, async ({
+  page,
+}) => {
   const socket = await mockApis(page);
-  await page.goto("/test");
-  const items = page.getByTestId("chat-menu-item");
-  await expect(items.first()).toBeVisible({ timeout: 15_000 });
-  await items.first().click();
-  await expect(page.getByText("Mensagem 100")).toBeVisible();
-  await expect.poll(() => !!socket.route).toBe(true);
-
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpuRate });
   await cdp.send("Network.emulateNetworkConditions", {
@@ -199,24 +209,34 @@ test(`mantém evento-render p95 abaixo de 200 ms sob CPU ${cpuRate}x`, async ({ 
     uploadThroughput: (750_000 / 8) * 0.9,
     connectionType: "cellular3g",
   });
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     const metrics = window as typeof window & {
       __longTasks?: number[];
       __longTaskStarts?: number[];
+      __longTaskObserver?: PerformanceObserver;
     };
     metrics.__longTasks = [];
     metrics.__longTaskStarts = [];
     try {
-      new PerformanceObserver((list) => {
+      metrics.__longTaskObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           metrics.__longTasks?.push(entry.duration);
           metrics.__longTaskStarts?.push(entry.startTime);
         }
-      }).observe({ type: "longtask" });
+      });
+      metrics.__longTaskObserver.observe({ type: "longtask" });
     } catch {
       // Long tasks are not available in every Chromium build.
     }
   });
+  await page.goto("/test");
+  const items = page.getByTestId("chat-menu-item");
+  await expect(items.first()).toBeVisible({ timeout: 15_000 });
+  const startupDuration = await page.evaluate(() => performance.now());
+  await items.first().click();
+  await expect(page.getByText("Mensagem 100")).toBeVisible();
+  await expect.poll(() => !!socket.route).toBe(true);
+
   const burstStartedAt = await page.evaluate(() => performance.now());
 
   const durations: number[] = [];
@@ -253,31 +273,164 @@ test(`mantém evento-render p95 abaixo de 200 ms sob CPU ${cpuRate}x`, async ({ 
       }),
   );
 
+  // Exercise the real pagehide flush path without waiting 30 seconds. The
+  // long-task observer below therefore includes serialization and dispatch.
+  const batchesBeforeFlush = socket.telemetryBatches.length;
+  const flushStartedAt = performance.now();
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
+  if (telemetryEnabled) {
+    await expect.poll(() => socket.telemetryBatches.length).toBeGreaterThan(batchesBeforeFlush);
+    const flushedBatches = socket.telemetryBatches.slice(batchesBeforeFlush);
+    for (const rawBatch of flushedBatches) {
+      expect(Buffer.byteLength(rawBatch, "utf8")).toBeLessThanOrEqual(64 * 1024);
+      const payload = JSON.parse(rawBatch) as {
+        schemaVersion: number;
+        metrics: Array<{ route: string }>;
+      };
+      expect(payload.schemaVersion).toBe(1);
+      expect(payload.metrics.length).toBeGreaterThan(0);
+      expect(payload.metrics.length).toBeLessThanOrEqual(50);
+      for (const metric of payload.metrics) {
+        expect(metric.route).not.toContain("/test");
+        expect(metric.route).not.toMatch(/[?#]/);
+      }
+      expect(rawBatch).not.toContain("test-token");
+      expect(rawBatch).not.toContain("Contato ");
+      expect(rawBatch).not.toContain("Mensagem ");
+      expect(rawBatch).not.toContain("Rajada ");
+    }
+  }
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  const flushRoundTripDuration = performance.now() - flushStartedAt;
+
   durations.sort((left, right) => left - right);
+  const p75 = durations[Math.ceil(durations.length * 0.75) - 1] ?? Number.POSITIVE_INFINITY;
   const p95 = durations[Math.ceil(durations.length * 0.95) - 1] ?? Number.POSITIVE_INFINITY;
-  const longTasks = await page.evaluate((startedAt) => {
+  const longTaskMetrics = await page.evaluate((startedAt) => {
     const metrics = window as typeof window & {
       __longTasks?: number[];
       __longTaskStarts?: number[];
+      __longTaskObserver?: PerformanceObserver;
     };
-    return (metrics.__longTasks ?? []).filter(
+    for (const entry of metrics.__longTaskObserver?.takeRecords() ?? []) {
+      metrics.__longTasks?.push(entry.duration);
+      metrics.__longTaskStarts?.push(entry.startTime);
+    }
+    const all = metrics.__longTasks ?? [];
+    const burst = all.filter(
       (_, index) => (metrics.__longTaskStarts?.[index] ?? 0) >= startedAt,
     );
+    return { all, burst };
   }, burstStartedAt);
 
-  const maximumLongTask = Math.max(0, ...longTasks);
-  const totalLongTaskTime = longTasks.reduce((total, duration) => total + duration, 0);
+  const maximumLongTask = Math.max(0, ...longTaskMetrics.burst);
+  const totalLongTaskTime = longTaskMetrics.all.reduce((total, duration) => total + duration, 0);
+  const performanceMetrics = {
+    chatCount,
+    cpuRate,
+    telemetryEnabled,
+    startupDuration,
+    flushRoundTripDuration,
+    telemetryBatchCount: socket.telemetryBatches.length,
+    p75,
+    p95,
+    maximumLongTask,
+    totalLongTaskTime,
+    longTaskCount: longTaskMetrics.all.length,
+    burstLongTaskTime: longTaskMetrics.burst.reduce((total, duration) => total + duration, 0),
+  };
+  const metricsDirectory = path.join(
+    process.cwd(),
+    ".performance-artifacts",
+    "metrics",
+    performanceArtifactKey,
+  );
+  await mkdir(metricsDirectory, { recursive: true });
+  await writeFile(
+    path.join(metricsDirectory, "performance-metrics.json"),
+    JSON.stringify(performanceMetrics, null, 2),
+    "utf8",
+  );
   await test.info().attach("performance-metrics.json", {
+    body: Buffer.from(JSON.stringify(performanceMetrics, null, 2)),
+    contentType: "application/json",
+  });
+
+  expect(p95).toBeLessThan(200);
+  expect(maximumLongTask).toBeLessThanOrEqual(150);
+});
+
+test(`coalesce uma rajada real de 50 eventos sob CPU ${cpuRate}x com telemetria ${telemetryEnabled ? "on" : "off"}`, async ({
+  page,
+}) => {
+  const socket = await mockApis(page);
+  await page.goto("/test");
+  const items = page.getByTestId("chat-menu-item");
+  await expect(items.first()).toBeVisible({ timeout: 15_000 });
+  await items.first().click();
+  await expect(page.getByText("Mensagem 100")).toBeVisible();
+  await expect.poll(() => !!socket.route).toBe(true);
+
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpuRate });
+  await page.evaluate(() => {
+    const metrics = window as typeof window & { __burstLongTasks?: number[] };
+    metrics.__burstLongTasks = [];
+    try {
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) metrics.__burstLongTasks?.push(entry.duration);
+      }).observe({ type: "longtask" });
+    } catch {
+      // Long tasks are not available in every Chromium build.
+    }
+  });
+
+  const startedAt = performance.now();
+  for (let index = 1; index <= 50; index += 1) {
+    socket.route!.send(
+      `42${JSON.stringify([
+        "wpp_message",
+        {
+          message: {
+            id: 20_000 + index,
+            chatId: chatCount,
+            contactId: chatCount,
+            body: `Rajada real ${index}`,
+            type: "chat",
+            from: "contact:test",
+            to: "me:test",
+            status: "READ",
+            timestamp: String(1_910_000_000_000 + index),
+          },
+        },
+      ])}`,
+    );
+  }
+
+  await expect(
+    page.locator('[id="20050"]').getByText("Rajada real 50", { exact: true }),
+  ).toBeVisible({ timeout: 15_000 });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  const burstDuration = performance.now() - startedAt;
+  const longTasks = await page.evaluate(
+    () => (window as typeof window & { __burstLongTasks?: number[] }).__burstLongTasks ?? [],
+  );
+  const maximumLongTask = Math.max(0, ...longTasks);
+
+  await test.info().attach("socket-burst-metrics.json", {
     body: Buffer.from(
       JSON.stringify(
-        {
-          chatCount,
-          cpuRate,
-          p95,
-          maximumLongTask,
-          totalLongTaskTime,
-          longTaskCount: longTasks.length,
-        },
+        { chatCount, cpuRate, telemetryEnabled, burstDuration, maximumLongTask },
         null,
         2,
       ),
@@ -285,6 +438,6 @@ test(`mantém evento-render p95 abaixo de 200 ms sob CPU ${cpuRate}x`, async ({ 
     contentType: "application/json",
   });
 
-  expect(p95).toBeLessThan(200);
+  expect(burstDuration).toBeLessThan(2_000);
   expect(maximumLongTask).toBeLessThanOrEqual(150);
 });

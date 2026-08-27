@@ -11,6 +11,7 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import GroupMessage from "./group-message";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 type BubbleStyle = "system" | "sent" | "received";
 
@@ -37,6 +38,7 @@ export default function RenderInternalGroupMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderInternalGroupMessagesProps) {
+  useFrontendRenderMetric("RenderInternalGroupMessages");
   const {
     currentInternalChatMessages,
     users,

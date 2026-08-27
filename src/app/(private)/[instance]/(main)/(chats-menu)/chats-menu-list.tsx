@@ -3,7 +3,7 @@ import filesService from "@/lib/services/files.service";
 import { isExternalOperator } from "@/lib/permissions/operator-access";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
 import { replaceMentions } from "@/lib/utils/message-mentions";
-import { useContext, useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
@@ -62,7 +62,7 @@ export default function ChatsMenuList() {
     [users],
   );
 
-  const filteredChats = useMemo(() => {
+  const filteredComputation = useMemo(() => {
     const startedAt = performance.now();
     const validChats = Array.isArray(chats) ? chats : [];
     const validInternalChats = Array.isArray(internalChats) ? internalChats : [];
@@ -95,17 +95,21 @@ export default function ChatsMenuList() {
       }
       return chatFilters.search.length === 0 || matchesFilter(chat, chatFilters.search);
     });
+    return { result, duration: performance.now() - startedAt };
+  }, [chats, internalChats, chatFilters, isExternal]);
+  const filteredChats = filteredComputation.result;
+
+  useEffect(() => {
     recordFrontendPerformanceMetric({
       name: "interaction.chat_filter",
-      value: performance.now() - startedAt,
+      value: filteredComputation.duration,
       unit: "ms",
-      tags: { interaction: "chat_filter" },
+      tags: { interaction: "chat_filter", source: "committed" },
       detailed: true,
     });
-    return result;
-  }, [chats, internalChats, chatFilters, isExternal]);
+  }, [filteredComputation]);
 
-  const sortedChats = useMemo(() => {
+  const sortedComputation = useMemo(() => {
     const startedAt = performance.now();
     const getUserCreatorName = (chat: CombinedChat): string => {
       if (chat.chatType === "wpp") {
@@ -163,15 +167,19 @@ export default function ChatsMenuList() {
       const blt = getDate(b, "lastMessage");
       return blt - alt;
     });
+    return { result, duration: performance.now() - startedAt };
+  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder, userNameById]);
+  const sortedChats = sortedComputation.result;
+
+  useEffect(() => {
     recordFrontendPerformanceMetric({
       name: "interaction.chat_sort",
-      value: performance.now() - startedAt,
+      value: sortedComputation.duration,
       unit: "ms",
-      tags: { interaction: "chat_sort" },
+      tags: { interaction: "chat_sort", source: "committed" },
       detailed: true,
     });
-    return result;
-  }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder, userNameById]);
+  }, [sortedComputation]);
 
   const renderChatItem = (index: number, chat: CombinedChat) => {
     if (chat.chatType === "internal") {

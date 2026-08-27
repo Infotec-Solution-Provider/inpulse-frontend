@@ -38,7 +38,12 @@ import {
 } from "../../../lib/utils/file-upload-trace";
 import { dispatchConfiguredNotification } from "../../../lib/utils/notification-dispatch";
 import { shouldDispatchNotification } from "../../../lib/utils/notification-preferences";
-import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
+import {
+  cancelFrontendInteraction,
+  completeFrontendInteractionAfterPaint,
+  measureFrontendInteraction,
+  startFrontendInteraction,
+} from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 
@@ -138,6 +143,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const currentMessagesCursorRef = useRef<number | null>(null);
   const messageCursorCacheRef = useRef(new Map<number, number | null>());
   const activeMessagesCacheRef = useRef(new Map<number, InternalMessage[]>());
+  const openChatReadyInteractionRef = useRef<string | null>(null);
   const historyPrependRef = useRef(false);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
   const userInitiatedInternalChat = useRef<boolean>(false);
@@ -252,10 +258,42 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat, markAsRead: boolean = true) => {
+      cancelFrontendInteraction(openChatReadyInteractionRef.current);
+      const readyInteraction = startFrontendInteraction("open_chat_ready", {
+        source: "internal",
+      });
+      openChatReadyInteractionRef.current = readyInteraction;
+      const completeReadyInteraction = () => {
+        if (openChatReadyInteractionRef.current !== readyInteraction) {
+          cancelFrontendInteraction(readyInteraction);
+          return;
+        }
+        if (
+          currentChatRef.current?.chatType !== "internal" ||
+          currentChatRef.current.id !== chat.id
+        ) {
+          cancelFrontendInteraction(readyInteraction);
+          return;
+        }
+        completeFrontendInteractionAfterPaint(
+          readyInteraction,
+          () =>
+            currentChatRef.current?.chatType === "internal" &&
+            currentChatRef.current.id === chat.id,
+        );
+      };
+      const cancelReadyInteraction = () => {
+        if (openChatReadyInteractionRef.current === readyInteraction) {
+          openChatReadyInteractionRef.current = null;
+        }
+        cancelFrontendInteraction(readyInteraction);
+      };
       return measureFrontendInteraction("open_chat", () => {
         setCurrentChat(chat);
+        currentChatRef.current = chat as unknown as DetailedChat;
         if (!paginatedChatHistoryEnabled) {
           setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
+          completeReadyInteraction();
         } else {
           const monitorChatMessages = monitorMessages[chat.id];
           const cachedMessages = activeMessagesCacheRef.current.get(chat.id);
@@ -266,20 +304,24 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
             const cursor = cacheActiveMessages(chat.id, monitorChatMessages, null);
             currentMessagesCursorRef.current = cursor;
             setHasOlderInternalMessages(cursor !== null);
+            completeReadyInteraction();
           } else if (cachedMessages) {
             const cursor = messageCursorCacheRef.current.get(chat.id) ?? null;
             currentMessagesCursorRef.current = cursor;
             setHasOlderInternalMessages(cursor !== null);
+            completeReadyInteraction();
           } else {
             currentMessagesCursorRef.current = null;
             setHasOlderInternalMessages(false);
-            void loadFirstMessagePage(chat).catch(() =>
-              toast.error("Falha ao carregar mensagens internas."),
-            );
+            void loadFirstMessagePage(chat)
+              .then(completeReadyInteraction)
+              .catch(() => {
+                cancelReadyInteraction();
+                toast.error("Falha ao carregar mensagens internas.");
+              });
           }
         }
         setWppCurrMsgs([]);
-        currentChatRef.current = chat as unknown as DetailedChat;
 
         if (markAsRead) {
           void api.current.markChatMessagesAsRead(chat.id);
@@ -314,7 +356,12 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     if (!activeChat || activeChat.chatType !== "internal" || !cursor) return 0;
 
     const page = await api.current.getChatMessagesPage(activeChat.id, 50, cursor);
-    if (currentChatRef.current?.id !== activeChat.id) return 0;
+    if (
+      currentChatRef.current?.chatType !== "internal" ||
+      currentChatRef.current.id !== activeChat.id
+    ) {
+      return 0;
+    }
 
     historyPrependRef.current = true;
     const currentMessages = currentInternalChatMessagesRef.current;

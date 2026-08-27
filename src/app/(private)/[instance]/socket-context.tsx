@@ -5,6 +5,7 @@ import { AuthContext } from "../../auth-context";
 import { AppContext } from "./app-context";
 import QRModal from "./(main)/qr-modal";
 import { toast } from "react-toastify";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface ISocketContext {
   socket: SocketClient;
@@ -19,6 +20,7 @@ const SOCKET_URL = process.env["NEXT_PUBLIC_SOCKET_URL"] || "http://localhost:80
 export const SocketContext = createContext({} as ISocketContext);
 
 export default function SocketProvider({ children }: SocketProviderProps) {
+  useFrontendRenderMetric("SocketProvider");
   const { token } = useContext(AuthContext);
   const { openModal, closeModal } = useContext(AppContext);
 

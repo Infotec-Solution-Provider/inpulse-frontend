@@ -22,7 +22,7 @@ import {
   SelectChangeEvent,
   TextField,
 } from "@mui/material";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { AuthContext } from "@/app/auth-context";
 import { useAppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
@@ -30,6 +30,12 @@ import { canAccessInternalChats, isExternalOperator } from "@/lib/permissions/op
 import SchedulesModal from "./(schedules-modal)/schedules-modal";
 import StartChatModal from "./(start-chat-modal)/start-chat-modal";
 import StartInternalChatModal from "./(start-internal-chat-modal)/start-internal-chat-modal";
+import {
+  cancelFrontendInteraction,
+  completeFrontendInteractionAfterPaint,
+  startFrontendInteraction,
+} from "@/lib/performance/frontend-performance";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
   all: "",
@@ -40,6 +46,8 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 };
 
 export default function ChatsMenuFilters() {
+  useFrontendRenderMetric("ChatsMenuFilters");
+  const listInteractionRef = useRef<string | null>(null);
   const { openModal, closeModal } = useAppContext();
   const { user } = useContext(AuthContext);
   const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
@@ -84,12 +92,24 @@ export default function ChatsMenuFilters() {
     setFilterMenuAnchorEl(null);
   };
 
+  const measureListReadyAfterPaint = (
+    interactionName: "chat_filter_ready" | "chat_sort_ready",
+    source: "type" | "search" | "field" | "direction",
+  ) => {
+    cancelFrontendInteraction(listInteractionRef.current);
+    const interaction = startFrontendInteraction(interactionName, { source });
+    listInteractionRef.current = interaction;
+    completeFrontendInteractionAfterPaint(interaction);
+  };
+
   const handleChangeShowingType = (showingType: ShowingMessagesType) => {
+    measureListReadyAfterPaint("chat_filter_ready", "type");
     changeChatFilters({ type: "change-showing-type", showingType });
     handleFilterMenuClose();
   };
 
   const handleChangeText = (event: React.ChangeEvent<HTMLInputElement>) => {
+    measureListReadyAfterPaint("chat_filter_ready", "search");
     changeChatFilters({ type: "change-search", search: event.target.value });
   };
 
@@ -99,13 +119,17 @@ export default function ChatsMenuFilters() {
 
   const handleChangeSortBy = (event: SelectChangeEvent) => {
     const value = event.target.value as any;
+    measureListReadyAfterPaint("chat_sort_ready", "field");
     changeChatFilters({ type: "change-sort-by", sortBy: value });
   };
 
   const handleChangeSortOrder = (event: SelectChangeEvent) => {
     const value = event.target.value as any;
+    measureListReadyAfterPaint("chat_sort_ready", "direction");
     changeChatFilters({ type: "change-sort-order", sortOrder: value });
   };
+
+  useEffect(() => () => cancelFrontendInteraction(listInteractionRef.current), []);
 
   useEffect(() => {
     if (isExternal && chatFilters.showingType !== "internal") {

@@ -11,6 +11,7 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import Message from "./message";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 type BubbleStyle = "system" | "sent" | "received";
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
@@ -36,6 +37,7 @@ export default function RenderInternalChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderInternalChatMessagesProps) {
+  useFrontendRenderMetric("RenderInternalChatMessages");
   const {
     currentInternalChatMessages,
     users,

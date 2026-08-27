@@ -12,7 +12,8 @@
     "lint": "next lint",
     "test:unit": "vitest run src",
     "test:e2e": "playwright test --project=chromium",
-    "test:performance": "playwright test tests/performance.spec.ts --project=chromium-performance"
+    "test:performance": "playwright test tests/performance.spec.ts --project=chromium-performance",
+    "test:performance:telemetry-overhead": "node scripts/compare-telemetry-overhead.cjs"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.7",

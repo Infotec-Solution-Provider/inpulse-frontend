@@ -16,6 +16,7 @@ import WhatsappProvider from "./whatsapp-context";
 import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
 import { AuthContext } from "@/app/auth-context";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -44,6 +45,7 @@ const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
 ];
 
 function RouteFeatureGate({ children }: { children: ReactNode }) {
+  useFrontendRenderMetric("RouteFeatureGate");
   const pathname = usePathname();
   const { user } = useContext(AuthContext);
   const { loaded, parameters } = useWhatsappContext();

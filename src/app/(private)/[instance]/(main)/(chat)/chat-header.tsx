@@ -30,6 +30,7 @@ import TransferChatModal from "./(actions)/transfer-chat-modal";
 import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
 import { useAuthContext } from "@/app/auth-context";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 const safeFormatPhone = (phone: string | null): string => {
   try {
@@ -63,6 +64,7 @@ export default function ChatHeader({
   customerId,
   onClose,
 }: ChatContactInfoProps) {
+	useFrontendRenderMetric("ChatHeader");
 	const { instance } = useAuthContext();
 	const router = useRouter();
   const { openModal, closeModal } = useContext(AppContext);

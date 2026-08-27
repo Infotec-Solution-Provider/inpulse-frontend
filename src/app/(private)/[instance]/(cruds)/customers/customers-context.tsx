@@ -26,6 +26,7 @@ import customersReducer, {
   CustomersContextState,
   MultipleActions,
 } from "./(table)/customers-reducer";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface ICustomersProviderProps {
   children: ReactNode;
@@ -53,6 +54,7 @@ const CUSTOMERS_BASE_URL: string =
   process.env["NEXT_PUBLIC_CUSTOMERS_URL"] || "https://inpulse.infotecrs.inf.br";
 
 export default function CustomersProvider({ children }: ICustomersProviderProps) {
+  useFrontendRenderMetric("CustomersProvider");
   const api = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
   const { token } = useAuthContext();
 

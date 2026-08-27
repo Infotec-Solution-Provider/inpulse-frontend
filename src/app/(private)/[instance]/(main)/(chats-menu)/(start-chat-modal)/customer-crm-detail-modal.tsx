@@ -4,6 +4,10 @@ import customersService from "@/lib/services/customers.service";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { Customer } from "@/lib/sdk-local";
+import {
+  completeMeasuredFrontendFetch,
+  measuredFrontendFetch,
+} from "@/lib/performance/frontend-performance";
 import AddIcon from "@mui/icons-material/Add";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import CloseIcon from "@mui/icons-material/Close";
@@ -271,12 +275,14 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
     const loadCities = async () => {
       setLoadingCities(true);
+      let measuredResponse: Response | null = null;
 
       try {
         const instancesApiUrl = process.env["NEXT_PUBLIC_INSTANCES_URL"] || "http://localhost:8000";
-        const response = await fetch(
+        const response = await measuredFrontendFetch(
           `${instancesApiUrl}/api/instances/geo/states/${stateCode}/cities`
         );
+        measuredResponse = response;
 
         if (!response.ok) {
           throw new Error(`Unable to fetch cities for state ${stateCode}`);
@@ -292,6 +298,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         }
         console.error(error);
       } finally {
+        if (measuredResponse) completeMeasuredFrontendFetch(measuredResponse);
         if (!cancelled) {
           setLoadingCities(false);
         }

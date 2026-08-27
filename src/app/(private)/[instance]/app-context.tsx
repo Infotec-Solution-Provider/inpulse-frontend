@@ -1,5 +1,6 @@
 "use client";
 import { createContext, ReactElement, ReactNode, useContext, useEffect } from "react";
+import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 interface AppContextProps {
   modal: ReactNode;
@@ -24,6 +25,7 @@ export function useAppContext() {
 }
 
 export default function AppProvider({ children, modal, setModal }: AppProviderProps) {
+  useFrontendRenderMetric("AppProvider");
   const openModal = (modal: ReactElement) => {
     setModal(modal);
   };
