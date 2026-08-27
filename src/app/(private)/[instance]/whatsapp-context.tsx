@@ -62,7 +62,11 @@ import {
 } from "../../../lib/utils/file-upload-trace";
 import getFileSHA256 from "../../../lib/utils/get-file-sha256";
 import FrontendPerformanceProvider from "@/lib/performance/frontend-performance-provider";
-import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
+import {
+  measureFrontendInteraction,
+  recordFrontendError,
+  recordFrontendPerformanceMetric,
+} from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
@@ -423,6 +427,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions) => {
       let traceId: string | null = null;
+      let telemetryFlowStartedAt: number | null = null;
+      let telemetryPhaseStartedAt = 0;
+      let telemetryPhase = "file_total";
+      let uploadOwnsErrorTelemetry = false;
       try {
         Logger.debug("Attempting to send message", { to, data });
         if (!instance) {
@@ -441,6 +449,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         traceId = createFileUploadTraceId("whatsapp-send-file");
         const flowStartedAt = Date.now();
+        telemetryFlowStartedAt = flowStartedAt;
+        telemetryPhaseStartedAt = flowStartedAt;
+        telemetryPhase = "file_hash";
+        recordFrontendPerformanceMetric({
+          name: "file_send.bytes",
+          value: data.file.size,
+          unit: "bytes",
+        });
         logFileUploadTrace(traceId, "frontend.whatsapp.send-file.start", {
           instance,
           channelId: selectedChannel.id,
@@ -456,13 +472,27 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         const hashStartedAt = Date.now();
         const sha256 = await getFileSHA256(data.file);
+        recordFrontendPerformanceMetric({
+          name: "file_send.duration",
+          value: Date.now() - telemetryPhaseStartedAt,
+          unit: "ms",
+          tags: { phase: "file_hash", outcome: "success" },
+        });
         logFileUploadTrace(traceId, "frontend.whatsapp.hash.ready", {
           elapsedMs: Date.now() - hashStartedAt,
           sha256,
         });
 
         const dedupeStartedAt = Date.now();
+        telemetryPhaseStartedAt = dedupeStartedAt;
+        telemetryPhase = "file_dedupe";
         const res = await filesService.getFileByHash(instance, sha256);
+        recordFrontendPerformanceMetric({
+          name: "file_send.duration",
+          value: Date.now() - telemetryPhaseStartedAt,
+          unit: "ms",
+          tags: { phase: "file_dedupe", outcome: "success" },
+        });
         logFileUploadTrace(traceId, "frontend.whatsapp.dedupe.checked", {
           elapsedMs: Date.now() - dedupeStartedAt,
           foundExistingFile: !!res.file,
@@ -487,7 +517,27 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             fileId: res.file.id,
             elapsedMs: Date.now() - flowStartedAt,
           });
+          telemetryPhase = "file_message_request";
+          telemetryPhaseStartedAt = Date.now();
           await sendTracedFileMessage(selectedChannel.id, to, sendFileData);
+          recordFrontendPerformanceMetric({
+            name: "file_send.duration",
+            value: Date.now() - telemetryPhaseStartedAt,
+            unit: "ms",
+            tags: { phase: "file_message_request", outcome: "success" },
+          });
+          recordFrontendPerformanceMetric({
+            name: "file_send.duration",
+            value: Date.now() - telemetryFlowStartedAt,
+            unit: "ms",
+            tags: { phase: "file_total", outcome: "success" },
+          });
+          recordFrontendPerformanceMetric({
+            name: "file_send.count",
+            value: 1,
+            unit: "count",
+            tags: { phase: "file_total", outcome: "success" },
+          });
           logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
             mode: "dedupe-hit",
             elapsedMs: Date.now() - flowStartedAt,
@@ -496,6 +546,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           return;
         }
 
+        telemetryPhase = "file_total";
+        uploadOwnsErrorTelemetry = true;
         const uploadedFile = await filesService.uploadBrowserFile({
           instance,
           dirType: FileDirType.PUBLIC,
@@ -503,6 +555,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           contentHash: sha256,
           traceId,
         });
+        uploadOwnsErrorTelemetry = false;
         logFileUploadTrace(traceId, "frontend.whatsapp.upload.completed", {
           elapsedMs: Date.now() - flowStartedAt,
           uploadedFileId: uploadedFile.id,
@@ -514,6 +567,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           fileId: uploadedFile.id,
           elapsedMs: Date.now() - flowStartedAt,
         });
+        telemetryPhase = "file_message_request";
+        telemetryPhaseStartedAt = Date.now();
         await sendTracedFileMessage(selectedChannel.id, to, {
           contactId: data.contactId,
           text: data.text,
@@ -525,11 +580,62 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           sendAsDocument: !data.sendAsDocument,
           traceId,
         });
+        recordFrontendPerformanceMetric({
+          name: "file_send.duration",
+          value: Date.now() - telemetryPhaseStartedAt,
+          unit: "ms",
+          tags: { phase: "file_message_request", outcome: "success" },
+        });
+        recordFrontendPerformanceMetric({
+          name: "file_send.duration",
+          value: Date.now() - telemetryFlowStartedAt,
+          unit: "ms",
+          tags: { phase: "file_total", outcome: "success" },
+        });
+        recordFrontendPerformanceMetric({
+          name: "file_send.count",
+          value: 1,
+          unit: "count",
+          tags: { phase: "file_total", outcome: "success" },
+        });
         logFileUploadTrace(traceId, "frontend.whatsapp.send-file.success", {
           elapsedMs: Date.now() - flowStartedAt,
           fileId: uploadedFile.id,
         });
       } catch (err) {
+        if (telemetryFlowStartedAt !== null) {
+          const code = (err as { code?: unknown } | null)?.code;
+          const name = (err as { name?: unknown } | null)?.name;
+          const outcome =
+            code === "ECONNABORTED" || code === "ETIMEDOUT"
+              ? "timeout"
+              : code === "ERR_CANCELED" || name === "AbortError"
+                ? "aborted"
+                : "failed";
+          if (telemetryPhase !== "file_total") {
+            recordFrontendPerformanceMetric({
+              name: "file_send.duration",
+              value: Date.now() - telemetryPhaseStartedAt,
+              unit: "ms",
+              tags: { phase: telemetryPhase, outcome },
+            });
+          }
+          recordFrontendPerformanceMetric({
+            name: "file_send.duration",
+            value: Date.now() - telemetryFlowStartedAt,
+            unit: "ms",
+            tags: { phase: "file_total", outcome },
+          });
+          recordFrontendPerformanceMetric({
+            name: "file_send.count",
+            value: 1,
+            unit: "count",
+            tags: { phase: "file_total", outcome },
+          });
+          if (!uploadOwnsErrorTelemetry) {
+            recordFrontendError(err, { source: "file_send", phase: telemetryPhase });
+          }
+        }
         traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
         toast.error(sanitizeErrorMessage(err));
       }

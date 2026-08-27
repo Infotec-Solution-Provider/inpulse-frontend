@@ -10,7 +10,11 @@ export function PwaRegistration() {
 
     const register = async () => {
       try {
-        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+        const registration = await navigator.serviceWorker.register("/sw.js", {
+          scope: "/",
+          updateViaCache: "none",
+        });
+        await registration.update();
       } catch {
         // PWA support is optional; ignore registration failures.
       }

@@ -1,11 +1,25 @@
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { WppChatWithDetails, WppMessage } from "@/lib/sdk-local";
+import { recordFrontendPerformanceMetric } from "@/lib/performance/frontend-performance";
 
 export default function processChatsAndMessages(
   /* socketClient: SocketClient, */
   chats: WppChatWithDetails[],
   messages: WppMessage[],
 ) {
+  recordFrontendPerformanceMetric({
+    name: "volume.chats_loaded",
+    value: chats.length,
+    unit: "count",
+    detailed: true,
+  });
+  recordFrontendPerformanceMetric({
+    name: "volume.messages_loaded",
+    value: messages.length,
+    unit: "count",
+    detailed: true,
+  });
+
   messages.sort((a, b) => ((a.timestamp || 0) < (b.timestamp || 0) ? -1 : 1));
 
   const lastMessages: Record<number, WppMessage> = {};

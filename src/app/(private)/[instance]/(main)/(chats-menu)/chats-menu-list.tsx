@@ -84,11 +84,20 @@ export default function ChatsMenuList() {
       }
       return chatFilters.search.length === 0 || matchesFilter(chat, chatFilters.search);
     });
+    const duration = performance.now() - startedAt;
+    if (duration > 0) {
+      recordFrontendPerformanceMetric({
+        name: "interaction.chat_filter",
+        value: duration,
+        unit: "ms",
+        tags: { interaction: "chat_filter", source: "committed" },
+        detailed: true,
+      });
+    }
     recordFrontendPerformanceMetric({
-      name: "interaction.chat_filter",
-      value: performance.now() - startedAt,
-      unit: "ms",
-      tags: { interaction: "chat_filter" },
+      name: "volume.chats_filtered",
+      value: result.length,
+      unit: "count",
       detailed: true,
     });
     return result;
@@ -152,11 +161,20 @@ export default function ChatsMenuList() {
       const blt = getDate(b, "lastMessage");
       return blt - alt;
     });
+    const duration = performance.now() - startedAt;
+    if (duration > 0) {
+      recordFrontendPerformanceMetric({
+        name: "interaction.chat_sort",
+        value: duration,
+        unit: "ms",
+        tags: { interaction: "chat_sort", source: "committed" },
+        detailed: true,
+      });
+    }
     recordFrontendPerformanceMetric({
-      name: "interaction.chat_sort",
-      value: performance.now() - startedAt,
-      unit: "ms",
-      tags: { interaction: "chat_sort" },
+      name: "volume.chats_sorted",
+      value: result.length,
+      unit: "count",
       detailed: true,
     });
     return result;
