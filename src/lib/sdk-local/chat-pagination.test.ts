@@ -3,6 +3,17 @@ import InternalChatClient from "./internal.client";
 import WhatsappClient from "./whatsapp.client";
 
 describe("paginated chat history clients", () => {
+	it("uses the backend edit routes for WhatsApp and internal messages", async () => {
+		const client = new WhatsappClient("http://localhost");
+		const put = vi.spyOn(client.ax, "put").mockResolvedValue({ data: {} });
+
+		await client.editMessage("2", "73289", "WhatsApp edit");
+		await client.editMessage("2", "73290", "Internal edit", true);
+
+		expect(put.mock.calls[0]?.[0]).toBe("/api/whatsapp/2/messages/73289");
+		expect(put.mock.calls[1]?.[0]).toBe("/api/internal/messages/73290");
+	});
+
   it("requests WhatsApp summaries and cursor pages without message content", async () => {
     const client = new WhatsappClient("http://localhost");
     const get = vi
