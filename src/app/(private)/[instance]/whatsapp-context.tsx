@@ -546,7 +546,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         return;
       }
 
-      api.current.editMessage(String(channelId), messageId, newText, isInternal);
+      await api.current.editMessage(String(channelId), messageId, newText, isInternal);
     },
     [selectedChannel],
   );

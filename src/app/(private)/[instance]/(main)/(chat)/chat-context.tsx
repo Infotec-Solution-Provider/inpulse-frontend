@@ -107,7 +107,7 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     [dispatch, isReadOnlyMode],
   );
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (isReadOnlyMode) {
       toast.info("Esta conversa esta em modo somente leitura.");
       return;
@@ -143,10 +143,11 @@ export default function ChatProvider({ children }: ChatProviderProps) {
 
     if (editingMessage && currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
       try {
-        editMessage(String(editingMessage.id), state.text);
+        await editMessage(String(editingMessage.id), state.text);
       } catch (err) {
         toast.error("Não foi possível editar esta mensagem.");
-        console.error("Erro inesperado ao chamar sendMessage para editar", err);
+        console.error("Erro inesperado ao editar mensagem", err);
+        return;
       }
     }
 
@@ -164,7 +165,13 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     }
 
     if (editingMessage && currentChat && currentChat.chatType === "internal") {
-      editMessage(String(editingMessage.id), state.text, true);
+      try {
+        await editMessage(String(editingMessage.id), state.text, true);
+      } catch (err) {
+        toast.error("Nao foi possivel editar esta mensagem.");
+        console.error("Erro inesperado ao editar mensagem interna", err);
+        return;
+      }
     }
 
     dispatch({ type: "reset" });
