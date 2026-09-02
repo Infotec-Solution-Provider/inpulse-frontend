@@ -30,7 +30,12 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     } else {
       socket.current.disconnect();
     }
-  }, [token, socket]);
+  }, [token]);
+
+  useEffect(() => {
+    const socketClient = socket.current;
+    return () => socketClient.disconnect();
+  }, []);
 
   useEffect(() => {
     const socketClient = socket.current;

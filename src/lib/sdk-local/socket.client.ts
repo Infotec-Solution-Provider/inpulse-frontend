@@ -66,7 +66,7 @@ export default class SocketClient {
 		this.unregisterTelemetryFlushHook ??=
 			frontendPerformanceCollector.registerFlushHook(() => this.flushSocketTelemetry());
 		this.ws.auth = { token };
-		this.ws.connect();
+		if (!this.ws.connected) this.ws.connect();
 	}
 
 	/**

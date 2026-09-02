@@ -2,6 +2,7 @@ import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { DataResponse } from "./types/response.types";
 import ApiClient from "./api-client";
 import { LoginData, SessionData, UserOnlineSession } from "./types/auth.types";
+import { skipAuthInterceptors } from "@/lib/auth-session";
 
 /**
  * Classe AuthSDK para interagir com a API de autenticação.
@@ -17,9 +18,29 @@ export default class AuthClient extends ApiClient {
 	public async login(instance: string, username: string, password: string) {
 		const { data: res } = await this.ax.post<
 			DataResponse<LoginData>
-		>(`/api/auth/login`, { LOGIN: username, SENHA: password, instance });
+		>(`/api/auth/login`, { LOGIN: username, SENHA: password, instance }, {
+			...skipAuthInterceptors(),
+			withCredentials: true,
+		});
 
 		return res.data;
+	}
+
+	public async refresh(instance: string) {
+		const { data: res } = await this.ax.post<DataResponse<LoginData>>(
+			"/api/auth/refresh",
+			{ instance },
+			{ ...skipAuthInterceptors(), withCredentials: true },
+		);
+		return res.data;
+	}
+
+	public async logout(instance: string) {
+		await this.ax.post(
+			"/api/auth/logout",
+			{ instance },
+			{ ...skipAuthInterceptors(), withCredentials: true },
+		);
 	}
 
 	/**
@@ -30,6 +51,7 @@ export default class AuthClient extends ApiClient {
 	public async fetchSessionData(authToken: string) {
 		const { data: res } = await this.ax
 			.get<DataResponse<SessionData>>(`/api/auth/session`, {
+				...skipAuthInterceptors(),
 				headers: {
 					authorization: authToken,
 				},

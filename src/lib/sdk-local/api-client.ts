@@ -4,6 +4,7 @@ import {
   frontendPerformanceCollector,
   recordFrontendPerformanceMetric,
 } from "@/lib/performance/frontend-performance";
+import { AuthRequestConfig, authSession } from "@/lib/auth-session";
 
 type TimedRequestConfig = InternalAxiosRequestConfig & {
   frontendPerformanceRoute?: string;
@@ -29,6 +30,7 @@ export default class ApiClient {
       },
     });
 
+    authSession.install(this.ax);
     this.initializeResponseInterceptor();
   }
 
@@ -57,7 +59,7 @@ export default class ApiClient {
         );
         return response;
       },
-      (error: AxiosError<ErrorResponse>) => {
+      async (error: AxiosError<ErrorResponse>) => {
         if (error.config)
           this.recordRequestDuration(
             error.config as TimedRequestConfig,
@@ -65,6 +67,15 @@ export default class ApiClient {
             this.readContentLength(error.response?.headers),
             axios.isCancel(error) ? "cancelled" : undefined,
           );
+        const config = error.config as AuthRequestConfig | undefined;
+        if (error.response?.status === 401 && !config?.skipAuthRefresh && !config?.authRefreshRetried) {
+          try {
+            return await authSession.retryUnauthorized(error, this.ax);
+          } catch (refreshError) {
+            if (axios.isAxiosError(refreshError)) return this.handleError(refreshError as AxiosError<ErrorResponse>);
+            return Promise.reject(refreshError);
+          }
+        }
         return this.handleError(error);
       },
     );

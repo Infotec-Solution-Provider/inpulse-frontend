@@ -6,10 +6,11 @@ export interface AuthSignForm {
 }
 
 export interface AuthContextProps {
+    status: "loading" | "authenticated" | "recovering" | "anonymous";
     isAuthenticated: boolean;
     user: User | null;
     signIn: (instance: string, data: AuthSignForm) => Promise<void>;
-    signOut: () => void;
+    signOut: () => Promise<void>;
     token: string | null;
     instance: string;
     pathname: string;

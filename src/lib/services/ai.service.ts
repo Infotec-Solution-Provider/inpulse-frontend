@@ -14,6 +14,7 @@ import type {
   SendSupervisorAiMessageResponse,
   UpdateAiAgentInput,
 } from "@/lib/types/sdk-local.types";
+import { authenticatedFetch } from "@/lib/auth-session";
 
 const NEXT_PUBLIC_AI_URL = process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8008";
 
@@ -33,7 +34,7 @@ class FrontendAiService extends AiClient {
 		options: { signal: AbortSignal; onDelta: (text: string) => void },
 	): Promise<SendSupervisorAiMessageResponse> {
 		const baseUrl = String(this.ax.defaults.baseURL ?? "").replace(/\/$/, "");
-		const response = await fetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
+		const response = await authenticatedFetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

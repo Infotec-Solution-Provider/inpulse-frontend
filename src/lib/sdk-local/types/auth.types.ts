@@ -12,6 +12,8 @@ export interface LoginData {
 }
 
 export interface SessionData {
+	sid?: string;
+	typ?: "access";
 	/**
 	 * ID do usuário.
 	 */

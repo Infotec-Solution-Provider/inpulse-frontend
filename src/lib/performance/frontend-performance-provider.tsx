@@ -52,8 +52,9 @@ export default function FrontendPerformanceProvider({
     }
     frontendPerformanceCollector.start({ token, endpoint, buildId: BUILD_ID, route: pathname });
     setReporterSessionId(frontendPerformanceCollector.getSessionId());
-    return () => frontendPerformanceCollector.stop();
   }, [enabled, endpoint, token]);
+
+  useEffect(() => () => frontendPerformanceCollector.stop(), []);
 
   useEffect(() => {
     if (enabled) frontendPerformanceCollector.setRoute(pathname);

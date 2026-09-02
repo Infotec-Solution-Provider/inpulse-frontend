@@ -1,13 +1,14 @@
 import axios from 'axios';
 import { Dashboard, Metric, TableMeta, ReportJob } from '@/types/reports';
 import type { GeneratedReportArtifact, GeneratedReportBlock, GeneratedReportExecution } from '@/types/generated-reports';
+import { authenticatedFetch } from '@/lib/auth-session';
 
 const BASE_URL = process.env.NEXT_PUBLIC_REPORTS_API_URL ?? 'http://localhost:8006';
 
 async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
   const authHeader = axios.defaults.headers['authorization'] as string | undefined;
 
-  const res = await fetch(`${BASE_URL}/api/reports${path}`, {
+  const res = await authenticatedFetch(`${BASE_URL}/api/reports${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -84,7 +85,7 @@ export const updateGeneratedReportLayout = (id: string, blocks: GeneratedReportB
 
 export async function exportGeneratedReport(id: string, body: { format: 'pdf' | 'csv' | 'png'; filters: Record<string, unknown>; datasetId?: string; blockId?: string }): Promise<void> {
   const authHeader = axios.defaults.headers['authorization'] as string | undefined;
-  const response = await fetch(`${BASE_URL}/api/reports/generated/${id}/export`, {
+  const response = await authenticatedFetch(`${BASE_URL}/api/reports/generated/${id}/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(authHeader ? { Authorization: authHeader } : {}) },
     body: JSON.stringify(body),
