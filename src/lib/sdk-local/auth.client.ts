@@ -26,11 +26,11 @@ export default class AuthClient extends ApiClient {
 		return res.data;
 	}
 
-	public async refresh(instance: string) {
+	public async refresh(instance: string, signal?: AbortSignal) {
 		const { data: res } = await this.ax.post<DataResponse<LoginData>>(
 			"/api/auth/refresh",
 			{ instance },
-			{ ...skipAuthInterceptors(), withCredentials: true },
+			{ ...skipAuthInterceptors(), withCredentials: true, signal },
 		);
 		return res.data;
 	}

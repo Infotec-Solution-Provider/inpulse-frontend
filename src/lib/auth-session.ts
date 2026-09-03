@@ -128,27 +128,37 @@ class AuthSessionCoordinator {
   private async refreshAccessToken(): Promise<string> {
     if (this.refreshPromise) return this.refreshPromise;
     if (!this.configuration) throw new Error("authentication session is not configured");
+    const configuration = this.configuration;
 
     const execute = async () => {
+      if (this.configuration !== configuration) {
+        throw new Error("authentication session changed");
+      }
       try {
-        const token = await this.configuration!.refresh();
+        const token = await configuration.refresh();
+        if (this.configuration !== configuration) {
+          throw new Error("authentication session changed");
+        }
         this.accessToken = token;
         return token;
       } catch (error) {
-        if (this.isDefinitiveRefreshFailure(error)) this.configuration?.onInvalid();
+        if (this.configuration === configuration && this.isDefinitiveRefreshFailure(error)) {
+          configuration.onInvalid();
+        }
         throw error;
       }
     };
 
-    const lockName = `inpulse-auth-refresh:${this.configuration.instance}`;
-    this.refreshPromise = typeof navigator !== "undefined" && navigator.locks
+    const lockName = `inpulse-auth-refresh:${configuration.instance}`;
+    const refreshPromise = typeof navigator !== "undefined" && navigator.locks
       ? navigator.locks.request(lockName, execute)
       : execute();
+    this.refreshPromise = refreshPromise;
 
     try {
-      return await this.refreshPromise;
+      return await refreshPromise;
     } finally {
-      this.refreshPromise = null;
+      if (this.refreshPromise === refreshPromise) this.refreshPromise = null;
     }
   }
 }

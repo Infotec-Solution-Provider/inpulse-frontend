@@ -26,6 +26,22 @@ describe("AuthSessionCoordinator", () => {
     expect(new Set(tokens).size).toBe(1);
   });
 
+  it("discards a refresh response that arrives after the session was cleared", async () => {
+    const newToken = tokenExpiringAt(Date.now() + 900_000);
+    let resolveRefresh!: (token: string) => void;
+    const refresh = vi.fn(() => new Promise<string>((resolve) => {
+      resolveRefresh = resolve;
+    }));
+    authSession.configure({ instance: "tenant-a", refresh, onInvalid: vi.fn() });
+
+    const pendingRefresh = authSession.forceRefresh();
+    authSession.clearConfiguration();
+    resolveRefresh(newToken);
+
+    await expect(pendingRefresh).rejects.toThrow("authentication session changed");
+    expect(authSession.getAccessToken()).toBeNull();
+  });
+
   it("refreshes and retries fetch once after a 401", async () => {
     const oldToken = tokenExpiringAt(Date.now() + 900_000);
     const newToken = tokenExpiringAt(Date.now() + 1_800_000);

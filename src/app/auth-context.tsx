@@ -39,11 +39,16 @@ export default function AuthProvider({ children }: ProviderProps) {
   const instanceRef = useRef(getInstanceFromPath(pathname));
   const tokenRef = useRef<string | null>(null);
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const refreshAbortRef = useRef<AbortController | null>(null);
+  const sessionEpochRef = useRef(0);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
 
   const clearLocalSession = useCallback((redirect = true) => {
+    sessionEpochRef.current += 1;
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = null;
     tokenRef.current = null;
     authSession.clearConfiguration();
     setToken(null);
@@ -72,20 +77,39 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   const refreshSession = useCallback(async (): Promise<string> => {
     let lastError: unknown;
+    const epoch = sessionEpochRef.current;
+    const instance = instanceRef.current;
+    const abortController = new AbortController();
+    refreshAbortRef.current = abortController;
     setStatus((current) => current === "anonymous" ? current : "recovering");
-    for (const delay of REFRESH_RETRY_DELAYS_MS) {
-      if (delay) await wait(delay);
-      try {
-        const session = await authService.refresh(instanceRef.current);
-        applySession(session);
-        return session.token;
-      } catch (error) {
-        lastError = error;
-        if (authSession.isDefinitiveRefreshFailure(error)) throw error;
+    try {
+      for (const delay of REFRESH_RETRY_DELAYS_MS) {
+        if (delay) await wait(delay);
+        if (abortController.signal.aborted || epoch !== sessionEpochRef.current) {
+          throw new Error("session refresh cancelled");
+        }
+        try {
+          const session = await authService.refresh(instance, abortController.signal);
+          if (
+            abortController.signal.aborted ||
+            epoch !== sessionEpochRef.current ||
+            instance !== instanceRef.current
+          ) {
+            throw new Error("session refresh cancelled");
+          }
+          applySession(session);
+          return session.token;
+        } catch (error) {
+          lastError = error;
+          if (axios.isCancel(error) || abortController.signal.aborted) throw error;
+          if (authSession.isDefinitiveRefreshFailure(error)) throw error;
+        }
       }
+      setStatus(tokenRef.current ? "recovering" : "anonymous");
+      throw lastError;
+    } finally {
+      if (refreshAbortRef.current === abortController) refreshAbortRef.current = null;
     }
-    setStatus(tokenRef.current ? "recovering" : "anonymous");
-    throw lastError;
   }, [applySession]);
 
   useEffect(() => {
@@ -98,6 +122,10 @@ export default function AuthProvider({ children }: ProviderProps) {
   }, [clearLocalSession, refreshSession, pathname]);
 
   const signIn = useCallback(async (instance: string, { login, password }: AuthSignForm) => {
+    sessionEpochRef.current += 1;
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = null;
+    authSession.clearConfiguration();
     try {
       const session = await authService.login(instance, login, password);
       localStorage.setItem(LAST_TENANT_STORAGE_KEY, instance);
@@ -116,15 +144,16 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   const signOut = useCallback(async () => {
     const instance = instanceRef.current;
+    clearLocalSession(false);
     try {
       if (instance) await authService.logout(instance);
     } catch {
       // Local logout must still complete when the API is unavailable.
     } finally {
       channelRef.current?.postMessage({ type: "logout", instance });
-      clearLocalSession(true);
+      router.replace(instance ? `/${instance}/login` : "/");
     }
-  }, [clearLocalSession]);
+  }, [clearLocalSession, router]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -158,28 +187,51 @@ export default function AuthProvider({ children }: ProviderProps) {
       return;
     }
 
+    sessionEpochRef.current += 1;
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = null;
+    authSession.setAccessToken(null);
+    tokenRef.current = null;
     instanceRef.current = instance;
+    authSession.configure({
+      instance,
+      refresh: refreshSession,
+      onInvalid: () => { if (tokenRef.current) clearLocalSession(true); },
+    });
     localStorage.setItem(LAST_TENANT_STORAGE_KEY, instance);
+
+    if (isLoginPath) {
+      setStatus("anonymous");
+      return;
+    }
+
     setStatus("loading");
     let cancelled = false;
+    const bootstrapEpoch = sessionEpochRef.current;
+    const isStaleBootstrap = () => (
+      cancelled ||
+      bootstrapEpoch !== sessionEpochRef.current ||
+      instance !== instanceRef.current
+    );
 
     const bootstrap = async () => {
       try {
         await authSession.forceRefresh();
-        if (cancelled) return;
+        if (isStaleBootstrap()) return;
         if (isLoginPath) router.replace(`/${instance}`);
         return;
       } catch (refreshError) {
-        if (cancelled) return;
+        if (isStaleBootstrap()) return;
         const legacyToken = localStorage.getItem(`@inpulse/${instance}/token`);
         if (legacyToken) {
           try {
             const sessionData = await authService.fetchSessionData(legacyToken);
+            if (isStaleBootstrap()) return;
             tokenRef.current = legacyToken;
             authSession.setAccessToken(legacyToken);
             usersService.setAuth(legacyToken);
             const legacyUser = await usersService.getUserById(sessionData.userId);
-            if (cancelled) return;
+            if (isStaleBootstrap()) return;
             applySession({ token: legacyToken, user: legacyUser });
             if (isLoginPath) router.replace(`/${instance}`);
             return;
