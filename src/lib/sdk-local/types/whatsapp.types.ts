@@ -196,6 +196,9 @@ export interface MessageReaction {
   emoji: string;
   fromMe: boolean;
   reactedAt: string;
+  sourceEventId?: string;
+  internalUserId?: number;
+  internalUserName?: string | null;
 }
 
 export interface MessageReactionSnapshot {

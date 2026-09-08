@@ -5,6 +5,17 @@ import WhatsappClient from "./whatsapp.client";
 vi.mock("form-data", () => ({ default: globalThis.FormData }));
 
 describe("message attempt HTTP contract", () => {
+  it("keeps direct sending compatible with backends without message attempts", async () => {
+    const client = new WhatsappClient("http://localhost:8005");
+    const post = vi.spyOn(client.ax, "post").mockResolvedValue({ data: { data: { id: 41, status: "SENT" } } });
+    const get = vi.spyOn(client.ax, "get");
+    await client.sendMessage("6", "5511999999999", { text: "hello", contactId: 8 });
+    const [, form, config] = post.mock.calls[0];
+    expect((form as FormData).has("idempotencyKey")).toBe(false);
+    expect(config?.headers?.["Idempotency-Key"]).toBeUndefined();
+    expect(get).not.toHaveBeenCalled();
+  });
+
   it("sends one key in the header and multipart data with the original file options", async () => {
     const client = new WhatsappClient("http://localhost:8005");
     const post = vi

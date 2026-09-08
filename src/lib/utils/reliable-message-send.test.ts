@@ -6,6 +6,7 @@ import {
   MessageSendCoordinator,
   messageAttemptStorageKey,
   resolveMessageAttempt,
+  sendOfficialMessage,
 } from "./reliable-message-send";
 import type { WppMessage } from "@/lib/sdk-local";
 
@@ -29,6 +30,20 @@ function storage() {
 }
 
 describe("reliable message sends", () => {
+  it("sends official messages directly without opting into the queue and preserves the payload", async () => {
+    const data = { idempotencyKey: "draft-attempt", text: "hello", fileId: 12, quotedId: 8 };
+    const send = vi.fn(async () => message("SENT"));
+    expect(await sendOfficialMessage(data, send)).toMatchObject({ id: 42, status: "SENT" });
+    expect(send).toHaveBeenCalledExactlyOnceWith({ ...data, idempotencyKey: undefined });
+    expect(data.idempotencyKey).toBe("draft-attempt");
+  });
+
+  it("does not retry an official send after a lost provider response", async () => {
+    const send = vi.fn(async () => { throw new Error("response lost"); });
+    await expect(sendOfficialMessage({ idempotencyKey: "draft-attempt" }, send)).rejects.toThrow("response lost");
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it("reconciles a lost POST response without creating a second message on retry", async () => {
     let persisted: WppMessage | undefined;
     const lookup = vi.fn(async () => {

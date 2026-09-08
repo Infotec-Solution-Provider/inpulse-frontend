@@ -208,8 +208,8 @@ function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: st
           dispatch({ type: "set-attempt", key: createMessageAttemptKey(), clientId });
           snapshot = stateRef.current;
         }
-        // Persist the exact text, attachment and key before a request can reach the provider.
-        await saveChatDraft(scope, snapshot);
+        // Keep the in-memory draft immediately; browser storage must not block sending.
+        void saveChatDraft(scope, snapshot).catch(() => undefined);
         await sendMessage(contactAddress, {
           ...snapshot,
           idempotencyKey: snapshot.attemptKey,

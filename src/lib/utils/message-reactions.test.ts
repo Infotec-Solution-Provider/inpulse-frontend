@@ -12,6 +12,7 @@ import {
   canReactToInternalMessage,
   canReactToWhatsappMessage,
   groupMessageReactions,
+  reactionActorName,
   preserveReactionHistory,
   preserveReactionHistoryCache,
   ReactionRequestCoordinator,
@@ -50,6 +51,71 @@ const snapshot = (reactions: MessageReaction[], revision = newer): MessageReacti
 });
 
 describe("confirmed reaction snapshots", () => {
+  it("adds the authenticated author when an equal-revision HTTP/socket confirmation follows the echo", () => {
+    for (const source of ["http", "socket"] as const) {
+      const echo = { ...ours, sourceEventId: "reaction-1" };
+      const attributed = { ...echo, internalUserId: 7, internalUserName: "Ana" };
+      const updated = applyMessageReaction(
+        { ...message(), reactions: [echo, contact] },
+        snapshot([attributed, contact], older),
+        source,
+      );
+      expect(updated.reactions).toEqual([attributed, contact]);
+      expect(
+        applyMessageReaction(updated, snapshot([echo, contact], older), source).reactions,
+      ).toEqual([attributed, contact]);
+    }
+  });
+
+  it("does not transfer author metadata across distinct events with the same timestamp and emoji", () => {
+    const echo = { ...ours, sourceEventId: "device" };
+    const attributed = {
+      ...ours,
+      sourceEventId: "in-pulse",
+      internalUserId: 7,
+      internalUserName: "Ana",
+    };
+    expect(
+      applyMessageReaction(
+        { ...message(), reactions: [echo] },
+        snapshot([attributed], older),
+        "http",
+      ).reactions,
+    ).toEqual([echo]);
+  });
+
+  it("updates the author on replacement and clears it for a later unattributed device event", () => {
+    const current = {
+      ...message(),
+      reactions: [{ ...ours, internalUserId: 7, internalUserName: "Ana" }],
+    };
+    const replacement = {
+      ...ours,
+      emoji: "😂",
+      reactedAt: newer,
+      internalUserId: 8,
+      internalUserName: "Bruno",
+    };
+    expect(applyMessageReaction(current, snapshot([replacement])).reactions).toEqual([replacement]);
+    expect(
+      applyMessageReaction(current, snapshot([{ ...ours, reactedAt: newer }])).reactions?.[0]
+        .internalUserId,
+    ).toBeUndefined();
+  });
+
+  it("resolves internal names without attributing unknown or external reactions to an operator", () => {
+    expect(reactionActorName({ ...ours, internalUserId: 7, internalUserName: "Ana" })).toBe("Ana");
+    expect(reactionActorName({ ...ours, internalUserId: 7, internalUserName: " " })).toBe(
+      "Usuário interno #7",
+    );
+    expect(reactionActorName(ours)).toContain("usuário interno não identificado");
+    expect(
+      reactionActorName(
+        { ...contact, internalUserId: 7, internalUserName: "Ana" },
+        new Map([[contact.actorId, "Cliente"]]),
+      ),
+    ).toBe("Cliente");
+  });
   it("changes one actor without replacing the other participants' reactions", () => {
     const updated = applyMessageReaction(
       message(),
@@ -183,6 +249,19 @@ describe("reaction capabilities", () => {
 });
 
 describe("history reload reaction preservation", () => {
+  it("enriches an echo from history and retains attribution when an older snapshot has no author", () => {
+    const echo = { ...message(), reactions: [{ ...ours, sourceEventId: "reaction-1" }] };
+    const attributed = {
+      ...echo,
+      reactions: [{ ...echo.reactions[0], internalUserId: 7, internalUserName: "Ana" }],
+    };
+    expect(preserveReactionHistory([echo], [attributed])[0].reactions).toEqual(
+      attributed.reactions,
+    );
+    expect(preserveReactionHistory([attributed], [echo])[0].reactions).toEqual(
+      attributed.reactions,
+    );
+  });
   it("keeps socket-confirmed removal while accepting new body/status from an older history snapshot", () => {
     const removed = applyMessageReaction(message(), snapshot([]));
     const reloaded = { ...message(), body: "updated body", status: "READ" as const };

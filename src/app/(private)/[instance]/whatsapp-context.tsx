@@ -71,10 +71,12 @@ import {
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 import {
   assertPersistedMessage,
+  createMessageAttemptKey,
   getPendingMessageKey,
   MessageSendCoordinator,
   messageAttemptStorageKey,
   resolveMessageAttempt,
+  sendOfficialMessage,
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
@@ -777,6 +779,21 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       if (!instance || !token || !user) throw new Error("Sessão indisponível para envio.");
       if (!clientId) throw new Error("Nenhum canal selecionado para enviar a mensagem.");
       signal.throwIfAborted();
+      const channel = channels.find((item) => item.id === clientId) ??
+        (selectedChannel?.id === clientId ? selectedChannel : undefined);
+      if (channel?.type === "WABA") {
+        const key = data.idempotencyKey ?? createMessageAttemptKey();
+        return sendCoordinator.current.run(`${session.scope}:${clientId}`, key, async () => {
+          signal.throwIfAborted();
+          const message = await sendOfficialMessage(
+            { ...data, clientId },
+            (request) => sendMessageRequest(to, request, signal),
+          );
+          signal.throwIfAborted();
+          registerPersistedMessage(message);
+          return message;
+        });
+      }
       let storageKey: string | undefined;
       let idempotencyKey = data.idempotencyKey;
       if (!idempotencyKey) {
@@ -854,6 +871,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       sendMessageRequest,
       registerPersistedMessage,
       renderSendSession,
+      channels,
     ],
   );
 

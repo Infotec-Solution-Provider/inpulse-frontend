@@ -6,7 +6,7 @@ import AddReactionOutlinedIcon from "@mui/icons-material/AddReactionOutlined";
 import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 import { toast } from "react-toastify";
 import type { MessageReaction } from "@/lib/sdk-local";
-import { groupMessageReactions } from "@/lib/utils/message-reactions";
+import { groupMessageReactions, reactionActorName } from "@/lib/utils/message-reactions";
 
 interface MessageReactionsProps {
   identity: string;
@@ -26,6 +26,7 @@ export default function MessageReactions({
   showReactions = true,
 }: MessageReactionsProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const [details, setDetails] = useState<{ anchor: HTMLElement; emoji: string } | null>(null);
   const [pending, setPending] = useState(false);
   const requestPending = useRef(false);
   const epoch = useRef(0);
@@ -34,12 +35,14 @@ export default function MessageReactions({
     requestPending.current = false;
     setPending(false);
     setAnchor(null);
+    setDetails(null);
     return () => {
       epoch.current += 1;
     };
   }, [identity]);
 
   const groups = showReactions ? groupMessageReactions(reactions ?? []) : [];
+  const selectedGroup = groups.find((group) => group.emoji === details?.emoji);
   const ownReaction = reactions?.find((reaction) => reaction.fromMe);
   const changeReaction = async (emoji: string) => {
     if (!onChange || requestPending.current) return;
@@ -69,12 +72,7 @@ export default function MessageReactions({
     }
   };
 
-  const actorName = (reaction: MessageReaction) => {
-    if (reaction.fromMe) return "Esta conta WhatsApp";
-    if (reaction.actorId === "legacy:unknown") return "Participante não identificado";
-    const address = reaction.actorId.split("@")[0];
-    return actorNames?.get(reaction.actorId) ?? actorNames?.get(address) ?? address;
-  };
+  const actorName = (reaction: MessageReaction) => reactionActorName(reaction, actorNames);
 
   if (!onChange && !groups.length && (!legacyReaction || reactions)) return null;
   return (
@@ -84,14 +82,44 @@ export default function MessageReactions({
     >
       {groups.map((group) => (
         <Tooltip key={group.emoji} title={group.actors.map(actorName).join(", ")}>
-          <span
+          <button
+            type="button"
+            aria-label={`${group.emoji}: ${group.actors.map(actorName).join(", ")}. Ver quem reagiu`}
+            aria-haspopup="dialog"
+            onClick={(event) => setDetails({ anchor: event.currentTarget, emoji: group.emoji })}
             className={`rounded-full border px-2 py-0.5 text-sm shadow-sm ${group.fromMe ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950" : "border-transparent bg-white dark:bg-slate-700"}`}
           >
             {group.emoji}
             {group.count > 1 ? ` ${group.count}` : ""}
-          </span>
+          </button>
         </Tooltip>
       ))}
+      <Popover
+        open={!!details && !!selectedGroup}
+        anchorEl={details?.anchor}
+        onClose={() => setDetails(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <div
+          role="dialog"
+          aria-label="Quem reagiu"
+          className="max-h-72 max-w-xs overflow-y-auto p-3"
+        >
+          <p className="mb-2 text-sm font-semibold">Quem reagiu {selectedGroup?.emoji}</p>
+          <ul className="space-y-2">
+            {selectedGroup?.actors.map((reaction) => (
+              <li key={reaction.actorId} className="break-words text-sm">
+                <p>{actorName(reaction)}</p>
+                {reaction.fromMe && reaction.internalUserId && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Usuário interno #{reaction.internalUserId} · Conta WhatsApp compartilhada
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Popover>
       {showReactions && !reactions && legacyReaction && (
         <span className="rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
           {legacyReaction}
@@ -125,6 +153,11 @@ export default function MessageReactions({
               <p className="mb-2 text-xs text-slate-600 dark:text-slate-300">
                 Reação da conta WhatsApp compartilhada
               </p>
+              {ownReaction && (
+                <p className="mb-2 text-xs text-slate-600 dark:text-slate-300">
+                  Reação atual de: {actorName(ownReaction)}
+                </p>
+              )}
               <div className={pending ? "pointer-events-none opacity-50" : ""}>
                 <EmojiPicker
                   onEmojiClick={(data) => void changeReaction(data.emoji)}

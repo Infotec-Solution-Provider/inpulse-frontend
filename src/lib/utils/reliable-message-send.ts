@@ -37,6 +37,15 @@ export function assertPersistedMessage(message: WppMessage): WppMessage {
   return message;
 }
 
+/** WABA uses the synchronous endpoint while the operator queue is investigated. */
+export async function sendOfficialMessage<T extends { idempotencyKey?: string }>(
+  data: T,
+  send: (data: T) => Promise<WppMessage>,
+): Promise<WppMessage> {
+  // Do not opt into the durable worker or retry an uncertain provider response.
+  return assertPersistedMessage(await send({ ...data, idempotencyKey: undefined }));
+}
+
 /** Share only concurrent calls for the same intention. Completed sends can be sent again explicitly. */
 export class MessageSendCoordinator {
   private readonly pending = new Map<string, Promise<WppMessage>>();

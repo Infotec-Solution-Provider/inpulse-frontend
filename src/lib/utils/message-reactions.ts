@@ -51,6 +51,37 @@ export function groupMessageReactions(reactions: MessageReaction[]) {
   }));
 }
 
+export function reactionActorName(reaction: MessageReaction, actorNames?: Map<string, string>) {
+  if (reaction.fromMe) {
+    if (reaction.internalUserId) {
+      return reaction.internalUserName?.trim() || `Usuário interno #${reaction.internalUserId}`;
+    }
+    return "Esta conta WhatsApp — usuário interno não identificado";
+  }
+  if (reaction.actorId === "legacy:unknown") return "Participante não identificado";
+  const address = reaction.actorId.split("@")[0];
+  return actorNames?.get(reaction.actorId) ?? actorNames?.get(address) ?? address;
+}
+
+function enrichReactionAuthor(current: MessageReaction, incoming: MessageReaction | undefined) {
+  if (
+    current.fromMe &&
+    incoming?.fromMe &&
+    !current.internalUserId &&
+    incoming.internalUserId &&
+    current.sourceEventId &&
+    current.sourceEventId === incoming.sourceEventId &&
+    current.emoji === incoming.emoji
+  ) {
+    return {
+      ...current,
+      internalUserId: incoming.internalUserId,
+      internalUserName: incoming.internalUserName,
+    };
+  }
+  return current;
+}
+
 export type ReactionUpdateSource = "socket" | "http";
 
 export function applyMessageReaction<T extends ReactionMessage>(
@@ -67,14 +98,14 @@ export function applyMessageReaction<T extends ReactionMessage>(
   const eventTime = Date.parse(event.reactionsUpdatedAt ?? "");
   if (Number.isFinite(previousTime) && (!Number.isFinite(eventTime) || eventTime < previousTime))
     return message;
-  if (source === "http" && Number.isFinite(previousTime) && eventTime <= previousTime)
-    return message;
   if (Array.isArray(event.reactions)) {
     let reactions = normalizeReactions(event.reactions);
     if (Number.isFinite(previousTime) && eventTime === previousTime && message.reactions) {
       // Equal revisions cannot prove a new actor or changed emoji is newer than a removal.
-      const stillPresent = new Set(reactions.map((reaction) => reaction.actorId));
-      reactions = message.reactions.filter((reaction) => stillPresent.has(reaction.actorId));
+      const incoming = new Map(reactions.map((reaction) => [reaction.actorId, reaction]));
+      reactions = message.reactions
+        .filter((reaction) => source === "http" || incoming.has(reaction.actorId))
+        .map((reaction) => enrichReactionAuthor(reaction, incoming.get(reaction.actorId)));
     }
     const reaction = reactions.map((item) => item.emoji).join("");
     if (
