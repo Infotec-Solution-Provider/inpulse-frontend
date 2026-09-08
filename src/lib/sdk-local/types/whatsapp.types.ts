@@ -190,6 +190,22 @@ export interface CustomerProfileSummaryBatchRequest {
   customerIds: number[];
 }
 
+export interface MessageReaction {
+  actorId: string;
+  emoji: string;
+  fromMe: boolean;
+  reactedAt: string;
+}
+
+export interface MessageReactionSnapshot {
+  messageId: number;
+  messageType: "wpp" | "internal";
+  clientId: number;
+  reactions: MessageReaction[];
+  reactionsUpdatedAt: string | null;
+  reaction?: string;
+}
+
 export interface WppMessage {
   id: number;
   instance: string;
@@ -209,6 +225,8 @@ export interface WppMessage {
   isForwarded: boolean;
   isEdited: boolean;
   reaction?: string;
+  reactions?: MessageReaction[];
+  reactionsUpdatedAt?: string | null;
   fileId: number | null;
   fileName: string | null;
   fileType: string | null;

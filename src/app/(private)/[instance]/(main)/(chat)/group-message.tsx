@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "@/lib/sdk-local";
+import { MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
@@ -10,6 +10,7 @@ import React, { useMemo, useState } from "react";
 import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
+import MessageReactions from "./message-reactions";
 
 interface MessageProps {
   id: number | string;
@@ -35,6 +36,8 @@ interface MessageProps {
   isSelected?: boolean;
   isEdited?: boolean;
   reaction?: string;
+  reactions?: MessageReaction[];
+  onReaction?: (emoji: string) => Promise<unknown>;
   onSelect?: (id: number | string) => void;
   onForward?: () => void;
   onCopy?: () => void;
@@ -66,6 +69,8 @@ export default function GroupMessage({
   isSelected,
   isEdited,
   reaction,
+  reactions,
+  onReaction,
   onSelect,
   onForward,
   onCopy,
@@ -202,11 +207,13 @@ export default function GroupMessage({
               ))
             )}
           </div>
-          {reaction && (
-            <span className="self-start rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
-              {reaction}
-            </span>
-          )}
+          <MessageReactions
+            identity={`internal:${id}`}
+            reactions={reactions}
+            legacyReaction={reaction}
+            actorNames={mentionNameMap}
+            onChange={!isReadOnly && !isForwardMode ? onReaction : undefined}
+          />
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>

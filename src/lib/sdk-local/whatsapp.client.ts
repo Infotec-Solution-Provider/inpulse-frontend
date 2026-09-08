@@ -27,6 +27,7 @@ import {
   WppChatWithDetailsAndMessages,
   WppContact,
   WppMessage,
+  MessageReactionSnapshot,
   WppSchedule,
   UpdateCustomerProfileManualOverridesInput,
   WppWallet,
@@ -176,6 +177,20 @@ export default class WhatsappClient extends ApiClient {
       : `/api/whatsapp/${clientId}/messages/${messageId}`;
     const body = { newText };
     await this.ax.put(url, body);
+  }
+
+  public async setMessageReaction(
+    clientId: number,
+    messageId: number,
+    emoji: string,
+    signal?: AbortSignal,
+  ) {
+    const { data: response } = await this.ax.post<DataResponse<MessageReactionSnapshot>>(
+      `/api/whatsapp/${clientId}/messages/${messageId}/reaction`,
+      { emoji },
+      { signal },
+    );
+    return response.data;
   }
 
   public async finishChatById(id: number, resultId: number, scheduleDate?: Date | null) {

@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "./whatsapp.types";
+import { MessageReaction, WppMessageStatus } from "./whatsapp.types";
 
 export interface InternalMessage {
 	id: number;
@@ -12,6 +12,11 @@ export interface InternalMessage {
 	isForwarded: boolean;
 	isEdited: boolean;
 	reaction?: string;
+	reactions?: MessageReaction[];
+	reactionsUpdatedAt?: string | null;
+	clientId?: number | null;
+	wwebjsId?: string | null;
+	wwebjsIdStanza?: string | null;
 	status: WppMessageStatus;
 	fileId: number | null;
 	fileName: string | null;
@@ -20,6 +25,7 @@ export interface InternalMessage {
 }
 
 export interface InternalChat {
+	wppGroupId?: string | null;
 	id: number;
 	instance: string;
 	creatorId: number | null;
@@ -35,42 +41,42 @@ export interface InternalChat {
 }
 
 export interface InternalWhatsappSenderMessage {
-  id: number;
-  body: string;
-  timestamp: string;
-  type: string;
-  fileName: string | null;
-  chat: {
-    id: number;
-    groupName: string | null;
-    wppGroupId: string | null;
-  } | null;
+	id: number;
+	body: string;
+	timestamp: string;
+	type: string;
+	fileName: string | null;
+	chat: {
+		id: number;
+		groupName: string | null;
+		wppGroupId: string | null;
+	} | null;
 }
 
 export interface InternalWhatsappSenderSummary {
-  senderId: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-  lastMessage: Omit<InternalWhatsappSenderMessage, "fileName"> | null;
+	senderId: string;
+	createdAt: string;
+	updatedAt: string;
+	messageCount: number;
+	lastMessage: Omit<InternalWhatsappSenderMessage, "fileName"> | null;
 }
 
 export interface PaginatedInternalWhatsappSenders {
-  items: InternalWhatsappSenderSummary[];
-  page: number;
-  perPage: number;
-  total: number;
-  totalPages: number;
+	items: InternalWhatsappSenderSummary[];
+	page: number;
+	perPage: number;
+	total: number;
+	totalPages: number;
 }
 
 export interface PaginatedInternalWhatsappSenderMessages {
-  messages: InternalWhatsappSenderMessage[];
-  nextCursor: number | null;
+	messages: InternalWhatsappSenderMessage[];
+	nextCursor: number | null;
 }
 
 export interface InternalWhatsappSenderName {
-  senderId: string;
-  displayName: string;
+	senderId: string;
+	displayName: string;
 }
 
 export interface InternalGroup {

@@ -28,6 +28,7 @@ import {
   WppChatWithDetails,
   WppChatWithDetailsAndMessages,
   WppMessage,
+  MessageReactionSnapshot,
   WppSchedule,
 } from "@/lib/sdk-local";
 import { Logger, sanitizeErrorMessage } from "@in.pulse-crm/utils";
@@ -76,6 +77,13 @@ import {
   resolveMessageAttempt,
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
+import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
+import {
+  canReactToWhatsappMessage,
+  MessageReactionTarget,
+  preserveReactionHistory,
+  preserveReactionHistoryCache,
+} from "@/lib/utils/message-reactions";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -129,6 +137,7 @@ interface IWhatsappContext {
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageOptions) => Promise<WppMessage>;
   editMessage: (messageId: string, newText: string, isInternal?: boolean) => Promise<void>;
+  reactToMessage: (message: WppMessage, emoji: string) => Promise<MessageReactionSnapshot>;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
   transferAttendance: (chatId: number, userId: number) => Promise<void>;
   chatFilters: ChatsFiltersState;
@@ -181,7 +190,7 @@ export interface MessageTemplate {
 export interface WppClient {
   id: number;
   name: string;
-  type: "WWEBJS" | "WABA" | "GUPSHUP";
+  type: "WWEBJS" | "REMOTE" | "WABA" | "GUPSHUP";
 }
 
 interface SectorData {
@@ -213,8 +222,31 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
   const currentChatRef = useRef<DetailedChat | null>(null);
-  const [currentChatMessages, setCurrentChatMessages] = useState<WppMessage[]>([]);
-  const [messages, setMessages] = useState<Record<number, WppMessage[]>>({});
+  const [currentChatMessages, setCurrentChatMessagesState] = useState<WppMessage[]>([]);
+  const [messages, setMessagesState] = useState<Record<number, WppMessage[]>>({});
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const setMessages = useCallback((update: SetStateAction<Record<number, WppMessage[]>>) => {
+    setMessagesState((previous) =>
+      preserveReactionHistoryCache(
+        previous,
+        typeof update === "function" ? update(previous) : update,
+      ),
+    );
+  }, []);
+  const setCurrentChatMessages = useCallback((update: SetStateAction<WppMessage[]>) => {
+    setCurrentChatMessagesState((previous) => {
+      const incoming = typeof update === "function" ? update(previous) : update;
+      const contacts = new Set(
+        incoming.map((message) => message.contactId).filter((id): id is number => !!id),
+      );
+      const known = [...contacts].flatMap((id) => messagesRef.current[id] ?? []);
+      return preserveReactionHistory(
+        preserveReactionHistory(previous, known),
+        preserveReactionHistory(previous, incoming),
+      );
+    });
+  }, []);
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
@@ -806,6 +838,45 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [selectedChannel],
   );
 
+  const applyConfirmedReaction = useCallback((snapshot: MessageReactionSnapshot) => {
+    MessageReactionHandler(setMessages, setCurrentChatMessages, currentChatRef, "http")(snapshot);
+  }, []);
+  const requestReaction = useCallback(
+    (target: MessageReactionTarget, emoji: string, signal: AbortSignal) => {
+      if (isReadOnlyMode)
+        return Promise.reject(new Error("Esta conversa está em modo somente leitura."));
+      if (!target.clientId)
+        return Promise.reject(new Error("A mensagem não possui canal WhatsApp identificado."));
+      return api.current.setMessageReaction(target.clientId, target.messageId, emoji, signal);
+    },
+    [isReadOnlyMode],
+  );
+  const confirmReaction = useConfirmedReaction(requestReaction, applyConfirmedReaction);
+  const reactToMessage = useCallback(
+    (message: WppMessage, emoji: string) => {
+      const channel = channels.find((item) => item.id === message.clientId);
+      if (!canReactToWhatsappMessage(message, channel?.type)) {
+        return Promise.reject(
+          new Error("Reações não estão disponíveis para esta mensagem ou canal."),
+        );
+      }
+      return confirmReaction(
+        { messageType: "wpp", messageId: message.id, clientId: message.clientId },
+        emoji,
+      );
+    },
+    [channels, confirmReaction],
+  );
+
+  useEffect(
+    () =>
+      socket.subscribe(
+        SocketEventType.WppMessageReaction,
+        MessageReactionHandler(setMessages, setCurrentChatMessages, currentChatRef),
+      ),
+    [socket],
+  );
+
   const getChatsMonitor = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
@@ -1154,11 +1225,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       );
 
       socket.on(
-        SocketEventType.WppMessageReaction,
-        MessageReactionHandler(setMessages, setUniqueCurrentChatMessages),
-      );
-
-      socket.on(
         SocketEventType.WppMessageDelete,
         MessageDeleteHandler(setMessages, setUniqueCurrentChatMessages),
       );
@@ -1172,7 +1238,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         socket.off(SocketEventType.WppChatStarted);
         socket.off(SocketEventType.WppContactMessagesRead);
         socket.off(SocketEventType.WppMessageEdit);
-        socket.off(SocketEventType.WppMessageReaction);
         socket.off(SocketEventType.WppMessageDelete);
       };
     }
@@ -1191,6 +1256,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         startChatByContactId,
         sendMessage,
         editMessage,
+        reactToMessage,
         forwardMessages,
         setCurrentChatMessages: setUniqueCurrentChatMessages,
         wppApi: api,

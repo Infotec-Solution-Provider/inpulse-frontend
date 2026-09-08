@@ -9,6 +9,7 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import Message from "./message";
+import { canReactToWhatsappMessage } from "@/lib/utils/message-reactions";
 
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
 
@@ -40,7 +41,7 @@ export default function RenderWhatsappChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
-  const { currentChatMessages } = useWhatsappContext();
+  const { currentChatMessages, reactToMessage, channels } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { instance } = useContext(AuthContext);
 
@@ -130,12 +131,7 @@ export default function RenderWhatsappChatMessages({
           const findQuoted = m.contactId && m.quotedId && getMessageById(m.contactId, m.quotedId);
           const quotedMsgProps =
             findQuoted && "to" in findQuoted
-              ? getQuotedMsgProps(
-                  findQuoted,
-                  getWppMessageStyle(findQuoted),
-                  [],
-                  [],
-                )
+              ? getQuotedMsgProps(findQuoted, getWppMessageStyle(findQuoted), [], [])
               : null;
 
           return (
@@ -165,6 +161,16 @@ export default function RenderWhatsappChatMessages({
               isForwardMode={isSelectionMode}
               isEdited={!!m.isEdited}
               reaction={m.reaction}
+              reactions={m.reactions}
+              onReaction={
+                !isReadOnlyMode &&
+                canReactToWhatsappMessage(
+                  m,
+                  channels.find((channel) => channel.id === m.clientId)?.type,
+                )
+                  ? (emoji) => reactToMessage(m, emoji)
+                  : undefined
+              }
               channelId={m.clientId}
               agentId={m.agentId}
               isReadOnly={isReadOnlyMode}
