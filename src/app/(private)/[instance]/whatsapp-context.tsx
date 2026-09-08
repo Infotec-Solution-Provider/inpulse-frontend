@@ -70,13 +70,9 @@ import {
 } from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 import {
-  assertPersistedMessage,
   createMessageAttemptKey,
-  getPendingMessageKey,
   MessageSendCoordinator,
-  messageAttemptStorageKey,
-  resolveMessageAttempt,
-  sendOfficialMessage,
+  sendDirectMessage,
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
@@ -297,7 +293,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }
   const renderSendSession = sendSession.current;
   const sendCoordinator = useRef(new MessageSendCoordinator());
-  const messagePolls = useRef(new Set<string>());
   useEffect(() => {
     if (sendSession.current.controller.signal.aborted) {
       sendSession.current.controller = new AbortController();
@@ -505,7 +500,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       to: string,
       data: SendMessageOptions,
       signal: AbortSignal,
-      onFilePrepared?: (fileId: number) => void,
     ): Promise<WppMessage> => {
       let traceId: string | null = null;
       let telemetryFlowStartedAt: number | null = null;
@@ -579,7 +573,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
 
         if (!!res.file) {
-          onFilePrepared?.(res.file.id);
           const sendFileData = {
             idempotencyKey: data.idempotencyKey,
             contactId: data.contactId,
@@ -638,7 +631,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           traceId,
         });
         uploadOwnsErrorTelemetry = false;
-        onFilePrepared?.(uploadedFile.id);
         logFileUploadTrace(traceId, "frontend.whatsapp.upload.completed", {
           elapsedMs: Date.now() - flowStartedAt,
           uploadedFileId: uploadedFile.id,
@@ -779,87 +771,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       if (!instance || !token || !user) throw new Error("Sessão indisponível para envio.");
       if (!clientId) throw new Error("Nenhum canal selecionado para enviar a mensagem.");
       signal.throwIfAborted();
-      const channel = channels.find((item) => item.id === clientId) ??
-        (selectedChannel?.id === clientId ? selectedChannel : undefined);
-      if (channel?.type === "WABA") {
-        const key = data.idempotencyKey ?? createMessageAttemptKey();
-        return sendCoordinator.current.run(`${session.scope}:${clientId}`, key, async () => {
-          signal.throwIfAborted();
-          const message = await sendOfficialMessage(
-            { ...data, clientId },
-            (request) => sendMessageRequest(to, request, signal),
-          );
-          signal.throwIfAborted();
-          registerPersistedMessage(message);
-          return message;
-        });
-      }
-      let storageKey: string | undefined;
-      let idempotencyKey = data.idempotencyKey;
-      if (!idempotencyKey) {
-        storageKey = await messageAttemptStorageKey(session.scope, {
-          ...data,
-          clientId,
-          to,
-          file: data.file ? await getFileSHA256(data.file) : undefined,
-        });
-        signal.throwIfAborted();
-        idempotencyKey = getPendingMessageKey(storageKey);
-      }
-      const key = idempotencyKey;
-      const preparedFileKey = `inpulse-send-file:${session.scope}:${clientId}:${key}`;
+      const key = data.idempotencyKey ?? createMessageAttemptKey();
       return sendCoordinator.current.run(`${session.scope}:${clientId}`, key, async () => {
         signal.throwIfAborted();
-        const message = await resolveMessageAttempt(
-          () => api.current.getMessageAttempt(String(clientId), key, signal),
-          () => {
-            const rememberedFileId = data.file
-              ? Number(sessionStorage.getItem(preparedFileKey))
-              : 0;
-            const preparedData =
-              Number.isSafeInteger(rememberedFileId) && rememberedFileId > 0
-                ? { ...data, file: undefined, fileId: rememberedFileId }
-                : data;
-            return sendMessageRequest(
-              to,
-              { ...preparedData, clientId, idempotencyKey: key },
-              signal,
-              (fileId) => sessionStorage.setItem(preparedFileKey, String(fileId)),
-            );
-          },
+        const message = await sendDirectMessage(
+          { ...data, clientId },
+          (request) => sendMessageRequest(to, request, signal),
         );
         signal.throwIfAborted();
-        assertPersistedMessage(message);
         registerPersistedMessage(message);
-        if (storageKey) sessionStorage.removeItem(storageKey);
-        if (data.file) sessionStorage.removeItem(preparedFileKey);
-        if (message.status === "UNKNOWN") {
-          toast.info(
-            "Mensagem registrada. A confirmação do WhatsApp ainda é desconhecida; acompanhe o status sem reenviar.",
-          );
-        }
-        if (["PENDING", "UNKNOWN"].includes(message.status) && !messagePolls.current.has(key)) {
-          messagePolls.current.add(key);
-          // Poll is bounded and read-only. A lost socket must not hide the persisted send.
-          void (async () => {
-            try {
-              for (let attempt = 0; attempt < 10; attempt++) {
-                await new Promise<void>((resolve) => setTimeout(resolve, 3000));
-                signal.throwIfAborted();
-                const update = assertPersistedMessage(
-                  await api.current.getMessageAttempt(String(clientId), key, signal),
-                );
-                signal.throwIfAborted();
-                registerPersistedMessage(update);
-                if (!["PENDING", "UNKNOWN"].includes(update.status)) break;
-              }
-            } catch {
-              // The registered message remains visible; reconnect/history can reconcile it later.
-            } finally {
-              messagePolls.current.delete(key);
-            }
-          })();
-        }
         return message;
       });
     },
@@ -871,7 +791,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       sendMessageRequest,
       registerPersistedMessage,
       renderSendSession,
-      channels,
     ],
   );
 

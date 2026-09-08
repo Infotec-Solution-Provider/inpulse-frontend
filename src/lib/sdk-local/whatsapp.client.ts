@@ -158,14 +158,6 @@ export default class WhatsappClient extends ApiClient {
     return res.data;
   }
 
-  public async getMessageAttempt(clientId: string, idempotencyKey: string, signal?: AbortSignal) {
-    const { data: res } = await this.ax.get<DataResponse<WppMessage>>(
-      `/api/whatsapp/${clientId}/message-attempts/${encodeURIComponent(idempotencyKey)}`,
-      { signal },
-    );
-    return res.data;
-  }
-
   public async editMessage(
     clientId: string,
     messageId: string,
