@@ -2,9 +2,8 @@ import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 import { isExternalOperator } from "@/lib/permissions/operator-access";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
-import { replaceMentions } from "@/lib/utils/message-mentions";
+import { mentionDisplayText } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
-import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
 import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
 import ChatsMenuItem from "./chats-menu-item";
@@ -48,8 +47,8 @@ export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
   const isExternal = isExternalOperator(user?.NIVEL);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
-  const { internalChats, openInternalChat, users } = useContext(InternalChatContext);
-  const { state } = useContext(ContactsContext);
+  const { internalChats, openInternalChat, users, mentionDirectory } =
+    useContext(InternalChatContext);
 
   const filteredChats = useMemo(() => {
     const startedAt = performance.now();
@@ -208,9 +207,13 @@ export default function ChatsMenuList() {
               name={names}
               message={
                 chat.lastMessage
-                  ? !["template", "text", "system", "chat"].includes(chat.lastMessage.type)
-                    ? getTypeTextIcon(chat.lastMessage.type)
-                    : replaceMentions(chat.lastMessage.body, users ?? [], state.contacts ?? [])
+                  ? chat.lastMessage.type !== "vcard" && chat.lastMessage.body?.trim()
+                    ? mentionDisplayText(
+                        chat.lastMessage.body,
+                        chat.lastMessage.mentionEntities,
+                        mentionDirectory,
+                      )
+                    : getTypeTextIcon(chat.lastMessage.type)
                   : "Nenhuma mensagem"
               }
               messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}
@@ -230,8 +233,12 @@ export default function ChatsMenuList() {
             avatar={chat.avatarUrl ?? undefined}
             message={
               chat.lastMessage
-                ? ["text", "system", "text", "chat"].includes(chat.lastMessage.type)
-                  ? chat.lastMessage.body
+                ? chat.lastMessage.type !== "vcard" && chat.lastMessage.body?.trim()
+                  ? mentionDisplayText(
+                      chat.lastMessage.body,
+                      chat.lastMessage.mentionEntities,
+                      mentionDirectory,
+                    )
                   : getTypeTextIcon(chat.lastMessage.type)
                 : "Nenhuma mensagem"
             }

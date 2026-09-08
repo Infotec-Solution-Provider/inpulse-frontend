@@ -84,6 +84,13 @@ import {
   preserveReactionHistory,
   preserveReactionHistoryCache,
 } from "@/lib/utils/message-reactions";
+import {
+  EMPTY_MENTION_DIRECTORY,
+  MentionDirectory,
+  preserveChatMentionHistory,
+  preserveMentionHistory,
+  preserveMentionHistoryCache,
+} from "@/lib/utils/message-mentions";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -124,6 +131,7 @@ interface TracedSendMessageOptions extends SendMessageOptions {
 }
 
 interface IWhatsappContext {
+  mentionDirectoryRef: React.RefObject<MentionDirectory>;
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
   chat: WppChatWithDetailsAndMessages | undefined;
@@ -213,12 +221,27 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const renderStartedAt = Date.now();
   const { token, instance, user } = useContext(AuthContext);
   const { socket } = useContext(SocketContext);
+  const mentionDirectoryRef = useRef<MentionDirectory>(EMPTY_MENTION_DIRECTORY);
+  const mentionScope = `${instance}:${user?.CODIGO ?? ""}`;
+  const mentionScopeRef = useRef(mentionScope);
+  if (mentionScopeRef.current !== mentionScope || !token) {
+    mentionScopeRef.current = mentionScope;
+    mentionDirectoryRef.current = EMPTY_MENTION_DIRECTORY;
+  }
 
   const [channels, setChannels] = useState<WppClient[]>([]);
   const globalChannel = useRef<WppClient | null>(null);
   const chatsChannels = useRef(new Map<number, number>());
   const userInitiatedChatContactId = useRef<number | null>(null);
-  const [chats, setChats] = useState<DetailedChat[]>([]);
+  const [chats, setChatsState] = useState<DetailedChat[]>([]);
+  const setChats = useCallback((update: SetStateAction<DetailedChat[]>) => {
+    setChatsState((previous) =>
+      preserveChatMentionHistory(
+        previous,
+        typeof update === "function" ? update(previous) : update,
+      ),
+    );
+  }, []);
   const [chat, setChat] = useState<WppChatWithDetailsAndMessages | undefined>();
   const [currentChat, setCurrentChat] = useState<DetailedChat | DetailedInternalChat | null>(null);
   const currentChatRef = useRef<DetailedChat | null>(null);
@@ -228,9 +251,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   messagesRef.current = messages;
   const setMessages = useCallback((update: SetStateAction<Record<number, WppMessage[]>>) => {
     setMessagesState((previous) =>
-      preserveReactionHistoryCache(
+      preserveMentionHistoryCache(
         previous,
-        typeof update === "function" ? update(previous) : update,
+        preserveReactionHistoryCache(
+          previous,
+          typeof update === "function" ? update(previous) : update,
+        ),
       ),
     );
   }, []);
@@ -241,9 +267,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         incoming.map((message) => message.contactId).filter((id): id is number => !!id),
       );
       const known = [...contacts].flatMap((id) => messagesRef.current[id] ?? []);
-      return preserveReactionHistory(
-        preserveReactionHistory(previous, known),
-        preserveReactionHistory(previous, incoming),
+      return preserveMentionHistory(
+        preserveMentionHistory(previous, known),
+        preserveMentionHistory(
+          previous,
+          preserveReactionHistory(
+            preserveReactionHistory(previous, known),
+            preserveReactionHistory(previous, incoming),
+          ),
+        ),
       );
     });
   }, []);
@@ -1198,6 +1230,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         currentChatRef,
         chats,
         emitPolicyNotification,
+        () => mentionDirectoryRef.current,
       );
       socket.on(SocketEventType.WppMessage, (data: { message: WppMessage }) => {
         handleMessage(data);
@@ -1246,6 +1279,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   return (
     <WhatsappContext.Provider
       value={{
+        mentionDirectoryRef,
         chats,
         messages,
         currentChat: currentChat,

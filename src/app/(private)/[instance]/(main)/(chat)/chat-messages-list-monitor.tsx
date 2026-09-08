@@ -68,11 +68,7 @@ export default function ChatMessagesListMonitor() {
   }, []);
 
   return (
-    <ul
-      className="flex h-full w-full flex-col gap-2 scrollbar-whatsap p-2"
-      ref={ulRef}
-    >
-
+    <ul className="scrollbar-whatsap flex h-full w-full flex-col gap-2 p-2" ref={ulRef}>
       {currentChat?.chatType === "wpp" &&
         currentChatMessages.length > 0 &&
         currentChatMessages.map((m) => (
@@ -82,6 +78,7 @@ export default function ChatMessagesListMonitor() {
             type={m.type}
             style={getWppMessageStyle(m)}
             text={m.body}
+            mentionEntities={m.mentionEntities}
             date={new Date(+m.timestamp)}
             status={m.status}
             fileId={m.fileId}
@@ -108,6 +105,7 @@ export default function ChatMessagesListMonitor() {
               groupFirst={groupFirst}
               sentBy={findUser ? findUser.NOME : "Desconhecido"}
               text={m.body}
+              mentionEntities={m.mentionEntities}
               type={m.type}
               date={new Date(+m.timestamp)}
               status={m.status}

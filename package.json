@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "vitest run src",
+    "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
     "test:e2e": "playwright test --project=chromium"
   },
   "dependencies": {

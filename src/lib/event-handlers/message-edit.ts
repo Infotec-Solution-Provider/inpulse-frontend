@@ -8,9 +8,9 @@ export default function EditedMessageHandler(
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
   chatRef: RefObject<DetailedChat | DetailedInternalChat | null>,
 ) {
-  return ({ messageId, newText, contactId }: WppMessageEditEventData) => {
+  return ({ messageId, newText, contactId, mentionEntities }: WppMessageEditEventData) => {
     setMessages((prev) => {
-      const newMessages = { ...prev };
+      const newMessages = { ...prev, [contactId]: [...(prev[contactId] ?? [])] };
 
       if (!newMessages[contactId]) {
         newMessages[contactId] = [];
@@ -20,7 +20,13 @@ export default function EditedMessageHandler(
       if (msgIndex !== -1) {
         const msg = newMessages[contactId][msgIndex];
 
-        newMessages[contactId][msgIndex] = { ...msg, body: newText, isEdited: true };
+        newMessages[contactId][msgIndex] = {
+          ...msg,
+          body: newText,
+          isEdited: true,
+          mentionEntities:
+            mentionEntities ?? (msg.body === newText ? msg.mentionEntities : undefined),
+        };
       }
 
       return newMessages;
@@ -35,7 +41,13 @@ export default function EditedMessageHandler(
 
         if (i !== -1) {
           const msg = newMessages[i];
-          newMessages[i] = { ...msg, body: newText, isEdited: true };
+          newMessages[i] = {
+            ...msg,
+            body: newText,
+            isEdited: true,
+            mentionEntities:
+              mentionEntities ?? (msg.body === newText ? msg.mentionEntities : undefined),
+          };
         }
 
         return newMessages;

@@ -1,4 +1,5 @@
-import { MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
+import { MessageMentionEntity, MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
+import MessageMentionText from "@/lib/components/message-mention-text";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
@@ -13,6 +14,7 @@ import VCardMessage from "./vcard-message";
 import MessageReactions from "./message-reactions";
 
 interface MessageProps {
+  mentionEntities?: MessageMentionEntity[];
   id: number | string;
   style: "received" | "sent" | "system";
   sentBy: string;
@@ -49,6 +51,7 @@ export default function GroupMessage({
   id,
   style,
   text,
+  mentionEntities,
   type,
   date,
   status,
@@ -116,15 +119,6 @@ export default function GroupMessage({
     handleMenuClose();
   };
 
-  const visualText = useMemo(() => {
-    if (!mentionNameMap || !text) return text;
-    return text.replace(/@(\d{8,15})\b/g, (match, phone) => {
-      const cleanPhone = phone.replace(/\D/g, "");
-      const name = mentionNameMap.get(cleanPhone);
-      return name ? `@${name}` : match;
-    });
-  }, [text, mentionNameMap]);
-
   const dateText = useMemo(() => {
     return date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
   }, [date]);
@@ -160,11 +154,10 @@ export default function GroupMessage({
             >
               <h2>{quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}</h2>
               <div className="h-full w-full rounded-md p-4 text-black dark:text-slate-200">
-                {quotedMessage.text.split("\n").map((line, index) => (
-                  <p key={index} className="max-w-[100%] break-words text-sm">
-                    {line}
-                  </p>
-                ))}
+                <MessageMentionText
+                  text={quotedMessage.text}
+                  mentionEntities={quotedMessage.mentionEntities}
+                />
               </div>
 
               {quotedMessage.fileId && (
@@ -195,16 +188,11 @@ export default function GroupMessage({
               showMediaByDefault={showMediaByDefault}
             />
           )}
-          {/* --- CORREÇÃO: Utiliza visualText para renderizar a mensagem --- */}
           <div className="w-full text-slate-900 dark:text-slate-200">
             {type === "vcard" ? (
               <VCardMessage vCardString={text} /> // vCard mantém o texto original
             ) : (
-              visualText?.split("\n").map((line, index) => (
-                <p key={index} className="max-w-[100%] break-words text-sm">
-                  {line}
-                </p>
-              ))
+              <MessageMentionText text={text} mentionEntities={mentionEntities} />
             )}
           </div>
           <MessageReactions
@@ -269,7 +257,7 @@ export default function GroupMessage({
               <ListItemIcon>
                 <ContentCopyIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>Copiar</ListItemText>
+              <ListItemText>Copiar texto original</ListItemText>
             </MenuItem>
           </Menu>
         </>

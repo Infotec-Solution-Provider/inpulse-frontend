@@ -151,6 +151,7 @@ export default function RenderInternalGroupMessages({
               groupFirst={groupFirst}
               sentBy={senderName}
               text={m.body ?? ""}
+              mentionEntities={m.mentionEntities}
               type={m.type}
               date={new Date(Number(m.timestamp))}
               status={m.status}

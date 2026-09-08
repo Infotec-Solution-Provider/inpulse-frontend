@@ -140,6 +140,7 @@ export default function RenderWhatsappChatMessages({
               id={m.id}
               style={getWppMessageStyle(m)}
               text={m.body}
+              mentionEntities={m.mentionEntities}
               type={m.type}
               date={new Date(+m.timestamp)}
               status={m.status}

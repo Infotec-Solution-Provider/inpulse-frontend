@@ -1,4 +1,5 @@
-import { MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
+import { MessageMentionEntity, MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
+import MessageMentionText from "@/lib/components/message-mention-text";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -29,6 +30,7 @@ import VCardMessage from "./vcard-message";
 import MessageReactions from "./message-reactions";
 
 export interface QuotedMessageProps {
+  mentionEntities?: MessageMentionEntity[];
   id: number | string;
   style: "received" | "sent" | "system" | "thirdparty";
   text: string;
@@ -39,6 +41,7 @@ export interface QuotedMessageProps {
 }
 
 export interface MessageProps {
+  mentionEntities?: MessageMentionEntity[];
   id: number | string;
   style: "received" | "sent" | "system" | "thirdparty";
   text: string;
@@ -103,6 +106,7 @@ export default function Message({
   style,
   type,
   text,
+  mentionEntities,
   date,
   status,
   fileId,
@@ -237,11 +241,10 @@ export default function Message({
               {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
             </h2>
             <div className="h-full w-full rounded-md px-3 py-1 text-black dark:text-slate-200">
-              {quotedMessage.text.split("\n").map((line, index) => (
-                <p key={index} className="max-w-[100%] break-words text-sm">
-                  {line}
-                </p>
-              ))}
+              <MessageMentionText
+                text={quotedMessage.text}
+                mentionEntities={quotedMessage.mentionEntities}
+              />
             </div>
             {quotedMessage.fileId && (
               <MessageFile
@@ -276,11 +279,7 @@ export default function Message({
             {type === "vcard" ? (
               <VCardMessage vCardString={text} />
             ) : (
-              text?.split("\n").map((line, index) => (
-                <p key={index} className="max-w-[100%] break-words text-sm">
-                  {line}
-                </p>
-              ))
+              <MessageMentionText text={text} mentionEntities={mentionEntities} />
             )}
           </div>
           <MessageReactions
@@ -355,7 +354,7 @@ export default function Message({
                 <ListItemIcon>
                   <ContentCopyIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Copiar</ListItemText>
+                <ListItemText>Copiar texto original</ListItemText>
               </MenuItem>
             )}
           </Menu>

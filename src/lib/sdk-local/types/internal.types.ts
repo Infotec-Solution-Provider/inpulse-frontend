@@ -1,4 +1,4 @@
-import { MessageReaction, WppMessageStatus } from "./whatsapp.types";
+import { MessageMentionEntity, MessageReaction, WppMessageStatus } from "./whatsapp.types";
 
 export interface InternalMessage {
 	id: number;
@@ -8,6 +8,7 @@ export interface InternalMessage {
 	quotedId: number | null;
 	internalChatId: number;
 	body: string;
+	mentionEntities?: MessageMentionEntity[];
 	timestamp: string;
 	isForwarded: boolean;
 	isEdited: boolean;
@@ -41,6 +42,7 @@ export interface InternalChat {
 }
 
 export interface InternalWhatsappSenderMessage {
+	mentionEntities?: MessageMentionEntity[];
 	id: number;
 	body: string;
 	timestamp: string;

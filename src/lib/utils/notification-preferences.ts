@@ -3,7 +3,14 @@ import {
   NotificationEventPreferences,
   User,
   UserNotificationPreferences,
+  MessageMentionEntity,
 } from "@/lib/sdk-local";
+import {
+  canonicalMentionIdentity,
+  createMentionDirectory,
+  MentionDirectory,
+  resolveMessageMentions,
+} from "./message-mentions";
 
 export const NOTIFICATION_SOUND_OPTIONS = [
   { value: "/notify-chat.mp3", label: "Chat" },
@@ -50,7 +57,9 @@ function normalizeEventConfig(
 ): NotificationEventPreferences {
   const data = (raw ?? {}) as Partial<NotificationEventPreferences>;
   const channels = (data.channels ?? {}) as Partial<NotificationEventPreferences["channels"]>;
-  const sound = (channels.sound ?? {}) as Partial<NotificationEventPreferences["channels"]["sound"]>;
+  const sound = (channels.sound ?? {}) as Partial<
+    NotificationEventPreferences["channels"]["sound"]
+  >;
 
   return {
     enabled: typeof data.enabled === "boolean" ? data.enabled : fallback.enabled,
@@ -127,9 +136,7 @@ export function createDefaultNotificationPreferences(): UserNotificationPreferen
   };
 }
 
-export function normalizeNotificationPreferences(
-  raw: unknown,
-): UserNotificationPreferences {
+export function normalizeNotificationPreferences(raw: unknown): UserNotificationPreferences {
   const defaults = createDefaultNotificationPreferences();
   const payload = (raw ?? {}) as Partial<UserNotificationPreferences>;
   const events = (payload.events ?? {}) as Partial<UserNotificationPreferences["events"]>;
@@ -147,10 +154,7 @@ export function normalizeNotificationPreferences(
     legacyEvents.external_new_conversation,
   );
 
-  const mergedMention = pickFirstDefined(
-    events.mention,
-    legacyEvents.internal_new_message,
-  );
+  const mergedMention = pickFirstDefined(events.mention, legacyEvents.internal_new_message);
 
   return {
     version: typeof payload.version === "number" ? payload.version : defaults.version,
@@ -187,29 +191,34 @@ export function shouldDispatchNotification(
   return true;
 }
 
-export function isInternalMentionForUser(text: string, user: User | null): boolean {
+export function isInternalMentionForUser(
+  text: string,
+  user: User | null,
+  entities?: MessageMentionEntity[],
+  directory?: MentionDirectory,
+): boolean {
   if (!text || !user) {
     return false;
   }
 
-  const mentionPattern = /@(~?(?:\+?\d[\d\s().-]*\d))/g;
-  const mentions = [...text.matchAll(mentionPattern)].map((match) => match[1]?.trim() ?? "");
-
-  if (mentions.length === 0) {
-    return false;
-  }
-
-  const userCode = String(user.CODIGO);
-  const userPhone = (user.WHATSAPP ?? "").replace(/\D/g, "");
-
-  return mentions.some((rawMention) => {
-    const mentionNoTilde = rawMention.replace(/^~/, "");
-    const mentionDigits = mentionNoTilde.replace(/\D/g, "");
-
-    if (mentionNoTilde === userCode) {
+  const lookup = directory ?? createMentionDirectory([user]);
+  const userId = `user:${user.CODIGO}`;
+  const digits = (user.WHATSAPP ?? "").replace(/\D/g, "");
+  const phoneId = digits ? `${digits}@s.whatsapp.net` : null;
+  return resolveMessageMentions(text, entities, lookup).some((segment) => {
+    if (segment.kind !== "mention") return false;
+    if (segment.identity === userId) return true;
+    if (!phoneId || segment.identity.startsWith("user:")) return false;
+    if (segment.identity === phoneId || lookup.aliases.get(segment.identity)?.has(phoneId))
       return true;
-    }
-
-    return !!userPhone && mentionDigits.length > 0 && mentionDigits === userPhone;
+    return (
+      entities?.some(
+        (entity) =>
+          canonicalMentionIdentity(entity.id, entity.type) === segment.identity &&
+          entity.type !== "user" &&
+          !!entity.phone &&
+          entity.phone.replace(/\D/g, "") === digits,
+      ) ?? false
+    );
   });
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
-import { replaceMentions } from "@/lib/utils/message-mentions";
 import { InternalMessage } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -126,7 +125,8 @@ export default function RenderInternalChatMessages({
               id={m.id}
               key={`message_${m.id}`}
               style={getInternalMessageStyle(m, user?.CODIGO)}
-              text={replaceMentions(m.body ?? "", users ?? [], contacts ?? [])}
+              text={m.body ?? ""}
+              mentionEntities={m.mentionEntities}
               type={m.type}
               date={new Date(Number(m.timestamp))}
               status={m.status}
@@ -135,7 +135,9 @@ export default function RenderInternalChatMessages({
               fileType={m.fileType}
               fileSize={m.fileSize}
               showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
-              showQuotedMediaByDefault={!quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)}
+              showQuotedMediaByDefault={
+                !quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)
+              }
               quotedMessage={quotedMsg}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               isSelected={selectedMessageIds.has(m.id)}

@@ -21,8 +21,10 @@ const event: WppMessageReactionEventData = {
 
 describe("reaction event domain isolation", () => {
   it("applies only to the matching table when WhatsApp and internal IDs collide", () => {
-    const wpp = state({ 5: [{ id: 17, clientId: 3 } as WppMessage] });
-    const internal = state({ 8: [{ id: 17, clientId: 3 } as InternalMessage] });
+    const wpp = state<Record<number, WppMessage[]>>({ 5: [{ id: 17, clientId: 3 } as WppMessage] });
+    const internal = state<Record<number, InternalMessage[]>>({
+      8: [{ id: 17, clientId: 3 } as InternalMessage],
+    });
     const currentWpp = state<WppMessage[]>([]);
     const currentInternal = state<InternalMessage[]>([]);
     MessageReactionHandler(wpp.set, currentWpp.set)(event);
@@ -38,7 +40,7 @@ describe("reaction event domain isolation", () => {
 
   it("ignores ambiguous legacy events instead of guessing a message domain", () => {
     const original = { 5: [{ id: 17 } as WppMessage] };
-    const cache = state(original);
+    const cache = state<Record<number, WppMessage[]>>(original);
     MessageReactionHandler(
       cache.set,
       state<WppMessage[]>([]).set,
@@ -47,7 +49,9 @@ describe("reaction event domain isolation", () => {
   });
 
   it("reads the current chat at event time and does not update another domain's open conversation", () => {
-    const cache = state({ 5: [{ id: 17, clientId: 3 } as WppMessage] });
+    const cache = state<Record<number, WppMessage[]>>({
+      5: [{ id: 17, clientId: 3 } as WppMessage],
+    });
     const original = [{ id: 17, clientId: 3 } as WppMessage];
     const current = state(original);
     const chatRef = { current: { chatType: "wpp" } };
@@ -59,8 +63,10 @@ describe("reaction event domain isolation", () => {
   });
 
   it("updates internal monitor caches and supports confirmed removal", () => {
-    const cache = state({ 8: [{ id: 17 } as InternalMessage] });
-    const monitor = state({ 8: [{ id: 17 } as InternalMessage] });
+    const cache = state<Record<number, InternalMessage[]>>({ 8: [{ id: 17 } as InternalMessage] });
+    const monitor = state<Record<number, InternalMessage[]>>({
+      8: [{ id: 17 } as InternalMessage],
+    });
     const current = state([{ id: 17 } as InternalMessage]);
     const handler = InternalMessageReactionHandler(
       cache.set,

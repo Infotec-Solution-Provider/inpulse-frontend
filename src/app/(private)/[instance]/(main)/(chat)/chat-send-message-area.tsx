@@ -15,6 +15,7 @@ import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
 import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
+import MessageMentionText from "@/lib/components/message-mention-text";
 import { useWhatsappContext, WppClient } from "../../whatsapp-context";
 import AudioRecorder from "./audio-recorder";
 import ChannelSelect from "./channels-select";
@@ -265,11 +266,10 @@ export default function ChatSendMessageArea() {
       {refMessage && (
         <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
           <div className="min-w-0 text-sm text-black dark:text-slate-300">
-            {refMessage.body.split("\n").map((line, index) => (
-              <p key={index} className="break-words text-sm">
-                {line}
-              </p>
-            ))}
+            <MessageMentionText
+              text={refMessage.body}
+              mentionEntities={refMessage.mentionEntities}
+            />
             {refMessage.fileId && (
               <span className="text-xs text-slate-400 dark:text-slate-500">
                 {refMessage.fileName || "Arquivo anexado"}

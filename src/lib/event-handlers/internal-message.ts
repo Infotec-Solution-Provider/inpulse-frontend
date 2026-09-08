@@ -3,7 +3,12 @@ import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { InternalChatClient, InternalMessage, User, WppContact } from "@/lib/sdk-local";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import getInternalMessageAuthor from "../utils/get-internal-message-author";
-import { replaceMentions } from "../utils/message-mentions";
+import {
+  createMentionDirectory,
+  MentionDirectory,
+  mentionDisplayText,
+  preserveMessageMentionMetadata,
+} from "../utils/message-mentions";
 import { isInternalMentionForUser } from "../utils/notification-preferences";
 
 interface InternalReceiveMessageCallbackProps {
@@ -18,7 +23,7 @@ const types: Record<string, string> = {
   document: "Enviou um documento.",
   file: "Enviou um arquivo.",
 };
-const notifiedMessages = new Set<number>();
+const notifiedMessages = new Set<string>();
 export default function InternalReceiveMessageHandler(
   api: InternalChatClient,
   setMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
@@ -36,10 +41,18 @@ export default function InternalReceiveMessageHandler(
     body: string;
     isChatFocused: boolean;
   }) => void,
+  mentionDirectory: MentionDirectory = createMentionDirectory(
+    users,
+    contacts,
+    whatsappSenderNameMap,
+  ),
 ) {
   return ({ message }: InternalReceiveMessageCallbackProps) => {
-    if (notifiedMessages.has(message.id)) return;
-    notifiedMessages.add(message.id);
+    const notificationKey = `${message.instance}:${loggedUser.CODIGO}:${message.id}`;
+    const alreadyNotified = notifiedMessages.has(notificationKey);
+    notifiedMessages.add(notificationKey);
+    if (notifiedMessages.size > 5000)
+      notifiedMessages.delete(notifiedMessages.values().next().value!);
     const isCurrentChat =
       chatRef.current?.chatType === "internal" && chatRef.current.id === message.internalChatId;
     const isCurrentUser = message.from === `user:${loggedUser.CODIGO}`;
@@ -53,11 +66,13 @@ export default function InternalReceiveMessageHandler(
         if (!prev.some((m) => m.id === message.id)) {
           return [...prev, message];
         }
-        return prev;
+        return prev.map((item) =>
+          item.id === message.id ? preserveMessageMentionMetadata(item, message) : item,
+        );
       });
     }
 
-    if (message.from !== `user:${loggedUser.CODIGO}`) {
+    if (!alreadyNotified && message.from !== `user:${loggedUser.CODIGO}`) {
       const author = getInternalMessageAuthor(
         message.from,
         phoneNameMap,
@@ -65,10 +80,16 @@ export default function InternalReceiveMessageHandler(
         whatsappSenderNameMap,
       );
       const bodyFinal =
-        message.type !== "chat"
-          ? types[message.type] || "Enviou um arquivo"
-          : replaceMentions(message.body || "", users, contacts);
-      const isMention = isInternalMentionForUser(message.body || "", loggedUser);
+        (message.type !== "vcard" && message.body?.trim()) ||
+        ["chat", "text"].includes(message.type)
+          ? mentionDisplayText(message.body || "", message.mentionEntities, mentionDirectory)
+          : types[message.type] || "Enviou um arquivo";
+      const isMention = isInternalMentionForUser(
+        message.body || "",
+        loggedUser,
+        message.mentionEntities,
+        mentionDirectory,
+      );
 
       notify?.({
         event: isMention ? "mention" : "new_message",
@@ -79,21 +100,17 @@ export default function InternalReceiveMessageHandler(
     }
 
     setMessages((prev) => {
-      const newMessages = { ...prev };
       const id = message.internalChatId;
-
-      if (!newMessages[id]) {
-        newMessages[id] = [];
-      }
-
-      const findIndex = newMessages[id].findIndex((m) => m.id === message.id);
-      if (findIndex === -1) {
-        newMessages[id].push(message);
-      } else {
-        newMessages[id][findIndex] = message;
-      }
-
-      return newMessages;
+      const previous = prev[id] ?? [];
+      const exists = previous.some((item) => item.id === message.id);
+      return {
+        ...prev,
+        [id]: exists
+          ? previous.map((item) =>
+              item.id === message.id ? preserveMessageMentionMetadata(item, message) : item,
+            )
+          : [...previous, message],
+      };
     });
 
     setChats((prev) =>
@@ -102,7 +119,7 @@ export default function InternalReceiveMessageHandler(
           return {
             ...chat,
             isUnread: chatRef.current?.id !== message.internalChatId,
-            lastMessage: message,
+            lastMessage: preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
           };
         }
 

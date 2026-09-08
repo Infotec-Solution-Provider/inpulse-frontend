@@ -4,6 +4,9 @@ import { InternalWhatsappSenderSummary } from "@/lib/sdk-local";
 import HistoryIcon from "@mui/icons-material/History";
 import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
 import { Button, Chip, TableCell, TableRow } from "@mui/material";
+import { useContext } from "react";
+import { MentionDirectoryContext } from "@/lib/components/message-mention-text";
+import { mentionDisplayText } from "@/lib/utils/message-mentions";
 
 interface SenderRowProps {
   sender: InternalWhatsappSenderSummary;
@@ -13,6 +16,7 @@ interface SenderRowProps {
 
 export default function SenderRow({ sender, onHistory, onAssign }: SenderRowProps) {
   const lastMessage = sender.lastMessage;
+  const directory = useContext(MentionDirectoryContext);
 
   return (
     <TableRow hover>
@@ -24,7 +28,9 @@ export default function SenderRow({ sender, onHistory, onAssign }: SenderRowProp
       </TableCell>
       <TableCell className="max-w-sm">
         <p className="truncate text-sm">
-          {lastMessage?.body || getMessagePreview(lastMessage?.type)}
+          {lastMessage?.body
+            ? mentionDisplayText(lastMessage.body, lastMessage.mentionEntities, directory)
+            : getMessagePreview(lastMessage?.type)}
         </p>
         {lastMessage && (
           <p className="mt-1 text-xs text-slate-500">{formatMessageDate(lastMessage.timestamp)}</p>

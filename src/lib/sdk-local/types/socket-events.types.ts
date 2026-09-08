@@ -7,7 +7,7 @@ import {
 	SocketServerUserRoom,
 } from "./socket-rooms.types";
 import { MessageResponse } from "./response.types";
-import { MessageReaction, WppMessage, WppMessageStatus } from "./whatsapp.types";
+import { MessageMentionEntity, MessageReaction, WppMessage, WppMessageStatus } from "./whatsapp.types";
 import { InternalChat, InternalChatMember, InternalMessage } from "./internal.types";
 
 export enum SocketEventType {
@@ -233,6 +233,7 @@ export interface WppMessageEventData {
 }
 
 export interface WppMessageEditEventData {
+	mentionEntities?: MessageMentionEntity[];
 	contactId: number;
 	messageId: number;
 	newText: string;
@@ -274,6 +275,7 @@ export interface InternalMessageEventData {
 	message: InternalMessage;
 }
 export interface InternalMessageEditEventData {
+	mentionEntities?: MessageMentionEntity[];
 	chatId: number;
 	internalMessageId: number;
 	newText: string;

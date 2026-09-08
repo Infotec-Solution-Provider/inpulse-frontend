@@ -1,4 +1,5 @@
 "use client";
+import MessageMentionText from "@/lib/components/message-mention-text";
 
 import { InternalChatContext } from "@/app/(private)/[instance]/internal-context";
 import { InternalWhatsappSenderMessage } from "@/lib/sdk-local";
@@ -94,9 +95,12 @@ export default function SenderMessagesDialog({
                     {formatMessageDate(message.timestamp)}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap break-words text-sm text-slate-800 dark:text-slate-100">
-                  {message.body || message.fileName || getMessageTypeLabel(message.type)}
-                </p>
+                <div className="text-slate-800 dark:text-slate-100">
+                  <MessageMentionText
+                    text={message.body || message.fileName || getMessageTypeLabel(message.type)}
+                    mentionEntities={message.body ? message.mentionEntities : []}
+                  />
+                </div>
               </article>
             ))}
             {nextCursor && (

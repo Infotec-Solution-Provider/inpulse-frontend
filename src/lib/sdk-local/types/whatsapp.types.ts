@@ -9,6 +9,7 @@ export interface WppContact {
   id: number;
   name: string;
   phone: string;
+  whatsappId?: string | null;
   customerId?: number;
   avatarUrl?: string;
   instance: string;
@@ -206,6 +207,15 @@ export interface MessageReactionSnapshot {
   reaction?: string;
 }
 
+export interface MessageMentionEntity {
+  id: string;
+  type: "lid" | "phone" | "user";
+  tokens: string[];
+  phone?: string | null;
+  lid?: string | null;
+  displayName?: string | null;
+}
+
 export interface WppMessage {
   id: number;
   instance: string;
@@ -220,6 +230,7 @@ export interface WppMessage {
   chatId: number | null;
   contactId: number | null;
   body: string;
+  mentionEntities?: MessageMentionEntity[];
   timestamp: string;
   status: WppMessageStatus;
   isForwarded: boolean;

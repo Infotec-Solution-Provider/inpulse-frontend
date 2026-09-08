@@ -49,6 +49,16 @@ import {
   preserveReactionHistoryCache,
 } from "@/lib/utils/message-reactions";
 import type { MessageReactionSnapshot } from "@/lib/sdk-local";
+import { MentionDirectoryContext } from "@/lib/components/message-mention-text";
+import { ContactsContext } from "./(cruds)/contacts/contacts-context";
+import {
+  createMentionDirectory,
+  EMPTY_MENTION_DIRECTORY,
+  MentionDirectory,
+  preserveChatMentionHistory,
+  preserveMentionHistory,
+  preserveMentionHistoryCache,
+} from "@/lib/utils/message-mentions";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -59,6 +69,7 @@ export interface DetailedInternalChat extends InternalChat {
 }
 
 interface InternalChatContextType {
+  mentionDirectory: MentionDirectory;
   internalApi: React.RefObject<InternalChatClient>;
   internalChats: DetailedInternalChat[];
   messages: Record<number, InternalMessage[]>;
@@ -111,9 +122,24 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     notificationPreferences,
     isReadOnlyMode,
     channels,
+    mentionDirectoryRef,
   } = useWhatsappContext();
+  const { token, user, instance } = useContext(AuthContext);
+  const { state: contactsState } = useContext(ContactsContext);
+  const mentionScope = `${instance}:${user?.CODIGO ?? ""}`;
+  const liveMentionScope = useRef(mentionScope);
+  liveMentionScope.current = mentionScope;
+  const [directoryScope, setDirectoryScope] = useState(mentionScope);
 
-  const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
+  const [internalChats, setInternalChatsState] = useState<DetailedInternalChat[]>([]);
+  const setInternalChats = useCallback((update: SetStateAction<DetailedInternalChat[]>) => {
+    setInternalChatsState((previous) =>
+      preserveChatMentionHistory(
+        previous,
+        typeof update === "function" ? update(previous) : update,
+      ),
+    );
+  }, []);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
   const [messages, setMessagesState] = useState<Record<number, InternalMessage[]>>({});
@@ -125,18 +151,24 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   knownMessagesRef.current = { messages, monitorMessages };
   const setMessages = useCallback((update: SetStateAction<Record<number, InternalMessage[]>>) => {
     setMessagesState((previous) =>
-      preserveReactionHistoryCache(
+      preserveMentionHistoryCache(
         previous,
-        typeof update === "function" ? update(previous) : update,
+        preserveReactionHistoryCache(
+          previous,
+          typeof update === "function" ? update(previous) : update,
+        ),
       ),
     );
   }, []);
   const setMonitorMessages = useCallback(
     (update: SetStateAction<Record<number, InternalMessage[]>>) => {
       setMonitorMessagesState((previous) =>
-        preserveReactionHistoryCache(
+        preserveMentionHistoryCache(
           previous,
-          typeof update === "function" ? update(previous) : update,
+          preserveReactionHistoryCache(
+            previous,
+            typeof update === "function" ? update(previous) : update,
+          ),
         ),
       );
     },
@@ -146,6 +178,36 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   const [whatsappSenderNameMap, setWhatsappSenderNameMap] = useState<Map<string, string>>(
     new Map(),
   );
+  const mentionDirectory = useMemo(() => {
+    if (!token || directoryScope !== mentionScope) return EMPTY_MENTION_DIRECTORY;
+    const currentContacts = new Map(
+      [...contacts, ...(contactsState?.contacts ?? [])]
+        .filter((contact) => contact.instance === instance)
+        .map((contact) => [contact.id, contact]),
+    );
+    return createMentionDirectory(users, [...currentContacts.values()], whatsappSenderNameMap);
+  }, [
+    users,
+    contacts,
+    contactsState?.contacts,
+    whatsappSenderNameMap,
+    directoryScope,
+    mentionScope,
+    instance,
+    !!token,
+  ]);
+  useEffect(() => {
+    mentionDirectoryRef.current = mentionDirectory;
+    return () => {
+      mentionDirectoryRef.current = EMPTY_MENTION_DIRECTORY;
+    };
+  }, [mentionDirectory, mentionDirectoryRef]);
+  useEffect(() => {
+    setUsers([]);
+    setContacts([]);
+    setWhatsappSenderNameMap(new Map());
+    setDirectoryScope(mentionScope);
+  }, [mentionScope]);
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -176,15 +238,20 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         ...(knownMessagesRef.current.messages[id] ?? []),
         ...(knownMessagesRef.current.monitorMessages[id] ?? []),
       ]);
-      return preserveReactionHistory(
-        preserveReactionHistory(previous, known),
-        preserveReactionHistory(previous, incoming),
+      return preserveMentionHistory(
+        preserveMentionHistory(previous, known),
+        preserveMentionHistory(
+          previous,
+          preserveReactionHistory(
+            preserveReactionHistory(previous, known),
+            preserveReactionHistory(previous, incoming),
+          ),
+        ),
       );
     });
   }, []);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
   const userInitiatedInternalChat = useRef<boolean>(false);
-  const { token, user } = useContext(AuthContext);
   const applyConfirmedReaction = useCallback(
     (snapshot: MessageReactionSnapshot) => {
       InternalMessageReactionHandler(
@@ -253,6 +320,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     api.current.setAuth(token);
     const names = await api.current.getWhatsappSenderNames();
+    if (liveMentionScope.current !== mentionScope) return;
     setWhatsappSenderNameMap(
       new Map(
         names
@@ -260,7 +328,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           .map((sender) => [sender.senderId, sender.displayName]),
       ),
     );
-  }, [token]);
+  }, [token, mentionScope]);
 
   useEffect(() => {
     void refreshWhatsappSenderNames().catch(() => {
@@ -418,21 +486,30 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     usersService.setAuth(token);
     setUsersLoaded(false);
+    let active = true;
 
     usersService
       .getUsers({ perPage: "999" })
-      .then((res) => setUsers(Array.isArray(res?.data) ? res.data : []))
+      .then((res) => {
+        if (active) setUsers(Array.isArray(res?.data) ? res.data : []);
+      })
       .catch((err) => {
         console.error("Falha ao carregar usuários internos", err);
-        setUsers([]);
+        if (active) setUsers([]);
       })
-      .finally(() => setUsersLoaded(true));
-  }, [token]);
+      .finally(() => {
+        if (active) setUsersLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, mentionScope]);
 
   useEffect(() => {
     if (token && user && usersLoaded && users.length > 0) {
       api.current.setAuth(token);
       wppApi.current.getContacts().then((res) => {
+        if (liveMentionScope.current !== mentionScope) return;
         setContacts(Array.isArray(res) ? res : []);
       });
       api.current.getInternalChatsBySession().then((payload) => {
@@ -454,7 +531,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
     setInternalChats([]);
     setMessages({});
-  }, [token, user, usersLoaded, users]);
+  }, [token, user, usersLoaded, users, mentionScope]);
 
   const startDirectChat = useCallback(
     (userId: number) => {
@@ -561,6 +638,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
               icon: HorizontalLogo.src,
             });
           },
+          mentionDirectory,
         ),
       );
 
@@ -597,6 +675,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     contacts,
     phoneNameMap,
     whatsappSenderNameMap,
+    mentionDirectory,
     currentInternalChatMessages,
     notificationPreferences,
   ]);
@@ -604,6 +683,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   return (
     <InternalChatContext.Provider
       value={{
+        mentionDirectory,
         internalApi: api,
         internalChats,
         messages,
@@ -625,7 +705,9 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         refreshWhatsappSenderNames,
       }}
     >
-      {children}
+      <MentionDirectoryContext.Provider value={mentionDirectory}>
+        {children}
+      </MentionDirectoryContext.Provider>
     </InternalChatContext.Provider>
   );
 }

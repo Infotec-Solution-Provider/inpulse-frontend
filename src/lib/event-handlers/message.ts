@@ -3,6 +3,13 @@ import { Formatter, Logger } from "@in.pulse-crm/utils";
 import { Dispatch, RefObject, SetStateAction } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
+import {
+  canonicalMentionIdentity,
+  EMPTY_MENTION_DIRECTORY,
+  MentionDirectory,
+  mentionDisplayText,
+  preserveMessageMentionMetadata,
+} from "../utils/message-mentions";
 
 interface ReceiveMessageCallbackProps {
   message: WppMessage;
@@ -30,6 +37,7 @@ export default function ReceiveMessageHandler(
     body: string;
     isChatFocused: boolean;
   }) => void,
+  getMentionDirectory: () => MentionDirectory = () => EMPTY_MENTION_DIRECTORY,
 ) {
   return ({ message }: ReceiveMessageCallbackProps) => {
     if (!message.from.startsWith("me") && !message.from.startsWith("system")) {
@@ -37,14 +45,23 @@ export default function ReceiveMessageHandler(
         return chat.contactId === message.contactId;
       });
       const parts = message.from.split(":");
-      let raw = "";
+      let raw = message.from;
       if (parts.length === 3) {
         raw = parts[2];
       } else if (parts.length === 2) {
         raw = parts[1];
       }
-      const phone = raw.split("@")[0].replace(/\D/g, "");
       const contactName = matchedChat?.contact?.name;
+      let title = contactName || "Nova mensagem";
+      // An unknown/LID sender must not be formatted as a phone or prevent message ingestion.
+      const identity = canonicalMentionIdentity(raw);
+      if (!contactName && identity?.endsWith("@s.whatsapp.net")) {
+        try {
+          title = Formatter.phone(identity.split("@")[0]);
+        } catch {
+          /* Keep neutral title. */
+        }
+      }
 
       const isTextMsg = ["chat", "text"].includes(message.type);
       const isCurrentWppChat =
@@ -52,28 +69,27 @@ export default function ReceiveMessageHandler(
 
       notify?.({
         event: "new_message",
-        title: contactName || Formatter.phone(phone),
-        body: isTextMsg ? message.body : types[message.type] || "Enviou um arquivo",
+        title,
+        body:
+          isTextMsg || (message.type !== "vcard" && message.body?.trim())
+            ? mentionDisplayText(message.body || "", message.mentionEntities, getMentionDirectory())
+            : types[message.type] || "Enviou um arquivo",
         isChatFocused: !!isCurrentWppChat,
       });
     }
 
     setMessages((prev) => {
-      const newMessages = { ...prev };
       const contactId = message.contactId || 0;
-
-      if (!newMessages[contactId]) {
-        newMessages[contactId] = [];
-      }
-
-      const findIndex = newMessages[contactId].findIndex((m) => m.id === message.id);
-      if (findIndex === -1) {
-        newMessages[contactId].push(message);
-      } else {
-        newMessages[contactId][findIndex] = message;
-      }
-
-      return newMessages;
+      const previous = prev[contactId] ?? [];
+      const exists = previous.some((item) => item.id === message.id);
+      return {
+        ...prev,
+        [contactId]: exists
+          ? previous.map((item) =>
+              item.id === message.id ? preserveMessageMentionMetadata(item, message) : item,
+            )
+          : [...previous, message],
+      };
     });
 
     const x = chatRef.current;
@@ -82,15 +98,14 @@ export default function ReceiveMessageHandler(
       prev
         .map((chat) => {
           if (chat.contactId === message.contactId) {
-            const isCurrentWppChat =
-              x?.chatType === "wpp" && x.contactId === message.contactId;
+            const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
             const isFromMe = message.from.startsWith("me");
             const isUnread = !isCurrentWppChat && !isFromMe;
 
             return {
               ...chat,
               isUnread: isUnread,
-              lastMessage: message,
+              lastMessage: preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
             };
           }
 
@@ -108,7 +123,7 @@ export default function ReceiveMessageHandler(
         if (i === -1) {
           newMessages.push(message);
         } else {
-          newMessages[i] = message;
+          newMessages[i] = preserveMessageMentionMetadata(newMessages[i], message);
         }
 
         return newMessages;
@@ -116,12 +131,13 @@ export default function ReceiveMessageHandler(
 
       // TODO: Change the logic to only update the received message;
       if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        api
-          .markContactMessagesAsRead(message.contactId || 0)
-          .catch((error) => {
-            Logger.error(`[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`, error);
-          });
+        api.markContactMessagesAsRead(message.contactId || 0).catch((error) => {
+          Logger.error(
+            `[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`,
+            error,
+          );
+        });
       }
-    };
-  }
+    }
+  };
 }
