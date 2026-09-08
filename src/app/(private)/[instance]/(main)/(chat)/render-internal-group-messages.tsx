@@ -9,6 +9,8 @@ import { InternalChatContext } from "../../internal-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import GroupMessage from "./group-message";
+import { useWhatsappContext } from "../../whatsapp-context";
+import { canReactToInternalMessage } from "@/lib/utils/message-reactions";
 
 type BubbleStyle = "system" | "sent" | "received";
 
@@ -40,7 +42,9 @@ export default function RenderInternalGroupMessages({
     users,
     phoneNameMap,
     whatsappSenderNameMap,
+    reactToInternalMessage,
   } = useContext(InternalChatContext);
+  const { currentChat, channels } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
   const { user } = useAuthContext();
 
@@ -156,7 +160,9 @@ export default function RenderInternalGroupMessages({
               fileSize={m.fileSize}
               quotedMessage={quotedMsg}
               showMediaByDefault={!m.fileId || autoVisibleFileIdSet.has(m.fileId)}
-              showQuotedMediaByDefault={!quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)}
+              showQuotedMediaByDefault={
+                !quotedMsg?.fileId || autoVisibleFileIdSet.has(quotedMsg.fileId)
+              }
               isForwarded={m.isForwarded}
               onQuote={isReadOnlyMode ? undefined : () => handleQuoteMessage(m)}
               onCopy={() => navigator.clipboard.writeText(m.body ?? "")}
@@ -164,6 +170,18 @@ export default function RenderInternalGroupMessages({
               isSelected={selectedMessageIds.has(m.id)}
               isEdited={m.isEdited}
               reaction={m.reaction}
+              reactions={m.reactions}
+              onReaction={
+                !isReadOnlyMode &&
+                currentChat?.chatType === "internal" &&
+                canReactToInternalMessage(
+                  m,
+                  currentChat,
+                  channels.find((channel) => channel.id === m.clientId)?.type,
+                )
+                  ? (emoji) => reactToInternalMessage(m, emoji)
+                  : undefined
+              }
               onSelect={isReadOnlyMode ? undefined : () => toggleSelectMessage(m.id)}
               onForward={isReadOnlyMode ? undefined : () => openManualForward(m)}
               isReadOnly={isReadOnlyMode}

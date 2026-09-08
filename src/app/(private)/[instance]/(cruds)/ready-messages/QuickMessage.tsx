@@ -106,7 +106,7 @@ export const QuickMessage = ({ chat, onClose }: Props) => {
         });
       }
 
-      toast.success("Mensagem enviada com sucesso!");
+      toast.success(chat.chatType === "wpp" ? "Mensagem registrada. Acompanhe a confirmação na conversa." : "Mensagem enviada com sucesso!");
       onClose();
     } catch {
       toast.error("Erro ao enviar mensagem");

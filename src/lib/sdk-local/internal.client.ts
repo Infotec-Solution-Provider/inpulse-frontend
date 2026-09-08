@@ -11,6 +11,7 @@ import {
 	InternalSendMessageData,
 } from "./types/internal.types";
 import FormData from "form-data";
+import { MessageReactionSnapshot } from "./types/whatsapp.types";
 
 type GetChatsResponse = DataResponse<{
 	chats: (InternalChat & { participants: InternalChatMember[] })[];
@@ -23,17 +24,22 @@ type InternalChatsPayload = {
 };
 
 export default class InternalChatClient extends ApiClient {
+	public async setMessageReaction(messageId: number, emoji: string, signal?: AbortSignal) {
+		const { data: response } = await this.ax.post<DataResponse<MessageReactionSnapshot>>(
+			`/api/internal/messages/${messageId}/reaction`,
+			{ emoji },
+			{ signal },
+		);
+		return response.data;
+	}
 	private normalizeChatsPayload(
-		response:
-			| GetChatsResponse
-			| InternalChatsPayload
-			| null
-			| undefined,
+		response: GetChatsResponse | InternalChatsPayload | null | undefined,
 	): InternalChatsPayload {
-		const payload = Array.isArray((response as GetChatsResponse | undefined)?.data?.chats)
-			|| Array.isArray((response as GetChatsResponse | undefined)?.data?.messages)
-			? (response as GetChatsResponse).data
-			: (response as InternalChatsPayload | null | undefined);
+		const payload =
+			Array.isArray((response as GetChatsResponse | undefined)?.data?.chats) ||
+			Array.isArray((response as GetChatsResponse | undefined)?.data?.messages)
+				? (response as GetChatsResponse).data
+				: (response as InternalChatsPayload | null | undefined);
 
 		return {
 			chats: Array.isArray(payload?.chats) ? payload.chats : [],
@@ -54,21 +60,18 @@ export default class InternalChatClient extends ApiClient {
 			form.append("file", groupImage);
 		}
 
-		form.append(
-			"data",
-			JSON.stringify({ participants, isGroup, groupName, groupId }),
-		);
+		form.append("data", JSON.stringify({ participants, isGroup, groupName, groupId }));
 
-		const { data: res } = await this.ax.post<
-			DataResponse<InternalChat>
-		>(`/api/internal/chats`, form, {
-			headers: {
-				"Content-Type": "multipart/form-data",
+		const { data: res } = await this.ax.post<DataResponse<InternalChat>>(
+			`/api/internal/chats`,
+			form,
+			{
+				headers: {
+					"Content-Type": "multipart/form-data",
+				},
+				timeout: groupImage ? ApiClient.UPLOAD_TIMEOUT_MS : ApiClient.DEFAULT_TIMEOUT_MS,
 			},
-			timeout: groupImage
-				? ApiClient.UPLOAD_TIMEOUT_MS
-				: ApiClient.DEFAULT_TIMEOUT_MS,
-		});
+		);
 
 		return res.data;
 	}
@@ -81,9 +84,7 @@ export default class InternalChatClient extends ApiClient {
 	public async getInternalChatsBySession(token: string | null = null) {
 		const url = `/api/internal/session/chats`;
 
-		const headers = token
-			? { Authorization: `Bearer ${token}` }
-			: undefined;
+		const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
 		const { data: response } = await this.ax.get<GetChatsResponse | InternalChatsPayload>(url, {
 			headers,
@@ -94,8 +95,9 @@ export default class InternalChatClient extends ApiClient {
 
 	public async getInternalGroups() {
 		const url = `/api/internal/groups`;
-		const { data: response } =
-			await this.ax.get<DataResponse<InternalGroup[]> | InternalGroup[]>(url);
+		const { data: response } = await this.ax.get<DataResponse<InternalGroup[]> | InternalGroup[]>(
+			url,
+		);
 
 		if (Array.isArray(response)) {
 			return response;
@@ -129,9 +131,9 @@ export default class InternalChatClient extends ApiClient {
 	public async getWhatsappSenderMessages(senderId: string, limit = 50, beforeId?: number | null) {
 		const params = new URLSearchParams({ senderId, limit: String(limit) });
 		if (beforeId) params.set("beforeId", String(beforeId));
-		const { data: res } = await this.ax.get<
-			DataResponse<PaginatedInternalWhatsappSenderMessages>
-		>(`/api/internal/whatsapp-senders/messages?${params.toString()}`);
+		const { data: res } = await this.ax.get<DataResponse<PaginatedInternalWhatsappSenderMessages>>(
+			`/api/internal/whatsapp-senders/messages?${params.toString()}`,
+		);
 		return res.data;
 	}
 
@@ -156,21 +158,15 @@ export default class InternalChatClient extends ApiClient {
 		data.fileId && formData.append("fileId", data.fileId.toString());
 		data.traceId && formData.append("traceId", data.traceId);
 		if (data.mentions && data.mentions.length > 0) {
-  		formData.append("mentions", JSON.stringify(data.mentions));
+			formData.append("mentions", JSON.stringify(data.mentions));
 		}
-		await this.ax.post<DataResponse<InternalMessage>>(
-			url,
-			formData,
-			{
-				headers: {
-					"Content-Type": "multipart/form-data",
-					...(data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
-				},
-				timeout: data.file
-					? ApiClient.UPLOAD_TIMEOUT_MS
-					: ApiClient.DEFAULT_TIMEOUT_MS,
+		await this.ax.post<DataResponse<InternalMessage>>(url, formData, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+				...(data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
 			},
-		);
+			timeout: data.file ? ApiClient.UPLOAD_TIMEOUT_MS : ApiClient.DEFAULT_TIMEOUT_MS,
+		});
 	}
 
 	public async updateInternalGroup(
@@ -181,9 +177,10 @@ export default class InternalChatClient extends ApiClient {
 			wppGroupId: string | null;
 		},
 	) {
-		const { data: res } = await this.ax.put<
-			DataResponse<InternalGroup>
-		>(`/api/internal/groups/${groupId}`, data);
+		const { data: res } = await this.ax.put<DataResponse<InternalGroup>>(
+			`/api/internal/groups/${groupId}`,
+			data,
+		);
 		return res.data;
 	}
 
@@ -191,14 +188,16 @@ export default class InternalChatClient extends ApiClient {
 		const formData = new FormData();
 		formData.append("file", file);
 
-		const { data: res } = await this.ax.put<
-			DataResponse<InternalGroup>
-		>(`/api/internal/groups/${groupId}/image`, formData, {
-			headers: {
-				"Content-Type": "multipart/form-data",
+		const { data: res } = await this.ax.put<DataResponse<InternalGroup>>(
+			`/api/internal/groups/${groupId}/image`,
+			formData,
+			{
+				headers: {
+					"Content-Type": "multipart/form-data",
+				},
+				timeout: ApiClient.UPLOAD_TIMEOUT_MS,
 			},
-			timeout: ApiClient.UPLOAD_TIMEOUT_MS,
-		});
+		);
 		return res.data;
 	}
 
@@ -206,16 +205,15 @@ export default class InternalChatClient extends ApiClient {
 		const url = `/api/internal/chat/${chatId}/mark-as-read`;
 		await this.ax.patch(url);
 	}
-	
+
 	public async getInternalChatsMonitor() {
 		const url = `/api/internal/monitor/chats`;
 		const { data: response } = await this.ax.get<GetChatsResponse | InternalChatsPayload>(url);
 
 		return this.normalizeChatsPayload(response);
 	}
-	
+
 	public setAuth(token: string) {
-		this.ax.defaults.headers.common["Authorization"] =
-			`Bearer ${token}`;
+		this.ax.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 	}
 }

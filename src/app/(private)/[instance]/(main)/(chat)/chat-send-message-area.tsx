@@ -54,6 +54,8 @@ export default function ChatSendMessageArea() {
     handleStopEditMessage,
     editingMessage,
     isReadOnlyMode,
+    isSending,
+    isDraftLoading,
   } = useContext(ChatContext);
 
   const { users } = useInternalChatContext();
@@ -62,7 +64,7 @@ export default function ChatSendMessageArea() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const isDisabled = !currentChat || isReadOnlyMode;
+  const isDisabled = !currentChat || isReadOnlyMode || isDraftLoading;
 
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
@@ -212,21 +214,15 @@ export default function ChatSendMessageArea() {
     dispatch({ type: "toggle-emoji-menu" });
   };
 
-  function sendMessages() {
-    if (isDisabled) return;
+  async function sendMessages() {
+    if (isDisabled || isSending) return;
 
-    const hasFile = !!state.file;
+    const hasFile = !!state.file || !!state.fileId;
     const hasText = !!state.text?.trim();
 
     if (!hasText && !hasFile) return;
 
-    sendMessageContext();
-    dispatch({ type: "change-text", text: "" });
-    dispatch({ type: "remove-file" });
-    setTextWithNames("");
-    handleQuoteMessageRemove();
-
-    document.dispatchEvent(new Event("scroll-to-bottom"));
+    if (await sendMessageContext()) document.dispatchEvent(new Event("scroll-to-bottom"));
   }
 
   useEffect(() => {
@@ -245,7 +241,7 @@ export default function ChatSendMessageArea() {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isDisabled, state.text, state.file]);
+  }, [isDisabled, isSending, state.text, state.file, state.fileId, sendMessageContext]);
 
   const refMessage = isReadOnlyMode ? null : quotedMessage || editingMessage || null;
   const mentionCount = state.mentions?.length || 0;
@@ -439,9 +435,10 @@ export default function ChatSendMessageArea() {
 
           <IconButton
             size="small"
-            aria-hidden={textWithNames.length === 0 && !state.sendAsAudio}
+            aria-hidden={textWithNames.length === 0 && !state.file && !state.fileId}
             className="bg-white/20 aria-hidden:hidden dark:text-indigo-400"
-            disabled={isDisabled}
+            disabled={isDisabled || isSending}
+            aria-label={isSending ? "Registrando mensagem" : "Enviar mensagem"}
             onClick={sendMessages}
           >
             <SendIcon />

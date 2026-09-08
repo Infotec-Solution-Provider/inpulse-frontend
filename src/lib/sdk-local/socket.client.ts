@@ -63,8 +63,9 @@ export default class SocketClient {
 	 *                This token is sent as part of the WebSocket authentication payload.
 	 */
 	public connect(token: string) {
-		this.unregisterTelemetryFlushHook ??=
-			frontendPerformanceCollector.registerFlushHook(() => this.flushSocketTelemetry());
+		this.unregisterTelemetryFlushHook ??= frontendPerformanceCollector.registerFlushHook(() =>
+			this.flushSocketTelemetry(),
+		);
 		this.ws.auth = { token };
 		if (!this.ws.connected) this.ws.connect();
 	}
@@ -170,6 +171,23 @@ export default class SocketClient {
 			this.ws.off(event, oldListener);
 		}
 
+		const measuredCallback = this.measureListener(event, (data: unknown) =>
+			callback(data as never),
+		);
+		this.ws.on(event, measuredCallback);
+		this.listeners.set(event, measuredCallback);
+	};
+
+	/** Add an independent subscription; cleanup removes only this callback. */
+	public subscribe<T>(event: SocketEventType, callback: (data: T) => void): () => void {
+		const measuredCallback = this.measureListener(event, callback);
+		this.ws.on(event, measuredCallback);
+		return () => {
+			this.ws.off(event, measuredCallback);
+		};
+	}
+
+	private measureListener<T>(event: SocketEventType, callback: (data: T) => void) {
 		const eventName = String(event).slice(0, 96);
 		let eventSequence = 0;
 		const measuredCallback = (data: unknown) => {
@@ -180,7 +198,11 @@ export default class SocketClient {
 			const shouldMeasureHandler = eventSequence % SOCKET_HANDLER_SAMPLE_RATE === 1;
 			const startedAt = shouldMeasureHandler ? performance.now() : null;
 			const route = frontendPerformanceCollector.getRoute();
-			const paintInteraction = this.beginSocketPaintInteraction(eventName, sessionId, eventSequence);
+			const paintInteraction = this.beginSocketPaintInteraction(
+				eventName,
+				sessionId,
+				eventSequence,
+			);
 			try {
 				return callback(data as never);
 			} finally {
@@ -194,9 +216,8 @@ export default class SocketClient {
 			}
 		};
 
-		this.ws.on(event, measuredCallback);
-		this.listeners.set(event, measuredCallback);
-	};
+		return measuredCallback;
+	}
 
 	/**
 	 * Removes a previously registered event listener from the WebSocket connection.

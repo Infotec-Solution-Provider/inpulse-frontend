@@ -27,6 +27,7 @@ import {
   useMemo,
   useRef,
   useState,
+  SetStateAction,
 } from "react";
 import { toast } from "react-toastify";
 import { SocketContext } from "./socket-context";
@@ -40,6 +41,14 @@ import { dispatchConfiguredNotification } from "../../../lib/utils/notification-
 import { shouldDispatchNotification } from "../../../lib/utils/notification-preferences";
 import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
+import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
+import {
+  canReactToInternalMessage,
+  MessageReactionTarget,
+  preserveReactionHistory,
+  preserveReactionHistoryCache,
+} from "@/lib/utils/message-reactions";
+import type { MessageReactionSnapshot } from "@/lib/sdk-local";
 
 export interface DetailedInternalChat extends InternalChat {
   lastMessage: InternalMessage | null;
@@ -54,6 +63,10 @@ interface InternalChatContextType {
   internalChats: DetailedInternalChat[];
   messages: Record<number, InternalMessage[]>;
   sendInternalMessage: (data: InternalSendMessageData) => Promise<void>;
+  reactToInternalMessage: (
+    message: InternalMessage,
+    emoji: string,
+  ) => Promise<MessageReactionSnapshot>;
   openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
@@ -96,14 +109,39 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     chats: wppChats,
     wppApi,
     notificationPreferences,
+    isReadOnlyMode,
+    channels,
   } = useWhatsappContext();
 
   const [internalChats, setInternalChats] = useState<DetailedInternalChat[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
-  const [messages, setMessages] = useState<Record<number, InternalMessage[]>>({});
+  const [messages, setMessagesState] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
-  const [monitorMessages, setMonitorMessages] = useState<Record<number, InternalMessage[]>>({});
+  const [monitorMessages, setMonitorMessagesState] = useState<Record<number, InternalMessage[]>>(
+    {},
+  );
+  const knownMessagesRef = useRef({ messages, monitorMessages });
+  knownMessagesRef.current = { messages, monitorMessages };
+  const setMessages = useCallback((update: SetStateAction<Record<number, InternalMessage[]>>) => {
+    setMessagesState((previous) =>
+      preserveReactionHistoryCache(
+        previous,
+        typeof update === "function" ? update(previous) : update,
+      ),
+    );
+  }, []);
+  const setMonitorMessages = useCallback(
+    (update: SetStateAction<Record<number, InternalMessage[]>>) => {
+      setMonitorMessagesState((previous) =>
+        preserveReactionHistoryCache(
+          previous,
+          typeof update === "function" ? update(previous) : update,
+        ),
+      );
+    },
+    [],
+  );
   const [contacts, setContacts] = useState<WppContact[]>([]);
   const [whatsappSenderNameMap, setWhatsappSenderNameMap] = useState<Map<string, string>>(
     new Map(),
@@ -127,10 +165,85 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     return map;
   }, [users, contacts]);
 
-  const [currentInternalChatMessages, setCurrentChatMessages] = useState<InternalMessage[]>([]);
+  const [currentInternalChatMessages, setCurrentChatMessagesState] = useState<InternalMessage[]>(
+    [],
+  );
+  const setCurrentChatMessages = useCallback((update: SetStateAction<InternalMessage[]>) => {
+    setCurrentChatMessagesState((previous) => {
+      const incoming = typeof update === "function" ? update(previous) : update;
+      const chats = new Set(incoming.map((message) => message.internalChatId));
+      const known = [...chats].flatMap((id) => [
+        ...(knownMessagesRef.current.messages[id] ?? []),
+        ...(knownMessagesRef.current.monitorMessages[id] ?? []),
+      ]);
+      return preserveReactionHistory(
+        preserveReactionHistory(previous, known),
+        preserveReactionHistory(previous, incoming),
+      );
+    });
+  }, []);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
   const userInitiatedInternalChat = useRef<boolean>(false);
   const { token, user } = useContext(AuthContext);
+  const applyConfirmedReaction = useCallback(
+    (snapshot: MessageReactionSnapshot) => {
+      InternalMessageReactionHandler(
+        setMessages,
+        setCurrentChatMessages,
+        currentChatRef,
+        setMonitorMessages,
+        "http",
+      )(snapshot);
+    },
+    [currentChatRef],
+  );
+  const requestReaction = useCallback(
+    (target: MessageReactionTarget, emoji: string, signal: AbortSignal) => {
+      if (isReadOnlyMode)
+        return Promise.reject(new Error("Esta conversa está em modo somente leitura."));
+      return api.current.setMessageReaction(target.messageId, emoji, signal);
+    },
+    [isReadOnlyMode],
+  );
+  const confirmReaction = useConfirmedReaction(requestReaction, applyConfirmedReaction);
+  const reactToInternalMessage = useCallback(
+    (message: InternalMessage, emoji: string) => {
+      const activeChat = currentChatRef.current;
+      const chat =
+        activeChat?.chatType === "internal" && activeChat.id === message.internalChatId
+          ? activeChat
+          : [...internalChats, ...monitorInternalChats].find(
+              (item) => item.id === message.internalChatId,
+            );
+      const channel = channels.find((item) => item.id === message.clientId);
+      if (!canReactToInternalMessage(message, chat, channel?.type)) {
+        return Promise.reject(
+          new Error(
+            "Reações estão disponíveis apenas para mensagens de grupos WhatsApp sincronizados.",
+          ),
+        );
+      }
+      return confirmReaction(
+        { messageType: "internal", messageId: message.id, clientId: message.clientId },
+        emoji,
+      );
+    },
+    [channels, confirmReaction, currentChatRef, internalChats, monitorInternalChats],
+  );
+
+  useEffect(
+    () =>
+      socket.subscribe(
+        SocketEventType.WppMessageReaction,
+        InternalMessageReactionHandler(
+          setMessages,
+          setCurrentChatMessages,
+          currentChatRef,
+          setMonitorMessages,
+        ),
+      ),
+    [socket, currentChatRef],
+  );
 
   const refreshWhatsappSenderNames = useCallback(async () => {
     if (!token) {
@@ -458,11 +571,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       );
 
       socket.on(
-        SocketEventType.WppMessageReaction,
-        InternalMessageReactionHandler(setMessages, setCurrentChatMessages),
-      );
-
-      socket.on(
         SocketEventType.InternalMessageDelete,
         InternalMessageDeleteHandler(setMessages, setCurrentChatMessages),
       );
@@ -478,7 +586,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         socket.off(SocketEventType.InternalMessage);
         socket.off(SocketEventType.InternalMessageStatus);
         socket.off(SocketEventType.InternalMessageEdit);
-        socket.off(SocketEventType.WppMessageReaction);
         socket.off(SocketEventType.InternalMessageDelete);
         socket.off(SocketEventType.InternalChatFinished);
       };
@@ -502,6 +609,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         messages,
         setCurrentChat,
         sendInternalMessage,
+        reactToInternalMessage,
         startDirectChat,
         openInternalChat,
         currentInternalChatMessages,

@@ -1,4 +1,4 @@
-import { WppMessageStatus } from "@/lib/sdk-local";
+import { MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -12,12 +12,21 @@ import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
-import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
+import {
+  Checkbox,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
+import MessageReactions from "./message-reactions";
 
 export interface QuotedMessageProps {
   id: number | string;
@@ -50,6 +59,8 @@ export interface MessageProps {
   isSelected?: boolean;
   isEdited?: boolean;
   reaction?: string;
+  reactions?: MessageReaction[];
+  onReaction?: (emoji: string) => Promise<unknown>;
   channelId?: number | null;
   agentId?: number | null;
   onSelect?: (id: number | string) => void;
@@ -74,6 +85,11 @@ export const liStyleVariants = {
 
 export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   PENDING: <AccessTimeIcon className="text-slate-300" />,
+  UNKNOWN: (
+    <Tooltip title="Envio registrado, mas a confirmação do WhatsApp ainda é desconhecida. Não reenvie esta mensagem.">
+      <AccessTimeIcon className="text-amber-500" aria-label="Confirmação de envio desconhecida" />
+    </Tooltip>
+  ),
   SENT: <DoneIcon className="text-slate-300" />,
   RECEIVED: <DoneAllIcon className="text-slate-300" />,
   READ: <DoneAllIcon className="text-blue-300" />,
@@ -97,6 +113,8 @@ export default function Message({
   onQuote,
   isEdited = false,
   reaction,
+  reactions,
+  onReaction,
   isForwarded = false,
   isForwardMode = false,
   isReadOnly = false,
@@ -265,11 +283,12 @@ export default function Message({
               ))
             )}
           </div>
-          {reaction && (
-            <span className="self-start rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
-              {reaction}
-            </span>
-          )}
+          <MessageReactions
+            identity={`wpp:${channelId}:${id}`}
+            reactions={reactions}
+            legacyReaction={reaction}
+            onChange={!isReadOnly && !isForwardMode ? onReaction : undefined}
+          />
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {channelName && channelColor && (
               <span className="font-semibold" style={{ color: channelColor }}>

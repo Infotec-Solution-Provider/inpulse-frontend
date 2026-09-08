@@ -7,12 +7,8 @@ import {
 	SocketServerUserRoom,
 } from "./socket-rooms.types";
 import { MessageResponse } from "./response.types";
-import { WppMessage, WppMessageStatus } from "./whatsapp.types";
-import {
-	InternalChat,
-	InternalChatMember,
-	InternalMessage,
-} from "./internal.types";
+import { MessageReaction, WppMessage, WppMessageStatus } from "./whatsapp.types";
+import { InternalChat, InternalChatMember, InternalMessage } from "./internal.types";
 
 export enum SocketEventType {
 	WppChatStarted = "wpp_chat_started",
@@ -141,34 +137,16 @@ export interface EmitSocketEventFn {
 }
 
 export interface ListenSocketEventFn {
-	(
-		type: SocketEventType.WwebjsQr,
-		callback: (data: WWEBJSQrEventData) => void,
-	): void;
-	(
-		type: SocketEventType.WwebjsAuth,
-		callback: (data: WWEBJSAuthEventData) => void,
-	): void;
+	(type: SocketEventType.WwebjsQr, callback: (data: WWEBJSQrEventData) => void): void;
+	(type: SocketEventType.WwebjsAuth, callback: (data: WWEBJSAuthEventData) => void): void;
 	(
 		type: SocketEventType.WwebjsSessionStatus,
 		callback: (data: WWEBJSSessionStatusEventData) => void,
 	): void;
-	(
-		type: SocketEventType.WppChatStarted,
-		callback: (data: WppChatStartedEventData) => void,
-	): void;
-	(
-		type: SocketEventType.WppChatFinished,
-		callback: (data: WppChatFinishedEventData) => void,
-	): void;
-	(
-		type: SocketEventType.WppChatTransfer,
-		callback: (data: WppChatTransferEventData) => void,
-	): void;
-	(
-		type: SocketEventType.WppMessage,
-		callback: (data: WppMessageEventData) => void,
-	): void;
+	(type: SocketEventType.WppChatStarted, callback: (data: WppChatStartedEventData) => void): void;
+	(type: SocketEventType.WppChatFinished, callback: (data: WppChatFinishedEventData) => void): void;
+	(type: SocketEventType.WppChatTransfer, callback: (data: WppChatTransferEventData) => void): void;
+	(type: SocketEventType.WppMessage, callback: (data: WppMessageEventData) => void): void;
 	(
 		type: SocketEventType.WppMessageStatus,
 		callback: (data: WppMessageStatusEventData) => void,
@@ -181,10 +159,7 @@ export interface ListenSocketEventFn {
 		type: SocketEventType.WppMessageReaction,
 		callback: (data: WppMessageReactionEventData) => void,
 	): void;
-	(
-		type: SocketEventType.ReportStatus,
-		callback: (data: ReportStatusEventData) => void,
-	): void;
+	(type: SocketEventType.ReportStatus, callback: (data: ReportStatusEventData) => void): void;
 	(
 		type: SocketEventType.InternalChatStarted,
 		callback: (data: InternalChatStartedEventData) => void,
@@ -193,10 +168,7 @@ export interface ListenSocketEventFn {
 		type: SocketEventType.InternalChatFinished,
 		callback: (data: InternalChatFinishedEventData) => void,
 	): void;
-	(
-		type: SocketEventType.InternalMessage,
-		callback: (data: InternalMessageEventData) => void,
-	): void;
+	(type: SocketEventType.InternalMessage, callback: (data: InternalMessageEventData) => void): void;
 	(
 		type: SocketEventType.InternalMessageEdit,
 		callback: (data: InternalMessageEditEventData) => void,
@@ -209,10 +181,7 @@ export interface ListenSocketEventFn {
 		type: SocketEventType.InternalMessageStatus,
 		callback: (data: InternalMessageStatusEventData) => void,
 	): void;
-	(
-		type: SocketEventType.WppMessageEdit,
-		callback: (data: WppMessageEditEventData) => void,
-	): void;
+	(type: SocketEventType.WppMessageEdit, callback: (data: WppMessageEditEventData) => void): void;
 	(
 		type: SocketEventType.WppMessageDelete,
 		callback: (data: WppMessageDeleteEventData) => void,
@@ -280,7 +249,11 @@ export interface WppMessageStatusEventData {
 }
 export interface WppMessageReactionEventData {
 	messageId: number;
-	reaction: string;
+	messageType?: "wpp" | "internal";
+	clientId?: number;
+	reactions?: MessageReaction[];
+	reactionsUpdatedAt?: string | null;
+	reaction?: string;
 }
 export interface InternalChatStartedEventData {
 	chat: InternalChat & {
@@ -319,24 +292,24 @@ export type ReportStatusEventData = {
 	id: number;
 	type: string;
 } & (
-		| {
+	| {
 			isCompleted: true;
 			isFailed: false;
 			fileId: number;
 			chats: number;
 			messages: number;
-		}
-		| {
+	  }
+	| {
 			isCompleted: false;
 			isFailed: true;
 			error: string;
-		}
-		| {
+	  }
+	| {
 			isCompleted: false;
 			isFailed: false;
 			progress: number;
-		}
-	);
+	  }
+);
 
 export interface TelephonyCallReceivedEventData {
 	uniqueid: string;
