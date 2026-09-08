@@ -12,7 +12,15 @@ import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
-import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
+import {
+  Checkbox,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { getChannelColor } from "./channels-select";
@@ -74,6 +82,11 @@ export const liStyleVariants = {
 
 export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   PENDING: <AccessTimeIcon className="text-slate-300" />,
+  UNKNOWN: (
+    <Tooltip title="Envio registrado, mas a confirmação do WhatsApp ainda é desconhecida. Não reenvie esta mensagem.">
+      <AccessTimeIcon className="text-amber-500" aria-label="Confirmação de envio desconhecida" />
+    </Tooltip>
+  ),
   SENT: <DoneIcon className="text-slate-300" />,
   RECEIVED: <DoneAllIcon className="text-slate-300" />,
   READ: <DoneAllIcon className="text-blue-300" />,

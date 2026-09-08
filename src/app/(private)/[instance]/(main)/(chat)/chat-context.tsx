@@ -4,22 +4,33 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useReducer,
+  useRef,
   useState,
 } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import ChatReducer, {
   ChangeMessageDataAction,
+  DraftAction,
   SendMessageDataState,
 } from "@/app/(private)/[instance]/(main)/(chat)/chat-reducer";
 import { InternalChatContext } from "../../internal-context";
 import { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import { toast } from "react-toastify";
+import { AuthContext } from "@/app/auth-context";
+import {
+  getCachedChatDraft,
+  loadChatDraft,
+  saveChatDraft,
+  subscribeChatDraft,
+} from "@/lib/utils/chat-draft-store";
+import { createMessageAttemptKey } from "@/lib/utils/reliable-message-send";
 
 interface IChatContext {
   state: SendMessageDataState;
   dispatch: React.Dispatch<ChangeMessageDataAction>;
-  sendMessage: () => void;
+  sendMessage: () => Promise<boolean>;
+  isSending: boolean;
+  isDraftLoading: boolean;
   applySuggestedText: (text: string) => void;
   isReadOnlyMode: boolean;
   getMessageById: (
@@ -51,17 +62,81 @@ const initialState: SendMessageDataState = {
 export const ChatContext = createContext({} as IChatContext);
 
 export default function ChatProvider({ children }: ChatProviderProps) {
+  const { currentChat } = useContext(WhatsappContext);
+  const { instance, user } = useContext(AuthContext);
+  const scope = JSON.stringify([instance, user?.CODIGO, currentChat?.chatType, currentChat?.id]);
+  return <ScopedChatProvider scope={scope}>{children}</ScopedChatProvider>;
+}
+
+function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: string }) {
   const {
     sendMessage,
     currentChat,
     messages: whatsappMsgs,
     editMessage,
     isReadOnlyMode,
+    selectedChannel,
   } = useContext(WhatsappContext);
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
-  const [state, dispatch] = useReducer(ChatReducer, initialState);
+  const [state, setState] = useState(() => getCachedChatDraft(scope) ?? initialState);
+  const stateRef = useRef(state);
+  const activeScopeRef = useRef(scope);
+  const [isDraftLoading, setDraftLoading] = useState(!getCachedChatDraft(scope));
+  const [isSending, setSending] = useState(false);
+  const sendingScopes = useRef(new Set<string>());
+  const dispatch = useCallback(
+    (action: DraftAction) => {
+      const next = ChatReducer(
+        getCachedChatDraft(scope) ??
+          (activeScopeRef.current === scope ? stateRef.current : initialState),
+        action,
+      );
+      if (activeScopeRef.current === scope) {
+        stateRef.current = next;
+        setState(next);
+      }
+      void saveChatDraft(scope, next).catch(() => undefined);
+    },
+    [scope],
+  );
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = subscribeChatDraft(scope, (draft) => {
+      if (activeScopeRef.current === scope) {
+        stateRef.current = draft;
+        setState(draft);
+      }
+    });
+    void loadChatDraft(scope)
+      .then((draft) => {
+        if (active && activeScopeRef.current === scope && draft) {
+          const restored = getCachedChatDraft(scope) ?? draft;
+          stateRef.current = restored;
+          setState(restored);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active && activeScopeRef.current === scope) setDraftLoading(false);
+      });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [scope]);
   const [quotedMessage, setQuotedMessage] = useState<WppMessage | InternalMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<WppMessage | InternalMessage | null>(null);
+  if (activeScopeRef.current !== scope) {
+    activeScopeRef.current = scope;
+    const cached = getCachedChatDraft(scope);
+    stateRef.current = cached ?? initialState;
+    setState(stateRef.current);
+    setDraftLoading(!cached);
+    setSending(sendingScopes.current.has(scope));
+    setQuotedMessage(null);
+    setEditingMessage(null);
+  }
 
   const resolveContactAddress = useCallback(
     (contactId: number, fallbackPhone?: string | null): string | null => {
@@ -108,74 +183,68 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   );
 
   const handleSendMessage = async () => {
+    if (isDraftLoading || sendingScopes.current.has(scope) || !currentChat) return false;
     if (isReadOnlyMode) {
       toast.info("Esta conversa esta em modo somente leitura.");
-      return;
+      return false;
     }
-
-    if (currentChat && currentChat.chatType === "wpp" && currentChat.contact && !editingMessage) {
-      const contactAddress = resolveContactAddress(
-        currentChat.contact.id,
-        (currentChat.contact as unknown as { phone?: string | null; whatsappId?: string | null }).phone ||
-          (currentChat.contact as unknown as { phone?: string | null; whatsappId?: string | null }).whatsappId ||
-          null,
-      );
-
-      if (!contactAddress) {
-        toast.error("Nao foi possivel identificar o destino do contato para envio.");
-        return;
-      }
-
-      try {
-        sendMessage(contactAddress, {
-          ...state,
+    if (!stateRef.current.text.trim() && !stateRef.current.file && !stateRef.current.fileId)
+      return false;
+    sendingScopes.current.add(scope);
+    setSending(true);
+    let snapshot = stateRef.current;
+    const sentEditingMessage = editingMessage;
+    try {
+      if (!editingMessage && currentChat.chatType === "wpp") {
+        if (!currentChat.contact) throw new Error("Contato não encontrado para envio.");
+        const clientId = snapshot.attemptClientId ?? selectedChannel?.id;
+        if (!clientId) throw new Error("Nenhum canal selecionado para enviar a mensagem.");
+        const contactAddress = resolveContactAddress(
+          currentChat.contact.id,
+          currentChat.contact.phone || (currentChat.contact as { whatsappId?: string }).whatsappId,
+        );
+        if (!contactAddress) throw new Error("Não foi possível identificar o destino do contato.");
+        if (!snapshot.attemptKey) {
+          dispatch({ type: "set-attempt", key: createMessageAttemptKey(), clientId });
+          snapshot = stateRef.current;
+        }
+        // Persist the exact text, attachment and key before a request can reach the provider.
+        await saveChatDraft(scope, snapshot);
+        await sendMessage(contactAddress, {
+          ...snapshot,
+          idempotencyKey: snapshot.attemptKey,
+          clientId,
           contactId: currentChat.contact.id,
           chatId: currentChat.id,
-          ...(state.file ? { file: state.file } : {}),
-          sendAsDocument: state.sendAsDocument,
-          sendAsAudio: state.sendAsAudio,
         });
-      } catch (err) {
-        toast.error("Falha inesperada ao enviar mensagem.\nRecarregue a página e tente novamente.");
-        console.error("Erro inesperado ao chamar sendMessage", err);
+      } else if (editingMessage) {
+        await editMessage(
+          String(editingMessage.id),
+          snapshot.text,
+          currentChat.chatType === "internal",
+        );
+      } else {
+        await sendInternalMessage({
+          ...snapshot,
+          chatId: currentChat.id,
+        });
       }
-    }
-
-    if (editingMessage && currentChat && currentChat.chatType === "wpp" && currentChat.contact) {
-      try {
-        await editMessage(String(editingMessage.id), state.text);
-      } catch (err) {
-        toast.error("Não foi possível editar esta mensagem.");
-        console.error("Erro inesperado ao editar mensagem", err);
-        return;
+      dispatch({ type: "acknowledge", sent: snapshot });
+      if (activeScopeRef.current === scope) {
+        if (stateRef.current.quotedId !== snapshot.quotedId)
+          setQuotedMessage((current) => (current?.id === snapshot.quotedId ? null : current));
+        setEditingMessage((current) => (current === sentEditingMessage ? null : current));
       }
+      return true;
+    } catch (error) {
+      toast.error(
+        `${error instanceof Error ? error.message : "Não foi possível confirmar o envio."} O rascunho foi preservado.`,
+      );
+      return false;
+    } finally {
+      sendingScopes.current.delete(scope);
+      if (activeScopeRef.current === scope) setSending(false);
     }
-
-    if (currentChat && currentChat.chatType === "internal" && !editingMessage) {
-      sendInternalMessage({
-        chatId: currentChat.id,
-        text: state.text,
-        sendAsAudio: state.sendAsAudio,
-        sendAsDocument: state.sendAsDocument,
-        quotedId: state.quotedId,
-        file: state.file,
-        fileId: state.fileId,
-        mentions: state.mentions,
-      });
-    }
-
-    if (editingMessage && currentChat && currentChat.chatType === "internal") {
-      try {
-        await editMessage(String(editingMessage.id), state.text, true);
-      } catch (err) {
-        toast.error("Nao foi possivel editar esta mensagem.");
-        console.error("Erro inesperado ao editar mensagem interna", err);
-        return;
-      }
-    }
-
-    dispatch({ type: "reset" });
-    setEditingMessage(null);
   };
 
   const getMessageById = useCallback(
@@ -220,14 +289,6 @@ export default function ChatProvider({ children }: ChatProviderProps) {
     setEditingMessage(null);
   }, [setEditingMessage]);
 
-  useEffect(() => {
-    return () => {
-      dispatch({ type: "reset" });
-      setEditingMessage(null);
-      setQuotedMessage(null);
-    };
-  }, [currentChat, setQuotedMessage, setEditingMessage, dispatch]);
-
   return (
     <ChatContext.Provider
       value={{
@@ -235,6 +296,8 @@ export default function ChatProvider({ children }: ChatProviderProps) {
         quotedMessage,
         dispatch,
         isReadOnlyMode,
+        isSending,
+        isDraftLoading,
         sendMessage: handleSendMessage,
         applySuggestedText,
         getMessageById,

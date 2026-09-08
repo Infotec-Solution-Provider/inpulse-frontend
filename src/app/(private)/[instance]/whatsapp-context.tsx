@@ -68,6 +68,14 @@ import {
   recordFrontendPerformanceMetric,
 } from "@/lib/performance/frontend-performance";
 import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
+import {
+  assertPersistedMessage,
+  getPendingMessageKey,
+  MessageSendCoordinator,
+  messageAttemptStorageKey,
+  resolveMessageAttempt,
+} from "@/lib/utils/reliable-message-send";
+import compareMessageStatus from "@/lib/utils/compare-message-status";
 export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
@@ -88,6 +96,9 @@ interface GetNotificationsResponse {
 }
 
 interface SendMessageOptions {
+  idempotencyKey?: string;
+  clientId?: number;
+  fileId?: number;
   sendAsChatOwner?: boolean;
   contactId: number;
   text: string;
@@ -116,7 +127,7 @@ interface IWhatsappContext {
   openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[]) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
-  sendMessage: (to: string, data: SendMessageOptions) => Promise<void>;
+  sendMessage: (to: string, data: SendMessageOptions) => Promise<WppMessage>;
   editMessage: (messageId: string, newText: string, isInternal?: boolean) => Promise<void>;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
   transferAttendance: (chatId: number, userId: number) => Promise<void>;
@@ -212,6 +223,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
+  const sendScope = JSON.stringify([instance, user?.CODIGO, !!token]);
+  const sendSession = useRef({ scope: sendScope, controller: new AbortController() });
+  if (sendSession.current.scope !== sendScope) {
+    sendSession.current.controller.abort();
+    sendSession.current = { scope: sendScope, controller: new AbortController() };
+  }
+  const renderSendSession = sendSession.current;
+  const sendCoordinator = useRef(new MessageSendCoordinator());
+  const messagePolls = useRef(new Set<string>());
+  useEffect(() => {
+    if (sendSession.current.controller.signal.aborted) {
+      sendSession.current.controller = new AbortController();
+    }
+    const controller = sendSession.current.controller;
+    return () => controller.abort();
+  }, [sendScope]);
   const [notificationPreferences, setNotificationPreferences] =
     useState<UserNotificationPreferences>(createDefaultNotificationPreferences());
   const notificationPreferencesRef = useRef<UserNotificationPreferences>(
@@ -219,26 +246,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const sendTracedFileMessage = useCallback(
-    async (clientId: number, to: string, data: TracedSendMessageOptions) => {
-      const formData = new FormData();
-
-      formData.append("to", to);
-      formData.append("text", data.text);
-      formData.append("contactId", String(data.contactId));
-      data.quotedId && formData.append("quotedId", String(data.quotedId));
-      data.chatId && formData.append("chatId", String(data.chatId));
-      data.fileId && formData.append("fileId", String(data.fileId));
-      data.sendAsAudio && formData.append("sendAsAudio", "true");
-      data.sendAsDocument && formData.append("sendAsDocument", "true");
-      data.sendAsChatOwner && formData.append("sendAsChatOwner", String(data.sendAsChatOwner));
-      data.traceId && formData.append("traceId", data.traceId);
-
-      await api.current.ax.post(`/api/whatsapp/${clientId}/messages`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          ...(data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
-        },
-      });
+    async (clientId: number, to: string, data: TracedSendMessageOptions, signal: AbortSignal) => {
+      signal.throwIfAborted();
+      return api.current.sendMessage(String(clientId), to, data, signal);
     },
     [],
   );
@@ -424,27 +434,30 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     [api, token],
   );
 
-  const sendMessage = useCallback(
-    async (to: string, data: SendMessageOptions) => {
+  const sendMessageRequest = useCallback(
+    async (
+      to: string,
+      data: SendMessageOptions,
+      signal: AbortSignal,
+      onFilePrepared?: (fileId: number) => void,
+    ): Promise<WppMessage> => {
       let traceId: string | null = null;
       let telemetryFlowStartedAt: number | null = null;
       let telemetryPhaseStartedAt = 0;
       let telemetryPhase = "file_total";
       let uploadOwnsErrorTelemetry = false;
       try {
-        Logger.debug("Attempting to send message", { to, data });
+        signal.throwIfAborted();
+        const channelId = data.clientId ?? selectedChannel?.id;
         if (!instance) {
-          toast.error("Instância não encontrada. Recarregue a página e tente novamente.");
-          return;
+          throw new Error("Instância não encontrada. Recarregue a página e tente novamente.");
         }
-        if (!selectedChannel) {
-          toast.error("Nenhum canal selecionado para enviar a mensagem.");
-          return;
+        if (!channelId) {
+          throw new Error("Nenhum canal selecionado para enviar a mensagem.");
         }
 
         if (!data.file) {
-          await api.current.sendMessage(String(selectedChannel.id), to, data);
-          return;
+          return await api.current.sendMessage(String(channelId), to, data, signal);
         }
 
         traceId = createFileUploadTraceId("whatsapp-send-file");
@@ -459,7 +472,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
         logFileUploadTrace(traceId, "frontend.whatsapp.send-file.start", {
           instance,
-          channelId: selectedChannel.id,
+          channelId,
           contactId: data.contactId,
           chatId: data.chatId,
           to,
@@ -500,15 +513,18 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
 
         if (!!res.file) {
+          onFilePrepared?.(res.file.id);
           const sendFileData = {
+            idempotencyKey: data.idempotencyKey,
             contactId: data.contactId,
             text: data.text,
             chatId: data.chatId,
             fileId: res.file.id,
             quotedId: data.quotedId,
-            sendAsAudio: !data.sendAsAudio,
-            sendAsChatOwner: !data.sendAsChatOwner,
-            sendAsDocument: !data.sendAsDocument,
+            sendAsAudio: data.sendAsAudio,
+            sendAsChatOwner: data.sendAsChatOwner,
+            sendAsDocument: data.sendAsDocument,
+            readyMessageId: data.readyMessageId,
             traceId,
           };
 
@@ -519,7 +535,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           });
           telemetryPhase = "file_message_request";
           telemetryPhaseStartedAt = Date.now();
-          await sendTracedFileMessage(selectedChannel.id, to, sendFileData);
+          const message = await sendTracedFileMessage(channelId, to, sendFileData, signal);
           recordFrontendPerformanceMetric({
             name: "file_send.duration",
             value: Date.now() - telemetryPhaseStartedAt,
@@ -543,7 +559,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             elapsedMs: Date.now() - flowStartedAt,
           });
 
-          return;
+          return message;
         }
 
         telemetryPhase = "file_total";
@@ -556,6 +572,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           traceId,
         });
         uploadOwnsErrorTelemetry = false;
+        onFilePrepared?.(uploadedFile.id);
         logFileUploadTrace(traceId, "frontend.whatsapp.upload.completed", {
           elapsedMs: Date.now() - flowStartedAt,
           uploadedFileId: uploadedFile.id,
@@ -569,17 +586,24 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
         telemetryPhase = "file_message_request";
         telemetryPhaseStartedAt = Date.now();
-        await sendTracedFileMessage(selectedChannel.id, to, {
-          contactId: data.contactId,
-          text: data.text,
-          chatId: data.chatId,
-          fileId: uploadedFile.id,
-          quotedId: data.quotedId,
-          sendAsAudio: !data.sendAsAudio,
-          sendAsChatOwner: !data.sendAsChatOwner,
-          sendAsDocument: !data.sendAsDocument,
-          traceId,
-        });
+        const message = await sendTracedFileMessage(
+          channelId,
+          to,
+          {
+            idempotencyKey: data.idempotencyKey,
+            contactId: data.contactId,
+            text: data.text,
+            chatId: data.chatId,
+            fileId: uploadedFile.id,
+            quotedId: data.quotedId,
+            sendAsAudio: data.sendAsAudio,
+            sendAsChatOwner: data.sendAsChatOwner,
+            sendAsDocument: data.sendAsDocument,
+            readyMessageId: data.readyMessageId,
+            traceId,
+          },
+          signal,
+        );
         recordFrontendPerformanceMetric({
           name: "file_send.duration",
           value: Date.now() - telemetryPhaseStartedAt,
@@ -602,6 +626,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           elapsedMs: Date.now() - flowStartedAt,
           fileId: uploadedFile.id,
         });
+        return message;
       } catch (err) {
         if (telemetryFlowStartedAt !== null) {
           const code = (err as { code?: unknown } | null)?.code;
@@ -637,10 +662,135 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           }
         }
         traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
-        toast.error(sanitizeErrorMessage(err));
+        throw err;
       }
     },
-    [channels, selectedChannel, sendTracedFileMessage],
+    [instance, selectedChannel, sendTracedFileMessage],
+  );
+
+  const registerPersistedMessage = useCallback((message: WppMessage) => {
+    const contactId = message.contactId;
+    if (!contactId) return;
+    const merge = (previous: WppMessage[]) => {
+      const existing = previous.find((item) => item.id === message.id);
+      if (!existing) return [...previous, message].sort((a, b) => a.id - b.id);
+      return previous.map((item) =>
+        item.id === message.id
+          ? { ...item, ...message, status: compareMessageStatus(item.status, message.status) }
+          : item,
+      );
+    };
+    setMessages((previous) => ({ ...previous, [contactId]: merge(previous[contactId] ?? []) }));
+    const activeChat = currentChatRef.current;
+    if (activeChat?.chatType === "wpp" && activeChat.contactId === message.contactId) {
+      setCurrentChatMessages(merge);
+    }
+    setChats((previous) =>
+      previous.map((chat) =>
+        chat.id === message.chatId && (!chat.lastMessage || chat.lastMessage.id <= message.id)
+          ? {
+              ...chat,
+              lastMessage:
+                chat.lastMessage?.id === message.id
+                  ? {
+                      ...chat.lastMessage,
+                      ...message,
+                      status: compareMessageStatus(chat.lastMessage.status, message.status),
+                    }
+                  : message,
+            }
+          : chat,
+      ),
+    );
+  }, []);
+
+  const sendMessage = useCallback(
+    async (to: string, data: SendMessageOptions): Promise<WppMessage> => {
+      // Bind to the session that produced this callback, including time spent saving a draft.
+      const session = renderSendSession;
+      const signal = session.controller.signal;
+      const clientId = data.clientId ?? selectedChannel?.id;
+      if (!instance || !token || !user) throw new Error("Sessão indisponível para envio.");
+      if (!clientId) throw new Error("Nenhum canal selecionado para enviar a mensagem.");
+      signal.throwIfAborted();
+      let storageKey: string | undefined;
+      let idempotencyKey = data.idempotencyKey;
+      if (!idempotencyKey) {
+        storageKey = await messageAttemptStorageKey(session.scope, {
+          ...data,
+          clientId,
+          to,
+          file: data.file ? await getFileSHA256(data.file) : undefined,
+        });
+        signal.throwIfAborted();
+        idempotencyKey = getPendingMessageKey(storageKey);
+      }
+      const key = idempotencyKey;
+      const preparedFileKey = `inpulse-send-file:${session.scope}:${clientId}:${key}`;
+      return sendCoordinator.current.run(`${session.scope}:${clientId}`, key, async () => {
+        signal.throwIfAborted();
+        const message = await resolveMessageAttempt(
+          () => api.current.getMessageAttempt(String(clientId), key, signal),
+          () => {
+            const rememberedFileId = data.file
+              ? Number(sessionStorage.getItem(preparedFileKey))
+              : 0;
+            const preparedData =
+              Number.isSafeInteger(rememberedFileId) && rememberedFileId > 0
+                ? { ...data, file: undefined, fileId: rememberedFileId }
+                : data;
+            return sendMessageRequest(
+              to,
+              { ...preparedData, clientId, idempotencyKey: key },
+              signal,
+              (fileId) => sessionStorage.setItem(preparedFileKey, String(fileId)),
+            );
+          },
+        );
+        signal.throwIfAborted();
+        assertPersistedMessage(message);
+        registerPersistedMessage(message);
+        if (storageKey) sessionStorage.removeItem(storageKey);
+        if (data.file) sessionStorage.removeItem(preparedFileKey);
+        if (message.status === "UNKNOWN") {
+          toast.info(
+            "Mensagem registrada. A confirmação do WhatsApp ainda é desconhecida; acompanhe o status sem reenviar.",
+          );
+        }
+        if (["PENDING", "UNKNOWN"].includes(message.status) && !messagePolls.current.has(key)) {
+          messagePolls.current.add(key);
+          // Poll is bounded and read-only. A lost socket must not hide the persisted send.
+          void (async () => {
+            try {
+              for (let attempt = 0; attempt < 10; attempt++) {
+                await new Promise<void>((resolve) => setTimeout(resolve, 3000));
+                signal.throwIfAborted();
+                const update = assertPersistedMessage(
+                  await api.current.getMessageAttempt(String(clientId), key, signal),
+                );
+                signal.throwIfAborted();
+                registerPersistedMessage(update);
+                if (!["PENDING", "UNKNOWN"].includes(update.status)) break;
+              }
+            } catch {
+              // The registered message remains visible; reconnect/history can reconcile it later.
+            } finally {
+              messagePolls.current.delete(key);
+            }
+          })();
+        }
+        return message;
+      });
+    },
+    [
+      instance,
+      token,
+      user,
+      selectedChannel,
+      sendMessageRequest,
+      registerPersistedMessage,
+      renderSendSession,
+    ],
   );
 
   const editMessage = useCallback(
@@ -648,8 +798,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       const channelId = selectedChannel?.id ?? globalChannel.current?.id;
 
       if (!channelId) {
-        toast.error("Nenhum canal WhatsApp disponível para editar a mensagem.");
-        return;
+        throw new Error("Nenhum canal WhatsApp disponível para editar a mensagem.");
       }
 
       await api.current.editMessage(String(channelId), messageId, newText, isInternal);

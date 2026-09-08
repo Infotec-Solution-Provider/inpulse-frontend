@@ -267,6 +267,7 @@ export interface WppWallet {
 // Enums
 export type WppMessageStatus =
   | "PENDING"
+  | "UNKNOWN"
   | "SENT"
   | "RECEIVED"
   | "READ"
@@ -301,6 +302,7 @@ export type WppChatWithDetailsAndMessages = WppChatWithDetails & {
 };
 
 export interface SendMessageData {
+  idempotencyKey?: string;
   text: string;
   contactId: number;
   chatId?: number | null;

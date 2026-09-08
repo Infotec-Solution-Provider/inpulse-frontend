@@ -120,12 +120,14 @@ export default class WhatsappClient extends ApiClient {
     clientId: string,
     to: string,
     data: SendMessageData | SendFileMessageData,
+    signal?: AbortSignal,
   ) {
     const url = `/api/whatsapp/${clientId}/messages`;
     const formData = new FormData();
     formData.append("to", to);
     formData.append("text", data.text);
     formData.append("contactId", String(data.contactId));
+    data.idempotencyKey && formData.append("idempotencyKey", data.idempotencyKey);
 
     "quotedId" in data && data.quotedId && formData.append("quotedId", String(data.quotedId));
     "chatId" in data && data.chatId && formData.append("chatId", String(data.chatId));
@@ -141,8 +143,10 @@ export default class WhatsappClient extends ApiClient {
       formData.append("readyMessageId", String(data.readyMessageId));
 
     const { data: res } = await this.ax.post<DataResponse<WppMessage>>(url, formData, {
+      signal,
       headers: {
         "Content-Type": "multipart/form-data",
+        ...(data.idempotencyKey ? { "Idempotency-Key": data.idempotencyKey } : {}),
         ...("traceId" in data && data.traceId ? { "x-upload-trace-id": data.traceId } : {}),
       },
       timeout:
@@ -150,6 +154,14 @@ export default class WhatsappClient extends ApiClient {
           ? ApiClient.UPLOAD_TIMEOUT_MS
           : ApiClient.DEFAULT_TIMEOUT_MS,
     });
+    return res.data;
+  }
+
+  public async getMessageAttempt(clientId: string, idempotencyKey: string, signal?: AbortSignal) {
+    const { data: res } = await this.ax.get<DataResponse<WppMessage>>(
+      `/api/whatsapp/${clientId}/message-attempts/${encodeURIComponent(idempotencyKey)}`,
+      { signal },
+    );
     return res.data;
   }
 
