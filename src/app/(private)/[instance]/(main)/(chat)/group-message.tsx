@@ -200,7 +200,6 @@ export default function GroupMessage({
             reactions={reactions}
             legacyReaction={reaction}
             actorNames={mentionNameMap}
-            onChange={!isReadOnly && !isForwardMode ? onReaction : undefined}
           />
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {isEdited && <span>Editada</span>}
@@ -211,7 +210,7 @@ export default function GroupMessage({
       </div>
 
       {style !== "system" && !isForwardMode && !isReadOnly && (
-        <>
+        <div className="flex shrink-0 flex-col items-center">
           <IconButton
             className="invisible group-hover:visible"
             size="small"
@@ -220,6 +219,12 @@ export default function GroupMessage({
           >
             <MoreVertIcon />
           </IconButton>
+          <MessageReactions
+            identity={`internal:${id}`}
+            reactions={reactions}
+            showReactions={false}
+            onChange={onReaction}
+          />
           <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
             {onSelect && (
               <MenuItem onClick={handleSelect}>
@@ -260,7 +265,7 @@ export default function GroupMessage({
               <ListItemText>Copiar texto original</ListItemText>
             </MenuItem>
           </Menu>
-        </>
+        </div>
       )}
     </li>
   );

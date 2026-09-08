@@ -286,7 +286,6 @@ export default function Message({
             identity={`wpp:${channelId}:${id}`}
             reactions={reactions}
             legacyReaction={reaction}
-            onChange={!isReadOnly && !isForwardMode ? onReaction : undefined}
           />
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {channelName && channelColor && (
@@ -307,7 +306,7 @@ export default function Message({
       </div>
 
       {style !== "system" && !isForwardMode && !isReadOnly && (
-        <>
+        <div className="flex shrink-0 flex-col items-center">
           <IconButton
             className="visible shrink-0 md:invisible md:group-hover:visible"
             size="small"
@@ -316,6 +315,12 @@ export default function Message({
           >
             <MoreVertIcon />
           </IconButton>
+          <MessageReactions
+            identity={`wpp:${channelId}:${id}`}
+            reactions={reactions}
+            showReactions={false}
+            onChange={onReaction}
+          />
           <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
             {onSelect && (
               <MenuItem onClick={handleSelect}>
@@ -358,7 +363,7 @@ export default function Message({
               </MenuItem>
             )}
           </Menu>
-        </>
+        </div>
       )}
     </li>
   );

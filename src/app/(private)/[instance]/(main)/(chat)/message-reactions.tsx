@@ -14,6 +14,7 @@ interface MessageReactionsProps {
   legacyReaction?: string;
   onChange?: (emoji: string) => Promise<unknown>;
   actorNames?: Map<string, string>;
+  showReactions?: boolean;
 }
 
 export default function MessageReactions({
@@ -22,6 +23,7 @@ export default function MessageReactions({
   legacyReaction,
   onChange,
   actorNames,
+  showReactions = true,
 }: MessageReactionsProps) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [pending, setPending] = useState(false);
@@ -37,7 +39,7 @@ export default function MessageReactions({
     };
   }, [identity]);
 
-  const groups = groupMessageReactions(reactions ?? []);
+  const groups = showReactions ? groupMessageReactions(reactions ?? []) : [];
   const ownReaction = reactions?.find((reaction) => reaction.fromMe);
   const changeReaction = async (emoji: string) => {
     if (!onChange || requestPending.current) return;
@@ -90,7 +92,7 @@ export default function MessageReactions({
           </span>
         </Tooltip>
       ))}
-      {!reactions && legacyReaction && (
+      {showReactions && !reactions && legacyReaction && (
         <span className="rounded-full bg-white px-2 py-0.5 text-sm shadow-sm dark:bg-slate-700">
           {legacyReaction}
         </span>
