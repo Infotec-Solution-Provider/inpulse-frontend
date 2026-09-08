@@ -772,7 +772,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions): Promise<WppMessage> => {
-      // Bind to the session that produced this callback, including time spent saving a draft.
+      // Bind the request to the session that produced this callback.
       const session = renderSendSession;
       const signal = session.controller.signal;
       const clientId = data.clientId ?? selectedChannel?.id;

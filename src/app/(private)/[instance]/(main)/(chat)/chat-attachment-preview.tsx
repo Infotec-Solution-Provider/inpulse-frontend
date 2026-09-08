@@ -11,9 +11,9 @@ interface ChatAttachmentPreviewProps {
 }
 
 export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewProps) {
-  const { dispatch, sendMessage, state, isSending, isDraftLoading, isReadOnlyMode } =
+  const { dispatch, sendMessage, state, isSending, isReadOnlyMode } =
     useContext(ChatContext);
-  const isDisabled = isSending || isDraftLoading || isReadOnlyMode;
+  const isDisabled = isSending || isReadOnlyMode;
 
   const handleClose = () => {
     dispatch({ type: "remove-file" });
@@ -144,7 +144,7 @@ export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewPro
             maxRows={5}
             onChange={handleTextChange}
             value={state.text}
-            disabled={isDraftLoading || isReadOnlyMode}
+            disabled={isReadOnlyMode}
           />
 
           <IconButton

@@ -56,7 +56,6 @@ export default function ChatSendMessageArea() {
     editingMessage,
     isReadOnlyMode,
     isSending,
-    isDraftLoading,
   } = useContext(ChatContext);
 
   const { users } = useInternalChatContext();
@@ -65,7 +64,7 @@ export default function ChatSendMessageArea() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const isDisabled = !currentChat || isReadOnlyMode || isDraftLoading;
+  const isDisabled = !currentChat || isReadOnlyMode;
 
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);

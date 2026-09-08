@@ -1,6 +1,4 @@
 export interface SendMessageDataState {
-  attemptKey?: string;
-  attemptClientId?: number;
   mentions?: MentionableUser[];
   text: string;
   file?: File;
@@ -37,9 +35,6 @@ type SetMentionsAction = {
   mentions: MentionableUser[];
 };
 type ResetAction = { type: "reset" };
-type RestoreDraftAction = { type: "restore-draft"; draft: SendMessageDataState };
-type SetAttemptAction = { type: "set-attempt"; key: string; clientId: number };
-type AcknowledgeAction = { type: "acknowledge"; sent: SendMessageDataState };
 type ToggleForwardMode = { type: "toggle-forward-mode" };
 type SelectMessage = { type: "select-message"; messageId: number };
 type ClearForward = { type: "clear-forward" };
@@ -59,43 +54,7 @@ export type ChangeMessageDataAction =
   | SelectMessage
   | ClearForward;
 
-export type DraftAction =
-  | ChangeMessageDataAction
-  | RestoreDraftAction
-  | SetAttemptAction
-  | AcknowledgeAction;
-
-export function sameMessageDraft(left: SendMessageDataState, right: SendMessageDataState) {
-  return (
-    left.text === right.text &&
-    left.file === right.file &&
-    left.fileId === right.fileId &&
-    left.quotedId === right.quotedId &&
-    left.sendAsAudio === right.sendAsAudio &&
-    left.sendAsDocument === right.sendAsDocument &&
-    JSON.stringify(left.mentions ?? []) === JSON.stringify(right.mentions ?? [])
-  );
-}
-
 export default function ChatReducer(
-  state: SendMessageDataState,
-  action: DraftAction,
-): SendMessageDataState {
-  if (action.type === "restore-draft") return action.draft;
-  if (action.type === "set-attempt")
-    return { ...state, attemptKey: action.key, attemptClientId: action.clientId };
-  if (action.type === "acknowledge") {
-    return sameMessageDraft(state, action.sent) && state.attemptKey === action.sent.attemptKey
-      ? reduceMessageDraft(state, { type: "reset" })
-      : state;
-  }
-  const next = reduceMessageDraft(state, action);
-  return sameMessageDraft(state, next)
-    ? next
-    : { ...next, attemptKey: undefined, attemptClientId: undefined };
-}
-
-function reduceMessageDraft(
   state: SendMessageDataState,
   action: ChangeMessageDataAction,
 ): SendMessageDataState {
@@ -188,8 +147,6 @@ function reduceMessageDraft(
         fileId: undefined,
         mentions: [],
         quotedId: undefined,
-        attemptKey: undefined,
-        attemptClientId: undefined,
         sendAsAudio: false,
         sendAsDocument: false,
         isEmojiMenuOpen: false,
