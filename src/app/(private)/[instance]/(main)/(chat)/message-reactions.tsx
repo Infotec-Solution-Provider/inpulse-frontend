@@ -98,6 +98,7 @@ export default function MessageReactions({
       {onChange && (
         <>
           <IconButton
+            className="invisible group-hover:visible"
             size="small"
             aria-label={ownReaction ? "Alterar reação desta conta WhatsApp" : "Reagir à mensagem"}
             title={ownReaction ? "Alterar reação desta conta WhatsApp" : "Reagir à mensagem"}
