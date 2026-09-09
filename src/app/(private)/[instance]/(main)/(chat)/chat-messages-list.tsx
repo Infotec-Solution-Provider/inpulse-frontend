@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Typography } from "@mui/material";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import { InternalChatContext } from "../../internal-context";
 import { WhatsappContext } from "../../whatsapp-context";
 import ForwardMessagesModal, {
@@ -12,11 +12,8 @@ import RenderInternalChatMessages from "./render-internal-chat-messages";
 import RenderInternalGroupMessages from "./render-internal-group-messages";
 import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
 import { ChatContext } from "./chat-context";
-import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
-import { recordFrontendPerformanceMetric } from "@/lib/performance/frontend-performance";
 
 export default function ChatMessagesList() {
-  useFrontendRenderMetric("ChatMessagesList");
   const { currentChat, currentChatMessages, chats, forwardMessages } = useContext(WhatsappContext);
   const { users, internalChats, currentInternalChatMessages } = useContext(InternalChatContext);
   const { isReadOnlyMode } = useContext(ChatContext);
@@ -31,20 +28,6 @@ export default function ChatMessagesList() {
   const isInternalChat = currentChat?.chatType === "internal" && !currentChat.isGroup;
   const isInternalGroup = currentChat?.chatType === "internal" && currentChat.isGroup;
   const isSelectionMode = !isReadOnlyMode && selectedMessageIds.size > 0;
-  const renderedMessageCount = isWhatsappChat
-    ? currentChatMessages.length
-    : currentInternalChatMessages.length;
-
-  useEffect(() => {
-    if (!currentChat) return;
-    recordFrontendPerformanceMetric({
-      name: "volume.messages_rendered",
-      value: renderedMessageCount,
-      unit: "count",
-      tags: { source: isWhatsappChat ? "whatsapp" : "internal" },
-      detailed: true,
-    });
-  }, [currentChat?.id, isWhatsappChat, renderedMessageCount]);
 
   const selectedMessages = useMemo((): ForwardableMessage[] => {
     const activeMessages = isWhatsappChat ? currentChatMessages : currentInternalChatMessages;

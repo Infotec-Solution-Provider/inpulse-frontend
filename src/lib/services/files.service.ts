@@ -1,9 +1,5 @@
 import { type File as StoredFile, FilesClient, type FileDirType } from "@/lib/sdk-local";
 import { logFileUploadTrace, logFileUploadTraceError } from "../utils/file-upload-trace";
-import {
-  recordFrontendError,
-  recordFrontendPerformanceMetric,
-} from "../performance/frontend-performance";
 
 const DEFAULT_FILES_BASE_URL = "https://inpulse.infotecrs.inf.br";
 const FILES_URL = process.env["NEXT_PUBLIC_FILES_URL"] || DEFAULT_FILES_BASE_URL;
@@ -22,15 +18,6 @@ class FrontendFilesService extends FilesClient {
   }): Promise<StoredFile> {
     const startedAt = Date.now();
     const totalChunks = Math.max(1, Math.ceil(props.file.size / UPLOAD_CHUNK_SIZE_BYTES));
-    let activePhase = "file_upload_init";
-    let phaseStartedAt = Date.now();
-    let chunkDurationMs = 0;
-
-    recordFrontendPerformanceMetric({
-      name: "file_send.chunks",
-      value: totalChunks,
-      unit: "count",
-    });
 
     props.traceId &&
       logFileUploadTrace(props.traceId, "frontend.files-service.upload.start", {
@@ -45,7 +32,6 @@ class FrontendFilesService extends FilesClient {
       });
 
     try {
-      phaseStartedAt = Date.now();
       const initResponse = await this.ax.post<{
         message: string;
         data: { uploadId: string };
@@ -68,15 +54,8 @@ class FrontendFilesService extends FilesClient {
           timeout: UPLOAD_TIMEOUT_MS,
         },
       );
-      recordFrontendPerformanceMetric({
-        name: "file_send.duration",
-        value: Date.now() - phaseStartedAt,
-        unit: "ms",
-        tags: { phase: "file_upload_init", outcome: "success" },
-      });
 
       const uploadId = initResponse.data.data.uploadId;
-      activePhase = "file_upload_chunk";
 
       for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
         const start = chunkIndex * UPLOAD_CHUNK_SIZE_BYTES;
@@ -91,7 +70,6 @@ class FrontendFilesService extends FilesClient {
           chunkForm.append("traceId", props.traceId);
         }
 
-        phaseStartedAt = Date.now();
         await this.ax.post(`/api/files/chunks/${uploadId}`, chunkForm, {
           headers: {
             "Content-Type": "multipart/form-data",
@@ -101,7 +79,6 @@ class FrontendFilesService extends FilesClient {
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
         });
-        chunkDurationMs += Date.now() - phaseStartedAt;
 
         props.traceId &&
           logFileUploadTrace(props.traceId, "frontend.files-service.upload.chunk.success", {
@@ -111,15 +88,6 @@ class FrontendFilesService extends FilesClient {
             chunkSize: chunk.size,
           });
       }
-      recordFrontendPerformanceMetric({
-        name: "file_send.duration",
-        value: chunkDurationMs,
-        unit: "ms",
-        tags: { phase: "file_upload_chunk", outcome: "success" },
-      });
-
-      activePhase = "file_upload_complete";
-      phaseStartedAt = Date.now();
       const response = await this.ax.post<{ message: string; data: StoredFile }>(
         `/api/files/chunks/${uploadId}/complete`,
         props.traceId ? { traceId: props.traceId } : {},
@@ -130,12 +98,6 @@ class FrontendFilesService extends FilesClient {
           timeout: UPLOAD_TIMEOUT_MS,
         },
       );
-      recordFrontendPerformanceMetric({
-        name: "file_send.duration",
-        value: Date.now() - phaseStartedAt,
-        unit: "ms",
-        tags: { phase: "file_upload_complete", outcome: "success" },
-      });
 
       props.traceId &&
         logFileUploadTrace(props.traceId, "frontend.files-service.upload.success", {
@@ -147,21 +109,6 @@ class FrontendFilesService extends FilesClient {
 
       return response.data.data;
     } catch (error) {
-      const code = (error as { code?: unknown } | null)?.code;
-      const name = (error as { name?: unknown } | null)?.name;
-      const outcome =
-        code === "ECONNABORTED" || code === "ETIMEDOUT"
-          ? "timeout"
-          : code === "ERR_CANCELED" || name === "AbortError"
-            ? "aborted"
-            : "failed";
-      recordFrontendPerformanceMetric({
-        name: "file_send.duration",
-        value: Date.now() - phaseStartedAt,
-        unit: "ms",
-        tags: { phase: activePhase, outcome },
-      });
-      recordFrontendError(error, { source: "file_send", phase: activePhase });
       props.traceId &&
         logFileUploadTraceError(props.traceId, "frontend.files-service.upload.error", error, {
           elapsedMs: Date.now() - startedAt,

@@ -39,8 +39,6 @@ import {
 } from "../../../lib/utils/file-upload-trace";
 import { dispatchConfiguredNotification } from "../../../lib/utils/notification-dispatch";
 import { shouldDispatchNotification } from "../../../lib/utils/notification-preferences";
-import { measureFrontendInteraction } from "@/lib/performance/frontend-performance";
-import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
 import {
   canReactToInternalMessage,
@@ -110,7 +108,6 @@ export default function useInternalChatContext() {
 }
 
 export function InternalChatProvider({ children }: { children: React.ReactNode }) {
-  useFrontendRenderMetric("InternalChatProvider");
   const { socket } = useContext(SocketContext);
 
   const {
@@ -354,28 +351,26 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
   const openInternalChat = useCallback(
     (chat: DetailedInternalChat, markAsRead: boolean = true) => {
-      return measureFrontendInteraction("open_chat", () => {
-        setCurrentChat(chat);
-        setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
-        setWppCurrMsgs([]);
-        currentChatRef.current = chat as unknown as DetailedChat;
+      setCurrentChat(chat);
+      setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
+      setWppCurrMsgs([]);
+      currentChatRef.current = chat as unknown as DetailedChat;
 
-        if (markAsRead) {
-          api.current.markChatMessagesAsRead(chat.id);
+      if (markAsRead) {
+        api.current.markChatMessagesAsRead(chat.id);
 
-          setInternalChats((prev) =>
-            prev.map((c) => {
-              if (c.id === chat.id) {
-                return {
-                  ...c,
-                  isUnread: false,
-                };
-              }
-              return c;
-            }),
-          );
-        }
-      });
+        setInternalChats((prev) =>
+          prev.map((c) => {
+            if (c.id === chat.id) {
+              return {
+                ...c,
+                isUnread: false,
+              };
+            }
+            return c;
+          }),
+        );
+      }
     },
     [messages],
   );

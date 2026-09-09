@@ -124,8 +124,6 @@ export default function FunnelProvider({ funnelId, children }: Props) {
     ) => {
       if (!token) return;
 
-      const startedAt = performance.now();
-
       setLoadingMore((prev) => ({ ...prev, [stageId]: true }));
       try {
         const result = await funnelApiService.getClientsByStage(
@@ -181,7 +179,6 @@ export default function FunnelProvider({ funnelId, children }: Props) {
         }
 
         const batch = stageIds.slice(index, index + BATCH_SIZE);
-        const batchStartedAt = performance.now();
 
         await Promise.all(
           batch.map((stageId) =>
@@ -210,8 +207,6 @@ export default function FunnelProvider({ funnelId, children }: Props) {
     boardLoadVersionRef.current = loadVersion;
     activeBoardTraceRef.current = traceId;
     setBoardTraceId(traceId);
-
-    const startedAt = performance.now();
 
     setLoading(true);
     setLoadingMore({});
@@ -263,7 +258,6 @@ export default function FunnelProvider({ funnelId, children }: Props) {
   useEffect(() => {
     if (!token) return;
     const traceId = createTraceId(`metadata-${funnelId}`);
-    const startedAt = performance.now();
     funnelApiService
       .getFunnel(token, funnelId, traceId)
       .then((funnel) => {

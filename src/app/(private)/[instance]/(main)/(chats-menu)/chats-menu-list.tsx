@@ -7,8 +7,6 @@ import { useContext, useMemo } from "react";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
 import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
 import ChatsMenuItem from "./chats-menu-item";
-import { recordFrontendPerformanceMetric } from "@/lib/performance/frontend-performance";
-import { useFrontendRenderMetric } from "@/lib/performance/use-frontend-render-metric";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
@@ -43,7 +41,6 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 };
 
 export default function ChatsMenuList() {
-  useFrontendRenderMetric("ChatsMenuList");
   const { user } = useContext(AuthContext);
   const isExternal = isExternalOperator(user?.NIVEL);
   const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
@@ -51,7 +48,6 @@ export default function ChatsMenuList() {
     useContext(InternalChatContext);
 
   const filteredChats = useMemo(() => {
-    const startedAt = performance.now();
     const validChats = Array.isArray(chats) ? chats : [];
     const validInternalChats = Array.isArray(internalChats) ? internalChats : [];
 
@@ -83,27 +79,10 @@ export default function ChatsMenuList() {
       }
       return chatFilters.search.length === 0 || matchesFilter(chat, chatFilters.search);
     });
-    const duration = performance.now() - startedAt;
-    if (duration > 0) {
-      recordFrontendPerformanceMetric({
-        name: "interaction.chat_filter",
-        value: duration,
-        unit: "ms",
-        tags: { interaction: "chat_filter", source: "committed" },
-        detailed: true,
-      });
-    }
-    recordFrontendPerformanceMetric({
-      name: "volume.chats_filtered",
-      value: result.length,
-      unit: "count",
-      detailed: true,
-    });
     return result;
   }, [chats, internalChats, chatFilters, isExternal]);
 
   const sortedChats = useMemo(() => {
-    const startedAt = performance.now();
     const getUserCreatorName = (chat: CombinedChat): string => {
       if (chat.chatType === "wpp") {
         // For WhatsApp chats, prefer assigned user name via userId
@@ -159,22 +138,6 @@ export default function ChatsMenuList() {
       const alt = getDate(a, "lastMessage");
       const blt = getDate(b, "lastMessage");
       return blt - alt;
-    });
-    const duration = performance.now() - startedAt;
-    if (duration > 0) {
-      recordFrontendPerformanceMetric({
-        name: "interaction.chat_sort",
-        value: duration,
-        unit: "ms",
-        tags: { interaction: "chat_sort", source: "committed" },
-        detailed: true,
-      });
-    }
-    recordFrontendPerformanceMetric({
-      name: "volume.chats_sorted",
-      value: result.length,
-      unit: "count",
-      detailed: true,
     });
     return result;
   }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder]);
