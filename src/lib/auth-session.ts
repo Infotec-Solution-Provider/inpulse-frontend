@@ -22,8 +22,9 @@ const REFRESH_EARLY_MS = 60_000;
 function tokenExpiresAt(token: string | null): number | null {
   if (!token) return null;
   try {
-    const payload = JSON.parse(atob(token.split(".")[1] || "")) as { exp?: number };
-    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+    const encodedPayload = (token.split(".")[1] || "").replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(encodedPayload)) as { exp?: number };
+    return typeof payload.exp === "number" && Number.isFinite(payload.exp) ? payload.exp * 1000 : null;
   } catch {
     return null;
   }
@@ -65,11 +66,16 @@ class AuthSessionCoordinator {
   }
 
   public async tokenForRequest(): Promise<string | null> {
-    if (!this.accessToken || this.expiresWithin(REFRESH_EARLY_MS)) {
-      if (!this.configuration) return this.accessToken;
+    const token = this.accessToken;
+    if (!this.configuration) return token;
+    if (!token || this.expiresWithin(0)) {
       return this.refreshAccessToken();
     }
-    return this.accessToken;
+    if (this.expiresWithin(REFRESH_EARLY_MS)) {
+      // The current token remains valid while its replacement is requested.
+      void this.refreshAccessToken().catch(() => undefined);
+    }
+    return token;
   }
 
   public async forceRefresh(): Promise<string> {

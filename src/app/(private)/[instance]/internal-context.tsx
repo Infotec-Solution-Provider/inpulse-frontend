@@ -122,10 +122,13 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     mentionDirectoryRef,
   } = useWhatsappContext();
   const { token, user, instance } = useContext(AuthContext);
+  const sessionScope = JSON.stringify([
+    instance, user?.CODIGO, user?.SETOR, user?.NIVEL, user?.ATIVO, !!token,
+  ]);
+  const liveAuth = useRef({ token, user, scope: sessionScope });
+  liveAuth.current = { token, user, scope: sessionScope };
   const { state: contactsState } = useContext(ContactsContext);
   const mentionScope = `${instance}:${user?.CODIGO ?? ""}`;
-  const liveMentionScope = useRef(mentionScope);
-  liveMentionScope.current = mentionScope;
   const [directoryScope, setDirectoryScope] = useState(mentionScope);
 
   const [internalChats, setInternalChatsState] = useState<DetailedInternalChat[]>([]);
@@ -139,6 +142,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   }, []);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoaded, setUsersLoaded] = useState(false);
+  const [usersScope, setUsersScope] = useState<string | null>(null);
   const [messages, setMessagesState] = useState<Record<number, InternalMessage[]>>({});
   const [monitorInternalChats, setMonitorInternalChats] = useState<DetailedInternalChat[]>([]);
   const [monitorMessages, setMonitorMessagesState] = useState<Record<number, InternalMessage[]>>(
@@ -204,7 +208,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     setContacts([]);
     setWhatsappSenderNameMap(new Map());
     setDirectoryScope(mentionScope);
-  }, [mentionScope]);
+  }, [mentionScope, sessionScope]);
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -248,6 +252,10 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     });
   }, []);
   const api = useRef(new InternalChatClient(INTENAL_BASE_URL));
+  useEffect(() => {
+    api.current.setAuth(token || "");
+    if (token) usersService.setAuth(token);
+  }, [token]);
   const userInitiatedInternalChat = useRef<boolean>(false);
   const applyConfirmedReaction = useCallback(
     (snapshot: MessageReactionSnapshot) => {
@@ -310,14 +318,16 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   );
 
   const refreshWhatsappSenderNames = useCallback(async () => {
-    if (!token) {
+    const session = liveAuth.current;
+    if (session.scope !== sessionScope) return;
+    if (!session.token) {
       setWhatsappSenderNameMap(new Map());
       return;
     }
 
-    api.current.setAuth(token);
+    api.current.setAuth(session.token);
     const names = await api.current.getWhatsappSenderNames();
-    if (liveMentionScope.current !== mentionScope) return;
+    if (liveAuth.current.scope !== sessionScope) return;
     setWhatsappSenderNameMap(
       new Map(
         names
@@ -325,13 +335,14 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
           .map((sender) => [sender.senderId, sender.displayName]),
       ),
     );
-  }, [token, mentionScope]);
+  }, [sessionScope]);
 
   useEffect(() => {
     void refreshWhatsappSenderNames().catch(() => {
+      if (liveAuth.current.scope !== sessionScope) return;
       setWhatsappSenderNameMap(new Map());
     });
-  }, [refreshWhatsappSenderNames]);
+  }, [refreshWhatsappSenderNames, sessionScope]);
 
   useEffect(() => {
     const originalTitle = "InPulse";
@@ -473,46 +484,60 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   );
 
   useEffect(() => {
-    if (!token) {
+    const session = liveAuth.current;
+    if (!session.token) {
       setUsers([]);
       setUsersLoaded(false);
+      setUsersScope(null);
       return;
     }
 
-    usersService.setAuth(token);
+    usersService.setAuth(session.token);
     setUsersLoaded(false);
+    setUsersScope(null);
     let active = true;
+    const isCurrent = () => active && liveAuth.current.scope === sessionScope;
 
     usersService
       .getUsers({ perPage: "999" })
       .then((res) => {
-        if (active) setUsers(Array.isArray(res?.data) ? res.data : []);
+        if (isCurrent()) setUsers(Array.isArray(res?.data) ? res.data : []);
       })
       .catch((err) => {
         console.error("Falha ao carregar usuários internos", err);
-        if (active) setUsers([]);
+        if (isCurrent()) setUsers([]);
       })
       .finally(() => {
-        if (active) setUsersLoaded(true);
+        if (isCurrent()) {
+          setUsersScope(sessionScope);
+          setUsersLoaded(true);
+        }
       });
     return () => {
       active = false;
     };
-  }, [token, mentionScope]);
+  }, [sessionScope]);
 
   useEffect(() => {
-    if (token && user && usersLoaded && users.length > 0) {
-      api.current.setAuth(token);
+    const session = liveAuth.current;
+    const sessionUser = session.user;
+    let active = true;
+    const isCurrent = () => active && liveAuth.current.scope === sessionScope;
+    if (session.token && sessionUser && usersScope === sessionScope && usersLoaded && users.length > 0) {
+      api.current.setAuth(session.token);
       wppApi.current.getContacts().then((res) => {
-        if (liveMentionScope.current !== mentionScope) return;
+        if (!isCurrent()) return;
         setContacts(Array.isArray(res) ? res : []);
+      }).catch((error) => {
+        if (isCurrent()) console.error("Falha ao carregar contatos internos", error);
       });
       api.current.getInternalChatsBySession().then((payload) => {
+        if (!isCurrent()) return;
         const chats = Array.isArray(payload?.chats) ? payload.chats : [];
         const messages = Array.isArray(payload?.messages) ? payload.messages : [];
 
         const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
-          user!.CODIGO,
+          sessionUser.CODIGO,
           users,
           chats,
           messages,
@@ -520,13 +545,17 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
 
         setInternalChats(detailedChats || []);
         setMessages(chatsMessages || []);
+      }).catch((error) => {
+        if (isCurrent()) console.error("Falha ao carregar conversas internas", error);
       });
-      return;
+      return () => {
+        active = false;
+      };
     }
 
     setInternalChats([]);
     setMessages({});
-  }, [token, user, usersLoaded, users, mentionScope]);
+  }, [sessionScope, usersScope, usersLoaded, users, wppApi]);
 
   const startDirectChat = useCallback(
     (userId: number) => {

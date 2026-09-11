@@ -44,6 +44,7 @@ export default function AuthProvider({ children }: ProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
+  const [refreshRetryPending, setRefreshRetryPending] = useState(false);
 
   const clearLocalSession = useCallback((redirect = true) => {
     sessionEpochRef.current += 1;
@@ -54,6 +55,7 @@ export default function AuthProvider({ children }: ProviderProps) {
     setToken(null);
     setUser(null);
     setStatus("anonymous");
+    setRefreshRetryPending(false);
     delete axios.defaults.headers.common.Authorization;
     delete axios.defaults.headers.authorization;
     if (instanceRef.current) {
@@ -68,8 +70,13 @@ export default function AuthProvider({ children }: ProviderProps) {
     tokenRef.current = session.token;
     authSession.setAccessToken(session.token);
     setToken(session.token);
-    setUser(session.user);
+    setUser((current) => {
+      const unchanged = current && Object.keys(current).length === Object.keys(session.user).length &&
+        Object.entries(session.user).every(([key, value]) => Object.is(current[key as keyof User], value));
+      return unchanged ? current : session.user;
+    });
     setStatus("authenticated");
+    setRefreshRetryPending(false);
     axios.defaults.headers.common.Authorization = `Bearer ${session.token}`;
     usersService.setAuth(session.token);
     if (instanceRef.current) localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
@@ -81,7 +88,6 @@ export default function AuthProvider({ children }: ProviderProps) {
     const instance = instanceRef.current;
     const abortController = new AbortController();
     refreshAbortRef.current = abortController;
-    setStatus((current) => current === "anonymous" ? current : "recovering");
     try {
       for (const delay of REFRESH_RETRY_DELAYS_MS) {
         if (delay) await wait(delay);
@@ -105,7 +111,8 @@ export default function AuthProvider({ children }: ProviderProps) {
           if (authSession.isDefinitiveRefreshFailure(error)) throw error;
         }
       }
-      setStatus(tokenRef.current ? "recovering" : "anonymous");
+      setRefreshRetryPending(true);
+      if (!tokenRef.current) setStatus("recovering");
       throw lastError;
     } finally {
       if (refreshAbortRef.current === abortController) refreshAbortRef.current = null;
@@ -119,7 +126,7 @@ export default function AuthProvider({ children }: ProviderProps) {
       refresh: refreshSession,
       onInvalid: () => { if (tokenRef.current) clearLocalSession(true); },
     });
-  }, [clearLocalSession, refreshSession, pathname]);
+  }, [clearLocalSession, refreshSession]);
 
   const signIn = useCallback(async (instance: string, { login, password }: AuthSignForm) => {
     sessionEpochRef.current += 1;
@@ -190,8 +197,11 @@ export default function AuthProvider({ children }: ProviderProps) {
     sessionEpochRef.current += 1;
     refreshAbortRef.current?.abort();
     refreshAbortRef.current = null;
-    authSession.setAccessToken(null);
+    authSession.clearConfiguration();
     tokenRef.current = null;
+    setToken(null);
+    setUser(null);
+    setRefreshRetryPending(false);
     instanceRef.current = instance;
     authSession.configure({
       instance,
@@ -265,17 +275,20 @@ export default function AuthProvider({ children }: ProviderProps) {
     };
     const interval = setInterval(refreshWhenNeeded, 30_000);
     const onVisibility = () => { if (document.visibilityState === "visible") refreshWhenNeeded(); };
+    refreshWhenNeeded();
     window.addEventListener("focus", refreshWhenNeeded);
+    window.addEventListener("online", refreshWhenNeeded);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", refreshWhenNeeded);
+      window.removeEventListener("online", refreshWhenNeeded);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [token]);
 
   useEffect(() => {
-    if (status !== "recovering") return;
+    if (status !== "recovering" && !refreshRetryPending) return;
     let cancelled = false;
     const retryUntilRecovered = async () => {
       while (!cancelled) {
@@ -285,13 +298,17 @@ export default function AuthProvider({ children }: ProviderProps) {
           await authSession.forceRefresh();
           return;
         } catch (error) {
-          if (authSession.isDefinitiveRefreshFailure(error)) return;
+          if (cancelled) return;
+          if (authSession.isDefinitiveRefreshFailure(error)) {
+            if (!tokenRef.current) clearLocalSession(true);
+            return;
+          }
         }
       }
     };
     void retryUntilRecovered();
     return () => { cancelled = true; };
-  }, [status]);
+  }, [clearLocalSession, refreshRetryPending, status]);
 
   const requiresAuth = pathname !== "/" && !pathname.includes("/login");
   const blockPrivateContent = requiresAuth && (status === "loading" || (status === "recovering" && !token));

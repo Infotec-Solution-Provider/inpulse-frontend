@@ -3,8 +3,10 @@ import {
   ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { WhatsappContext } from "../../whatsapp-context";
 import ChatReducer, {
@@ -15,13 +17,29 @@ import { InternalChatContext } from "../../internal-context";
 import { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import { toast } from "react-toastify";
 import { AuthContext } from "@/app/auth-context";
-import { createMessageAttemptKey } from "@/lib/utils/reliable-message-send";
+import {
+  createMessageAttemptKey,
+  isDefinitiveSendFailure,
+} from "@/lib/utils/reliable-message-send";
+import {
+  EMPTY_PENDING_SENDS,
+  getPendingChatSends,
+  PendingChatSend,
+  samePendingContent,
+  subscribePendingChatSends,
+  updatePendingChatSends,
+} from "@/lib/utils/pending-chat-sends";
 
 interface IChatContext {
   state: SendMessageDataState;
   dispatch: React.Dispatch<ChangeMessageDataAction>;
   sendMessage: () => Promise<boolean>;
   isSending: boolean;
+  pendingSends: PendingChatSend[];
+  checkPendingSend: (id: string) => Promise<void>;
+  restoreFailedSend: (id: string) => void;
+  discardFailedSend: (id: string) => void;
+  acknowledgeInternalSend: (id: string) => void;
   applySuggestedText: (text: string) => void;
   isReadOnlyMode: boolean;
   getMessageById: (
@@ -56,10 +74,19 @@ export default function ChatProvider({ children }: ChatProviderProps) {
   const { currentChat } = useContext(WhatsappContext);
   const { instance, user } = useContext(AuthContext);
   const scope = JSON.stringify([instance, user?.CODIGO, currentChat?.chatType, currentChat?.id]);
-  return <ScopedChatProvider scope={scope}>{children}</ScopedChatProvider>;
+  const sessionScope = JSON.stringify([instance, user?.CODIGO]);
+  return (
+    <ScopedChatProvider key={sessionScope} scope={scope} sessionScope={sessionScope}>
+      {children}
+    </ScopedChatProvider>
+  );
 }
 
-function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: string }) {
+function ScopedChatProvider({
+  children,
+  scope,
+  sessionScope,
+}: ChatProviderProps & { scope: string; sessionScope: string }) {
   const {
     sendMessage,
     currentChat,
@@ -67,6 +94,7 @@ function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: st
     editMessage,
     isReadOnlyMode,
     selectedChannel,
+    lookupMessageAttempt,
   } = useContext(WhatsappContext);
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
   const [state, setState] = useState(initialState);
@@ -74,6 +102,63 @@ function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: st
   const activeScopeRef = useRef(scope);
   const [isSending, setSending] = useState(false);
   const sendingScopes = useRef(new Set<string>());
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const allPendingSends = useSyncExternalStore(
+    subscribePendingChatSends,
+    () => getPendingChatSends(sessionScope),
+    () => EMPTY_PENDING_SENDS,
+  );
+  const pendingSends = allPendingSends.filter((attempt) => attempt.scope === scope);
+  const hasSendingAttempt = pendingSends.some((attempt) => attempt.status === "sending");
+  const checkingAttempts = useRef(new Set<string>());
+  const updateAttempt = (id: string, patch: Partial<PendingChatSend>) =>
+    updatePendingChatSends(sessionScope, (entries) =>
+      entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
+    );
+  const removeAttempt = (id: string) =>
+    updatePendingChatSends(sessionScope, (entries) => entries.filter((entry) => entry.id !== id));
+  const settleAttempt = (id: string, message: WppMessage) => {
+    if (message.status === "PENDING") {
+      updateAttempt(id, {
+        status: "sending",
+        messageId: message.id,
+        contactId: message.contactId ?? undefined,
+        error: undefined,
+      });
+    } else if (message.status === "UNKNOWN" || message.status === "ERROR") {
+      updateAttempt(id, {
+        status: "unconfirmed",
+        messageId: message.id,
+        contactId: message.contactId ?? undefined,
+        error: "O envio ainda não tem confirmação. Consulte antes de reenviar.",
+      });
+    } else {
+      removeAttempt(id);
+    }
+  };
+
+  useEffect(() => {
+    for (const attempt of allPendingSends) {
+      if (!attempt.messageId || !attempt.contactId) continue;
+      const message = whatsappMsgs[attempt.contactId]?.find(
+        (item) => item.id === attempt.messageId,
+      );
+      if (!message || message.status === "PENDING") continue;
+      if (message.status === "UNKNOWN" || message.status === "ERROR") {
+        if (attempt.status !== "unconfirmed")
+          updateAttempt(attempt.id, {
+            status: "unconfirmed",
+            error: "O envio ainda não tem confirmação. Consulte antes de reenviar.",
+          });
+      } else removeAttempt(attempt.id);
+    }
+  }, [allPendingSends, whatsappMsgs, sessionScope]);
   const dispatch = useCallback(
     (action: ChangeMessageDataAction) => {
       if (activeScopeRef.current !== scope) return;
@@ -140,64 +225,225 @@ function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: st
   );
 
   const handleSendMessage = async () => {
-    if (sendingScopes.current.has(scope) || !currentChat) return false;
+    if (!mounted.current || activeScopeRef.current !== scope) return false;
+    if (
+      sendingScopes.current.has(scope) ||
+      !currentChat ||
+      getPendingChatSends(sessionScope).some(
+        (attempt) => attempt.scope === scope && attempt.status === "sending",
+      )
+    )
+      return false;
     if (isReadOnlyMode) {
       toast.info("Esta conversa esta em modo somente leitura.");
       return false;
     }
     if (!stateRef.current.text.trim() && !stateRef.current.file && !stateRef.current.fileId)
       return false;
-    sendingScopes.current.add(scope);
-    setSending(true);
     const snapshot = stateRef.current;
     const sentEditingMessage = editingMessage;
+    let attemptId = "";
+    let contactAddress: string | null = null;
+    const clientId = currentChat.chatType === "wpp" ? selectedChannel?.id : undefined;
     try {
       if (!editingMessage && currentChat.chatType === "wpp") {
         if (!currentChat.contact) throw new Error("Contato não encontrado para envio.");
-        const clientId = selectedChannel?.id;
         if (!clientId) throw new Error("Nenhum canal selecionado para enviar a mensagem.");
-        const contactAddress = resolveContactAddress(
+        contactAddress = resolveContactAddress(
           currentChat.contact.id,
           currentChat.contact.phone || (currentChat.contact as { whatsappId?: string }).whatsappId,
         );
         if (!contactAddress) throw new Error("Não foi possível identificar o destino do contato.");
-        await sendMessage(contactAddress, {
-          ...snapshot,
-          idempotencyKey: createMessageAttemptKey(),
-          clientId,
-          contactId: currentChat.contact.id,
-          chatId: currentChat.id,
-        });
-      } else if (editingMessage) {
+      }
+      if (
+        !editingMessage &&
+        getPendingChatSends(sessionScope).some((attempt) =>
+          samePendingContent(attempt, scope, clientId, snapshot),
+        )
+      ) {
+        toast.info(
+          "Esta mensagem já está em envio ou aguardando confirmação. Consulte a tentativa pendente.",
+        );
+        return false;
+      }
+      if (!editingMessage) attemptId = createMessageAttemptKey();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível iniciar o envio.");
+      return false;
+    }
+
+    sendingScopes.current.add(scope);
+    setSending(true);
+    if (editingMessage) {
+      try {
         await editMessage(
           String(editingMessage.id),
           snapshot.text,
           currentChat.chatType === "internal",
         );
-      } else {
-        await sendInternalMessage({
-          ...snapshot,
-          chatId: currentChat.id,
-        });
+        if (mounted.current && activeScopeRef.current === scope) {
+          if (stateRef.current === snapshot) dispatch({ type: "reset" });
+          setEditingMessage((current) => (current === sentEditingMessage ? null : current));
+        }
+        return true;
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Não foi possível confirmar a edição.",
+        );
+        return false;
+      } finally {
+        sendingScopes.current.delete(scope);
+        if (mounted.current && activeScopeRef.current === scope) setSending(false);
       }
-      if (activeScopeRef.current === scope && stateRef.current === snapshot) {
-        dispatch({ type: "reset" });
-      }
-      if (activeScopeRef.current === scope) {
-        if (stateRef.current.quotedId !== snapshot.quotedId)
-          setQuotedMessage((current) => (current?.id === snapshot.quotedId ? null : current));
-        setEditingMessage((current) => (current === sentEditingMessage ? null : current));
-      }
-      return true;
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Não foi possível confirmar o envio.",
-      );
-      return false;
-    } finally {
-      sendingScopes.current.delete(scope);
-      if (activeScopeRef.current === scope) setSending(false);
     }
+
+    const attempt: PendingChatSend = {
+      id: attemptId,
+      scope,
+      snapshot,
+      status: "sending",
+      clientId,
+      fileName: snapshot.file?.name,
+    };
+    updatePendingChatSends(sessionScope, (entries) => [...entries, attempt]);
+    // Detach the accepted draft synchronously, before any upload or HTTP wait.
+    dispatch({ type: "reset" });
+    setQuotedMessage(null);
+
+    const submit = async () => {
+      try {
+        const result =
+          currentChat.chatType === "wpp"
+            ? await sendMessage(contactAddress!, {
+                ...snapshot,
+                idempotencyKey: attempt.id,
+                clientId,
+                contactId: currentChat.contact!.id,
+                chatId: currentChat.id,
+              })
+            : await sendInternalMessage({ ...snapshot, chatId: currentChat.id });
+        if (result) settleAttempt(attempt.id, result);
+        else removeAttempt(attempt.id);
+      } catch (error) {
+        // Internal endpoints can report 400 after persistence, so HTTP status
+        // alone cannot prove that an internal message was never sent.
+        const definitelyRejected = currentChat.chatType === "wpp" && isDefinitiveSendFailure(error);
+        updateAttempt(attempt.id, {
+          status: definitelyRejected ? "failed" : "unconfirmed",
+          error: definitelyRejected
+            ? error instanceof Error
+              ? error.message
+              : "O envio foi recusado."
+            : currentChat.chatType === "internal"
+              ? "Confirme na conversa se esta mensagem chegou antes de enviar novamente."
+              : "Não foi possível confirmar o envio. A mensagem pode ter sido enviada.",
+        });
+      } finally {
+        sendingScopes.current.delete(scope);
+        if (mounted.current && activeScopeRef.current === scope) setSending(false);
+      }
+    };
+    void submit();
+    return true;
+  };
+
+  const checkPendingSend = async (id: string) => {
+    const attempt = getPendingChatSends(sessionScope).find(
+      (entry) => entry.id === id && entry.scope === scope,
+    );
+    if (
+      !attempt?.clientId ||
+      (attempt.status !== "unconfirmed" && !attempt.messageId) ||
+      checkingAttempts.current.has(id)
+    )
+      return;
+    checkingAttempts.current.add(id);
+    try {
+      const message = await lookupMessageAttempt(attempt.clientId, attempt.id);
+      if (!mounted.current) return;
+      if (message) settleAttempt(id, message);
+      else
+        updateAttempt(id, {
+          status: attempt.messageId ? attempt.status : "unconfirmed",
+          error:
+            "A tentativa não foi localizada nesta consulta. Consulte novamente antes de reenviar.",
+        });
+    } catch {
+      if (mounted.current)
+        updateAttempt(id, {
+          status: attempt.messageId ? attempt.status : "unconfirmed",
+          error: "Não foi possível consultar o envio. Tente consultar novamente.",
+        });
+    } finally {
+      checkingAttempts.current.delete(id);
+    }
+  };
+
+  useEffect(() => {
+    const waiting = pendingSends.filter(
+      (attempt) => attempt.messageId && attempt.status === "sending",
+    );
+    if (!waiting.length) return;
+    // Socket events normally settle the attempt; reads also recover a missed event.
+    const timer = setInterval(() => {
+      for (const attempt of waiting) void checkPendingSend(attempt.id);
+    }, 5_000);
+    return () => clearInterval(timer);
+  }, [scope, allPendingSends, lookupMessageAttempt]);
+
+  const restoreFailedSend = (id: string) => {
+    if (!mounted.current || activeScopeRef.current !== scope || isReadOnlyMode) return;
+    const attempt = getPendingChatSends(sessionScope).find(
+      (entry) => entry.id === id && entry.scope === scope && entry.status === "failed",
+    );
+    if (!attempt) return;
+    const draft = stateRef.current;
+    if (draft.text || draft.file || draft.fileId || draft.quotedId || editingMessage) {
+      toast.info(
+        "O campo já contém um rascunho. Finalize ou limpe esse texto antes de recuperar a mensagem.",
+      );
+      return;
+    }
+    stateRef.current = { ...attempt.snapshot };
+    setState(stateRef.current);
+    if (attempt.snapshot.quotedId) {
+      const contextId = currentChat?.chatType === "wpp" ? currentChat.contactId : currentChat?.id;
+      setQuotedMessage(
+        contextId
+          ? getMessageById(
+              contextId,
+              attempt.snapshot.quotedId,
+              currentChat?.chatType === "internal",
+            )
+          : null,
+      );
+    }
+    removeAttempt(id);
+    if (attempt.fileName && !attempt.snapshot.file && !attempt.snapshot.fileId)
+      toast.info("Anexe o arquivo novamente antes de enviar.");
+    window.dispatchEvent(new CustomEvent("chat:focus-composer"));
+  };
+
+  const discardFailedSend = (id: string) => {
+    if (
+      getPendingChatSends(sessionScope).some(
+        (entry) => entry.id === id && entry.scope === scope && entry.status === "failed",
+      )
+    )
+      removeAttempt(id);
+  };
+
+  const acknowledgeInternalSend = (id: string) => {
+    if (
+      getPendingChatSends(sessionScope).some(
+        (entry) =>
+          entry.id === id &&
+          entry.scope === scope &&
+          !entry.clientId &&
+          entry.status === "unconfirmed",
+      )
+    )
+      removeAttempt(id);
   };
 
   const getMessageById = useCallback(
@@ -249,7 +495,12 @@ function ScopedChatProvider({ children, scope }: ChatProviderProps & { scope: st
         quotedMessage,
         dispatch,
         isReadOnlyMode,
-        isSending,
+        isSending: isSending || hasSendingAttempt,
+        pendingSends,
+        checkPendingSend,
+        restoreFailedSend,
+        discardFailedSend,
+        acknowledgeInternalSend,
         sendMessage: handleSendMessage,
         applySuggestedText,
         getMessageById,

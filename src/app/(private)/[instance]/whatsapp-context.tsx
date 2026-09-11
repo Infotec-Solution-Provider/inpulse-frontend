@@ -63,9 +63,12 @@ import {
 } from "../../../lib/utils/file-upload-trace";
 import getFileSHA256 from "../../../lib/utils/get-file-sha256";
 import {
+  assertPersistedMessage,
   createMessageAttemptKey,
+  DefinitiveMessageSendError,
   MessageSendCoordinator,
   sendDirectMessage,
+  sendIdentifiedMessage,
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
@@ -135,6 +138,7 @@ interface IWhatsappContext {
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageOptions) => Promise<WppMessage>;
+  lookupMessageAttempt: (clientId: number, key: string) => Promise<WppMessage | null>;
   editMessage: (messageId: string, newText: string, isInternal?: boolean) => Promise<void>;
   reactToMessage: (message: WppMessage, emoji: string) => Promise<MessageReactionSnapshot>;
   forwardMessages: (data: ForwardMessagesData) => Promise<void>;
@@ -209,6 +213,11 @@ export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token, instance, user } = useContext(AuthContext);
+  const sessionScope = JSON.stringify([
+    instance, user?.CODIGO, user?.SETOR, user?.NIVEL, user?.ATIVO, !!token,
+  ]);
+  const liveAuth = useRef({ token, user, scope: sessionScope });
+  liveAuth.current = { token, user, scope: sessionScope };
   const { socket } = useContext(SocketContext);
   const mentionDirectoryRef = useRef<MentionDirectory>(EMPTY_MENTION_DIRECTORY);
   const mentionScope = `${instance}:${user?.CODIGO ?? ""}`;
@@ -270,6 +279,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, []);
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
+  useEffect(() => {
+    api.current.setAuth(token || "");
+    if (token) usersService.setAuth(token);
+  }, [token]);
   const [monitorChats, setMonitorChats] = useState<DetailedChat[]>([]);
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -314,20 +327,24 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, [notificationPreferences]);
 
   const refreshNotificationPreferences = useCallback(async () => {
-    if (!token || !user) {
+    const session = liveAuth.current;
+    if (session.scope !== sessionScope) return;
+    if (!session.token || !session.user) {
       setNotificationPreferences(createDefaultNotificationPreferences());
       return;
     }
 
-    usersService.setAuth(token);
+    usersService.setAuth(session.token);
 
     try {
-      const data = await usersService.getUserNotificationPreferences(user.CODIGO);
+      const data = await usersService.getUserNotificationPreferences(session.user.CODIGO);
+      if (liveAuth.current.scope !== sessionScope) return;
       setNotificationPreferences(normalizeNotificationPreferences(data));
     } catch {
+      if (liveAuth.current.scope !== sessionScope) return;
       setNotificationPreferences(createDefaultNotificationPreferences());
     }
-  }, [token, user]);
+  }, [sessionScope]);
 
   const updateNotificationPreferences = useCallback(
     async (payload: Partial<UserNotificationPreferences>) => {
@@ -491,6 +508,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       signal: AbortSignal,
     ): Promise<WppMessage> => {
       let traceId: string | null = null;
+      let dispatched = false;
       try {
         signal.throwIfAborted();
         const channelId = data.clientId ?? selectedChannel?.id;
@@ -502,6 +520,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         }
 
         if (!data.file) {
+          dispatched = true;
           return await api.current.sendMessage(String(channelId), to, data, signal);
         }
 
@@ -537,6 +556,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
         if (!!res.file) {
           const sendFileData = {
+            ...data,
             idempotencyKey: data.idempotencyKey,
             contactId: data.contactId,
             text: data.text,
@@ -555,6 +575,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             fileId: res.file.id,
             elapsedMs: Date.now() - flowStartedAt,
           });
+          signal.throwIfAborted();
+          dispatched = true;
           const message = await sendTracedFileMessage(channelId, to, sendFileData, signal);
           logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
             mode: "dedupe-hit",
@@ -582,10 +604,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           fileId: uploadedFile.id,
           elapsedMs: Date.now() - flowStartedAt,
         });
+        signal.throwIfAborted();
+        dispatched = true;
         const message = await sendTracedFileMessage(
           channelId,
           to,
           {
+            ...data,
             idempotencyKey: data.idempotencyKey,
             contactId: data.contactId,
             text: data.text,
@@ -607,6 +632,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         return message;
       } catch (err) {
         traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
+        if (!dispatched && !signal.aborted) {
+          throw new DefinitiveMessageSendError(
+            err instanceof Error ? err.message : "Não foi possível preparar a mensagem para envio.",
+            err,
+          );
+        }
         throw err;
       }
     },
@@ -649,22 +680,48 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     );
   }, []);
 
+  const lookupMessageAttempt = useCallback(
+    async (clientId: number, key: string): Promise<WppMessage | null> => {
+      const session = renderSendSession;
+      const signal = session.controller.signal;
+      signal.throwIfAborted();
+      if (sendSession.current !== session || !token || !user) {
+        throw new Error("Sessão indisponível para consultar o envio.");
+      }
+      const message = await api.current.getMessageAttempt(String(clientId), key, signal);
+      signal.throwIfAborted();
+      if (sendSession.current !== session) {
+        throw new Error("A sessão mudou durante a consulta do envio.");
+      }
+      if (message) registerPersistedMessage(assertPersistedMessage(message));
+      return message;
+    },
+    [renderSendSession, token, user, registerPersistedMessage],
+  );
+
   const sendMessage = useCallback(
     async (to: string, data: SendMessageOptions): Promise<WppMessage> => {
       // Bind the request to the session that produced this callback.
       const session = renderSendSession;
       const signal = session.controller.signal;
       const clientId = data.clientId ?? selectedChannel?.id;
-      if (!instance || !token || !user) throw new Error("Sessão indisponível para envio.");
-      if (!clientId) throw new Error("Nenhum canal selecionado para enviar a mensagem.");
+      if (!instance || !token || !user) throw new DefinitiveMessageSendError("Sessão indisponível para envio.");
+      if (!clientId) throw new DefinitiveMessageSendError("Nenhum canal selecionado para enviar a mensagem.");
       signal.throwIfAborted();
       const key = data.idempotencyKey ?? createMessageAttemptKey();
       return sendCoordinator.current.run(`${session.scope}:${clientId}`, key, async () => {
         signal.throwIfAborted();
-        const message = await sendDirectMessage(
-          { ...data, clientId },
-          (request) => sendMessageRequest(to, request, signal),
-        );
+        const message = data.idempotencyKey
+          ? await sendIdentifiedMessage(
+              { ...data, clientId, idempotencyKey: key },
+              (request) => sendMessageRequest(to, request, signal),
+              (attemptKey) => api.current.getMessageAttempt(String(clientId), attemptKey, signal),
+              signal,
+            )
+          : await sendDirectMessage(
+              { ...data, clientId },
+              (request) => sendMessageRequest(to, request, signal),
+            );
         signal.throwIfAborted();
         registerPersistedMessage(message);
         return message;
@@ -781,17 +838,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       page: number;
       pageSize: number;
     }): Promise<{ notifications: AppNotification[]; totalCount: number }> => {
-      if (!(typeof token === "string" && token.length > 0 && api.current)) {
+      const session = liveAuth.current;
+      if (session.scope !== sessionScope) return { notifications: [], totalCount: 0 };
+      if (!session.token) {
         setNotifications([]);
         return { notifications: [], totalCount: 0 };
       }
 
-      api.current.setAuth(token);
+      api.current.setAuth(session.token);
 
       const response = await api.current.getNotifications({
         page,
         pageSize,
       });
+      if (liveAuth.current.scope !== sessionScope) {
+        return { notifications: [], totalCount: 0 };
+      }
 
       const notificationsData = response?.data;
       const newNotifications = Array.isArray(notificationsData?.notifications)
@@ -808,7 +870,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
       return { notifications: newNotifications, totalCount };
     },
-    [token, api.current],
+    [sessionScope],
   );
 
   const markAllAsReadNotification = useCallback(async () => {
@@ -929,11 +991,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, [currentChat]);
 
   useEffect(() => {
-    if (token?.length && api.current && user) {
-      api.current.setAuth(token);
-      usersService.setAuth(token);
+    const session = liveAuth.current;
+    const sessionUser = session.user;
+    let active = true;
+    const isCurrent = () => active && liveAuth.current.scope === sessionScope;
+    if (session.token && sessionUser) {
+      api.current.setAuth(session.token);
+      usersService.setAuth(session.token);
       refreshNotificationPreferences();
       api.current.getSectors().then((res) => {
+        if (!isCurrent()) return;
         const secs = Array.isArray(res)
           ? (res as SectorData[])
           : Array.isArray((res as { data?: SectorData[] })?.data)
@@ -943,17 +1010,21 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setSectors(secs);
 
         api.current.getChatsBySession(true, true).then((payload) => {
+          if (!isCurrent()) return;
           const chats = Array.isArray(payload?.chats) ? payload.chats : [];
           const messages = Array.isArray(payload?.messages) ? payload.messages : [];
 
           const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
           setChats(detailedChats);
           setMessages(chatsMessages);
+        }).catch((error) => {
+          if (isCurrent()) console.error("Falha ao carregar conversas", error);
         });
 
-        const sector = secs.find((s) => s.id === user.SETOR);
+        const sector = secs.find((s) => s.id === sessionUser.SETOR);
 
-        api.current.ax.get(`/api/whatsapp/sector/${user.SETOR}/clients`).then(async (res) => {
+        api.current.ax.get(`/api/whatsapp/sector/${sessionUser.SETOR}/clients`).then(async (res) => {
+          if (!isCurrent()) return;
           const channelsPayload = res?.data;
           const channelsData: WppClient[] = Array.isArray(
             (channelsPayload as { data?: WppClient[] })?.data,
@@ -969,11 +1040,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setSelectedChannel((current) => current ?? activeChannel);
 
           const parametersResponse = await api.current.ax.get("/api/whatsapp/session/parameters");
+          if (!isCurrent()) return;
           const parameters: Record<string, string> = parametersResponse.data["parameters"];
           if (parameters["is_official"] === "true" && activeChannel?.id) {
             const templatesResponse = await api.current.ax.get(
               `/api/whatsapp/${activeChannel.id}/templates`,
             );
+            if (!isCurrent()) return;
             setTemplates(templatesResponse.data.templates);
           } else {
             setTemplates([]);
@@ -983,12 +1056,19 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
           setChannels(channelsData);
           setLoaded(true);
+        }).catch((error) => {
+          if (isCurrent()) console.error("Falha ao carregar canais da sessão", error);
         });
 
-        getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE });
+        void getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }).catch((error) => {
+          if (isCurrent()) console.error("Falha ao carregar notificações", error);
+        });
+      }).catch((error) => {
+        if (isCurrent()) console.error("Falha ao carregar setores", error);
       });
 
       return () => {
+        active = false;
         setChats([]);
         setMessages([]);
         setTemplates([]);
@@ -998,8 +1078,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setLoaded(false);
       };
     }
-    // Removendo api.current das dependências para evitar loop infinito
-  }, [token, instance, user, refreshNotificationPreferences]);
+    // Token rotation updates credentials without discarding the current workspace.
+  }, [sessionScope, refreshNotificationPreferences, getNotifications]);
 
   useEffect(() => {
     if (socket) {
@@ -1113,6 +1193,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         finishChat,
         startChatByContactId,
         sendMessage,
+        lookupMessageAttempt,
         editMessage,
         reactToMessage,
         forwardMessages,

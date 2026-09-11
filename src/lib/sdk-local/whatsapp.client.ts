@@ -158,6 +158,31 @@ export default class WhatsappClient extends ApiClient {
     return res.data;
   }
 
+  public async getMessageAttempt(
+    clientId: string,
+    idempotencyKey: string,
+    signal?: AbortSignal,
+  ): Promise<WppMessage | null> {
+    try {
+      const { data: res } = await this.ax.get<DataResponse<WppMessage>>(
+        `/api/whatsapp/${encodeURIComponent(clientId)}/message-attempts/${encodeURIComponent(idempotencyKey)}`,
+        { signal },
+      );
+      return res.data;
+    } catch (error) {
+      // ApiClient wraps HTTP errors while retaining the Axios response in cause.
+      const visited = new Set<unknown>();
+      let current = error;
+      while (current && typeof current === "object" && !visited.has(current)) {
+        visited.add(current);
+        const candidate = current as { response?: { status?: number }; cause?: unknown };
+        if (candidate.response?.status === 404) return null;
+        current = candidate.cause;
+      }
+      throw error;
+    }
+  }
+
   public async editMessage(
     clientId: string,
     messageId: string,
