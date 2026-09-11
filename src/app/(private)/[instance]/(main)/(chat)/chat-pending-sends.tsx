@@ -44,13 +44,15 @@ export default function ChatPendingSends() {
               </p>
             )}
           <p
-            className={`mt-1 text-xs ${attempt.status === "sending" ? "text-slate-500 dark:text-slate-400" : "text-amber-700 dark:text-amber-300"}`}
+            className={`mt-1 text-xs ${attempt.status === "queued" || attempt.status === "sending" ? "text-slate-500 dark:text-slate-400" : "text-amber-700 dark:text-amber-300"}`}
           >
-            {attempt.status === "sending"
-              ? "Enviando…"
-              : attempt.status === "failed"
-                ? "Não enviada"
-                : "Aguardando confirmação"}
+            {attempt.status === "queued"
+              ? "Na fila…"
+              : attempt.status === "sending"
+                ? "Enviando…"
+                : attempt.status === "failed"
+                  ? "Não enviada"
+                  : "Aguardando confirmação"}
           </p>
           {attempt.error && (
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{attempt.error}</p>

@@ -49,7 +49,7 @@ function Composer() {
           void chat.sendMessage();
         }}
       />
-      <button onClick={() => void chat.sendMessage()}>Send</button>
+      <button disabled={chat.isSending} onClick={() => void chat.sendMessage()}>Send</button>
       <button onClick={() => { void chat.sendMessage(); void chat.sendMessage(); }}>Dispatch twice</button>
       <button onClick={() => chat.handleQuoteMessage(quotedMessage)}>Quote</button>
       <button onClick={() => chat.dispatch({

@@ -4,8 +4,10 @@ export interface PendingChatSend {
   id: string;
   scope: string;
   snapshot: SendMessageDataState;
-  status: "sending" | "unconfirmed" | "failed";
+  status: "queued" | "sending" | "unconfirmed" | "failed";
   clientId?: number;
+  chatId?: number;
+  to?: string;
   messageId?: number;
   contactId?: number;
   fileName?: string;
@@ -32,7 +34,7 @@ export function getPendingChatSends(session: string): PendingChatSend[] {
             typeof item.id === "string" &&
             typeof item.scope === "string" &&
             typeof item.snapshot?.text === "string" &&
-            ["sending", "unconfirmed", "failed"].includes(item.status),
+            ["queued", "sending", "unconfirmed", "failed"].includes(item.status),
         )
         .map((item) => ({
           ...item,
@@ -100,7 +102,7 @@ export function samePendingContent(
   return (
     attempt.scope === scope &&
     attempt.clientId === clientId &&
-    attempt.status !== "failed" &&
+    attempt.status === "unconfirmed" &&
     original.text === snapshot.text &&
     original.quotedId === snapshot.quotedId &&
     original.fileId === snapshot.fileId &&

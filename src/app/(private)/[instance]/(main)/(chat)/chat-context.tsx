@@ -72,11 +72,15 @@ export const ChatContext = createContext({} as IChatContext);
 
 export default function ChatProvider({ children }: ChatProviderProps) {
   const { currentChat } = useContext(WhatsappContext);
-  const { instance, user } = useContext(AuthContext);
+  const { instance, user, token } = useContext(AuthContext);
   const scope = JSON.stringify([instance, user?.CODIGO, currentChat?.chatType, currentChat?.id]);
   const sessionScope = JSON.stringify([instance, user?.CODIGO]);
   return (
-    <ScopedChatProvider key={sessionScope} scope={scope} sessionScope={sessionScope}>
+    <ScopedChatProvider
+      key={`${sessionScope}:${!!token}`}
+      scope={scope}
+      sessionScope={sessionScope}
+    >
       {children}
     </ScopedChatProvider>
   );
@@ -97,25 +101,46 @@ function ScopedChatProvider({
     lookupMessageAttempt,
   } = useContext(WhatsappContext);
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
+  const { token, user } = useContext(AuthContext);
+  const activeSession = !!token && !!user;
   const [state, setState] = useState(initialState);
   const stateRef = useRef(state);
   const activeScopeRef = useRef(scope);
   const [isSending, setSending] = useState(false);
   const sendingScopes = useRef(new Set<string>());
+  const queuedHere = useRef(new Set<string>());
+  const dispatchingScopes = useRef(new Set<string>());
+  const [queueVersion, setQueueVersion] = useState(0);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      // Strict Mode remounts immediately; a real unmount cancels only jobs
+      // accepted here that have never started, without replaying an active POST.
+      queueMicrotask(() => {
+        if (mounted.current) return;
+        updatePendingChatSends(sessionScope, (entries) =>
+          entries.map((entry) =>
+            queuedHere.current.has(entry.id) && entry.status === "queued"
+              ? {
+                  ...entry,
+                  status: "failed",
+                  error:
+                    "O envio foi interrompido antes de iniciar. Recupere a mensagem para enviar.",
+                }
+              : entry,
+          ),
+        );
+      });
     };
-  }, []);
+  }, [sessionScope]);
   const allPendingSends = useSyncExternalStore(
     subscribePendingChatSends,
     () => getPendingChatSends(sessionScope),
     () => EMPTY_PENDING_SENDS,
   );
   const pendingSends = allPendingSends.filter((attempt) => attempt.scope === scope);
-  const hasSendingAttempt = pendingSends.some((attempt) => attempt.status === "sending");
   const checkingAttempts = useRef(new Set<string>());
   const updateAttempt = (id: string, patch: Partial<PendingChatSend>) =>
     updatePendingChatSends(sessionScope, (entries) =>
@@ -125,6 +150,9 @@ function ScopedChatProvider({
     updatePendingChatSends(sessionScope, (entries) => entries.filter((entry) => entry.id !== id));
   const settleAttempt = (id: string, message: WppMessage) => {
     if (message.status === "PENDING") {
+      const current = getPendingChatSends(sessionScope).find((entry) => entry.id === id);
+      // A late read cannot replace an already observed uncertain terminal state.
+      if (current?.status === "unconfirmed" && current.messageId) return;
       updateAttempt(id, {
         status: "sending",
         messageId: message.id,
@@ -159,6 +187,72 @@ function ScopedChatProvider({
       } else removeAttempt(attempt.id);
     }
   }, [allPendingSends, whatsappMsgs, sessionScope]);
+
+  useEffect(() => {
+    if (!activeSession || !mounted.current) return;
+    for (const attempt of allPendingSends) {
+      if (attempt.status !== "queued" || dispatchingScopes.current.has(attempt.scope)) continue;
+      const entries = getPendingChatSends(sessionScope);
+      const position = entries.findIndex((entry) => entry.id === attempt.id);
+      if (position < 0 || entries[position].status !== "queued") continue;
+      const busy = entries.some(
+        (entry, index) =>
+          entry.scope === attempt.scope &&
+          (entry.status === "sending" || (index < position && entry.status === "queued")),
+      );
+      if (busy) continue;
+      if (!attempt.chatId || (attempt.clientId && (!attempt.contactId || !attempt.to))) {
+        updateAttempt(attempt.id, {
+          status: "failed",
+          error: "O destino do envio não está disponível. Recupere a mensagem.",
+        });
+        continue;
+      }
+
+      dispatchingScopes.current.add(attempt.scope);
+      queuedHere.current.delete(attempt.id);
+      updateAttempt(attempt.id, { status: "sending" });
+      const submit = async () => {
+        try {
+          const result = attempt.clientId
+            ? await sendMessage(attempt.to!, {
+                ...attempt.snapshot,
+                idempotencyKey: attempt.id,
+                clientId: attempt.clientId,
+                contactId: attempt.contactId!,
+                chatId: attempt.chatId!,
+              })
+            : await sendInternalMessage({ ...attempt.snapshot, chatId: attempt.chatId! });
+          if (result) settleAttempt(attempt.id, result);
+          else removeAttempt(attempt.id);
+        } catch (error) {
+          // Internal HTTP 400 can occur after persistence and is not safe to replay.
+          const definitelyRejected = !!attempt.clientId && isDefinitiveSendFailure(error);
+          updateAttempt(attempt.id, {
+            status: definitelyRejected ? "failed" : "unconfirmed",
+            error: definitelyRejected
+              ? error instanceof Error
+                ? error.message
+                : "O envio foi recusado."
+              : attempt.clientId
+                ? "Não foi possível confirmar o envio. A mensagem pode ter sido enviada."
+                : "Confirme na conversa se esta mensagem chegou antes de enviar novamente.",
+          });
+        } finally {
+          dispatchingScopes.current.delete(attempt.scope);
+          if (mounted.current) setQueueVersion((version) => version + 1);
+        }
+      };
+      void submit();
+    }
+  }, [
+    activeSession,
+    allPendingSends,
+    queueVersion,
+    sendMessage,
+    sendInternalMessage,
+    sessionScope,
+  ]);
   const dispatch = useCallback(
     (action: ChangeMessageDataAction) => {
       if (activeScopeRef.current !== scope) return;
@@ -225,15 +319,8 @@ function ScopedChatProvider({
   );
 
   const handleSendMessage = async () => {
-    if (!mounted.current || activeScopeRef.current !== scope) return false;
-    if (
-      sendingScopes.current.has(scope) ||
-      !currentChat ||
-      getPendingChatSends(sessionScope).some(
-        (attempt) => attempt.scope === scope && attempt.status === "sending",
-      )
-    )
-      return false;
+    if (!mounted.current || !activeSession || activeScopeRef.current !== scope) return false;
+    if (sendingScopes.current.has(scope) || !currentChat) return false;
     if (isReadOnlyMode) {
       toast.info("Esta conversa esta em modo somente leitura.");
       return false;
@@ -261,9 +348,7 @@ function ScopedChatProvider({
           samePendingContent(attempt, scope, clientId, snapshot),
         )
       ) {
-        toast.info(
-          "Esta mensagem já está em envio ou aguardando confirmação. Consulte a tentativa pendente.",
-        );
+        toast.info("Esta mensagem está aguardando confirmação. Consulte a tentativa pendente.");
         return false;
       }
       if (!editingMessage) attemptId = createMessageAttemptKey();
@@ -272,9 +357,9 @@ function ScopedChatProvider({
       return false;
     }
 
-    sendingScopes.current.add(scope);
-    setSending(true);
     if (editingMessage) {
+      sendingScopes.current.add(scope);
+      setSending(true);
       try {
         await editMessage(
           String(editingMessage.id),
@@ -301,56 +386,24 @@ function ScopedChatProvider({
       id: attemptId,
       scope,
       snapshot,
-      status: "sending",
+      status: "queued",
       clientId,
+      chatId: currentChat.id,
+      contactId: currentChat.chatType === "wpp" ? currentChat.contact!.id : undefined,
+      to: contactAddress ?? undefined,
       fileName: snapshot.file?.name,
     };
+    queuedHere.current.add(attempt.id);
     updatePendingChatSends(sessionScope, (entries) => [...entries, attempt]);
     // Detach the accepted draft synchronously, before any upload or HTTP wait.
     dispatch({ type: "reset" });
     setQuotedMessage(null);
 
-    const submit = async () => {
-      try {
-        const result =
-          currentChat.chatType === "wpp"
-            ? await sendMessage(contactAddress!, {
-                ...snapshot,
-                idempotencyKey: attempt.id,
-                clientId,
-                contactId: currentChat.contact!.id,
-                chatId: currentChat.id,
-              })
-            : await sendInternalMessage({ ...snapshot, chatId: currentChat.id });
-        if (result) settleAttempt(attempt.id, result);
-        else removeAttempt(attempt.id);
-      } catch (error) {
-        // Internal endpoints can report 400 after persistence, so HTTP status
-        // alone cannot prove that an internal message was never sent.
-        const definitelyRejected = currentChat.chatType === "wpp" && isDefinitiveSendFailure(error);
-        updateAttempt(attempt.id, {
-          status: definitelyRejected ? "failed" : "unconfirmed",
-          error: definitelyRejected
-            ? error instanceof Error
-              ? error.message
-              : "O envio foi recusado."
-            : currentChat.chatType === "internal"
-              ? "Confirme na conversa se esta mensagem chegou antes de enviar novamente."
-              : "Não foi possível confirmar o envio. A mensagem pode ter sido enviada.",
-        });
-      } finally {
-        sendingScopes.current.delete(scope);
-        if (mounted.current && activeScopeRef.current === scope) setSending(false);
-      }
-    };
-    void submit();
     return true;
   };
 
   const checkPendingSend = async (id: string) => {
-    const attempt = getPendingChatSends(sessionScope).find(
-      (entry) => entry.id === id && entry.scope === scope,
-    );
+    const attempt = getPendingChatSends(sessionScope).find((entry) => entry.id === id);
     if (
       !attempt?.clientId ||
       (attempt.status !== "unconfirmed" && !attempt.messageId) ||
@@ -364,14 +417,12 @@ function ScopedChatProvider({
       if (message) settleAttempt(id, message);
       else
         updateAttempt(id, {
-          status: attempt.messageId ? attempt.status : "unconfirmed",
           error:
             "A tentativa não foi localizada nesta consulta. Consulte novamente antes de reenviar.",
         });
     } catch {
       if (mounted.current)
         updateAttempt(id, {
-          status: attempt.messageId ? attempt.status : "unconfirmed",
           error: "Não foi possível consultar o envio. Tente consultar novamente.",
         });
     } finally {
@@ -380,16 +431,18 @@ function ScopedChatProvider({
   };
 
   useEffect(() => {
-    const waiting = pendingSends.filter(
-      (attempt) => attempt.messageId && attempt.status === "sending",
-    );
-    if (!waiting.length) return;
+    if (!activeSession) return;
     // Socket events normally settle the attempt; reads also recover a missed event.
+    // Keep this timer stable while new messages are queued so continuous typing
+    // cannot postpone reconciliation of the first pending send.
     const timer = setInterval(() => {
+      const waiting = getPendingChatSends(sessionScope).filter(
+        (attempt) => attempt.messageId && attempt.status === "sending",
+      );
       for (const attempt of waiting) void checkPendingSend(attempt.id);
     }, 5_000);
     return () => clearInterval(timer);
-  }, [scope, allPendingSends, lookupMessageAttempt]);
+  }, [activeSession, sessionScope, lookupMessageAttempt]);
 
   const restoreFailedSend = (id: string) => {
     if (!mounted.current || activeScopeRef.current !== scope || isReadOnlyMode) return;
@@ -495,7 +548,7 @@ function ScopedChatProvider({
         quotedMessage,
         dispatch,
         isReadOnlyMode,
-        isSending: isSending || hasSendingAttempt,
+        isSending,
         pendingSends,
         checkPendingSend,
         restoreFailedSend,
