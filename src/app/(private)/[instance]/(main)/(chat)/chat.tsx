@@ -5,7 +5,6 @@ import { ChatContext } from "./chat-context";
 import ChatHeader, { ChatContactInfoProps } from "./chat-header";
 import ChatMessagesList from "./chat-messages-list";
 import ChatSendMessageArea from "./chat-send-message-area";
-import ChatPendingSends from "./chat-pending-sends";
 
 export default function Chat({
   avatarUrl,
@@ -81,7 +80,6 @@ export default function Chat({
           <ChatAttachmentPreview file={state.file} />
         )}
       </div>
-      <ChatPendingSends />
       {!isReadOnlyMode && (!state?.file || state.sendAsAudio) && (
         <div className="sticky bottom-0 z-30 border-t border-slate-300/70 bg-slate-200/95 backdrop-blur dark:border-slate-700/70 dark:bg-slate-800/95 md:static">
           <ChatSendMessageArea />

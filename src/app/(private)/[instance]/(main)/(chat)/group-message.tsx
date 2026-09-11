@@ -7,7 +7,7 @@ import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
-import React, { useMemo, useState } from "react";
+import React, { ReactNode, useMemo, useState } from "react";
 import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
@@ -23,6 +23,7 @@ interface MessageProps {
   type: string;
   date: Date;
   status?: WppMessageStatus | null;
+  sendStatus?: ReactNode;
   fileId?: number | null;
   fileName?: string | null;
   fileType?: string | null;
@@ -55,6 +56,7 @@ export default function GroupMessage({
   type,
   date,
   status,
+  sendStatus,
   fileId,
   fileName,
   fileType,
@@ -204,7 +206,7 @@ export default function GroupMessage({
           <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
-            {style !== "system" && status && statusComponents[status]}
+            {style !== "system" && (sendStatus ?? (status && statusComponents[status]))}
           </div>
         </div>
       </div>

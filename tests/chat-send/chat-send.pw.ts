@@ -7,6 +7,13 @@ async function sendDraft(page: Page, text = "First message") {
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
 }
 
+async function installPausedClock(page: Page) {
+  const time = new Date("2026-09-11T12:00:00.000Z");
+  await page.clock.install({ time });
+  await page.clock.pauseAt(time);
+  await page.reload();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/*", (route) => {
     const url = new URL(route.request().url());
@@ -53,7 +60,6 @@ test("accepts three fast messages immediately and dispatches each in FIFO order"
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(draft).toHaveValue("");
   await expect(page.getByTestId("pending-status")).toHaveText(["sending", "queued", "queued"]);
-  await expect(page.getByText("Na fila…", { exact: true })).toHaveCount(2);
   await expect(page.getByTestId("pending-text")).toHaveText([
     "First fast message", "Second fast message", "Third fast message",
   ]);
@@ -161,15 +167,15 @@ test("an uncertain send stays separate and manual confirmation only looks up the
   await page.getByRole("button", { name: "Restore", exact: true }).click();
   await expect(page.getByLabel("Message draft")).toHaveValue("");
   await page.evaluate(() => window.chatSendHarness.switchChannel(99));
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
   const lookupArgs = await page.evaluate(() => window.chatSendHarness.state.lookups[0].args);
   expect(lookupArgs).toContain(key);
   expect(lookupArgs).toContain(23);
-  await expect(page.getByRole("button", { name: "Consultando…", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Verificando envio…", exact: true })).toBeDisabled();
   await page.evaluate(() => window.chatSendHarness.resolveLookup(false));
   await expect(page.getByTestId("pending-status")).toHaveText("unconfirmed");
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(2);
   await page.evaluate(() => window.chatSendHarness.resolveLookup(true, 1));
   await expect(page.getByTestId("pending-send")).toHaveCount(0);
@@ -189,7 +195,7 @@ test("a timed-out message is never retried while the next accepted message proce
   await page.getByLabel("Message draft").fill("Delivery outcome unknown");
   await page.getByLabel("Message draft").press("Enter");
   await expect(page.getByLabel("Message draft")).toHaveValue("Delivery outcome unknown");
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
   expect(await page.evaluate(() => window.chatSendHarness.state.lookups[0].args)).toContain(firstKey);
   await page.evaluate(() => window.chatSendHarness.resolveLookup(true));
@@ -350,7 +356,7 @@ test("reload preserves an interrupted attempt for lookup and blocks resending it
   await page.getByLabel("Message draft").fill("Message before reload");
   await page.getByLabel("Message draft").press("Enter");
   expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(0);
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
   expect(await page.evaluate(() => window.chatSendHarness.state.lookups[0].args)).toContain(key);
   await page.evaluate(() => window.chatSendHarness.resolveLookup(true));
@@ -360,8 +366,7 @@ test("reload preserves an interrupted attempt for lookup and blocks resending it
 });
 
 test("a PENDING receipt accepts the next message and dispatches it automatically after confirmation", async ({ page }) => {
-  await page.clock.install();
-  await page.reload();
+  await installPausedClock(page);
   await sendDraft(page, "Accepted by server queue");
   const key = await page.evaluate(() => window.chatSendHarness.state.sends[0].data.idempotencyKey);
   await page.evaluate(() => window.chatSendHarness.resolveSend(0, "PENDING"));
@@ -389,8 +394,7 @@ test("a PENDING receipt accepts the next message and dispatches it automatically
 });
 
 test("confirmation polling keeps draining a conversation after switching to another chat", async ({ page }) => {
-  await page.clock.install();
-  await page.reload();
+  await installPausedClock(page);
   await sendDraft(page, "Chat A waiting for provider");
   await page.getByLabel("Message draft").fill("Chat A queued in background");
   await page.getByLabel("Message draft").press("Enter");
@@ -411,8 +415,7 @@ test("confirmation polling keeps draining a conversation after switching to anot
 });
 
 test("continuous submissions do not postpone the five-second confirmation lookup", async ({ page }) => {
-  await page.clock.install();
-  await page.reload();
+  await installPausedClock(page);
   await sendDraft(page, "First message awaiting confirmation");
   const firstKey = await page.evaluate(() => window.chatSendHarness.state.sends[0].data.idempotencyKey);
   await page.evaluate(() => window.chatSendHarness.resolveSend(0, "PENDING"));
@@ -454,7 +457,7 @@ test("an internal HTTP 400 may follow delivery and cannot restore or resend the 
   expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
   await expect(page.getByTestId("pending-status")).toHaveText("unconfirmed");
   await expect(page.getByRole("button", { name: "Recuperar mensagem", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Consultar envio", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Verificar envio", exact: true })).toHaveCount(0);
   await page.getByLabel("Message draft").fill("New draft after checking conversation");
   await page.getByRole("button", { name: "Já conferi na conversa", exact: true }).click();
   await expect(page.getByTestId("pending-send")).toHaveCount(0);
@@ -463,16 +466,15 @@ test("an internal HTTP 400 may follow delivery and cannot restore or resend the 
 });
 
 test("reload preserves a PENDING receipt and queued content without automatically posting restored messages", async ({ page }) => {
-  await page.clock.install();
-  await page.reload();
+  await installPausedClock(page);
   await sendDraft(page, "Known queued message");
   const key = await page.evaluate(() => window.chatSendHarness.state.sends[0].data.idempotencyKey);
   await page.evaluate(() => window.chatSendHarness.resolveSend(0, "PENDING"));
   await expect(page.getByTestId("pending-send")).toHaveAttribute("data-message-id", "800");
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
   await page.evaluate(() => window.chatSendHarness.resolveLookup(false));
-  await expect(page.getByRole("button", { name: "Consultar envio", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Verificar envio", exact: true })).toBeEnabled();
   await expect(page.getByTestId("pending-status")).toHaveText("sending");
   await expect(page.getByTestId("is-sending")).toHaveText("false");
   await page.getByLabel("Message draft").fill("Queued before reload");
@@ -493,14 +495,14 @@ test("reload preserves a PENDING receipt and queued content without automaticall
   await expect(page.getByTestId("is-sending")).toHaveText("false");
   await page.getByLabel("Message draft").fill("New draft after reload");
   expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(0);
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).nth(0).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).nth(0).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
   expect(await page.evaluate(() => window.chatSendHarness.state.lookups[0].args)).toContain(key);
   await page.evaluate(() => window.chatSendHarness.resolveLookup(true));
   await expect(page.getByTestId("pending-send")).toHaveCount(1);
   await expect(page.getByTestId("pending-send")).toHaveAttribute("data-id", queuedKey!);
   await expect(page.getByTestId("pending-status")).toHaveText("unconfirmed");
-  await page.getByRole("button", { name: "Consultar envio", exact: true }).click();
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(2);
   expect(await page.evaluate(() => window.chatSendHarness.state.lookups[1].args)).toContain(queuedKey);
   await page.evaluate(() => window.chatSendHarness.resolveLookup(false, 1));
@@ -508,4 +510,150 @@ test("reload preserves a PENDING receipt and queued content without automaticall
   await expect(page.getByTestId("is-sending")).toHaveText("false");
   await expect(page.getByLabel("Message draft")).toHaveValue("New draft after reload");
   expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(0);
+});
+
+test("an unconfirmed send without a receipt is checked automatically with no overlapping lookup or resend", async ({ page }) => {
+  await installPausedClock(page);
+  await sendDraft(page, "Please confirm our appointment");
+  const key = await page.evaluate(() => window.chatSendHarness.state.sends[0].data.idempotencyKey);
+  await page.evaluate(() => window.chatSendHarness.rejectSend("unknown"));
+  await expect(page.getByTestId("pending-status")).toHaveText("unconfirmed");
+  await expect(page.getByTestId("pending-send")).not.toHaveAttribute("data-message-id");
+  await expect(page.getByTestId("pending-check")).toHaveText("automatic");
+  await page.getByLabel("Message draft").fill("Next draft stays intact");
+  await page.clock.runFor(4_999);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(0);
+  await page.clock.runFor(1);
+  await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups[0].args)).toContain(key);
+  await expect(page.getByRole("button", { name: "Verificando envio…", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Check", exact: true }).click();
+  await page.clock.runFor(40_000);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
+  await page.evaluate(() => window.chatSendHarness.resolveLookup(true));
+  await expect(page.getByTestId("pending-send")).toHaveCount(0);
+  await expect(page.getByLabel("Message draft")).toHaveValue("Next draft stays intact");
+  expect(await page.evaluate(() => window.chatSendHarness.state.toasts)).toEqual([]);
+});
+
+test("automatic verification stops after six checks and the icon still allows manual confirmation", async ({ page }) => {
+  await installPausedClock(page);
+  await sendDraft(page, "A message awaiting confirmation");
+  await page.evaluate(() => window.chatSendHarness.rejectSend("unknown"));
+  await expect(page.getByTestId("pending-check")).toHaveText("automatic");
+  for (const [index, delay] of [5_000, 10_000, 15_000, 20_000, 30_000, 30_000].entries()) {
+    await page.clock.runFor(delay);
+    await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(index + 1);
+    await page.evaluate((lookupIndex) => window.chatSendHarness.resolveLookup(false, lookupIndex), index);
+    await expect(page.getByTestId("pending-check")).toHaveText(index === 5 ? "paused" : "automatic");
+  }
+  await page.clock.runFor(180_000);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(6);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
+  await expect(page.getByRole("button", { name: "Recuperar mensagem", exact: true })).toHaveCount(0);
+  const verify = page.getByRole("button", { name: "Verificar envio", exact: true });
+  await expect(verify).toBeEnabled();
+  await expect(verify).toHaveText("");
+  await verify.click();
+  await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(7);
+  await page.evaluate(() => window.chatSendHarness.resolveLookup(true, 6));
+  await expect(page.getByTestId("pending-send")).toHaveCount(0);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
+});
+
+test("reload retains the spent automatic verification budget and never posts the restored message", async ({ page }) => {
+  await installPausedClock(page);
+  await sendDraft(page, "Still awaiting a reply from the server");
+  const key = await page.evaluate(() => window.chatSendHarness.state.sends[0].data.idempotencyKey);
+  await page.evaluate(() => window.chatSendHarness.rejectSend("unknown"));
+  await expect(page.getByTestId("pending-check")).toHaveText("automatic");
+  for (const [index, delay] of [5_000, 10_000, 15_000].entries()) {
+    await page.clock.runFor(delay);
+    await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(index + 1);
+    await page.evaluate((lookupIndex) => window.chatSendHarness.resolveLookup(false, lookupIndex), index);
+    await expect(page.getByTestId("pending-check")).toHaveText("automatic");
+  }
+  await page.reload();
+  await expect(page.getByTestId("pending-send")).toHaveAttribute("data-id", key!);
+  await expect(page.getByTestId("pending-check")).toHaveText("automatic");
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(0);
+  await page.clock.runFor(19_000);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(0);
+  for (const [index, delay] of [1_000, 30_000, 30_000].entries()) {
+    await page.clock.runFor(delay);
+    await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(index + 1);
+    await page.evaluate((lookupIndex) => window.chatSendHarness.resolveLookup(false, lookupIndex), index);
+    await expect(page.getByTestId("pending-check")).toHaveText(index === 2 ? "paused" : "automatic");
+  }
+  await page.reload();
+  await expect(page.getByTestId("pending-check")).toHaveText("paused");
+  await page.clock.runFor(180_000);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(0);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(0);
+  await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
+  expect(await page.evaluate(() => window.chatSendHarness.state.lookups[0].args)).toContain(key);
+  await page.evaluate(() => window.chatSendHarness.resolveLookup(true));
+  await expect(page.getByTestId("pending-send")).toHaveCount(0);
+});
+
+test("a visible receipt takes over the pending bubble and keeps its verification icon", async ({ page }) => {
+  await installPausedClock(page);
+  await sendDraft(page, "A single message bubble");
+  await page.evaluate(() => window.chatSendHarness.resolveSend(0, "PENDING"));
+  await expect(page.getByTestId("pending-send")).toHaveAttribute("data-message-id", "800");
+  await expect(page.getByTestId("pending-ui").getByText("A single message bubble", { exact: true })).toHaveCount(1);
+  await page.getByRole("button", { name: "Show server receipt", exact: true }).click();
+  await expect(page.getByTestId("server-receipt")).toBeVisible();
+  await expect(page.locator("[data-pending-send-id]")).toHaveCount(0);
+  await expect(page.getByTestId("pending-ui").getByText("A single message bubble", { exact: true })).toHaveCount(1);
+  await page.getByTestId("server-receipt").getByRole("button", { name: "Verificar envio", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
+  await expect(page.getByTestId("server-receipt").getByRole("button", { name: "Verificando envio…", exact: true })).toBeDisabled();
+  await page.evaluate(() => window.chatSendHarness.resolveLookup(true));
+  await expect(page.getByTestId("pending-send")).toHaveCount(0);
+  await expect(page.getByTestId("server-receipt")).toHaveText("A single message bubble");
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
+});
+
+test("message status stays compact, exposes keyboard tooltips and offers recovery only for failed sends", async ({ page }, testInfo) => {
+  await installPausedClock(page);
+  await sendDraft(page, "Olá! Podemos confirmar o horário?");
+  await page.evaluate(() => window.chatSendHarness.rejectSend("unknown"));
+  await expect(page.getByTestId("pending-check")).toHaveText("automatic");
+  await page.getByLabel("Message draft").fill("Segue o documento atualizado.");
+  await page.getByRole("button", { name: "Attach", exact: true }).click();
+  await page.getByLabel("Message draft").press("Enter");
+  await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(2);
+  await page.evaluate(() => window.chatSendHarness.rejectSend("definitive", 1));
+  await expect(page.getByTestId("pending-status")).toHaveText(["unconfirmed", "failed"]);
+  const preview = page.getByTestId("pending-ui");
+  await expect(preview.locator("p")).toHaveText([
+    "Olá! Podemos confirmar o horário?", "Segue o documento atualizado.", "example.pdf",
+  ]);
+  const recover = preview.getByRole("button", { name: "Recuperar mensagem", exact: true });
+  await expect(recover).toHaveText("");
+  await recover.focus();
+  await page.clock.runFor(200);
+  await expect(page.getByRole("tooltip")).toHaveText("Editar e tentar novamente");
+  await page.getByLabel("Message draft").focus();
+  await page.mouse.move(0, 0);
+  await page.keyboard.press("Escape");
+  await page.clock.runFor(1_000);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+  for (const [name, width, dark] of [["desktop", 1000, false], ["mobile", 390, false], ["dark", 1000, true]] as const) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.evaluate((useDark) => document.documentElement.classList.toggle("dark", useDark), dark);
+    const screenshotPath = testInfo.outputPath(`pending-send-${name}.png`);
+    await preview.screenshot({ path: screenshotPath, animations: "disabled" });
+    await testInfo.attach(`pending-send-${name}`, { path: screenshotPath, contentType: "image/png" });
+    const size = await preview.boundingBox();
+    expect(size!.x + size!.width).toBeLessThanOrEqual(width);
+    expect(await preview.evaluate((element) => element.scrollWidth)).toBeLessThanOrEqual(Math.ceil(size!.width));
+  }
+  await preview.getByRole("button", { name: "Descartar mensagem", exact: true }).click();
+  await expect(page.getByTestId("pending-status")).toHaveText("unconfirmed");
+  await expect(page.getByRole("button", { name: "Recuperar mensagem", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(2);
 });

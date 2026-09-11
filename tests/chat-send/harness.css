@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 24px;
+  font-family: Arial, sans-serif;
+}
+
+.pending-preview {
+  max-width: 680px;
+  min-height: 140px;
+  margin: 20px 0;
+  padding: 20px;
+  background: #f1f5f9;
+}
+
+.dark .pending-preview {
+  background: #0f172a;
+}
+
+.pending-preview > ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.receipt-preview {
+  align-self: flex-end;
+  max-width: 76%;
+  padding: 4px 8px;
+  border-radius: 6px 6px 0 6px;
+  background: #bbf7d0;
+  font-size: 14px;
+  text-align: right;
+}
+
+.dark .receipt-preview {
+  background: #166534;
+  color: #e2e8f0;
+}

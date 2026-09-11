@@ -12,6 +12,9 @@ export interface PendingChatSend {
   contactId?: number;
   fileName?: string;
   error?: string;
+  verificationStartedAt?: number;
+  verificationChecks?: number;
+  verificationLastCheckedAt?: number;
 }
 
 const sessions = new Map<string, PendingChatSend[]>();

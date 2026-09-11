@@ -10,7 +10,8 @@ import {
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
-import { ContactRegistrationConflict, Customer, WppContact } from "@/lib/sdk-local";
+import { Customer, WppContact } from "@/lib/sdk-local";
+import { getContactRegistrationConflict } from "@/lib/utils/contact-registration-conflict";
 import { Logger } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
@@ -61,14 +62,6 @@ interface IContactsContext {
   customerObjectMap: Map<number, Customer>;
   sectorMap: Map<number, string>;
 }
-
-const getRegistrationConflict = (error: unknown): ContactRegistrationConflict | null => {
-  const payload = (error as any)?.cause?.response?.data;
-  if (payload?.code !== "CONTACT_ALREADY_EXISTS") {
-    return null;
-  }
-  return payload as ContactRegistrationConflict;
-};
 
 export const ContactsContext = createContext<IContactsContext>({} as IContactsContext);
 export const useContactsContext = () => {
@@ -192,12 +185,12 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
           sectorIds,
         );
 
-        dispatch({ type: "add-contact", data: newContact });
-        toast.success("Contato criado com sucesso!");
+        dispatch({ type: "upsert-contact", data: newContact });
+        toast.success("Contato cadastrado com sucesso!");
         closeModal();
         return newContact;
       } catch (err) {
-        const conflict = getRegistrationConflict(err);
+        const conflict = getContactRegistrationConflict(err);
         if (conflict?.existingContact) {
           const proposal = {
             name,

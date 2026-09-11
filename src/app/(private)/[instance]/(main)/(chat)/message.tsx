@@ -48,6 +48,7 @@ export interface MessageProps {
   type: string;
   date: Date;
   status?: WppMessageStatus | null;
+  sendStatus?: ReactNode;
   fileId?: number | null;
   fileName?: string | null;
   fileType?: string | null;
@@ -89,8 +90,8 @@ export const liStyleVariants = {
 export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   PENDING: <AccessTimeIcon className="text-slate-300" />,
   UNKNOWN: (
-    <Tooltip title="Envio registrado, mas a confirmação do WhatsApp ainda é desconhecida. Não reenvie esta mensagem.">
-      <AccessTimeIcon className="text-amber-500" aria-label="Confirmação de envio desconhecida" />
+    <Tooltip title="Ainda sem confirmação de envio">
+      <AccessTimeIcon className="text-amber-500" aria-label="Ainda sem confirmação de envio" />
     </Tooltip>
   ),
   SENT: <DoneIcon className="text-slate-300" />,
@@ -109,6 +110,7 @@ export default function Message({
   mentionEntities,
   date,
   status,
+  sendStatus,
   fileId,
   fileName,
   fileType,
@@ -300,7 +302,7 @@ export default function Message({
                 <SmartToyIcon sx={{ fontSize: "0.85rem", color: "#8b5cf6" }} />
               </Tooltip>
             )}
-            {style !== "system" && status && statusComponents[status]}
+            {style !== "system" && (sendStatus ?? (status && statusComponents[status]))}
           </div>
         </div>
       </div>

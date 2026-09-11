@@ -29,6 +29,10 @@ import {
   subscribePendingChatSends,
   updatePendingChatSends,
 } from "@/lib/utils/pending-chat-sends";
+import {
+  PendingSendChecks,
+  PendingSendVerifier,
+} from "@/lib/utils/pending-send-verification";
 
 interface IChatContext {
   state: SendMessageDataState;
@@ -36,6 +40,7 @@ interface IChatContext {
   sendMessage: () => Promise<boolean>;
   isSending: boolean;
   pendingSends: PendingChatSend[];
+  pendingSendChecks: PendingSendChecks;
   checkPendingSend: (id: string) => Promise<void>;
   restoreFailedSend: (id: string) => void;
   discardFailedSend: (id: string) => void;
@@ -141,7 +146,10 @@ function ScopedChatProvider({
     () => EMPTY_PENDING_SENDS,
   );
   const pendingSends = allPendingSends.filter((attempt) => attempt.scope === scope);
-  const checkingAttempts = useRef(new Set<string>());
+  const verifier = useRef<PendingSendVerifier | null>(null);
+  const [pendingSendChecks, setPendingSendChecks] = useState<PendingSendChecks>({});
+  const lookupMessageAttemptRef = useRef(lookupMessageAttempt);
+  lookupMessageAttemptRef.current = lookupMessageAttempt;
   const updateAttempt = (id: string, patch: Partial<PendingChatSend>) =>
     updatePendingChatSends(sessionScope, (entries) =>
       entries.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)),
@@ -164,7 +172,7 @@ function ScopedChatProvider({
         status: "unconfirmed",
         messageId: message.id,
         contactId: message.contactId ?? undefined,
-        error: "O envio ainda não tem confirmação. Consulte antes de reenviar.",
+        error: "Ainda não foi possível confirmar o envio.",
       });
     } else {
       removeAttempt(id);
@@ -182,7 +190,7 @@ function ScopedChatProvider({
         if (attempt.status !== "unconfirmed")
           updateAttempt(attempt.id, {
             status: "unconfirmed",
-            error: "O envio ainda não tem confirmação. Consulte antes de reenviar.",
+            error: "Ainda não foi possível confirmar o envio.",
           });
       } else removeAttempt(attempt.id);
     }
@@ -348,7 +356,7 @@ function ScopedChatProvider({
           samePendingContent(attempt, scope, clientId, snapshot),
         )
       ) {
-        toast.info("Esta mensagem está aguardando confirmação. Consulte a tentativa pendente.");
+        toast.info("Esta mensagem ainda está sem confirmação. Verifique o envio na conversa.");
         return false;
       }
       if (!editingMessage) attemptId = createMessageAttemptKey();
@@ -403,46 +411,34 @@ function ScopedChatProvider({
   };
 
   const checkPendingSend = async (id: string) => {
-    const attempt = getPendingChatSends(sessionScope).find((entry) => entry.id === id);
-    if (
-      !attempt?.clientId ||
-      (attempt.status !== "unconfirmed" && !attempt.messageId) ||
-      checkingAttempts.current.has(id)
-    )
-      return;
-    checkingAttempts.current.add(id);
-    try {
-      const message = await lookupMessageAttempt(attempt.clientId, attempt.id);
-      if (!mounted.current) return;
-      if (message) settleAttempt(id, message);
-      else
-        updateAttempt(id, {
-          error:
-            "A tentativa não foi localizada nesta consulta. Consulte novamente antes de reenviar.",
-        });
-    } catch {
-      if (mounted.current)
-        updateAttempt(id, {
-          error: "Não foi possível consultar o envio. Tente consultar novamente.",
-        });
-    } finally {
-      checkingAttempts.current.delete(id);
-    }
+    if (!mounted.current || !activeSession) return;
+    await verifier.current?.check(id);
   };
 
   useEffect(() => {
     if (!activeSession) return;
-    // Socket events normally settle the attempt; reads also recover a missed event.
-    // Keep this timer stable while new messages are queued so continuous typing
-    // cannot postpone reconciliation of the first pending send.
-    const timer = setInterval(() => {
-      const waiting = getPendingChatSends(sessionScope).filter(
-        (attempt) => attempt.messageId && attempt.status === "sending",
-      );
-      for (const attempt of waiting) void checkPendingSend(attempt.id);
-    }, 5_000);
-    return () => clearInterval(timer);
-  }, [activeSession, sessionScope, lookupMessageAttempt]);
+    const currentVerifier = new PendingSendVerifier({
+      getAttempts: () => getPendingChatSends(sessionScope),
+      updateAttempt,
+      lookup: (clientId, id) => lookupMessageAttemptRef.current(clientId, id),
+      settle: settleAttempt,
+      onChange: setPendingSendChecks,
+    });
+    verifier.current = currentVerifier;
+    currentVerifier.tick();
+    // Keep the timer stable across messages and token refreshes. Reads recover
+    // missing socket events, with a persisted limit and no automatic resend.
+    const timer = setInterval(() => currentVerifier.tick(), 1_000);
+    return () => {
+      clearInterval(timer);
+      currentVerifier.stop();
+      if (verifier.current === currentVerifier) verifier.current = null;
+    };
+  }, [activeSession, sessionScope]);
+
+  useEffect(() => {
+    verifier.current?.tick();
+  }, [allPendingSends]);
 
   const restoreFailedSend = (id: string) => {
     if (!mounted.current || activeScopeRef.current !== scope || isReadOnlyMode) return;
@@ -550,6 +546,7 @@ function ScopedChatProvider({
         isReadOnlyMode,
         isSending,
         pendingSends,
+        pendingSendChecks,
         checkPendingSend,
         restoreFailedSend,
         discardFailedSend,

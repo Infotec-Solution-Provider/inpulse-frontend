@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { Add, Close } from "@mui/icons-material";
 import { AppContext } from "@/app/(private)/[instance]/app-context";
+import { getContactRegistrationConflict } from "@/lib/utils/contact-registration-conflict";
 import ContactRegistrationConflictModal from "../../../contacts/(table)/(modal)/contact-registration-conflict-modal";
 
 interface ContactModalProps {
@@ -14,9 +15,12 @@ interface ContactModalProps {
 }
 
 export default function ContactsModal({ customer }: ContactModalProps) {
-  const { closeModal, openModal } = useContext(AppContext);
+  const { closeModal } = useContext(AppContext);
   const { wppApi, updateChatContact } = useContext(WhatsappContext);
   const [contacts, setContacts] = useState<WppContact[]>([]);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationConflict, setRegistrationConflict] =
+    useState<ContactRegistrationConflict | null>(null);
   const [filter, setFilter] = useState<{ name: string; phone: string }>({ name: "", phone: "" });
   const [form, setForm] = useState({
     name: "",
@@ -99,59 +103,80 @@ export default function ContactsModal({ customer }: ContactModalProps) {
     setForm({ ...form, phone: e.target.value.replace(/\D/g, "") });
   };
 
-  const handleClickRegister = () => {
-    if (wppApi.current) {
-      wppApi.current
-        .createContact(form.name, form.phone, customer?.CODIGO)
-        .then((newContact) => {
-          setContacts((prevContacts) => [...prevContacts, newContact]);
-          setForm({ name: "", phone: "" });
-          toast.success("Contato cadastrado com sucesso!");
-        })
-        .catch((error) => {
-          const conflict = (error as any)?.cause?.response?.data as
-            | ContactRegistrationConflict
-            | undefined;
-          if (conflict?.existingContact && conflict.code === "CONTACT_ALREADY_EXISTS") {
-            openModal(
-              <ContactRegistrationConflictModal
-                conflict={conflict}
-                onCancel={closeModal}
-                onConfirm={async () => {
-                  if (conflict.existingContact.isDeleted) {
-                    const result = await wppApi.current.reactivateContact(
-                      conflict.existingContact.id,
-                      {
-                        name: form.name,
-                        customerId: customer.CODIGO,
-                        sectorIds: [],
-                      },
-                    );
-                    toast.success(
-                      result.outcome === "EXECUTED"
-                        ? "Contato reativado e atualizado com sucesso!"
-                        : "Solicitação enviada ao supervisor!",
-                    );
-                  } else {
-                    await wppApi.current.createContact(
-                      form.name,
-                      form.phone,
-                      customer.CODIGO,
-                      [],
-                      true,
-                    );
-                    toast.success("Cadastro sobrescrito com sucesso!");
-                  }
-                  closeModal();
-                }}
-              />,
-            );
-            return;
-          }
-          toast.error("Falha ao cadastrar contato:\n" + sanitizeErrorMessage(error));
-        });
+  const updateRegisteredContact = (registeredContact: WppContact) => {
+    setContacts((prevContacts) =>
+      prevContacts.some((contact) => contact.id === registeredContact.id)
+        ? prevContacts.map((contact) =>
+            contact.id === registeredContact.id ? registeredContact : contact,
+          )
+        : [...prevContacts, registeredContact],
+    );
+    updateChatContact(registeredContact.id, registeredContact.name, customer);
+  };
+
+  const handleClickRegister = async () => {
+    if (!wppApi.current || isRegistering || !isFormValid) return;
+
+    setIsRegistering(true);
+    try {
+      const registeredContact = await wppApi.current.createContact(
+        form.name,
+        form.phone,
+        customer.CODIGO,
+      );
+      updateRegisteredContact(registeredContact);
+      setForm({ name: "", phone: "" });
+      toast.success("Contato cadastrado no cliente com sucesso!");
+    } catch (error) {
+      const conflict = getContactRegistrationConflict(error);
+      if (conflict) {
+        setRegistrationConflict(conflict);
+        return;
+      }
+      toast.error("Falha ao cadastrar contato:\n" + sanitizeErrorMessage(error));
+    } finally {
+      setIsRegistering(false);
     }
   };
+
+  if (registrationConflict) {
+    return (
+      <ContactRegistrationConflictModal
+        conflict={registrationConflict}
+        onCancel={() => setRegistrationConflict(null)}
+        onConfirm={async () => {
+          if (registrationConflict.existingContact.isDeleted) {
+            const result = await wppApi.current.reactivateContact(
+              registrationConflict.existingContact.id,
+              {
+                name: form.name,
+                customerId: customer.CODIGO,
+                sectorIds: [],
+              },
+            );
+            if (result.outcome === "EXECUTED") {
+              updateRegisteredContact(result.contact);
+              toast.success("Contato reativado e atualizado com sucesso!");
+            } else {
+              toast.success("Solicitação enviada ao supervisor!");
+            }
+          } else {
+            const registeredContact = await wppApi.current.createContact(
+              form.name,
+              form.phone,
+              customer.CODIGO,
+              [],
+              true,
+            );
+            updateRegisteredContact(registeredContact);
+            toast.success("Cadastro sobrescrito com sucesso!");
+          }
+          setForm({ name: "", phone: "" });
+          setRegistrationConflict(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
@@ -234,6 +259,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
             placeholder="João Silva"
             onChange={handleChangeName}
             value={form.name}
+            disabled={isRegistering}
             variant="outlined"
             className="flex-1 bg-white dark:bg-slate-600"
             sx={{
@@ -248,6 +274,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
             placeholder="5511999999999"
             onChange={handleChangePhone}
             value={form.phone}
+            disabled={isRegistering}
             variant="outlined"
             className="flex-1 bg-white dark:bg-slate-600"
             sx={{
@@ -259,7 +286,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
           />
           <Button
             variant="contained"
-            disabled={!isFormValid}
+            disabled={!isFormValid || isRegistering}
             onClick={handleClickRegister}
             className="bg-indigo-600 px-6 py-3 hover:bg-indigo-700"
             startIcon={<Add />}

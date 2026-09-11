@@ -12,14 +12,31 @@ interface Props {
 
 export default function ContactRegistrationConflictModal({ conflict, onCancel, onConfirm }: Props) {
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const contact = conflict.existingContact;
   const customer = contact.customer;
   const isDeleted = contact.isDeleted === true;
+  const customerId =
+    customer?.CODIGO && customer.CODIGO > 0
+      ? customer.CODIGO
+      : contact.customerId && contact.customerId > 0
+        ? contact.customerId
+        : null;
+  const customerLabel = customerId
+    ? `${customer?.RAZAO || customer?.FANTASIA || "Cliente"} (#${customerId})`
+    : null;
 
   const handleConfirm = async () => {
     setSubmitting(true);
+    setErrorMessage(null);
     try {
       await onConfirm();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error && error.message
+          ? error.message
+          : "Não foi possível concluir o cadastro. Tente novamente.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -33,7 +50,9 @@ export default function ContactRegistrationConflictModal({ conflict, onCancel, o
             Contato já cadastrado
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-            Confira o cadastro atual antes de continuar.
+            {customerLabel
+              ? `Este número já está cadastrado no cliente ${customerLabel}.`
+              : "Este número já está cadastrado na ferramenta e não possui cliente vinculado."}
           </p>
         </div>
         <Chip
@@ -55,11 +74,7 @@ export default function ContactRegistrationConflictModal({ conflict, onCancel, o
         <div className="sm:col-span-2">
           <span className="text-slate-500">Cliente vinculado</span>
           <p className="font-medium text-slate-900 dark:text-white">
-            {customer
-              ? `${customer.RAZAO || customer.FANTASIA || "Cliente"} (#${customer.CODIGO})`
-              : contact.customerId
-                ? `Cliente #${contact.customerId}`
-                : "Nenhum cliente vinculado"}
+            {customerLabel || "Nenhum cliente vinculado"}
           </p>
         </div>
       </div>
@@ -80,6 +95,12 @@ export default function ContactRegistrationConflictModal({ conflict, onCancel, o
         <Alert severity="info">
           Ao confirmar, nome, cliente e setores serão substituídos pelos dados informados no novo
           cadastro.
+        </Alert>
+      )}
+
+      {errorMessage && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {errorMessage}
         </Alert>
       )}
 

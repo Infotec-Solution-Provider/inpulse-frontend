@@ -8,6 +8,8 @@ import { InternalChatContext } from "../../internal-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import Message from "./message";
+import ChatPendingSends from "./chat-pending-sends";
+import PendingSendStatus from "./pending-send-status";
 
 type BubbleStyle = "system" | "sent" | "received";
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
@@ -34,12 +36,14 @@ export default function RenderInternalChatMessages({
   isReadOnlyMode,
 }: RenderInternalChatMessagesProps) {
   const { currentInternalChatMessages, users, contacts } = useContext(InternalChatContext);
-  const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
+  const { getMessageById, handleQuoteMessage, handleEditMessage, pendingSends } =
+    useContext(ChatContext);
   const { user } = useAuthContext();
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const latestPendingId = pendingSends.at(-1)?.id;
 
   useEffect(() => {
     if (!isSelectionMode && messagesEndRef.current) {
@@ -48,7 +52,7 @@ export default function RenderInternalChatMessages({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentInternalChatMessages, isSelectionMode]);
+  }, [currentInternalChatMessages, isSelectionMode, latestPendingId]);
 
   const total = currentInternalChatMessages?.length ?? 0;
   const visibleMessages = useMemo(
@@ -105,6 +109,9 @@ export default function RenderInternalChatMessages({
 
       <ul className="flex flex-col gap-2">
         {visibleMessages.map((m) => {
+          const pending = pendingSends.find(
+            (attempt) => attempt.messageId === m.id && !attempt.clientId,
+          );
           const findQuoted =
             m.internalChatId &&
             m.quotedId &&
@@ -130,6 +137,14 @@ export default function RenderInternalChatMessages({
               type={m.type}
               date={new Date(Number(m.timestamp))}
               status={m.status}
+              sendStatus={
+                pending && (
+                  <PendingSendStatus
+                    attempt={pending}
+                    readOnly={isReadOnlyMode || isSelectionMode}
+                  />
+                )
+              }
               fileId={m.fileId}
               fileName={m.fileName}
               fileType={m.fileType}
@@ -156,6 +171,10 @@ export default function RenderInternalChatMessages({
             />
           );
         })}
+        <ChatPendingSends
+          renderedMessages={visibleMessages}
+          readOnly={isReadOnlyMode || isSelectionMode}
+        />
         <div ref={messagesEndRef} className="h-1" />
       </ul>
     </div>

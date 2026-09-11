@@ -9,6 +9,8 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import getQuotedMsgProps from "./(utils)/getQuotedMsgProps";
 import { ChatContext } from "./chat-context";
 import Message from "./message";
+import ChatPendingSends from "./chat-pending-sends";
+import PendingSendStatus from "./pending-send-status";
 import { canReactToWhatsappMessage } from "@/lib/utils/message-reactions";
 
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
@@ -42,12 +44,14 @@ export default function RenderWhatsappChatMessages({
   isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
   const { currentChatMessages, reactToMessage, channels } = useWhatsappContext();
-  const { getMessageById, handleQuoteMessage, handleEditMessage } = useContext(ChatContext);
+  const { getMessageById, handleQuoteMessage, handleEditMessage, pendingSends } =
+    useContext(ChatContext);
   const { instance } = useContext(AuthContext);
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const latestPendingId = pendingSends.at(-1)?.id;
 
   useEffect(() => {
     if (!isSelectionMode && messagesEndRef.current) {
@@ -56,7 +60,7 @@ export default function RenderWhatsappChatMessages({
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentChatMessages, isSelectionMode]);
+  }, [currentChatMessages, isSelectionMode, latestPendingId]);
 
   const messagesToRender = useMemo(
     () =>
@@ -128,6 +132,9 @@ export default function RenderWhatsappChatMessages({
 
       <ul className="flex flex-col gap-2">
         {visibleMessages.map((m) => {
+          const pending = pendingSends.find(
+            (attempt) => attempt.messageId === m.id && attempt.clientId === m.clientId,
+          );
           const findQuoted = m.contactId && m.quotedId && getMessageById(m.contactId, m.quotedId);
           const quotedMsgProps =
             findQuoted && "to" in findQuoted
@@ -144,6 +151,14 @@ export default function RenderWhatsappChatMessages({
               type={m.type}
               date={new Date(+m.timestamp)}
               status={m.status}
+              sendStatus={
+                pending && (
+                  <PendingSendStatus
+                    attempt={pending}
+                    readOnly={isReadOnlyMode || isSelectionMode}
+                  />
+                )
+              }
               fileId={m.fileId}
               fileName={m.fileName}
               fileType={m.fileType}
@@ -185,6 +200,10 @@ export default function RenderWhatsappChatMessages({
             />
           );
         })}
+        <ChatPendingSends
+          renderedMessages={visibleMessages}
+          readOnly={isReadOnlyMode || isSelectionMode}
+        />
         <div ref={messagesEndRef} className="h-1" />
       </ul>
     </div>
