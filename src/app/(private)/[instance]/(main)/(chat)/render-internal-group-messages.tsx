@@ -53,12 +53,14 @@ export default function RenderInternalGroupMessages({
 
   const [visibleCount, setVisibleCount] = useState(30);
   const [visibleFileCount, setVisibleFileCount] = useState(10);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const latestPendingId = pendingSends.at(-1)?.id;
 
   useEffect(() => {
-    if (!isSelectionMode && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView();
+    if (!isSelectionMode && messagesContainerRef.current) {
+      // Scroll only the history; scrollIntoView also moves ancestor panels.
+      const container = messagesContainerRef.current;
+      container.scrollTop = container.scrollHeight;
     }
   }, [currentInternalChatMessages, isSelectionMode, latestPendingId]);
 
@@ -87,7 +89,10 @@ export default function RenderInternalGroupMessages({
   const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
 
   return (
-    <div className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900">
+    <div
+      ref={messagesContainerRef}
+      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+    >
       {visibleCount < (currentInternalChatMessages?.length ?? 0) && (
         <div className="mb-2 flex justify-center">
           <Button
@@ -214,7 +219,7 @@ export default function RenderInternalGroupMessages({
           renderedMessages={visibleMessages}
           readOnly={isReadOnlyMode || isSelectionMode}
         />
-        <div ref={messagesEndRef} className="h-1" />
+        <div className="h-1" />
       </ul>
     </div>
   );
