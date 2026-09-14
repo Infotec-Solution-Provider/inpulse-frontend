@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { margin: 0; font-family: Arial, sans-serif; }
+.scroll-shell { padding: 24px; }
+.scroll-app-header { height: 56px; }
+/* Ancestors intentionally have overflow to detect scrolling outside the list,
+   including overflow:hidden containers that scrollIntoView can still scroll. */
+.scroll-workspace { height: 560px; overflow: hidden; border: 1px solid #64748b; }
+.scroll-panel { display: flex; flex-direction: column; height: 440px; margin: 40px 20px; }
+.scroll-chat-header { flex: 0 0 56px; background: #cbd5e1; }
+.scroll-message-slot { flex: 1; min-height: 0; overflow: hidden; }
+.scroll-composer { flex: 0 0 72px; display: flex; background: #f1f5f9; }
+.scroll-composer textarea { flex: 1; min-width: 0; resize: none; }
+.scroll-message { min-height: 48px; padding: 12px; background: white; }
+.scroll-workspace-tail { height: 500px; }
+.scroll-page-tail { height: 900px; }

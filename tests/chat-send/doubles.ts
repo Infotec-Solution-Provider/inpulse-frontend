@@ -1,4 +1,4 @@
-import { createContext, useSyncExternalStore } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import type { User, WppMessage } from "../../src/lib/sdk-local";
 import type { SendMessageDataState } from "../../src/app/(private)/[instance]/(main)/(chat)/chat-reducer";
 import {
@@ -113,6 +113,8 @@ export const internal = {
 export const AuthContext = createContext(environment.auth);
 export const WhatsappContext = createContext({ ...whatsapp, ...environment });
 export const InternalChatContext = createContext(internal);
+export const useAuthContext = () => useContext(AuthContext);
+export const useWhatsappContext = () => useContext(WhatsappContext);
 export const toast = {
   error: (message: string) => { state.toasts.push(message); },
   info: (message: string) => { state.toasts.push(message); },

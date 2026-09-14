@@ -10,10 +10,12 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 process.chdir(root);
 const doubles = "/tests/chat-send/doubles.ts";
 const stubs = {
-  "auth-context": `export { AuthContext } from '${doubles}'`,
-  "whatsapp-context": `export { WhatsappContext } from '${doubles}'`,
+  "auth-context": `export { AuthContext, useAuthContext } from '${doubles}'`,
+  "whatsapp-context": `export { WhatsappContext, useWhatsappContext } from '${doubles}'`,
   "internal-context": `export { InternalChatContext } from '${doubles}'`,
   "react-toastify": `export { toast } from '${doubles}'`,
+  "message": `export { default } from '/tests/chat-send/scroll-message.tsx'`,
+  "group-message": `export { default } from '/tests/chat-send/scroll-message.tsx'`,
 };
 
 const server = await createServer({
