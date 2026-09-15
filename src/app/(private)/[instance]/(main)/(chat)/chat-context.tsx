@@ -380,6 +380,8 @@ function ScopedChatProvider({
       contactId: currentChat.chatType === "wpp" ? currentChat.contact!.id : undefined,
       to: contactAddress ?? undefined,
       fileName: snapshot.file?.name,
+      fileSize: snapshot.file?.size,
+      fileLastModified: snapshot.file?.lastModified,
     };
     queuedHere.current.add(attempt.id);
     updatePendingChatSends(sessionScope, (entries) => [...entries, attempt]);

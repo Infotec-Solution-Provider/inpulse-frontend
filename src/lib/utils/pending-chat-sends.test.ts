@@ -71,6 +71,56 @@ describe("pending send persistence", () => {
     expect(JSON.parse(serialized)[0].fileName).toBe("report.pdf");
   });
 
+  it("does not confuse a newly recorded audio with an uncertain clip that has the same fixed filename", async () => {
+    const { samePendingContent } = await import("./pending-chat-sends");
+    const previous = attempt("uncertain-audio");
+    previous.status = "unconfirmed";
+    previous.snapshot.sendAsAudio = true;
+    previous.fileName = "audio.mp3";
+    previous.fileSize = 1_024;
+    previous.fileLastModified = 100;
+    const newClip = new File(["new recording bytes"], "audio.mp3", {
+      type: "audio/mpeg",
+      lastModified: 200,
+    });
+    const sameClip = new File(["x".repeat(1_024)], "audio.mp3", {
+      type: "audio/mpeg",
+      lastModified: 100,
+    });
+
+    expect(
+      samePendingContent(previous, previous.scope, previous.clientId, {
+        ...previous.snapshot,
+        file: newClip,
+      }),
+    ).toBe(false);
+    expect(
+      samePendingContent(previous, previous.scope, previous.clientId, {
+        ...previous.snapshot,
+        file: sameClip,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not let a legacy filename-only attempt block a new audio after reload", async () => {
+    const { samePendingContent } = await import("./pending-chat-sends");
+    const legacy = attempt("legacy-audio");
+    legacy.status = "unconfirmed";
+    legacy.snapshot.sendAsAudio = true;
+    legacy.fileName = "audio.mp3";
+    const freshClip = new File(["fresh recording"], "audio.mp3", {
+      type: "audio/mpeg",
+      lastModified: 300,
+    });
+
+    expect(
+      samePendingContent(legacy, legacy.scope, legacy.clientId, {
+        ...legacy.snapshot,
+        file: freshClip,
+      }),
+    ).toBe(false);
+  });
+
   it("settles one session without exposing or removing another user's attempts", async () => {
     const store = await import("./pending-chat-sends");
     store.updatePendingChatSends("tenant-a/7", () => [attempt("a")]);

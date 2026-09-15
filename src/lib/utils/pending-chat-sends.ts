@@ -11,6 +11,13 @@ export interface PendingChatSend {
   messageId?: number;
   contactId?: number;
   fileName?: string;
+  /**
+   * File bytes are deliberately not persisted, but this lightweight fingerprint
+   * distinguishes a fresh recorder clip from a possibly-delivered one after a
+   * reload. AudioRecorder names every clip "audio.mp3".
+   */
+  fileSize?: number;
+  fileLastModified?: number;
   error?: string;
   verificationStartedAt?: number;
   verificationChecks?: number;
@@ -102,16 +109,27 @@ export function samePendingContent(
   snapshot: SendMessageDataState,
 ): boolean {
   const original = attempt.snapshot;
-  return (
+  const sameMessage =
     attempt.scope === scope &&
     attempt.clientId === clientId &&
     attempt.status === "unconfirmed" &&
     original.text === snapshot.text &&
     original.quotedId === snapshot.quotedId &&
     original.fileId === snapshot.fileId &&
-    attempt.fileName === snapshot.file?.name &&
     original.sendAsAudio === snapshot.sendAsAudio &&
     original.sendAsDocument === snapshot.sendAsDocument &&
-    JSON.stringify(original.mentions || []) === JSON.stringify(snapshot.mentions || [])
+    JSON.stringify(original.mentions || []) === JSON.stringify(snapshot.mentions || []);
+  if (!sameMessage) return false;
+
+  if (!snapshot.file) return !attempt.fileName;
+  if (attempt.fileName !== snapshot.file.name) return false;
+
+  // Older session entries only retained the filename. A filename is not an
+  // identity for recorder output, so it must not indefinitely block a new clip.
+  return (
+    attempt.fileSize !== undefined &&
+    attempt.fileLastModified !== undefined &&
+    attempt.fileSize === snapshot.file.size &&
+    attempt.fileLastModified === snapshot.file.lastModified
   );
 }
