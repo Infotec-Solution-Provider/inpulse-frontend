@@ -236,6 +236,8 @@ export interface WppMessage {
   mentionEntities?: MessageMentionEntity[];
   timestamp: string;
   status: WppMessageStatus;
+  /** Delivery diagnostic for an explicitly rejected or unconfirmed operator send. */
+  sendError?: string | null;
   isForwarded: boolean;
   isEdited: boolean;
   reaction?: string;

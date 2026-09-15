@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { WppMessage } from "@/lib/sdk-local";
 import type { PendingChatSend } from "./pending-chat-sends";
 import { PendingSendVerifier } from "./pending-send-verification";
+import { pendingSendReceiptPatch } from "./pending-send-receipt";
 
 function setup(overrides: Partial<PendingChatSend> = {}) {
   let now = 1_000_000;
@@ -25,11 +26,11 @@ function setup(overrides: Partial<PendingChatSend> = {}) {
     attempts = attempts.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry));
   });
   const settle = vi.fn((id: string, message: WppMessage) => {
-    if (message.status === "PENDING")
-      updateAttempt(id, { status: "sending", messageId: message.id });
-    else if (message.status === "UNKNOWN" || message.status === "ERROR") {
-      updateAttempt(id, { status: "unconfirmed", messageId: message.id });
-    } else attempts = attempts.filter((entry) => entry.id !== id);
+    const current = attempts.find((entry) => entry.id === id);
+    if (!current) return;
+    const patch = pendingSendReceiptPatch(current, message);
+    if (patch === null) attempts = attempts.filter((entry) => entry.id !== id);
+    else updateAttempt(id, patch);
   });
   const onChange = vi.fn();
   const options = {
@@ -78,7 +79,7 @@ describe("pending send verification", () => {
     expect(test.onChange).toHaveBeenLastCalledWith({});
   });
 
-  it.each(["PENDING", "UNKNOWN", "ERROR"] as const)(
+  it.each(["PENDING", "UNKNOWN"] as const)(
     "preserves %s receipts and stops after six increasing waits; manual checks remain available",
     async (status) => {
       const test = setup();
@@ -106,6 +107,23 @@ describe("pending send verification", () => {
       expect(test.getAttempts()).toEqual([]);
     },
   );
+
+  it("stops verifying an explicit provider rejection and retains the reason for manual recovery", async () => {
+    const test = setup();
+    const sendError = "A Meta recusou a mídia (código 100).";
+    test.lookup.mockResolvedValue({ ...receipt("ERROR"), sendError });
+    await test.verifier.check("original-idempotency-key");
+    expect(test.getAttempts()[0]).toMatchObject({
+      status: "failed",
+      messageId: 41,
+      error: sendError,
+    });
+    expect(test.onChange).toHaveBeenLastCalledWith({});
+    test.elapse(120_000);
+    test.verifier.tick();
+    await test.verifier.check("original-idempotency-key");
+    expect(test.lookup).toHaveBeenCalledTimes(1);
+  });
 
   it("bounds absent receipts and lookup errors without declaring the send failed", async () => {
     const test = setup();

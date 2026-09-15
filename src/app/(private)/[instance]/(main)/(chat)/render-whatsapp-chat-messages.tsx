@@ -156,6 +156,7 @@ export default function RenderWhatsappChatMessages({
               type={m.type}
               date={new Date(+m.timestamp)}
               status={m.status}
+              sendError={m.sendError}
               sendStatus={
                 pending && (
                   <PendingSendStatus

@@ -29,10 +29,8 @@ import {
   subscribePendingChatSends,
   updatePendingChatSends,
 } from "@/lib/utils/pending-chat-sends";
-import {
-  PendingSendChecks,
-  PendingSendVerifier,
-} from "@/lib/utils/pending-send-verification";
+import { PendingSendChecks, PendingSendVerifier } from "@/lib/utils/pending-send-verification";
+import { pendingSendReceiptPatch } from "@/lib/utils/pending-send-receipt";
 
 interface IChatContext {
   state: SendMessageDataState;
@@ -157,26 +155,14 @@ function ScopedChatProvider({
   const removeAttempt = (id: string) =>
     updatePendingChatSends(sessionScope, (entries) => entries.filter((entry) => entry.id !== id));
   const settleAttempt = (id: string, message: WppMessage) => {
-    if (message.status === "PENDING") {
-      const current = getPendingChatSends(sessionScope).find((entry) => entry.id === id);
-      // A late read cannot replace an already observed uncertain terminal state.
-      if (current?.status === "unconfirmed" && current.messageId) return;
-      updateAttempt(id, {
-        status: "sending",
-        messageId: message.id,
-        contactId: message.contactId ?? undefined,
-        error: undefined,
-      });
-    } else if (message.status === "UNKNOWN" || message.status === "ERROR") {
-      updateAttempt(id, {
-        status: "unconfirmed",
-        messageId: message.id,
-        contactId: message.contactId ?? undefined,
-        error: "Ainda não foi possível confirmar o envio.",
-      });
-    } else {
-      removeAttempt(id);
-    }
+    const current = getPendingChatSends(sessionScope).find((entry) => entry.id === id);
+    if (!current) return;
+    const patch = pendingSendReceiptPatch(current, message);
+    if (patch === null) removeAttempt(id);
+    else if (
+      Object.entries(patch).some(([key, value]) => current[key as keyof PendingChatSend] !== value)
+    )
+      updateAttempt(id, patch);
   };
 
   useEffect(() => {
@@ -186,13 +172,7 @@ function ScopedChatProvider({
         (item) => item.id === attempt.messageId,
       );
       if (!message || message.status === "PENDING") continue;
-      if (message.status === "UNKNOWN" || message.status === "ERROR") {
-        if (attempt.status !== "unconfirmed")
-          updateAttempt(attempt.id, {
-            status: "unconfirmed",
-            error: "Ainda não foi possível confirmar o envio.",
-          });
-      } else removeAttempt(attempt.id);
+      settleAttempt(attempt.id, message);
     }
   }, [allPendingSends, whatsappMsgs, sessionScope]);
 

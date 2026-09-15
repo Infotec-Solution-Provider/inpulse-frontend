@@ -225,6 +225,44 @@ test("a definitive failure can be restored after clearing a new draft without ov
   expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
 });
 
+for (const source of ["response", "lookup", "socket"] as const) {
+  test(`an explicit provider rejection from ${source} shows its reason and only restores a draft`, async ({ page }) => {
+    const reason = "A Meta recusou a mídia (código 100).";
+    await sendDraft(page, "Imagem rejeitada");
+    if (source === "response") {
+      await page.evaluate((error) => window.chatSendHarness.resolveSend(0, "ERROR", error), reason);
+    } else {
+      await page.evaluate(() => window.chatSendHarness.resolveSend(0, "PENDING"));
+      await expect(page.getByTestId("pending-send")).toHaveAttribute("data-message-id", "800");
+      if (source === "lookup") {
+        await page.getByRole("button", { name: "Verificar envio", exact: true }).click();
+        await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.lookups.length)).toBe(1);
+        await page.evaluate((error) => window.chatSendHarness.resolveLookup(true, 0, "ERROR", error), reason);
+      } else {
+        await page.evaluate((error) => window.chatSendHarness.publishMessage("ERROR", error), reason);
+      }
+    }
+    await expect(page.getByTestId("pending-status")).toHaveText("failed");
+    await expect(page.getByRole("img", { name: reason, exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Verificar envio", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Recuperar mensagem", exact: true }).click();
+    await expect(page.getByLabel("Message draft")).toHaveValue("Imagem rejeitada");
+    await expect(page.getByTestId("pending-send")).toHaveCount(0);
+    expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
+  });
+}
+
+test("a persisted ambiguous result remains uncertain and cannot be recovered or resent automatically", async ({ page }) => {
+  await sendDraft(page, "Imagem sem confirmação");
+  await page.evaluate(() => window.chatSendHarness.resolveSend(0, "UNKNOWN", "Sem resposta da Meta após o envio."));
+  await expect(page.getByTestId("pending-status")).toHaveText("unconfirmed");
+  await expect(page.getByRole("button", { name: "Recuperar mensagem", exact: true })).toHaveCount(0);
+  await page.getByLabel("Message draft").fill("Imagem sem confirmação");
+  await page.getByLabel("Message draft").press("Enter");
+  await expect(page.getByLabel("Message draft")).toHaveValue("Imagem sem confirmação");
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(1);
+});
+
 test("a definitive rejection preserves the failed message and continues the following message", async ({ page }) => {
   await sendDraft(page, "Rejected first message");
   await page.getByLabel("Message draft").fill("Send this second message");

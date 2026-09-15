@@ -122,8 +122,8 @@ export const toast = {
   warning: (message: string) => { state.toasts.push(message); },
 };
 
-export function resolveSend(index = 0, status: WppMessage["status"] = "SENT") {
-  state.sends[index].resolve({ ...quotedMessage, id: 800 + index, status });
+export function resolveSend(index = 0, status: WppMessage["status"] = "SENT", sendError?: string) {
+  state.sends[index].resolve({ ...quotedMessage, id: 800 + index, status, sendError });
 }
 export function rejectSend(kind: "unknown" | "definitive" | "http400", index = 0) {
   const send = state.sends[index];
@@ -133,6 +133,10 @@ export function rejectSend(kind: "unknown" | "definitive" | "http400", index = 0
       ? Object.assign(new Error("Provider failed after dispatch."), { response: { status: 400 } })
     : new UnconfirmedMessageSendError(send.data.idempotencyKey!, new Error("Response timed out")));
 }
-export function resolveLookup(found: boolean, index = 0) {
-  state.lookups[index].resolve(found ? { ...quotedMessage, id: 800, status: "SENT" } : null);
+export function resolveLookup(found: boolean, index = 0, status: WppMessage["status"] = "SENT", sendError?: string) {
+  state.lookups[index].resolve(found ? { ...quotedMessage, id: 800, status, sendError } : null);
+}
+export function publishMessage(status: WppMessage["status"], sendError?: string) {
+  whatsapp.messages = { 101: [quotedMessage, { ...quotedMessage, id: 800, status, sendError }] };
+  updateEnvironment({ ...environment });
 }

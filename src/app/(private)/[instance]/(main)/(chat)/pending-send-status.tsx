@@ -81,6 +81,7 @@ export default function PendingSendStatus({
   const canCheck = !!attempt.clientId && (attempt.status === "unconfirmed" || !!attempt.messageId);
   const failureHint =
     (attempt.error && failureHints[attempt.error]) ||
+    attempt.error ||
     "Não foi possível enviar. Recupere a mensagem para tentar novamente.";
   // Announce state changes without narrating every background request.
   const announcement =
@@ -127,7 +128,9 @@ export default function PendingSendStatus({
   if (canCheck && !readOnly) {
     const label = checking ? "Verificando envio…" : "Verificar envio";
     const tooltip =
-      checking || automatic ? "Verificando envio…" : "Ainda sem confirmação. Verificar envio";
+      checking || automatic
+        ? "Verificando envio…"
+        : attempt.error || "Ainda sem confirmação. Verificar envio";
     return (
       <span
         className={

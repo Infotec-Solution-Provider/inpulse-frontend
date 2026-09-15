@@ -48,6 +48,7 @@ export interface MessageProps {
   type: string;
   date: Date;
   status?: WppMessageStatus | null;
+  sendError?: string | null;
   sendStatus?: ReactNode;
   fileId?: number | null;
   fileName?: string | null;
@@ -98,7 +99,11 @@ export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   RECEIVED: <DoneAllIcon className="text-slate-300" />,
   READ: <DoneAllIcon className="text-blue-300" />,
   DOWNLOADED: <DownloadDoneIcon className="text-blue-300" />,
-  ERROR: <ErrorIcon className="text-red-300" />,
+  ERROR: (
+    <Tooltip title="Falha no envio">
+      <ErrorIcon className="text-red-300" aria-label="Falha no envio" />
+    </Tooltip>
+  ),
   REVOKED: <DeleteIcon className="text-slate-300" />,
 };
 
@@ -110,6 +115,7 @@ export default function Message({
   mentionEntities,
   date,
   status,
+  sendError,
   sendStatus,
   fileId,
   fileName,
@@ -302,7 +308,22 @@ export default function Message({
                 <SmartToyIcon sx={{ fontSize: "0.85rem", color: "#8b5cf6" }} />
               </Tooltip>
             )}
-            {style !== "system" && (sendStatus ?? (status && statusComponents[status]))}
+            {style !== "system" &&
+              (sendStatus ??
+                (status &&
+                  (sendError && (status === "ERROR" || status === "UNKNOWN") ? (
+                    <Tooltip title={sendError} arrow>
+                      <span tabIndex={0} role="img" aria-label={sendError} className="inline-flex">
+                        {status === "ERROR" ? (
+                          <ErrorIcon className="text-red-300" />
+                        ) : (
+                          <AccessTimeIcon className="text-amber-500" />
+                        )}
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    statusComponents[status]
+                  ))))}
           </div>
         </div>
       </div>
