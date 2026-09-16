@@ -32,6 +32,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("pending send persistence", () => {
+  it("only resumes a missing identified WhatsApp attempt with its complete original payload", async () => {
+    const { canResumePendingSend } = await import("./pending-chat-sends");
+    const original: PendingChatSend = {
+      ...attempt("same-key"), status: "unconfirmed", attemptNotFound: true,
+      chatId: 1, contactId: 2, to: "5511999999999",
+    };
+    expect(canResumePendingSend(original)).toBe(true);
+    expect(canResumePendingSend({ ...original, messageId: 41 })).toBe(false);
+    expect(canResumePendingSend({ ...original, clientId: undefined })).toBe(false);
+    expect(canResumePendingSend({ ...original, attemptNotFound: false })).toBe(false);
+    expect(canResumePendingSend({ ...original, status: "queued" })).toBe(false);
+    expect(canResumePendingSend({ ...original, fileName: "lost.pdf" })).toBe(false);
+    expect(canResumePendingSend({ ...original, fileName: "kept.pdf", snapshot: { ...original.snapshot, fileId: 22 } })).toBe(true);
+  });
   it.each([
     { messageId: undefined, status: "unconfirmed" },
     { messageId: 41, status: "sending" },

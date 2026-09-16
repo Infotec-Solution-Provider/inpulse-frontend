@@ -13,6 +13,7 @@ import CustomersProvider from "./(cruds)/customers/customers-context";
 import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-context";
 import { InternalChatProvider } from "./internal-context";
 import WhatsappProvider from "./whatsapp-context";
+import ChatProvider from "./(main)/(chat)/chat-context";
 import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
 import { AuthContext } from "@/app/auth-context";
@@ -98,22 +99,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <ReadyMessagesProvider>
                     <CustomersProvider>
                       <ThemeProvider>
-                        <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
-                          <Header />
-                          <main className="min-h-0 overflow-y-auto">
-                            <RouteFeatureGate>{children}</RouteFeatureGate>
-                          </main>
-                          <Modal
-                            open={!!modal}
-                            onClose={(_, r) => {
-                              if (r === "backdropClick") return;
-                              setModal(null);
-                            }}
-                            className="flex items-center justify-center"
-                          >
-                            <div>{modal as ReactElement}</div>
-                          </Modal>
-                        </div>
+                        {/* Accepted sends must outlive pages and monitor dialogs. */}
+                        <ChatProvider>
+                          <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
+                            <Header />
+                            <main className="min-h-0 overflow-y-auto">
+                              <RouteFeatureGate>{children}</RouteFeatureGate>
+                            </main>
+                            <Modal
+                              open={!!modal}
+                              onClose={(_, r) => {
+                                if (r === "backdropClick") return;
+                                setModal(null);
+                              }}
+                              className="flex items-center justify-center"
+                            >
+                              <div>{modal as ReactElement}</div>
+                            </Modal>
+                          </div>
+                        </ChatProvider>
                       </ThemeProvider>
                     </CustomersProvider>
                   </ReadyMessagesProvider>

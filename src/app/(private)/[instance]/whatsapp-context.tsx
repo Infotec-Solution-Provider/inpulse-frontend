@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import { MessageSendStageError, type SendStage } from "@/lib/utils/message-send-diagnostics";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { SendTemplateData } from "@/lib/components/send-template-modal";
 import ChatFinishedHandler from "@/lib/event-handlers/chat-finished";
@@ -105,6 +106,7 @@ interface GetNotificationsResponse {
 }
 
 interface SendMessageOptions {
+  onPrepared?: (fileId: number | undefined) => void;
   idempotencyKey?: string;
   clientId?: number;
   fileId?: number;
@@ -509,6 +511,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     ): Promise<WppMessage> => {
       let traceId: string | null = null;
       let dispatched = false;
+      let stage: SendStage = "prepare";
       try {
         signal.throwIfAborted();
         const channelId = data.clientId ?? selectedChannel?.id;
@@ -520,11 +523,16 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         }
 
         if (!data.file) {
+          data.onPrepared?.(data.fileId);
+          stage = "request";
           dispatched = true;
-          return await api.current.sendMessage(String(channelId), to, data, signal);
+          return await api.current.sendMessage(String(channelId), to, {
+            ...data,
+            ...(data.fileId && data.idempotencyKey ? { traceId: data.idempotencyKey } : {}),
+          }, signal);
         }
 
-        traceId = createFileUploadTraceId("whatsapp-send-file");
+        traceId = data.idempotencyKey || createFileUploadTraceId("whatsapp-send-file");
         const flowStartedAt = Date.now();
         logFileUploadTrace(traceId, "frontend.whatsapp.send-file.start", {
           instance,
@@ -540,6 +548,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
 
         const hashStartedAt = Date.now();
+        stage = "hash";
         const sha256 = await getFileSHA256(data.file);
         logFileUploadTrace(traceId, "frontend.whatsapp.hash.ready", {
           elapsedMs: Date.now() - hashStartedAt,
@@ -547,6 +556,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
 
         const dedupeStartedAt = Date.now();
+        stage = "file-lookup";
         const res = await filesService.getFileByHash(instance, sha256);
         logFileUploadTrace(traceId, "frontend.whatsapp.dedupe.checked", {
           elapsedMs: Date.now() - dedupeStartedAt,
@@ -576,7 +586,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
             elapsedMs: Date.now() - flowStartedAt,
           });
           signal.throwIfAborted();
+          data.onPrepared?.(res.file.id);
           dispatched = true;
+          stage = "request";
           const message = await sendTracedFileMessage(channelId, to, sendFileData, signal);
           logFileUploadTrace(traceId, "frontend.whatsapp.send-message.success", {
             mode: "dedupe-hit",
@@ -586,6 +598,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           return message;
         }
 
+        stage = "upload";
         const uploadedFile = await filesService.uploadBrowserFile({
           instance,
           dirType: FileDirType.PUBLIC,
@@ -605,7 +618,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           elapsedMs: Date.now() - flowStartedAt,
         });
         signal.throwIfAborted();
+        data.onPrepared?.(uploadedFile.id);
         dispatched = true;
+        stage = "request";
         const message = await sendTracedFileMessage(
           channelId,
           to,
@@ -632,13 +647,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         return message;
       } catch (err) {
         traceId && logFileUploadTraceError(traceId, "frontend.whatsapp.send-file.error", err);
+        const stagedError = new MessageSendStageError(stage, err);
         if (!dispatched && !signal.aborted) {
           throw new DefinitiveMessageSendError(
             err instanceof Error ? err.message : "Não foi possível preparar a mensagem para envio.",
-            err,
+            stagedError,
           );
         }
-        throw err;
+        throw stagedError;
       }
     },
     [instance, selectedChannel, sendTracedFileMessage],

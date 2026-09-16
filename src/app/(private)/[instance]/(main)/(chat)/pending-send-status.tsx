@@ -1,13 +1,18 @@
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import { Tooltip } from "@mui/material";
 import { useContext, type ReactNode } from "react";
 import type { PendingChatSend } from "@/lib/utils/pending-chat-sends";
+import { canResumePendingSend } from "@/lib/utils/pending-chat-sends";
 import { ChatContext } from "./chat-context";
+import { formatSendDiagnostic } from "@/lib/utils/message-send-diagnostics";
+import { toast } from "react-toastify";
 
 const failureHints: Record<string, string> = {
   "Sessão indisponível para envio.": "Entre novamente para enviar.",
@@ -71,12 +76,27 @@ export default function PendingSendStatus({
   const {
     pendingSendChecks,
     checkPendingSend,
+    resumePendingSend,
     restoreFailedSend,
     discardFailedSend,
     acknowledgeInternalSend,
   } = useContext(ChatContext);
   const checkState = pendingSendChecks[attempt.id];
   const checking = checkState === "checking";
+  const copyDiagnostic = (
+    <StatusAction label="Copiar diagnóstico do envio" onClick={() => {
+      void (async () => {
+        try {
+          await navigator.clipboard.writeText(formatSendDiagnostic(attempt));
+          toast.success("Diagnóstico copiado.");
+        } catch {
+          toast.error("Não foi possível copiar o diagnóstico.");
+        }
+      })();
+    }}>
+      <ContentCopyIcon sx={{ fontSize: 16 }} />
+    </StatusAction>
+  );
   const automatic = checkState === "automatic";
   const canCheck = !!attempt.clientId && (attempt.status === "unconfirmed" || !!attempt.messageId);
   const failureHint =
@@ -107,6 +127,7 @@ export default function PendingSendStatus({
         <StatusIcon label={failureHint}>
           <ErrorOutlineIcon sx={{ fontSize: 16 }} />
         </StatusIcon>
+        {copyDiagnostic}
         {!readOnly && (
           <>
             <StatusAction
@@ -154,6 +175,13 @@ export default function PendingSendStatus({
             <RefreshIcon sx={{ fontSize: 16 }} />
           )}
         </StatusAction>
+        {attempt.status === "unconfirmed" && copyDiagnostic}
+        {canResumePendingSend(attempt) && (
+          <StatusAction label="Retomar envio" tooltip="Retomar a tentativa original" disabled={checking}
+            onClick={() => resumePendingSend(attempt.id)}>
+            <SendOutlinedIcon sx={{ fontSize: 16 }} />
+          </StatusAction>
+        )}
       </span>
     );
   }

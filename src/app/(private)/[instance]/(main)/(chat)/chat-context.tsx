@@ -1,3 +1,4 @@
+import { messageSendDiagnostic } from "@/lib/utils/message-send-diagnostics";
 import {
   createContext,
   ReactNode,
@@ -26,6 +27,7 @@ import {
   getPendingChatSends,
   PendingChatSend,
   samePendingContent,
+  canResumePendingSend,
   subscribePendingChatSends,
   updatePendingChatSends,
 } from "@/lib/utils/pending-chat-sends";
@@ -40,6 +42,7 @@ interface IChatContext {
   pendingSends: PendingChatSend[];
   pendingSendChecks: PendingSendChecks;
   checkPendingSend: (id: string) => Promise<void>;
+  resumePendingSend: (id: string) => void;
   restoreFailedSend: (id: string) => void;
   discardFailedSend: (id: string) => void;
   acknowledgeInternalSend: (id: string) => void;
@@ -128,9 +131,10 @@ function ScopedChatProvider({
             queuedHere.current.has(entry.id) && entry.status === "queued"
               ? {
                   ...entry,
-                  status: "failed",
-                  error:
-                    "O envio foi interrompido antes de iniciar. Recupere a mensagem para enviar.",
+                  status: entry.resuming ? "unconfirmed" : "failed",
+                  error: entry.resuming
+                    ? "Retomada interrompida. Verifique o envio."
+                    : "O envio foi interrompido antes de iniciar. Recupere a mensagem para enviar.",
                 }
               : entry,
           ),
@@ -209,14 +213,20 @@ function ScopedChatProvider({
                 clientId: attempt.clientId,
                 contactId: attempt.contactId!,
                 chatId: attempt.chatId!,
+                onPrepared: (fileId) => updateAttempt(attempt.id, {
+                  snapshot: { ...attempt.snapshot, file: undefined, fileId },
+                }),
               })
             : await sendInternalMessage({ ...attempt.snapshot, chatId: attempt.chatId! });
           if (result) settleAttempt(attempt.id, result);
           else removeAttempt(attempt.id);
         } catch (error) {
           // Internal HTTP 400 can occur after persistence and is not safe to replay.
-          const definitelyRejected = !!attempt.clientId && isDefinitiveSendFailure(error);
+          const definitelyRejected = !attempt.resuming && !!attempt.clientId && isDefinitiveSendFailure(error);
+          const diagnostic = messageSendDiagnostic(error);
+          console.warn("[message-send]", { attemptId: attempt.id, clientId: attempt.clientId, ...diagnostic });
           updateAttempt(attempt.id, {
+            diagnostic,
             status: definitelyRejected ? "failed" : "unconfirmed",
             error: definitelyRejected
               ? error instanceof Error
@@ -397,6 +407,19 @@ function ScopedChatProvider({
     await verifier.current?.check(id);
   };
 
+  const resumePendingSend = (id: string) => {
+    if (!mounted.current || !activeSession || isReadOnlyMode || activeScopeRef.current !== scope) return;
+    const attempt = getPendingChatSends(sessionScope).find((entry) => entry.id === id && entry.scope === scope);
+    if (!attempt || !canResumePendingSend(attempt)) return;
+    // Explicit action, same content/destination/key. The backend returns the
+    // existing job if the original request finishes late.
+    queuedHere.current.add(id);
+    updateAttempt(id, {
+      status: "queued", resuming: true, attemptNotFound: false, error: undefined,
+      verificationStartedAt: undefined, verificationChecks: undefined, verificationLastCheckedAt: undefined,
+    });
+  };
+
   useEffect(() => {
     if (!activeSession) return;
     const currentVerifier = new PendingSendVerifier({
@@ -530,6 +553,7 @@ function ScopedChatProvider({
         pendingSends,
         pendingSendChecks,
         checkPendingSend,
+        resumePendingSend,
         restoreFailedSend,
         discardFailedSend,
         acknowledgeInternalSend,

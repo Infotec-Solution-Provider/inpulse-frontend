@@ -11,7 +11,6 @@ import { IconButton } from "@mui/material";
 import { useContext } from "react";
 import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
-import ChatProvider from "../(main)/(chat)/chat-context";
 import ChatHeader from "../(main)/(chat)/chat-header";
 import ChatMessagesList from "../(main)/(chat)/chat-messages-list";
 import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor";
@@ -292,7 +291,7 @@ export default function MonitorPage() {
             >
               ✕
             </button>
-            <ChatProvider>
+            <>
               <ChatHeader
                 avatarUrl={chat.avatarUrl}
                 name={chat.contact?.name || "Contato excluído"}
@@ -310,7 +309,7 @@ export default function MonitorPage() {
               <div className="border-t border-gray-200 bg-white p-2 text-black dark:border-gray-700 dark:bg-slate-900">
                 {chat.isFinished === false && <ChatSendMessageArea />}
               </div>
-            </ChatProvider>
+            </>
           </div>,
         );
       };
@@ -328,7 +327,7 @@ export default function MonitorPage() {
             >
               ✕
             </button>
-            <ChatProvider>
+            <>
               <ChatHeader
                 avatarUrl={""}
                 name={chat.groupName || internalUsers[0]?.NOME || "Conversa interna"}
@@ -346,7 +345,7 @@ export default function MonitorPage() {
               <div className="border-t border-gray-200 bg-white p-2 text-black dark:border-gray-700 dark:bg-slate-900">
                 <ChatSendMessageArea />
               </div>
-            </ChatProvider>
+            </>
           </div>,
         );
       };

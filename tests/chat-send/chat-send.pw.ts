@@ -206,6 +206,42 @@ test("a timed-out message is never retried while the next accepted message proce
   expect(keys).toHaveLength(2);
 });
 
+test("accepted queued messages continue when the operator leaves the chat page", async ({ page }) => {
+  await sendDraft(page, "First accepted message");
+  await page.getByLabel("Message draft").fill("Second accepted message");
+  await page.getByLabel("Message draft").press("Enter");
+  await expect(page.getByTestId("pending-status")).toHaveText(["sending", "queued"]);
+  await page.getByRole("button", { name: "Toggle chat page" }).click();
+  await expect(page.getByLabel("Message draft")).toHaveCount(0);
+  const queuedStatus = await page.evaluate(() => {
+    const entries = JSON.parse(sessionStorage.getItem('@inpulse/pending-sends/["tenant-a",1]') || "[]");
+    return entries.find((entry: { snapshot: { text: string } }) => entry.snapshot.text === "Second accepted message")?.status;
+  });
+  expect(queuedStatus).toBe("queued");
+  await page.evaluate(() => window.chatSendHarness.resolveSend(0, "SENT"));
+  await expect.poll(() => page.evaluate(() => window.chatSendHarness.state.sends.length), { timeout: 2_000 }).toBe(2);
+  await page.evaluate(() => window.chatSendHarness.resolveSend(1, "SENT"));
+  await page.getByRole("button", { name: "Toggle chat page" }).click();
+  await expect(page.getByTestId("pending-send")).toHaveCount(0);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.map((send) => send.data.text)))
+    .toEqual(["First accepted message", "Second accepted message"]);
+});
+
+test("a failed send exposes a safe copyable diagnostic after reload without resending", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await sendDraft(page, "Private customer message");
+  await page.evaluate(() => window.chatSendHarness.rejectSend("definitive"));
+  await expect(page.getByTestId("pending-status")).toHaveText("failed");
+  await page.getByRole("button", { name: "Copiar diagnóstico do envio", exact: true }).click();
+  const before = await page.evaluate(() => navigator.clipboard.readText());
+  expect(JSON.parse(before)).toMatchObject({ status: "failed", clientId: 23, diagnostic: { at: expect.any(String) } });
+  expect(before).not.toContain("Private customer message");
+  await page.reload();
+  await page.getByRole("button", { name: "Copiar diagnóstico do envio", exact: true }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(before);
+  expect(await page.evaluate(() => window.chatSendHarness.state.sends.length)).toBe(0);
+});
+
 test("a definitive failure can be restored after clearing a new draft without overwriting it", async ({ page }) => {
   await page.getByRole("button", { name: "Attach", exact: true }).click();
   await page.getByRole("button", { name: "Quote", exact: true }).click();

@@ -63,6 +63,17 @@ const receipt = (status: WppMessage["status"]) => ({ id: 41, status }) as WppMes
 const flush = () => Promise.resolve();
 
 describe("pending send verification", () => {
+  it("distinguishes a missing attempt from a failed lookup without declaring delivery failed", async () => {
+    const test = setup();
+    test.lookup.mockRejectedValueOnce(new Error("network unavailable"));
+    await test.verifier.check("original-idempotency-key");
+    expect(test.getAttempts()[0].attemptNotFound).not.toBe(true);
+    await test.verifier.check("original-idempotency-key");
+    expect(test.getAttempts()[0]).toMatchObject({ status: "unconfirmed", attemptNotFound: true });
+    test.lookup.mockResolvedValueOnce(receipt("UNKNOWN"));
+    await test.verifier.check("original-idempotency-key");
+    expect(test.getAttempts()[0]).toMatchObject({ status: "unconfirmed", messageId: 41, attemptNotFound: false });
+  });
   it("recovers an unconfirmed send without a message ID using the original key", async () => {
     const test = setup();
     test.lookup.mockResolvedValue(receipt("SENT"));

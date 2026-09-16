@@ -137,8 +137,13 @@ export class PendingSendVerifier {
     try {
       const message = await this.options.lookup(attempt.clientId!, id);
       if (!this.active || !this.getAttempt(id)) return;
-      if (message) this.options.settle(id, message);
-      else this.options.updateAttempt(id, { error: UNCONFIRMED_MESSAGE });
+      if (message) {
+        this.options.updateAttempt(id, { attemptNotFound: false });
+        this.options.settle(id, message);
+      } else this.options.updateAttempt(id, {
+        attemptNotFound: true,
+        error: "Tentativa ainda não encontrada no servidor.",
+      });
     } catch {
       if (this.active && this.getAttempt(id)) {
         this.options.updateAttempt(id, {

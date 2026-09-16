@@ -4,12 +4,25 @@ import axios, {
   AxiosRequestConfig,
   InternalAxiosRequestConfig,
 } from "axios";
+import { MessageSendStageError } from "./utils/message-send-diagnostics";
+import { DefinitiveMessageSendError } from "./utils/reliable-message-send";
 
 export type AuthRequestConfig = InternalAxiosRequestConfig & {
   skipAuthInjection?: boolean;
   skipAuthRefresh?: boolean;
   authRefreshRetried?: boolean;
 };
+
+function messageAuthenticationFailure(config: AxiosRequestConfig, error: unknown): unknown {
+  if (config.method?.toLowerCase() !== "post" || !/^\/api\/whatsapp\/[^/]+\/messages$/.test(config.url || ""))
+    return error;
+  // Called only before HTTP dispatch, or after an explicit auth rejection.
+  // A failed lookup after a possibly delivered POST must remain uncertain.
+  return new DefinitiveMessageSendError(
+    "Não foi possível validar sua sessão. A mensagem não foi enviada. Recupere para tentar novamente.",
+    new MessageSendStageError("authentication", error),
+  );
+}
 
 interface AuthSessionConfiguration {
   instance: string;
@@ -86,7 +99,12 @@ class AuthSessionCoordinator {
     instance.interceptors.request.use(async (rawConfig) => {
       const config = rawConfig as AuthRequestConfig;
       if (config.skipAuthInjection) return config;
-      const token = await this.tokenForRequest();
+      let token: string | null;
+      try {
+        token = await this.tokenForRequest();
+      } catch (error) {
+        throw messageAuthenticationFailure(config, error);
+      }
       if (token) config.headers.set("Authorization", `Bearer ${token}`);
       return config;
     });
@@ -99,7 +117,12 @@ class AuthSessionCoordinator {
     }
 
     config.authRefreshRetried = true;
-    const token = await this.forceRefresh();
+    let token: string;
+    try {
+      token = await this.forceRefresh();
+    } catch (refreshError) {
+      throw messageAuthenticationFailure(config, refreshError);
+    }
     config.headers.set("Authorization", `Bearer ${token}`);
     return instance.request(config) as Promise<T>;
   }

@@ -103,6 +103,15 @@ describe("reliable message sends", () => {
     expect(lookup).not.toHaveBeenCalled();
   });
 
+  it("does not treat a lookup authentication failure as proof the original POST was unsent", async () => {
+    const send = vi.fn(async () => { throw new Error("response lost"); });
+    const lookup = vi.fn(async () => { throw new DefinitiveMessageSendError("authentication unavailable"); });
+    const error = await sendIdentifiedMessage({ idempotencyKey: "attempt-1" }, send, lookup).catch((error: unknown) => error);
+    expect(error).toBeInstanceOf(UnconfirmedMessageSendError);
+    expect(isDefinitiveSendFailure(error)).toBe(false);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it("discards a lookup that resolves after the session is aborted", async () => {
     const controller = new AbortController();
     const send = vi.fn(async () => { throw new Error("timeout"); });

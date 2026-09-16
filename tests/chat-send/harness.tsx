@@ -104,6 +104,7 @@ function Composer() {
 
 function Application() {
   const environment = useEnvironment();
+  const [onChatPage, setOnChatPage] = useState(true);
   return (
     <AuthContext.Provider value={environment.auth}>
       <WhatsappContext.Provider value={{ ...whatsapp, ...environment }}>
@@ -111,7 +112,8 @@ function Application() {
           <output data-testid="tenant">{environment.auth.instance}</output>
           <output data-testid="chat-id">{environment.currentChat.id}</output>
           <output data-testid="token">{environment.auth.token}</output>
-          <ChatProvider><Composer /></ChatProvider>
+          <button onClick={() => setOnChatPage((current) => !current)}>Toggle chat page</button>
+          <ChatProvider>{onChatPage ? <Composer /> : <p>Another page</p>}</ChatProvider>
         </InternalChatContext.Provider>
       </WhatsappContext.Provider>
     </AuthContext.Provider>

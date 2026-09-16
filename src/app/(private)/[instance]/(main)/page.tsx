@@ -2,7 +2,6 @@
 import Chat from "./(chat)/chat";
 import ChatsMenu from "./(chats-menu)/chats-menu";
 import React, { useContext } from "react";
-import ChatProvider from "./(chat)/chat-context";
 import { WhatsappContext } from "../whatsapp-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
@@ -31,7 +30,7 @@ export default function Home() {
   }
 
   return (
-    <ChatProvider>
+    <>
       <div
         className={`box-border grid h-full min-h-0 w-full grid-cols-1 grid-rows-1 overflow-hidden md:gap-2 md:p-2 ${currentChat ? "chat-open" : ""} md:grid-cols-[24rem_1fr]`}
       >
@@ -103,6 +102,6 @@ export default function Home() {
           )}
         </div>
       </div>
-    </ChatProvider>
+    </>
   );
 }

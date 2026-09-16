@@ -91,7 +91,7 @@ describe("message attempt HTTP contract", () => {
 
   it.each([false, true])("returns null for an attempt 404 (wrapped=%s)", async (wrapped) => {
     const client = new WhatsappClient("http://localhost:8005");
-    const error = { response: { status: 404 } };
+    const error = { response: { status: 404, data: { message: "Send attempt not found." } } };
     vi.spyOn(client.ax, "get").mockRejectedValue(wrapped ? new Error("not found", { cause: error }) : error);
     await expect(client.getMessageAttempt("6", "attempt-1")).resolves.toBeNull();
   });
@@ -102,6 +102,15 @@ describe("message attempt HTTP contract", () => {
     vi.spyOn(client.ax, "get").mockRejectedValue(error);
     await expect(client.getMessageAttempt("6", "attempt-1")).rejects.toBe(error);
   });
+
+  it.each([undefined, "Cannot GET /message-attempts", { message: "Not Found" }])(
+    "does not treat a generic proxy or route 404 as proof that a resumable attempt is missing (%s)", async (data) => {
+      const client = new WhatsappClient("http://localhost:8005");
+      const error = new Error("404", { cause: { response: { status: 404, data } } });
+      vi.spyOn(client.ax, "get").mockRejectedValue(error);
+      await expect(client.getMessageAttempt("6", "attempt-1")).rejects.toBe(error);
+    },
+  );
 
   it("does not issue a second POST after a timeout followed by a missing attempt", async () => {
     const client = new WhatsappClient("http://localhost:8005");

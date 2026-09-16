@@ -1,4 +1,5 @@
 import type { SendMessageDataState } from "@/app/(private)/[instance]/(main)/(chat)/chat-reducer";
+import type { MessageSendDiagnostic } from "./message-send-diagnostics";
 
 export interface PendingChatSend {
   id: string;
@@ -19,6 +20,10 @@ export interface PendingChatSend {
   fileSize?: number;
   fileLastModified?: number;
   error?: string;
+  diagnostic?: MessageSendDiagnostic;
+  attemptNotFound?: boolean;
+  /** Manual replay keeps the key; its failure cannot disprove the first POST. */
+  resuming?: boolean;
   verificationStartedAt?: number;
   verificationChecks?: number;
   verificationLastCheckedAt?: number;
@@ -100,6 +105,13 @@ export function subscribePendingChatSends(listener: () => void): () => void {
   return () => {
     listeners.delete(listener);
   };
+}
+
+export function canResumePendingSend(attempt: PendingChatSend): boolean {
+  return attempt.status === "unconfirmed" && attempt.attemptNotFound === true &&
+    !attempt.messageId && !!attempt.clientId && !!attempt.chatId && !!attempt.contactId && !!attempt.to &&
+    // Preserve the uploaded file identity; bytes do not survive a reload.
+    (!attempt.fileName || !!attempt.snapshot.fileId);
 }
 
 export function samePendingContent(

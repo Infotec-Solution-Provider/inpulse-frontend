@@ -175,8 +175,11 @@ export default class WhatsappClient extends ApiClient {
       let current = error;
       while (current && typeof current === "object" && !visited.has(current)) {
         visited.add(current);
-        const candidate = current as { response?: { status?: number }; cause?: unknown };
-        if (candidate.response?.status === 404) return null;
+        const candidate = current as { response?: { status?: number; data?: { message?: unknown } }; cause?: unknown };
+        // Only the application's explicit absence response enables manual
+        // continuation. A proxy/missing-route 404 does not prove this backend
+        // implements the idempotent message contract.
+        if (candidate.response?.status === 404 && candidate.response.data?.message === "Send attempt not found.") return null;
         current = candidate.cause;
       }
       throw error;
