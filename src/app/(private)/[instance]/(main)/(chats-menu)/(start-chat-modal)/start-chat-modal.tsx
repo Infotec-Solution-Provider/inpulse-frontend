@@ -237,7 +237,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
               onClick={handleSearch}
               disabled={loading}
               startIcon={<SearchIcon />}
-              sx={{ whiteSpace: "nowrap" }}
+              sx={{ whiteSpace: "nowrap", flexShrink: 0, px: 2.5, py: 1 }}
             >
               Pesquisar
             </Button>

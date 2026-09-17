@@ -146,6 +146,30 @@ export default function PendingSendStatus({
     );
   }
 
+  // Automatic confirmation has a bounded window. Keep the durable attempt
+  // ambiguous (it may still receive a late receipt), but stop showing an
+  // indefinite amber clock to the operator.
+  if (checkState === "paused") {
+    const label = attempt.error || "Não foi possível confirmar o envio.";
+    return (
+      <span className="inline-flex items-center text-red-600 dark:text-red-300">
+        {liveStatus}
+        <StatusIcon label={label}>
+          <ErrorOutlineIcon sx={{ fontSize: 16 }} />
+        </StatusIcon>
+        <StatusAction label="Verificar novamente" tooltip="Consultar o envio sem reenviar" onClick={() => void checkPendingSend(attempt.id)}>
+          <RefreshIcon sx={{ fontSize: 16 }} />
+        </StatusAction>
+        {copyDiagnostic}
+        {canResumePendingSend(attempt) && !readOnly && (
+          <StatusAction label="Retomar envio" tooltip="Retomar a tentativa original" onClick={() => resumePendingSend(attempt.id)}>
+            <SendOutlinedIcon sx={{ fontSize: 16 }} />
+          </StatusAction>
+        )}
+      </span>
+    );
+  }
+
   if (canCheck && !readOnly) {
     const label = checking ? "Verificando envio…" : "Verificar envio";
     const tooltip =
