@@ -64,6 +64,7 @@ export interface DetailedInternalChat extends InternalChat {
   isUnread: boolean | true;
   users: User[];
   participants: InternalChatMember[];
+  isPinned?: boolean;
 }
 
 interface InternalChatContextType {
@@ -88,6 +89,11 @@ interface InternalChatContextType {
   phoneNameMap: Map<string, string>;
   whatsappSenderNameMap: Map<string, string>;
   refreshWhatsappSenderNames: () => Promise<void>;
+  updateChatPreference: (
+    type: "wpp" | "internal",
+    chatId: number,
+    action: "pin" | "unpin" | "read" | "unread",
+  ) => Promise<{ isPinned: boolean; isMarkedUnread: boolean }>;
 
   users: User[];
   contacts: WppContact[];
@@ -123,7 +129,12 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   } = useWhatsappContext();
   const { token, user, instance } = useContext(AuthContext);
   const sessionScope = JSON.stringify([
-    instance, user?.CODIGO, user?.SETOR, user?.NIVEL, user?.ATIVO, !!token,
+    instance,
+    user?.CODIGO,
+    user?.SETOR,
+    user?.NIVEL,
+    user?.ATIVO,
+    !!token,
   ]);
   const liveAuth = useRef({ token, user, scope: sessionScope });
   liveAuth.current = { token, user, scope: sessionScope };
@@ -385,6 +396,29 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     },
     [messages],
   );
+
+  const updateChatPreference = useCallback(
+    async (
+      type: "wpp" | "internal",
+      chatId: number,
+      action: "pin" | "unpin" | "read" | "unread",
+    ) => {
+      const result = await wppApi.current.updateChatPreference(type, chatId, action);
+      setInternalChats((previous) =>
+        previous.map((chat) =>
+          chat.id === chatId && type === "internal"
+            ? {
+                ...chat,
+                isPinned: result.isPinned,
+                isUnread: action === "read" ? false : action === "unread" ? true : chat.isUnread,
+              }
+            : chat,
+        ),
+      );
+      return result;
+    },
+    [setInternalChats, wppApi],
+  );
   const deleteInternalChat = async (id: number) => {
     if (api.current) {
       try {
@@ -523,31 +557,43 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
     const sessionUser = session.user;
     let active = true;
     const isCurrent = () => active && liveAuth.current.scope === sessionScope;
-    if (session.token && sessionUser && usersScope === sessionScope && usersLoaded && users.length > 0) {
+    if (
+      session.token &&
+      sessionUser &&
+      usersScope === sessionScope &&
+      usersLoaded &&
+      users.length > 0
+    ) {
       api.current.setAuth(session.token);
-      wppApi.current.getContacts().then((res) => {
-        if (!isCurrent()) return;
-        setContacts(Array.isArray(res) ? res : []);
-      }).catch((error) => {
-        if (isCurrent()) console.error("Falha ao carregar contatos internos", error);
-      });
-      api.current.getInternalChatsBySession().then((payload) => {
-        if (!isCurrent()) return;
-        const chats = Array.isArray(payload?.chats) ? payload.chats : [];
-        const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+      wppApi.current
+        .getContacts()
+        .then((res) => {
+          if (!isCurrent()) return;
+          setContacts(Array.isArray(res) ? res : []);
+        })
+        .catch((error) => {
+          if (isCurrent()) console.error("Falha ao carregar contatos internos", error);
+        });
+      api.current
+        .getInternalChatsBySession()
+        .then((payload) => {
+          if (!isCurrent()) return;
+          const chats = Array.isArray(payload?.chats) ? payload.chats : [];
+          const messages = Array.isArray(payload?.messages) ? payload.messages : [];
 
-        const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
-          sessionUser.CODIGO,
-          users,
-          chats,
-          messages,
-        );
+          const { chatsMessages, detailedChats } = processInternalChatsAndMessages(
+            sessionUser.CODIGO,
+            users,
+            chats,
+            messages,
+          );
 
-        setInternalChats(detailedChats || []);
-        setMessages(chatsMessages || []);
-      }).catch((error) => {
-        if (isCurrent()) console.error("Falha ao carregar conversas internas", error);
-      });
+          setInternalChats(detailedChats || []);
+          setMessages(chatsMessages || []);
+        })
+        .catch((error) => {
+          if (isCurrent()) console.error("Falha ao carregar conversas internas", error);
+        });
       return () => {
         active = false;
       };
@@ -727,6 +773,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         phoneNameMap,
         whatsappSenderNameMap,
         refreshWhatsappSenderNames,
+        updateChatPreference,
       }}
     >
       <MentionDirectoryContext.Provider value={mentionDirectory}>

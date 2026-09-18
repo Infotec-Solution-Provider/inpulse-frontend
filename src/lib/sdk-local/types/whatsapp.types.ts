@@ -280,6 +280,8 @@ export interface WppChat {
   finishedAt?: Date | null;
   finishedBy?: number | null;
   isSchedule: boolean;
+  isUnread?: boolean;
+  isPinned?: boolean;
 }
 
 export interface WppSector {

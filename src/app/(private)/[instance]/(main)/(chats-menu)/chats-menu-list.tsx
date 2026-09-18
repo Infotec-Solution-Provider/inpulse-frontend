@@ -4,6 +4,7 @@ import { isExternalOperator } from "@/lib/permissions/operator-access";
 import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
 import { mentionDisplayText } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
+import { toast } from "react-toastify";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
 import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
 import ChatsMenuItem from "./chats-menu-item";
@@ -43,9 +44,34 @@ const matchesFilter = (chat: CombinedChat, search: string) => {
 export default function ChatsMenuList() {
   const { user } = useContext(AuthContext);
   const isExternal = isExternalOperator(user?.NIVEL);
-  const { chats, openChat, currentChat, chatFilters } = useContext(WhatsappContext);
-  const { internalChats, openInternalChat, users, mentionDirectory } =
-    useContext(InternalChatContext);
+  const {
+    chats,
+    openChat,
+    currentChat,
+    chatFilters,
+    updateChatPreference: updateWppPreference,
+  } = useContext(WhatsappContext);
+  const {
+    internalChats,
+    openInternalChat,
+    users,
+    mentionDirectory,
+    updateChatPreference: updateInternalPreference,
+  } = useContext(InternalChatContext);
+
+  const updatePreference = async (
+    type: "wpp" | "internal",
+    chatId: number,
+    action: "pin" | "unpin" | "read" | "unread",
+  ) => {
+    try {
+      await (type === "wpp" ? updateWppPreference : updateInternalPreference)(type, chatId, action);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível atualizar a conversa.",
+      );
+    }
+  };
 
   const filteredChats = useMemo(() => {
     const validChats = Array.isArray(chats) ? chats : [];
@@ -118,6 +144,7 @@ export default function ChatsMenuList() {
     const sortBy = chatFilters.sortBy;
 
     const result = [...filteredChats].sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
       if (sortBy === "userCreator") {
         const an = getUserCreatorName(a);
         const bn = getUserCreatorName(b);
@@ -165,6 +192,13 @@ export default function ChatsMenuList() {
           return (
             <ChatsMenuItem
               isUnread={chat.isUnread}
+              isPinned={chat.isPinned}
+              onTogglePin={() =>
+                void updatePreference("internal", chat.id, chat.isPinned ? "unpin" : "pin")
+              }
+              onToggleUnread={() =>
+                void updatePreference("internal", chat.id, chat.isUnread ? "read" : "unread")
+              }
               isOpen={currentChat?.id === chat.id && currentChat?.chatType === "internal"}
               key={`internal-chat:${chat.id}`}
               name={names}
@@ -189,6 +223,13 @@ export default function ChatsMenuList() {
         return (
           <ChatsMenuItem
             isUnread={chat.isUnread}
+            isPinned={chat.isPinned}
+            onTogglePin={() =>
+              void updatePreference("wpp", chat.id, chat.isPinned ? "unpin" : "pin")
+            }
+            onToggleUnread={() =>
+              void updatePreference("wpp", chat.id, chat.isUnread ? "read" : "unread")
+            }
             isOpen={currentChat?.id === chat.id && currentChat?.chatType === "wpp"}
             key={`chat:${chat.id}`}
             name={chat.contact?.name || "Contato excluído"}

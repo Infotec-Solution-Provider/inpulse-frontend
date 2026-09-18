@@ -47,6 +47,16 @@ interface FetchMessagesFilters {
 }
 
 export default class WhatsappClient extends ApiClient {
+  public async updateChatPreference(
+    type: "wpp" | "internal",
+    chatId: number,
+    action: "pin" | "unpin" | "read" | "unread",
+  ) {
+    const { data: response } = await this.ax.patch<
+      DataResponse<{ isPinned: boolean; isMarkedUnread: boolean }>
+    >(`/api/whatsapp/chat-preferences/${type}/${chatId}`, { action });
+    return response.data;
+  }
   private normalizeChatsPayload(
     response: GetChatsResponse | WppChatsAndMessages | null | undefined,
   ): WppChatsAndMessages {
@@ -175,11 +185,18 @@ export default class WhatsappClient extends ApiClient {
       let current = error;
       while (current && typeof current === "object" && !visited.has(current)) {
         visited.add(current);
-        const candidate = current as { response?: { status?: number; data?: { message?: unknown } }; cause?: unknown };
+        const candidate = current as {
+          response?: { status?: number; data?: { message?: unknown } };
+          cause?: unknown;
+        };
         // Only the application's explicit absence response enables manual
         // continuation. A proxy/missing-route 404 does not prove this backend
         // implements the idempotent message contract.
-        if (candidate.response?.status === 404 && candidate.response.data?.message === "Send attempt not found.") return null;
+        if (
+          candidate.response?.status === 404 &&
+          candidate.response.data?.message === "Send attempt not found."
+        )
+          return null;
         current = candidate.cause;
       }
       throw error;

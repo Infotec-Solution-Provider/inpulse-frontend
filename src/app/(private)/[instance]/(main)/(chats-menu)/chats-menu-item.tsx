@@ -1,6 +1,11 @@
 import { AuthContext } from "@/app/auth-context";
 import { Avatar } from "@mui/material";
-import { ReactNode, useContext, useMemo } from "react";
+import { IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import PushPinIcon from "@mui/icons-material/PushPin";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import MarkunreadIcon from "@mui/icons-material/Markunread";
+import DoneIcon from "@mui/icons-material/Done";
+import { ReactNode, useContext, useMemo, useState } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { InternalChatContext } from "../../internal-context";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
@@ -19,6 +24,9 @@ interface ChatsMenuItemProps {
   tags: Tag[];
   isUnread?: boolean;
   isOpen?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
+  onToggleUnread?: () => void;
   onClick?: () => void;
 }
 
@@ -32,7 +40,11 @@ export default function ChatsMenuItem({
   isUnread,
   isOpen,
   onClick,
+  isPinned,
+  onTogglePin,
+  onToggleUnread,
 }: ChatsMenuItemProps) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const { user } = useContext(AuthContext);
   const { users } = useContext(InternalChatContext);
   const { state } = useContext(ContactsContext);
@@ -63,6 +75,8 @@ export default function ChatsMenuItem({
     e.stopPropagation();
     onClick?.();
   };
+
+  const closeMenu = () => setMenuAnchor(null);
 
   function wasMentioned(text: string): boolean {
     if (!text || typeof text !== "string") return false;
@@ -128,10 +142,11 @@ export default function ChatsMenuItem({
         </div>
         <div className="flex flex-col gap-1 truncate">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold truncate text-sm leading-none text-gray-900 dark:text-slate-100">
+            <p className="truncate text-sm font-semibold leading-none text-gray-900 dark:text-slate-100">
               {name}
             </p>
             <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 group-aria-busy:dark:text-orange-200">
+              {isPinned && <PushPinIcon fontSize="inherit" titleAccess="Conversa fixada" />}
               <p className={`text-xs font-semibold ${isUnread ? "text-red-600" : ""}`}>
                 {lastMessageDateText}
               </p>
@@ -143,10 +158,61 @@ export default function ChatsMenuItem({
                   )}
                 </div>
               )}
+              {(onTogglePin || onToggleUnread) && (
+                <>
+                  <IconButton
+                    size="small"
+                    aria-label="Ações da conversa"
+                    title="Ações da conversa"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setMenuAnchor(event.currentTarget);
+                    }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                  <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+                    {onTogglePin && (
+                      <MenuItem
+                        onClick={() => {
+                          closeMenu();
+                          onTogglePin();
+                        }}
+                      >
+                        <ListItemIcon>
+                          <PushPinIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>
+                          {isPinned ? "Desafixar conversa" : "Fixar conversa"}
+                        </ListItemText>
+                      </MenuItem>
+                    )}
+                    {onToggleUnread && (
+                      <MenuItem
+                        onClick={() => {
+                          closeMenu();
+                          onToggleUnread();
+                        }}
+                      >
+                        <ListItemIcon>
+                          {isUnread ? (
+                            <DoneIcon fontSize="small" />
+                          ) : (
+                            <MarkunreadIcon fontSize="small" />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText>
+                          {isUnread ? "Marcar como lida" : "Marcar como não lida"}
+                        </ListItemText>
+                      </MenuItem>
+                    )}
+                  </Menu>
+                </>
+              )}
             </div>
           </div>
           {customer && (
-            <p className="font-semibold truncate text-xs leading-none text-gray-900 dark:text-slate-100">
+            <p className="truncate text-xs font-semibold leading-none text-gray-900 dark:text-slate-100">
               {customer}
             </p>
           )}

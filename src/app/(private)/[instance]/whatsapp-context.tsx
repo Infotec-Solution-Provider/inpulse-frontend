@@ -90,6 +90,7 @@ export interface DetailedChat extends WppChatWithDetails {
   isUnread: boolean;
   lastMessage: WppMessage | null;
   chatType: "wpp";
+  isPinned?: boolean;
 }
 
 export interface DetailedSchedule extends WppSchedule {
@@ -175,6 +176,11 @@ interface IWhatsappContext {
   setSelectedChannel: Dispatch<SetStateAction<WppClient | null>>;
   isReadOnlyMode: boolean;
   prepareReadOnlyOpen: (enabled: boolean) => void;
+  updateChatPreference: (
+    type: "wpp" | "internal",
+    chatId: number,
+    action: "pin" | "unpin" | "read" | "unread",
+  ) => Promise<{ isPinned: boolean; isMarkedUnread: boolean }>;
 }
 
 interface WhatsappProviderProps {
@@ -216,7 +222,12 @@ export const WhatsappContext = createContext({} as IWhatsappContext);
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const { token, instance, user } = useContext(AuthContext);
   const sessionScope = JSON.stringify([
-    instance, user?.CODIGO, user?.SETOR, user?.NIVEL, user?.ATIVO, !!token,
+    instance,
+    user?.CODIGO,
+    user?.SETOR,
+    user?.NIVEL,
+    user?.ATIVO,
+    !!token,
   ]);
   const liveAuth = useRef({ token, user, scope: sessionScope });
   liveAuth.current = { token, user, scope: sessionScope };
@@ -323,6 +334,27 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const pendingReadOnlyOpenRef = useRef(false);
 
   const [loaded, setLoaded] = useState(false);
+
+  const updateChatPreference = useCallback(
+    async (
+      type: "wpp" | "internal",
+      chatId: number,
+      action: "pin" | "unpin" | "read" | "unread",
+    ) => {
+      const result = await api.current.updateChatPreference(type, chatId, action);
+      const apply = (chat: DetailedChat | DetailedInternalChat) =>
+        chat.id === chatId && chat.chatType === type
+          ? {
+              ...chat,
+              isPinned: result.isPinned,
+              isUnread: action === "read" ? false : action === "unread" ? true : chat.isUnread,
+            }
+          : chat;
+      setChats((previous) => previous.map((chat) => apply(chat) as DetailedChat));
+      return result;
+    },
+    [setChats],
+  );
 
   useEffect(() => {
     notificationPreferencesRef.current = notificationPreferences;
@@ -504,11 +536,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const sendMessageRequest = useCallback(
-    async (
-      to: string,
-      data: SendMessageOptions,
-      signal: AbortSignal,
-    ): Promise<WppMessage> => {
+    async (to: string, data: SendMessageOptions, signal: AbortSignal): Promise<WppMessage> => {
       let traceId: string | null = null;
       let dispatched = false;
       let stage: SendStage = "prepare";
@@ -526,10 +554,15 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           data.onPrepared?.(data.fileId);
           stage = "request";
           dispatched = true;
-          return await api.current.sendMessage(String(channelId), to, {
-            ...data,
-            ...(data.fileId && data.idempotencyKey ? { traceId: data.idempotencyKey } : {}),
-          }, signal);
+          return await api.current.sendMessage(
+            String(channelId),
+            to,
+            {
+              ...data,
+              ...(data.fileId && data.idempotencyKey ? { traceId: data.idempotencyKey } : {}),
+            },
+            signal,
+          );
         }
 
         traceId = data.idempotencyKey || createFileUploadTraceId("whatsapp-send-file");
@@ -721,8 +754,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       const session = renderSendSession;
       const signal = session.controller.signal;
       const clientId = data.clientId ?? selectedChannel?.id;
-      if (!instance || !token || !user) throw new DefinitiveMessageSendError("Sessão indisponível para envio.");
-      if (!clientId) throw new DefinitiveMessageSendError("Nenhum canal selecionado para enviar a mensagem.");
+      if (!instance || !token || !user)
+        throw new DefinitiveMessageSendError("Sessão indisponível para envio.");
+      if (!clientId)
+        throw new DefinitiveMessageSendError("Nenhum canal selecionado para enviar a mensagem.");
       signal.throwIfAborted();
       const key = data.idempotencyKey ?? createMessageAttemptKey();
       return sendCoordinator.current.run(`${session.scope}:${clientId}`, key, async () => {
@@ -734,9 +769,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               (attemptKey) => api.current.getMessageAttempt(String(clientId), attemptKey, signal),
               signal,
             )
-          : await sendDirectMessage(
-              { ...data, clientId },
-              (request) => sendMessageRequest(to, request, signal),
+          : await sendDirectMessage({ ...data, clientId }, (request) =>
+              sendMessageRequest(to, request, signal),
             );
         signal.throwIfAborted();
         registerPersistedMessage(message);
@@ -1015,73 +1049,84 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.setAuth(session.token);
       usersService.setAuth(session.token);
       refreshNotificationPreferences();
-      api.current.getSectors().then((res) => {
-        if (!isCurrent()) return;
-        const secs = Array.isArray(res)
-          ? (res as SectorData[])
-          : Array.isArray((res as { data?: SectorData[] })?.data)
-            ? ((res as { data: SectorData[] }).data ?? [])
-            : [];
-
-        setSectors(secs);
-
-        api.current.getChatsBySession(true, true).then((payload) => {
+      api.current
+        .getSectors()
+        .then((res) => {
           if (!isCurrent()) return;
-          const chats = Array.isArray(payload?.chats) ? payload.chats : [];
-          const messages = Array.isArray(payload?.messages) ? payload.messages : [];
-
-          const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-          setChats(detailedChats);
-          setMessages(chatsMessages);
-        }).catch((error) => {
-          if (isCurrent()) console.error("Falha ao carregar conversas", error);
-        });
-
-        const sector = secs.find((s) => s.id === sessionUser.SETOR);
-
-        api.current.ax.get(`/api/whatsapp/sector/${sessionUser.SETOR}/clients`).then(async (res) => {
-          if (!isCurrent()) return;
-          const channelsPayload = res?.data;
-          const channelsData: WppClient[] = Array.isArray(
-            (channelsPayload as { data?: WppClient[] })?.data,
-          )
-            ? ((channelsPayload as { data: WppClient[] }).data ?? [])
-            : Array.isArray(channelsPayload)
-              ? (channelsPayload as WppClient[])
+          const secs = Array.isArray(res)
+            ? (res as SectorData[])
+            : Array.isArray((res as { data?: SectorData[] })?.data)
+              ? ((res as { data: SectorData[] }).data ?? [])
               : [];
-          const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
-          const activeChannel = defaultChannel || channelsData[0] || null;
 
-          globalChannel.current = activeChannel;
-          setSelectedChannel((current) => current ?? activeChannel);
+          setSectors(secs);
 
-          const parametersResponse = await api.current.ax.get("/api/whatsapp/session/parameters");
-          if (!isCurrent()) return;
-          const parameters: Record<string, string> = parametersResponse.data["parameters"];
-          if (parameters["is_official"] === "true" && activeChannel?.id) {
-            const templatesResponse = await api.current.ax.get(
-              `/api/whatsapp/${activeChannel.id}/templates`,
-            );
-            if (!isCurrent()) return;
-            setTemplates(templatesResponse.data.templates);
-          } else {
-            setTemplates([]);
-          }
-          setParameters(parameters);
-          console.log("Loaded parameters:", parameters);
+          api.current
+            .getChatsBySession(true, true)
+            .then((payload) => {
+              if (!isCurrent()) return;
+              const chats = Array.isArray(payload?.chats) ? payload.chats : [];
+              const messages = Array.isArray(payload?.messages) ? payload.messages : [];
 
-          setChannels(channelsData);
-          setLoaded(true);
-        }).catch((error) => {
-          if (isCurrent()) console.error("Falha ao carregar canais da sessão", error);
+              const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
+              setChats(detailedChats);
+              setMessages(chatsMessages);
+            })
+            .catch((error) => {
+              if (isCurrent()) console.error("Falha ao carregar conversas", error);
+            });
+
+          const sector = secs.find((s) => s.id === sessionUser.SETOR);
+
+          api.current.ax
+            .get(`/api/whatsapp/sector/${sessionUser.SETOR}/clients`)
+            .then(async (res) => {
+              if (!isCurrent()) return;
+              const channelsPayload = res?.data;
+              const channelsData: WppClient[] = Array.isArray(
+                (channelsPayload as { data?: WppClient[] })?.data,
+              )
+                ? ((channelsPayload as { data: WppClient[] }).data ?? [])
+                : Array.isArray(channelsPayload)
+                  ? (channelsPayload as WppClient[])
+                  : [];
+              const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
+              const activeChannel = defaultChannel || channelsData[0] || null;
+
+              globalChannel.current = activeChannel;
+              setSelectedChannel((current) => current ?? activeChannel);
+
+              const parametersResponse = await api.current.ax.get(
+                "/api/whatsapp/session/parameters",
+              );
+              if (!isCurrent()) return;
+              const parameters: Record<string, string> = parametersResponse.data["parameters"];
+              if (parameters["is_official"] === "true" && activeChannel?.id) {
+                const templatesResponse = await api.current.ax.get(
+                  `/api/whatsapp/${activeChannel.id}/templates`,
+                );
+                if (!isCurrent()) return;
+                setTemplates(templatesResponse.data.templates);
+              } else {
+                setTemplates([]);
+              }
+              setParameters(parameters);
+              console.log("Loaded parameters:", parameters);
+
+              setChannels(channelsData);
+              setLoaded(true);
+            })
+            .catch((error) => {
+              if (isCurrent()) console.error("Falha ao carregar canais da sessão", error);
+            });
+
+          void getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }).catch((error) => {
+            if (isCurrent()) console.error("Falha ao carregar notificações", error);
+          });
+        })
+        .catch((error) => {
+          if (isCurrent()) console.error("Falha ao carregar setores", error);
         });
-
-        void getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }).catch((error) => {
-          if (isCurrent()) console.error("Falha ao carregar notificações", error);
-        });
-      }).catch((error) => {
-        if (isCurrent()) console.error("Falha ao carregar setores", error);
-      });
 
       return () => {
         active = false;
@@ -1247,6 +1292,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setSelectedChannel,
         isReadOnlyMode,
         prepareReadOnlyOpen,
+        updateChatPreference,
       }}
     >
       {children}
