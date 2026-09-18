@@ -25,7 +25,8 @@ const getParticipantKey = (participant: UnifiedContact) => {
 export default function CreateInternalGroupModal() {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
-  const { createInternalGroup, wppGroups } = useInternalGroupsContext();
+  const { createInternalGroup, wppGroups, wppGroupsLoading, wppGroupsUnavailable } =
+    useInternalGroupsContext();
 
   const [name, setName] = useState("");
   const [participants, setParticipants] = useState<UnifiedContact[]>([]);
@@ -207,6 +208,8 @@ export default function CreateInternalGroupModal() {
             userOptions={userOptions}
             selectedGroup={selectedGroup}
             wppGroups={wppGroups}
+            wppGroupsLoading={wppGroupsLoading}
+            wppGroupsUnavailable={wppGroupsUnavailable}
             getParticipantKey={getParticipantKey}
             onSelectedUserChange={setSelectedUser}
             onAddUser={handleAddUser}

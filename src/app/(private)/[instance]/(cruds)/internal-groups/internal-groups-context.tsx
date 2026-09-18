@@ -27,6 +27,8 @@ interface IInternalGroupsProviderProps {
 interface IInternalGroupsContext {
   state: InternalGroupsContextState;
   wppGroups: WhatsappGroup[];
+  wppGroupsLoading: boolean;
+  wppGroupsUnavailable: boolean;
   dispatch: ActionDispatch<[ChangeInternalGroupsStateAction]>;
   updateInternalGroup: (
     id: number,
@@ -56,6 +58,8 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
   const { globalChannel, loaded, wppApi } = useWhatsappContext();
   const { token } = useAuthContext();
   const [wppGroups, setWppGroups] = useState<WhatsappGroup[]>([]);
+  const [wppGroupsLoading, setWppGroupsLoading] = useState(false);
+  const [wppGroupsUnavailable, setWppGroupsUnavailable] = useState(false);
   const [state, dispatch] = useReducer(internalGroupsReducer, {
     internalGroups: [],
     totalRows: 0,
@@ -196,16 +200,24 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
   useEffect(() => {
     if (!token || !loaded) {
       setWppGroups([]);
+      setWppGroupsLoading(false);
+      setWppGroupsUnavailable(false);
       return;
     }
 
-    const channelId = globalChannel.current?.id;
-    if (!channelId) {
+    const channel = globalChannel.current;
+    const channelId = channel?.id;
+    const supportsGroups = channel?.type === "WWEBJS" || channel?.type === "REMOTE";
+    if (!channelId || !supportsGroups) {
       setWppGroups([]);
+      setWppGroupsLoading(false);
+      setWppGroupsUnavailable(Boolean(channelId));
       return;
     }
 
     let active = true;
+    setWppGroupsLoading(true);
+    setWppGroupsUnavailable(false);
     wppApi.current.setAuth(token);
     wppApi.current
       .getGroups(channelId)
@@ -215,6 +227,10 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       .catch((err) => {
         if (active) setWppGroups([]);
         Logger.debug("Error loading WhatsApp groups", err as Error);
+        if (active) setWppGroupsUnavailable(true);
+      })
+      .finally(() => {
+        if (active) setWppGroupsLoading(false);
       });
 
     return () => {
@@ -231,6 +247,8 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
         createInternalGroup,
         loadInternalGroups,
         wppGroups,
+        wppGroupsLoading,
+        wppGroupsUnavailable,
         deleteInternalGroup,
         updateInternalGroupImage,
       }}

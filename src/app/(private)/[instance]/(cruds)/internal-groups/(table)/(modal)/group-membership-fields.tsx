@@ -14,6 +14,8 @@ interface GroupMembershipFieldsProps {
   userOptions: InternalGroupUser[];
   selectedGroup: WhatsappGroup | null;
   wppGroups: WhatsappGroup[];
+  wppGroupsLoading: boolean;
+  wppGroupsUnavailable: boolean;
   getParticipantKey: (participant: InternalGroupUser) => string | undefined;
   onSelectedUserChange: (user: InternalGroupUser | null) => void;
   onAddUser: () => void;
@@ -34,6 +36,8 @@ export default function GroupMembershipFields({
   userOptions,
   selectedGroup,
   wppGroups,
+  wppGroupsLoading,
+  wppGroupsUnavailable,
   getParticipantKey,
   onSelectedUserChange,
   onAddUser,
@@ -147,10 +151,16 @@ export default function GroupMembershipFields({
         <div className="flex flex-1 flex-col gap-4 p-4">
           <Autocomplete
             options={wppGroups}
+            loading={wppGroupsLoading}
             getOptionLabel={(option) => option.name}
             getOptionKey={(option) => option.id}
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            noOptionsText="Nenhum grupo do WhatsApp disponível"
+            loadingText="Carregando grupos do WhatsApp..."
+            noOptionsText={
+              wppGroupsUnavailable
+                ? "Grupos indisponíveis para este canal"
+                : "Nenhum grupo do WhatsApp disponível"
+            }
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -163,6 +173,11 @@ export default function GroupMembershipFields({
             value={selectedGroup}
             onChange={(_, group) => onSelectedGroupChange(group)}
           />
+          {wppGroupsUnavailable && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              O canal atual não permite consultar grupos do WhatsApp.
+            </p>
+          )}
 
           {selectedGroup ? (
             <div className="rounded-lg border border-emerald-200 bg-white p-4 dark:border-emerald-900/70 dark:bg-slate-800">

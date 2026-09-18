@@ -44,7 +44,13 @@ interface EditInternalGroupModalProps {
 export default function EditInternalGroupModal({ group }: EditInternalGroupModalProps) {
   const { closeModal } = useAppContext();
   const { users } = useContext(InternalChatContext);
-  const { updateInternalGroup, updateInternalGroupImage, wppGroups } = useInternalGroupsContext();
+  const {
+    updateInternalGroup,
+    updateInternalGroupImage,
+    wppGroups,
+    wppGroupsLoading,
+    wppGroupsUnavailable,
+  } = useInternalGroupsContext();
   const safeWppGroups = Array.isArray(wppGroups) ? wppGroups : [];
 
   const [name, setName] = useState(group.groupName);
@@ -285,6 +291,8 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
             userOptions={userOptions}
             selectedGroup={selectedGroup}
             wppGroups={safeWppGroups}
+            wppGroupsLoading={wppGroupsLoading}
+            wppGroupsUnavailable={wppGroupsUnavailable}
             getParticipantKey={getParticipantKey}
             onSelectedUserChange={setSelectedUser}
             onAddUser={handleAddUser}
