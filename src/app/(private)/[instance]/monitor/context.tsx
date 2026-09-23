@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
 import { DetailedInternalChat } from "../internal-context";
 import { AuthContext } from "@/app/auth-context";
+import { toast } from "react-toastify";
+import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 
 interface MonitorContextProps {
   chats: (DetailedInternalChat | DetailedChat | DetailedSchedule)[];
@@ -173,6 +175,8 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
       const total = typeof res?.totalCount === "number" ? res.totalCount : items.length;
       setChats(items);
       setTotalCount(total);
+    } catch (error) {
+      if (!readRequestLimitMessage(error)) toast.error("Falha ao carregar a monitoria.");
     } finally {
       setIsLoading(false);
     }

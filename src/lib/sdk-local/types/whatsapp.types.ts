@@ -325,6 +325,7 @@ export enum WppChatPriority {
 }
 
 export type WppChatWithDetails = WppChat & {
+  lastMessage?: WppMessage | null;
   contact: WppContact | null;
   customer: Customer | null;
   schedule: WppSchedule | null;

@@ -36,7 +36,7 @@ const isKeyOfContact = (key: string): key is FilterKey => {
 const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
 
 export default function ContactsTableHeader() {
-  const { dispatch, state, loadContacts } = useContactsContext();
+  const { dispatch, state } = useContactsContext();
   const { sectors = [] } = useWhatsappContext();
   const [idInput, setIdInput] = React.useState<string>(state.filters.id || "");
   const [nameInput, setNameInput] = React.useState<string>(state.filters.name || "");
@@ -83,7 +83,6 @@ export default function ContactsTableHeader() {
     actions.push({ type: "set-sector-filter", sectorIds: selectedSectorOptionsLocal.map((s) => s.id) });
 
     dispatch({ type: "multiple", actions });
-    loadContacts();
   };
   const onClearFilters = () => dispatch({ type: "clear-filters" });
 

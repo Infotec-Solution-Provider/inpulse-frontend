@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
 import { ErrorResponse } from "./types/response.types";
 import { AuthRequestConfig, authSession } from "@/lib/auth-session";
+import { toast } from "react-toastify";
+import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 
 export default class ApiClient {
   public static readonly DEFAULT_TIMEOUT_MS = 60_000;
@@ -43,7 +45,9 @@ export default class ApiClient {
   }
 
   protected handleError = (error: AxiosError<ErrorResponse>): Promise<never> => {
-    const errorMessage = error.response?.data?.message || error.message;
+    const limited = readRequestLimitMessage(error);
+    if (limited) toast.warning(limited, { toastId: "read-request-limit" });
+    const errorMessage = limited || error.response?.data?.message || error.message;
     return Promise.reject(new Error(errorMessage, { cause: error }));
   };
 }
