@@ -17,6 +17,7 @@ import ChatProvider from "./(main)/(chat)/chat-context";
 import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
 import { AuthContext } from "@/app/auth-context";
+import { TelephonyProvider } from "@/lib/telephony/telephony-provider";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -101,6 +102,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <ThemeProvider>
                         {/* Accepted sends must outlive pages and monitor dialogs. */}
                         <ChatProvider>
+                          <TelephonyProvider>
                           <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
                             <Header />
                             <main className="min-h-0 overflow-y-auto">
@@ -117,6 +119,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                               <div>{modal as ReactElement}</div>
                             </Modal>
                           </div>
+                          </TelephonyProvider>
                         </ChatProvider>
                       </ThemeProvider>
                     </CustomersProvider>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
+import { WebrtcSettingsForm } from "@/lib/telephony/webrtc-settings-form";
 import usersService, {
   GlobalSipConfigDTO,
   UpsertGlobalSipConfigPayload,
@@ -249,7 +250,7 @@ export default function SipConfigPage() {
           </div>
           <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Configuração global de SIP</h1>
           <p className="text-sm text-slate-500 dark:text-slate-300">
-            Defina os parâmetros de telefonia do tenant na tabela legacy de parâmetros. As credenciais por operador continuam na tela de usuários.
+            Configure a central telefônica da empresa. As credenciais por operador ficam na tela de usuários.
           </p>
         </div>
         <div className="flex items-center gap-2 self-start md:self-auto">
@@ -266,6 +267,8 @@ export default function SipConfigPage() {
           </Button>
         </div>
       </div>
+
+      <WebrtcSettingsForm />
 
       {isLoading ? (
         <Paper className="border border-slate-200 dark:border-slate-700">

@@ -179,9 +179,9 @@ class AuthSessionCoordinator {
     };
 
     const lockName = `inpulse-auth-refresh:${configuration.instance}`;
-    const refreshPromise = typeof navigator !== "undefined" && navigator.locks
+    const refreshPromise = Promise.resolve(typeof navigator !== "undefined" && navigator.locks
       ? navigator.locks.request(lockName, execute)
-      : execute();
+      : execute());
     this.refreshPromise = refreshPromise;
 
     try {

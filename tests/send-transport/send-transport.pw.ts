@@ -17,7 +17,8 @@ async function setup(page: Page, options: { postStatus?: number; refreshStatus?:
     if (url.pathname === "/test-api/refresh") { refreshes++; return reply({ token: "renewed-token", message: "Refresh unavailable" }, options.refreshStatus ?? 200); }
     const match = url.pathname.match(/^\/api\/whatsapp\/(\d+)\/messages$/);
     if (match && req.method() === "POST") {
-      const form = await new Response(req.postDataBuffer(), { headers: { "Content-Type": req.headers()["content-type"] } }).formData();
+      const body = req.postDataBuffer();
+      const form = await new Response(body ? new Uint8Array(body) : null, { headers: { "Content-Type": req.headers()["content-type"] } }).formData();
       const fields = Object.fromEntries(form.entries());
       sends.push({ clientId: match[1], key: req.headers()["idempotency-key"], fields });
       const sequence = sends.length;

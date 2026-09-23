@@ -9,6 +9,8 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Button, Chip } from "@mui/material";
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import { useTelephony } from "@/lib/telephony/telephony-provider";
+import { callPhaseLabels } from "@/lib/telephony/types";
 import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
 import TelephoneFinishModal from "./telephone-finish-modal";
 import {
@@ -39,17 +41,19 @@ const formatSchedule = (scheduledAt: string) => {
 export default function TelephoneDialerCard() {
   const { token } = useAuthContext();
   const { openModal } = useAppContext();
+  const phone = useTelephony();
   const [queue, setQueue] = useState<TelephoneQueueItem[]>([]);
-  const [activeId, setActiveId] = useState<number | null>(null);
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
   const [queueError, setQueueError] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState("");
-  const [startedAt, setStartedAt] = useState<string | null>(null);
   const [isStartingDial, setIsStartingDial] = useState(false);
 
   const nextAppointment = useMemo(() => queue[0] ?? null, [queue]);
-  const isDialing = nextAppointment?.id === activeId;
+  const matchesCall = nextAppointment?.id === phone.state.scheduleId;
+  const isDialing = matchesCall && phone.busy;
+  const startedAt = matchesCall ? phone.state.startedAt : null;
+  const callStatusLabel = matchesCall ? callPhaseLabels[phone.state.phase] : "Não iniciado";
 
   useEffect(() => {
     if (!nextAppointment) {
@@ -147,23 +151,7 @@ export default function TelephoneDialerCard() {
     setIsStartingDial(true);
 
     try {
-      customersService.setAuth(token);
-      const callStatus = await customersService.startTelephonyScheduleCall(nextAppointment.id, {
-        dialedPhone: selectedPhone || nextAppointment.phone,
-      });
-
-      if (callStatus.state !== "dialing" && callStatus.state !== "answered") {
-        throw new Error("A sessao de chamada nao entrou em estado valido de discagem.");
-      }
-
-      setActiveId(nextAppointment.id);
-      setStartedAt(callStatus.startedAt || new Date().toISOString());
-      setSelectedPhone(callStatus.dialedPhone || selectedPhone || nextAppointment.phone);
-      setQueue((previousQueue) =>
-        previousQueue.map((item) =>
-          item.id === nextAppointment.id ? { ...item, status: "dialing" } : item,
-        ),
-      );
+      await phone.dial(selectedPhone || nextAppointment.phone, nextAppointment.id);
     } catch (err) {
       toast.error(`Falha ao iniciar ligacao: ${sanitizeErrorMessage(err)}`);
     } finally {
@@ -173,22 +161,22 @@ export default function TelephoneDialerCard() {
 
   const handleFinishAppointment = async (resultId: number, scheduleDate?: string) => {
     if (!nextAppointment) return;
+    if (phone.busy) throw new Error("Desligue a chamada antes de finalizar o atendimento.");
 
     if (!token) {
       throw new Error("Sessao invalida para finalizar atendimento.");
     }
 
     try {
+      await phone.waitForSync();
       customersService.setAuth(token);
       await customersService.finishTelephonySchedule(nextAppointment.id, {
         resultId,
         scheduleDate,
         startedAt: startedAt || undefined,
-        finishedAt: new Date().toISOString(),
+        finishedAt: (matchesCall && phone.state.endedAt) || new Date().toISOString(),
         dialedPhone: selectedPhone || nextAppointment.phone,
       });
-      setActiveId(null);
-      setStartedAt(null);
       setIsDrawerOpen(false);
       await reloadQueue();
       toast.success("Atendimento telefonico finalizado com sucesso.");
@@ -282,7 +270,7 @@ export default function TelephoneDialerCard() {
               <Chip
                 size="small"
                 color={isDialing ? "success" : "warning"}
-                label={isDialing ? "Em discagem" : "Não iniciado"}
+                label={callStatusLabel}
                 className="!h-5"
               />
             </div>
@@ -312,6 +300,9 @@ export default function TelephoneDialerCard() {
         open={isDrawerOpen}
         appointment={nextAppointment}
         isDialing={isDialing || isStartingDial}
+        callStatusLabel={callStatusLabel}
+        canStartCall={phone.state.connection === "ready" && !phone.busy && !isStartingDial}
+        canFinish={!phone.busy && !isStartingDial}
         dialedPhone={selectedPhone || nextAppointment.phone}
         onClose={() => setIsDrawerOpen(false)}
         onSelectPhone={setSelectedPhone}
