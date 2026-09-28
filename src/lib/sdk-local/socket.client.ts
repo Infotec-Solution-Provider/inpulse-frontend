@@ -79,6 +79,12 @@ export default class SocketClient {
 		};
 	}
 
+	/** Observe initial connection and reconnections without owning other listeners. */
+	public subscribeConnection(callback: () => void): () => void {
+		this.ws.on("connect", callback);
+		return () => { this.ws.off("connect", callback); };
+	}
+
 	/**
 	 * Removes a previously registered event listener from the WebSocket connection.
 	 *

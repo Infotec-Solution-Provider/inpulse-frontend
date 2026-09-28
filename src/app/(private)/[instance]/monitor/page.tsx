@@ -1,535 +1,83 @@
 "use client";
-import filesService from "@/lib/services/files.service";
-import toDateString from "@/lib/utils/date-string";
-import { User } from "@/lib/sdk-local";
-import { Formatter } from "@in.pulse-crm/utils";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
-import { IconButton } from "@mui/material";
-import { useContext } from "react";
-import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
-import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
-import ChatHeader from "../(main)/(chat)/chat-header";
-import ChatMessagesList from "../(main)/(chat)/chat-messages-list";
-import ChatMessagesListMonitor from "../(main)/(chat)/chat-messages-list-monitor";
-import ChatSendMessageArea from "../(main)/(chat)/chat-send-message-area";
-import { AppContext } from "../app-context";
-import useInternalChatContext, {
-  DetailedInternalChat,
-  InternalChatContext,
-} from "../internal-context";
-import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
-import MonitorCard from "./(components)/card";
-import MonitorFilters from "./(components)/filters";
-import useMonitorContext from "./context";
 
-function getChatType(
-  chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
-): "external-chat" | "finished-chat" | "internal-chat" | "internal-group" | "schedule" {
-  if (!("chatType" in chat)) {
-    return "schedule";
-  }
-  if (chat.chatType === "wpp") {
-    return chat.isFinished ? "finished-chat" : "external-chat";
-  }
-  if (chat.chatType === "internal" && chat.isGroup) {
-    return "internal-group";
-  }
-  if (chat.chatType === "internal" && !chat.isGroup) {
-    return "internal-chat";
-  }
-
-  throw new Error(`Unknown chat type: ${chat.chatType}`);
-}
-
-function getEndDate(chat: DetailedInternalChat | DetailedChat) {
-  if (!chat.startedAt) {
-    return "Não iniciado";
-  }
-
-  if (!chat.finishedAt) {
-    return "Em andamento";
-  }
-
-  const datestr = toDateString(chat.finishedAt);
-
-  return datestr === "N/D" ? null : datestr;
-}
-
-function getChatUser(chat: DetailedInternalChat | DetailedChat, users: User[]): string {
-  const user = users.find((u) => {
-    if (chat.chatType === "wpp") {
-      return u.CODIGO === chat.userId;
-    }
-    return u.CODIGO === chat.creatorId;
-  });
-
-  return user ? user.NOME : "Supervisão";
-}
-
-function getInternalUsers(chat: DetailedInternalChat, users: User[]) {
-  const asAny = chat as any;
-  if (Array.isArray(asAny.users) && asAny.users.length) {
-    return asAny.users as User[];
-  }
-  if (Array.isArray(asAny.participants)) {
-    return (asAny.participants as { userId?: number }[])
-      .map((p) => users.find((u) => u.CODIGO === p.userId))
-      .filter(Boolean) as User[];
-  }
-  return [];
-}
-
-function getChatSector(
-  chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
-  sectors: any[],
-  users: User[],
-) {
-  if (!("chatType" in chat)) {
-    const sector = sectors.find((s) => s.id === chat.sectorId);
-
-    return sector ? sector.name : null;
-  }
-
-  if (chat.chatType === "wpp") {
-    const sector = sectors.find((s) => s.id === chat.sectorId);
-    return sector ? sector.name : null;
-  }
-  if (chat.chatType === "internal") {
-    const creator = users.find((u) => u.CODIGO === chat.creatorId);
-    const sector = creator && sectors.find((s) => s.id === creator?.SETOR);
-    return sector ? sector.name : null;
-  }
-}
-
-function getChatImage(
-  chat: DetailedInternalChat | DetailedChat | DetailedSchedule,
-  users: User[],
-): string {
-  if (!("chatType" in chat)) {
-    return "";
-  }
-
-  if (chat.chatType === "wpp") {
-    return chat.avatarUrl || "";
-  }
-
-  if (chat.chatType === "internal" && chat.isGroup && chat.groupImageFileId) {
-    return filesService.getFileDownloadUrl(chat.groupImageFileId);
-  }
-
-  if (chat.chatType === "internal" && !chat.isGroup) {
-    const user = users.find((u) => u.CODIGO !== chat.creatorId);
-
-    return user?.AVATAR_ID ? filesService.getFileDownloadUrl(user.AVATAR_ID) : "";
-  }
-
-  return "";
-}
-
-function getChatTitle(chat: DetailedInternalChat | DetailedChat | DetailedSchedule, users: User[]): string {
-  if (!("chatType" in chat)) {
-    return chat.contact?.name || "Contato excluído";
-  }
-  if (chat.chatType === "wpp") {
-    return chat.contact?.name || "Contato excluído";
-  }
-  if (chat.chatType === "internal" && chat.isGroup) {
-    return chat.groupName || "Grupo Interno";
-  }
-  if (chat.chatType === "internal" && !chat.isGroup) {
-    const internalUsers = getInternalUsers(chat, users);
-    return internalUsers.map((u) => u.NOME).join(" e ") || "Usuário Desconhecido";
-  }
-  return "Chat sem título";
-}
-
-function getChatCustomerName(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat) || chat.chatType === "wpp") {
-    return chat.customer?.RAZAO || "Sem cliente associado";
-  }
-  return null;
-}
-
-function getChatCustomerDocument(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat) || chat.chatType === "wpp") {
-    return chat.customer?.CPF_CNPJ || chat.customer ? "Documento não informado" : null;
-  }
-  return null;
-}
-
-function getChatContactNumber(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat) || chat.chatType === "wpp") {
-    if (!chat.contact?.phone) {
-      return "Whatsapp não encontrado";
-    }
-    try {
-      return Formatter.phone(chat.contact.phone);
-    } catch (error) {
-      console.error("Erro ao formatar telefone:", chat.contact.phone, error);
-      return chat.contact.phone; // Retorna o telefone sem formatação em caso de erro
-    }
-  }
-  return null;
-}
-
-function getChatParticipants(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat)) {
-    return [];
-  }
-
-  if (chat.chatType === "internal" && chat.isGroup) {
-    const internalUsers = getInternalUsers(chat, []);
-    return internalUsers.map((u) => u.NOME);
-  }
-  if (chat.chatType === "internal" && !chat.isGroup) {
-    const internalUsers = getInternalUsers(chat, []);
-    const otherUser = internalUsers.find((u) => u.CODIGO !== chat.creatorId);
-    return otherUser ? [otherUser.NOME] : [];
-  }
-  return [];
-}
-
-function getChatScheduledAt(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat)) {
-    return toDateString(chat.scheduledAt);
-  }
-
-  if (chat.chatType === "wpp" && chat.schedule) {
-    return toDateString(chat.schedule.scheduledAt);
-  }
-
-  return null;
-}
-
-function getChatScheduledFor(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat)) {
-    return toDateString(chat.scheduleDate);
-  }
-
-  if (chat.chatType === "wpp" && chat.schedule) {
-    return toDateString(chat.schedule.scheduleDate);
-  }
-  return null;
-}
-
-function getChatGroupName(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat)) {
-    return "";
-  }
-
-  if (chat.chatType === "internal" && chat.isGroup) {
-    return chat.groupName || "Grupo sem nome";
-  }
-
-  return null;
-}
-
-function getChatGroupDescription(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-  if (!("chatType" in chat)) {
-    return "";
-  }
-
-  if (chat.chatType === "internal" && chat.isGroup) {
-    return chat.groupDescription || "Sem descrição";
-  }
-
-  return null;
-}
-
-function getScheduledForUser(schedule: DetailedSchedule, users: User[]) {
-  const scheduledFor = users.find((u) => u.CODIGO === schedule.scheduledFor);
-  return scheduledFor ? scheduledFor.NOME : "Usuário Desconhecido";
-}
+import { Tab, Tabs } from "@mui/material";
+import { useEffect, useState } from "react";
+import { useAuthContext } from "@/app/auth-context";
+import { MonitorProvider } from "./context";
+import ConversationMonitor from "./conversations";
+import TelephonyMonitor from "./telephony/components/telephony-monitor";
 
 export default function MonitorPage() {
-  const { chats, page, setPage, pageSize, totalCount, isLoading, refetch } = useMonitorContext();
-  const { sectors = [] } = useWhatsappContext();
-  const { users = [] } = useInternalChatContext();
-  const { setCurrentChat, openChat, loadChatMessages } = useWhatsappContext();
-  const { openInternalChat, setCurrentChat: setCurrentInternalChat } =
-    useContext(InternalChatContext);
+  const { instance, user } = useAuthContext();
+  const scope = instance && user ? `${encodeURIComponent(instance)}:${user.CODIGO}` : "anonymous";
+  return <ScopedMonitorPage key={scope} scope={scope} />;
+}
 
-  const { openModal, closeModal } = useContext(AppContext);
-
-  function getHandleTransfer(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-    if (!("chatType" in chat)) {
-      return null;
+function ScopedMonitorPage({ scope }: { scope: string }) {
+  const storageKey = `monitor_tab:v1:${scope}`;
+  const [tab, setTab] = useState<"conversations" | "telephony">("conversations");
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    try {
+      setTab(localStorage.getItem(storageKey) === "telephony" ? "telephony" : "conversations");
+    } catch {
+      setTab("conversations");
     }
+    setReady(true);
+  }, [storageKey]);
 
-    if (chat.chatType === "wpp" && !chat.isFinished) {
-      return () => {
-        setCurrentChat(chat);
-        openModal(<TransferChatModal />);
-      };
+  useEffect(() => {
+    if (!ready || scope === "anonymous") return;
+    try {
+      localStorage.setItem(storageKey, tab);
+    } catch {
+      // Storage is optional; both views remain usable without it.
     }
-  }
+  }, [ready, scope, storageKey, tab]);
 
-  function getHandleView(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-    if (!("chatType" in chat)) {
-      return null;
-    }
-
-    if (chat.chatType === "wpp") {
-      return async () => {
-        let loadedMessages: any[] | undefined;
-        try {
-          loadedMessages = await loadChatMessages(chat);
-        } catch (error) {
-          console.error("Erro ao carregar mensagens do chat", chat.id, error);
-        }
-
-        openChat(chat, loadedMessages);
-
-        openModal(
-          <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
-            <button
-              onClick={() => closeModal?.()}
-              className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"
-            >
-              ✕
-            </button>
-            <>
-              <ChatHeader
-                avatarUrl={chat.avatarUrl}
-                name={chat.contact?.name || "Contato excluído"}
-                customerName={chat.customer?.RAZAO || "N/D"}
-                chatType={chat.chatType}
-                codErp={chat.customer?.COD_ERP || null}
-                cpfCnpj={chat.customer?.CPF_CNPJ || null}
-                customerId={chat.customer?.CODIGO || null}
-                startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
-                phone={chat.contact?.phone || "N/D"}
-              />
-              <div className="scrollbar-whatsapp flex-1 bg-white text-black drop-shadow-md dark:bg-slate-900 dark:text-white">
-                <ChatMessagesList />
-              </div>
-              <div className="border-t border-gray-200 bg-white p-2 text-black dark:border-gray-700 dark:bg-slate-900">
-                {chat.isFinished === false && <ChatSendMessageArea />}
-              </div>
-            </>
-          </div>,
-        );
-      };
-    }
-    if (chat.chatType === "internal") {
-      return () => {
-        setCurrentInternalChat(chat);
-        openInternalChat(chat, false);
-        const internalUsers = getInternalUsers(chat, users);
-        openModal(
-          <div className="relative flex h-[80vh] w-[calc(100vw-4rem)] max-w-[1200px] flex-col rounded-md bg-slate-900 shadow-xl dark:bg-slate-800">
-            <button
-              onClick={() => closeModal?.()}
-              className="absolute right-2 top-1 z-10 text-gray-700 hover:text-red-500 dark:text-gray-300 dark:hover:text-red-300"
-            >
-              ✕
-            </button>
-            <>
-              <ChatHeader
-                avatarUrl={""}
-                name={chat.groupName || internalUsers[0]?.NOME || "Conversa interna"}
-                customerName={chat.groupDescription || internalUsers[0]?.NOME_EXIBICAO || ""}
-                phone={internalUsers[0]?.SETOR_NOME || ""}
-                chatType={chat.chatType}
-                codErp={null}
-                cpfCnpj={null}
-                customerId={null}
-                startDate={chat.startedAt ? new Date(chat.startedAt).toDateString() : null}
-              />
-              <div className="scrollbar-whatsapp flex-1 bg-white text-black drop-shadow-md dark:bg-slate-900 dark:text-white">
-                <ChatMessagesListMonitor />
-              </div>
-              <div className="border-t border-gray-200 bg-white p-2 text-black dark:border-gray-700 dark:bg-slate-900">
-                <ChatSendMessageArea />
-              </div>
-            </>
-          </div>,
-        );
-      };
-    }
-  }
-
-  function getHandleFinish(chat: DetailedInternalChat | DetailedChat | DetailedSchedule) {
-    if (!("chatType" in chat)) {
-      return null;
-    }
-
-    if (chat.chatType === "wpp" && !chat.isFinished) {
-      return () => {
-        setCurrentChat(chat);
-        openModal(<FinishChatModal />);
-        refetch();
-      };
-    }
-
-    return null;
-  }
-  const totalPages = Math.ceil(totalCount / pageSize);
-  const paginatedChats = Array.isArray(chats) ? chats : [];
+  // Keep the server and first client render identical; restored tabs must not
+  // briefly start requests for a different channel during hydration.
+  if (!ready)
+    return (
+      <p role="status" className="p-5 text-sm text-slate-500">
+        Carregando monitoria…
+      </p>
+    );
 
   return (
-    <div className="mx-auto grid h-[98%] w-full max-w-[1366px] grid-rows-[auto_1fr] gap-0">
-      <div className="flex w-full gap-2 overflow-hidden p-4">
-        <MonitorFilters />
-        <main className="scrollbar-whatsapp grid grow grid-rows-[auto_1fr_auto] gap-4">
-          {/* Contador de Resultados */}
-          <div className="flex items-center justify-between rounded-lg bg-gradient-to-r from-indigo-200 to-purple-200 px-6 py-3 shadow-sm dark:from-indigo-800/30 dark:to-purple-800/30">
-            <div className="flex items-center gap-3">
-              <AssessmentIcon
-                className="text-indigo-600 dark:text-indigo-400"
-                sx={{ fontSize: 28 }}
-              />
-              <div>
-                <h2 className="text-lg font-bold text-gray-800 dark:text-white">
-                  Monitor de Conversas
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {isLoading ? (
-                    "Carregando..."
-                  ) : (
-                    <>
-                      Exibindo{" "}
-                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                        {paginatedChats.length}
-                      </span>{" "}
-                      de{" "}
-                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                        {totalCount}
-                      </span>{" "}
-                      conversas
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Página</p>
-                <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-                  {page} / {totalPages || 1}
-                </p>
-              </div>
-              {totalPages > 1 && (
-                <>
-                  <IconButton
-                    size="small"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "rgb(229, 231, 235)",
-                      "&:hover": {
-                        borderColor: "rgb(99, 102, 241)",
-                        backgroundColor: "rgb(238, 242, 255)",
-                      },
-                      "&.Mui-disabled": {
-                        borderColor: "rgb(229, 231, 235)",
-                        opacity: 0.5,
-                      },
-                    }}
-                  >
-                    <ChevronLeftIcon sx={{ fontSize: 20 }} />
-                  </IconButton>
-
-                  <IconButton
-                    size="small"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "rgb(229, 231, 235)",
-                      "&:hover": {
-                        borderColor: "rgb(99, 102, 241)",
-                        backgroundColor: "rgb(238, 242, 255)",
-                      },
-                      "&.Mui-disabled": {
-                        borderColor: "rgb(229, 231, 235)",
-                        opacity: 0.5,
-                      },
-                    }}
-                  >
-                    <ChevronRightIcon sx={{ fontSize: 20 }} />
-                  </IconButton>
-                </>
-              )}
-            </div>
-          </div>
-
-          <ul className="overflow-auto">
-            {paginatedChats.map((chat) => {
-              if ("chatType" in chat) {
-                return (
-                  <MonitorCard
-                    key={`${chat.chatType}-${chat.id}`}
-                    type={getChatType(chat)}
-                    startDate={toDateString(chat.startedAt)}
-                    endDate={getEndDate(chat)}
-                    userName={getChatUser(chat, users)}
-                    sectorName={getChatSector(chat, sectors, users)}
-                    imageUrl={getChatImage(chat, users)}
-                    chatTitle={getChatTitle(chat, users)}
-                    customerName={getChatCustomerName(chat)}
-                    contactNumber={getChatContactNumber(chat)}
-                    customerDocument={getChatCustomerDocument(chat)}
-                    scheduledAt={getChatScheduledAt(chat)}
-                    scheduledFor={getChatScheduledFor(chat)}
-                    isScheduled={"schedule" in chat && chat.schedule ? true : false}
-                    participants={getChatParticipants(chat)}
-                    groupName={getChatGroupName(chat)}
-                    groupDescription={getChatGroupDescription(chat)}
-                    handleTransfer={getHandleTransfer(chat)}
-                    handleView={getHandleView(chat)}
-                    handleFinish={getHandleFinish(chat)}
-                  />
-                );
-              }
-              // Optionally handle DetailedSchedule or skip rendering
-              return (
-                <MonitorCard
-                  key={`schedule-${chat.id}`}
-                  type={"schedule"}
-                  startDate={"Não Iniciado"}
-                  endDate={"."}
-                  userName={getScheduledForUser(chat, users)}
-                  sectorName={getChatSector(chat, sectors, users)}
-                  imageUrl={getChatImage(chat, users)}
-                  chatTitle={getChatTitle(chat, users)}
-                  customerName={getChatCustomerName(chat)}
-                  contactNumber={getChatContactNumber(chat)}
-                  customerDocument={getChatCustomerDocument(chat)}
-                  scheduledAt={getChatScheduledAt(chat)}
-                  scheduledFor={getChatScheduledFor(chat)}
-                  isScheduled={
-                    !("chatType" in chat) || ("schedule" in chat && chat.schedule) ? true : false
-                  }
-                  participants={getChatParticipants(chat)}
-                  groupName={getChatGroupName(chat)}
-                  groupDescription={getChatGroupDescription(chat)}
-                  handleTransfer={getHandleTransfer(chat)}
-                  handleView={getHandleView(chat)}
-                  handleFinish={getHandleFinish(chat)}
-                />
-              );
-            })}
-          </ul>
-
-          {chats.length === 0 && !isLoading && (
-            <div className="flex h-full flex-col items-center justify-center gap-4 text-gray-400">
-              <SearchOffIcon sx={{ fontSize: 80, opacity: 0.3 }} />
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-300">
-                  Nenhuma conversa encontrada
-                </h3>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Ajuste os filtros ou aguarde novas conversas
-                </p>
-              </div>
-            </div>
-          )}
-        </main>
+    <div className="flex min-h-full w-full min-w-0 flex-col lg:h-full lg:min-h-0">
+      <Tabs
+        aria-label="Canal da monitoria"
+        value={tab}
+        onChange={(_event, value: "conversations" | "telephony") => setTab(value)}
+        className="mx-3 shrink-0 border-b border-slate-200 dark:border-slate-700 md:mx-5"
+      >
+        <Tab
+          id="monitor-tab-conversations"
+          aria-controls="monitor-panel-conversations"
+          value="conversations"
+          label="Conversas"
+        />
+        <Tab
+          id="monitor-tab-telephony"
+          aria-controls="monitor-panel-telephony"
+          value="telephony"
+          label="Telefonia"
+        />
+      </Tabs>
+      <div
+        role="tabpanel"
+        id={`monitor-panel-${tab}`}
+        aria-labelledby={`monitor-tab-${tab}`}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
+      >
+        {tab === "conversations" ? (
+          <MonitorProvider>
+            <ConversationMonitor />
+          </MonitorProvider>
+        ) : (
+          <TelephonyMonitor />
+        )}
       </div>
     </div>
   );

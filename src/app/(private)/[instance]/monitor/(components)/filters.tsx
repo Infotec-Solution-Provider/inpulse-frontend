@@ -1,476 +1,375 @@
-import Checkbox from "@/lib/components/checkbox";
-import RangeDateField from "@/lib/components/range-date-field";
-import SearchIcon from "@mui/icons-material/Search";
+"use client";
+
 import FilterListIcon from "@mui/icons-material/FilterList";
-import ClearIcon from "@mui/icons-material/Clear";
-import {
-  FormControl,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
-  TextField,
-  Chip,
-  Button,
-} from "@mui/material";
-import { useState, useEffect } from "react";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import SearchIcon from "@mui/icons-material/Search";
+import { Button, Chip, MenuItem, TextField } from "@mui/material";
+import type { FormEvent, ReactNode } from "react";
+import { useState } from "react";
 import useInternalChatContext from "../../internal-context";
 import useMonitorContext from "../context";
+import type { MonitorFiltersState } from "../types";
+
+const panelClass =
+  "rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800";
+
+function FilterCheckbox({
+  id,
+  checked,
+  onChange,
+  children,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-start gap-2 py-1 text-sm text-slate-700 dark:text-slate-200"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 accent-indigo-600"
+      />
+      {children}
+    </label>
+  );
+}
+
+function FilterDateRange({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: MonitorFiltersState["startedAt"];
+  onChange: (value: MonitorFiltersState["startedAt"]) => void;
+}) {
+  return (
+    <fieldset className="min-w-0">
+      <legend className="mb-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+        {label}
+      </legend>
+      <div className="grid min-w-0 grid-cols-2 gap-2">
+        <TextField
+          type="date"
+          size="small"
+          fullWidth
+          label="De"
+          value={value.from ?? ""}
+          slotProps={{
+            inputLabel: { shrink: true },
+            htmlInput: { "aria-label": `${label}: de`, max: value.to || undefined },
+          }}
+          onChange={(event) => onChange({ ...value, from: event.target.value || null })}
+        />
+        <TextField
+          type="date"
+          size="small"
+          fullWidth
+          label="Até"
+          value={value.to ?? ""}
+          slotProps={{
+            inputLabel: { shrink: true },
+            htmlInput: { "aria-label": `${label}: até`, min: value.from || undefined },
+          }}
+          onChange={(event) => onChange({ ...value, to: event.target.value || null })}
+        />
+      </div>
+    </fieldset>
+  );
+}
 
 export default function MonitorFilters() {
-  const { filters, setFilters, resetFilters, applyFilters } = useMonitorContext();
-  const { users } = useInternalChatContext();
+  const { filters, setFilters, resetFilters, applyFilters, hasUnappliedFilters, isLoading } =
+    useMonitorContext();
+  const { users = [] } = useInternalChatContext();
+  const [expanded, setExpanded] = useState(false);
+  const update = <K extends keyof MonitorFiltersState>(key: K, value: MonitorFiltersState[K]) =>
+    setFilters((current) => ({ ...current, [key]: value }));
+  const activeFiltersCount = [
+    !!filters.searchText,
+    filters.user !== "all",
+    filters.scheduledFor !== "all",
+    filters.operationalStatus !== "all",
+    filters.showBots,
+    !filters.showOngoing || !filters.showFinished,
+    filters.showOnlyScheduled,
+    filters.showUnreadOnly,
+    filters.showPendingResponseOnly,
+    Object.values(filters.categories).some((visible) => !visible),
+    ...[filters.startedAt, filters.finishedAt, filters.scheduledAt, filters.scheduledTo].map(
+      (range) => !!range.from || !!range.to,
+    ),
+  ].filter(Boolean).length;
 
-  const [text, setText] = useState<string>(filters.searchText);
-  const [searchColumn, setSearchColumn] = useState<string>(filters.searchColumn);
-
-  // Sincronizar estados locais quando os filtros mudarem (ex: ao carregar do localStorage)
-  useEffect(() => {
-    setText(filters.searchText);
-    setSearchColumn(filters.searchColumn);
-  }, [filters.searchText, filters.searchColumn]);
-
-  // Contador de filtros ativos
-  const activeFiltersCount =
-    (filters.searchText ? 1 : 0) +
-    (filters.user !== "all" ? 1 : 0) +
-    (filters.scheduledFor !== "all" ? 1 : 0) +
-    (!filters.showOngoing || !filters.showFinished ? 1 : 0) +
-    (filters.showOnlyScheduled ? 1 : 0) +
-    (filters.showUnreadOnly ? 1 : 0) +
-    (filters.showPendingResponseOnly ? 1 : 0);
-
-  const handleSearch = () => {
-    const newFilters = {
-      ...filters,
-      searchText: text,
-      searchColumn: searchColumn as any,
-    };
-    setFilters(newFilters);
-    applyFilters(newFilters);
-  };
-
-  const onChangeUser = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      user: e.target.value === "all" ? "all" : Number(e.target.value),
-    });
-  };
-
-  const onChangeShowBots = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      showBots: e.target.checked,
-    });
-  };
-
-  const onChangeShowOngoing = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      showOngoing: e.target.checked,
-    });
-  };
-
-  const onChangeShowFinished = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      showFinished: e.target.checked,
-    });
-  };
-
-  const onChangeShowOnlyScheduled = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      showOnlyScheduled: e.target.checked,
-    });
-  };
-
-  const onChangeShowUnreadOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      showUnreadOnly: e.target.checked,
-    });
-  };
-
-  const onChangeShowPendingResponseOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      showPendingResponseOnly: e.target.checked,
-    });
-  };
-
-  const onChangeScheduledFor = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({
-      ...filters,
-      scheduledFor: e.target.value === "all" ? "all" : Number(e.target.value),
-    });
-  };
-
-  const handleClearSearch = () => {
-    setText("");
-    setSearchColumn("all");
-    const newFilters = {
-      ...filters,
-      searchText: "",
-      searchColumn: "all" as const,
-    };
-    setFilters(newFilters);
-    applyFilters(newFilters);
-  };
-
-  const handleSearchColumnChange = (e: SelectChangeEvent) => {
-    setSearchColumn(e.target.value);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
-
-  const onChangeSortBy = (e: SelectChangeEvent) => {
-    setFilters({
-      ...filters,
-      sortBy: e.target.value as any,
-    });
-  };
-
-  const onChangeSortOrder = (e: SelectChangeEvent) => {
-    setFilters({
-      ...filters,
-      sortOrder: e.target.value as any,
-    });
+  const handleApply = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    applyFilters();
   };
 
   return (
-    <aside className="grid h-full w-full grid-rows-[auto_1fr] rounded-lg border border-slate-600/40 bg-slate-200/50 shadow-sm  dark:bg-slate-900 md:w-96">
-      {/* Header corporativo */}
-      <header className="border-b px-3 py-2.5 bg-slate-200/50 dark:bg-slate-800/50 dark:border-slate-700">
-        <div className="flex items-center justify-between backdrop:hidden">
-          <div className="flex items-center gap-2">
-            <FilterListIcon sx={{ fontSize: 18, color: "rgb(75, 85, 99)" }} />
-            <h1 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Filtros</h1>
+    <aside
+      aria-label="Filtros da monitoria"
+      className={`min-h-0 w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900 lg:static lg:h-full lg:max-h-none lg:w-80 ${expanded ? "h-[34rem] max-h-[70dvh]" : ""}`}
+    >
+      <form
+        onSubmit={handleApply}
+        className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"
+      >
+        <header className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+            <FilterListIcon fontSize="small" />
+            <h2 className="hidden text-sm font-semibold lg:block">Filtros</h2>
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 lg:hidden"
+              aria-expanded={expanded}
+              aria-controls="monitor-filter-fields"
+              onClick={() => setExpanded((current) => !current)}
+            >
+              Filtros
+              <ExpandMoreIcon fontSize="small" className={expanded ? "rotate-180" : ""} />
+            </button>
             {activeFiltersCount > 0 && (
               <Chip
                 label={activeFiltersCount}
                 size="small"
-                sx={{
-                  backgroundColor: "rgb(59, 130, 246)",
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: "0.7rem",
-                  height: "18px",
-                  minWidth: "18px",
-                }}
+                color="primary"
+                aria-label={`${activeFiltersCount} filtros selecionados`}
               />
             )}
           </div>
-          <button
-            className="rounded px-1.5 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-slate-700 dark:hover:text-gray-200"
-            onClick={resetFilters}
-          >
-            <ClearIcon sx={{ fontSize: 13, mr: 0.5 }} />
+          <Button type="button" size="small" onClick={resetFilters}>
             Limpar
-          </button>
-        </div>
-      </header>
+          </Button>
+        </header>
 
-      <div className="scrollbar-whatsapp max-h-max overflow-y-auto p-3">
-        <section className="mb-3 rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-slate-800">
-          <h2 className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            <SearchIcon sx={{ fontSize: 14 }} />
-            Pesquisar
-          </h2>
-          <div className="flex flex-col gap-2">
-            <FormControl fullWidth size="small">
-              <InputLabel id="search-column-label">Buscar em</InputLabel>
-              <Select
-                labelId="search-column-label"
-                value={searchColumn}
-                label="Buscar em"
-                onChange={handleSearchColumnChange}
-              >
-                <MenuItem value="all">Todos os campos</MenuItem>
-                <MenuItem value="name">Nome</MenuItem>
-                <MenuItem value="phone">Telefone</MenuItem>
-                <MenuItem value="customer">Cliente</MenuItem>
-                <MenuItem value="message">Mensagem</MenuItem>
-              </Select>
-            </FormControl>
-            <div className="flex items-center gap-2">
-              <TextField
-                placeholder="Digite para buscar..."
-                fullWidth
-                size="small"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyPress={handleKeyPress}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: "8px",
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleSearch}
-                sx={{
-                  minWidth: "auto",
-                  px: 2,
-                  py: 1,
-                  backgroundColor: "rgb(59, 130, 246)",
-                  "&:hover": {
-                    backgroundColor: "rgb(37, 99, 235)",
-                  },
-                }}
-              >
-                <SearchIcon sx={{ fontSize: 18 }} />
-              </Button>
-            </div>
-          </div>
-          {filters.searchText && (
-            <Chip
-              label={`Buscando: "${filters.searchText}"${filters.searchColumn !== "all" ? ` em ${filters.searchColumn === "name" ? "Nome" : filters.searchColumn === "phone" ? "Telefone" : filters.searchColumn === "customer" ? "Cliente" : "Mensagem"}` : ""}`}
+        <div
+          id="monitor-filter-fields"
+          className={`scrollbar-whatsapp min-h-0 space-y-3 overflow-y-auto p-3 lg:block ${expanded ? "block" : "hidden"}`}
+        >
+          <section className={`${panelClass} space-y-3`} aria-label="Busca">
+            <TextField
+              fullWidth
               size="small"
-              onDelete={handleClearSearch}
-              sx={{ mt: 1 }}
+              label="Pesquisar"
+              placeholder="Nome, telefone ou mensagem"
+              value={filters.searchText}
+              onChange={(event) => update("searchText", event.target.value)}
             />
-          )}
-        </section>
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Buscar em"
+              value={filters.searchColumn}
+              onChange={(event) =>
+                update("searchColumn", event.target.value as MonitorFiltersState["searchColumn"])
+              }
+            >
+              <MenuItem value="all">Todos os campos</MenuItem>
+              <MenuItem value="name">Nome</MenuItem>
+              <MenuItem value="phone">Telefone</MenuItem>
+              <MenuItem value="customer">Cliente</MenuItem>
+              <MenuItem value="message">Mensagem</MenuItem>
+            </TextField>
+          </section>
 
-        <section className="mb-3 rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-slate-800">
-          <h2 className="mb-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Ordenação
-          </h2>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <FormControl fullWidth size="small">
-              <InputLabel id="monitor-sort-by-label">Ordenar por</InputLabel>
-              <Select
-                labelId="monitor-sort-by-label"
-                value={filters.sortBy}
-                label="Ordenar por"
-                onChange={onChangeSortBy}
-              >
-                <MenuItem value="startedAt">Data de início</MenuItem>
-                <MenuItem value="finishedAt">Data de finalização</MenuItem>
-                <MenuItem value="lastMessage">Data da última mensagem</MenuItem>
-                <MenuItem value="name">Nome</MenuItem>
-                <MenuItem value="scheduledAt">Agendado em</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel id="monitor-sort-order-label">Ordem</InputLabel>
-              <Select
-                labelId="monitor-sort-order-label"
-                value={filters.sortOrder}
-                label="Ordem"
-                onChange={onChangeSortOrder}
-              >
-                <MenuItem value="asc">Crescente</MenuItem>
-                <MenuItem value="desc">Decrescente</MenuItem>
-              </Select>
-            </FormControl>
-          </div>
-        </section>
-
-        <section className="mb-3 rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-slate-800">
-          <h2 className="mb-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Categorias
-          </h2>
-          <ul className="flex flex-col gap-2">
-            <Checkbox
-              id="monit-filter:external-chats"
-              value={filters.categories.showCustomerChats}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  categories: { ...filters.categories, showCustomerChats: e.target.checked },
-                })
-              }
-            >
-              Exibir: Conversas com clientes
-            </Checkbox>
-            <Checkbox
-              id="monit-filter:internal-chats"
-              value={filters.categories.showInternalChats}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  categories: { ...filters.categories, showInternalChats: e.target.checked },
-                })
-              }
-            >
-              Exibir: Conversas internas
-            </Checkbox>
-            <Checkbox
-              id="monit-filter:internal-groups"
-              value={filters.categories.showInternalGroups}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  categories: { ...filters.categories, showInternalGroups: e.target.checked },
-                })
-              }
-            >
-              Exibir: Grupos internos
-            </Checkbox>
-            <Checkbox
-              id="monit-filter:show-past-scheduled"
-              value={filters.categories.showSchedules}
-              onChange={(e) =>
-                setFilters({
-                  ...filters,
-                  categories: { ...filters.categories, showSchedules: e.target.checked },
-                })
-              }
-            >
-              Exibir: Agendamentos
-            </Checkbox>
-          </ul>
-        </section>
-
-        <section className="mb-3 rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-slate-800">
-          <h2 className="mb-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Atendente / Participante
-          </h2>
-          <div className="flex flex-col gap-2">
+          <section className={`${panelClass} space-y-3`} aria-label="Responsável e ordenação">
             <TextField
               select
               size="small"
-              label="Usuário"
+              label="Atendente / participante"
               fullWidth
-              defaultValue="all"
               value={filters.user}
-              onChange={onChangeUser}
+              onChange={(event) =>
+                update("user", event.target.value === "all" ? "all" : Number(event.target.value))
+              }
             >
               <MenuItem value="all">Todos</MenuItem>
-              {users.map((u) => (
-                <MenuItem key={u.CODIGO} value={u.CODIGO}>
-                  {u.NOME}
+              {users.map((user) => (
+                <MenuItem key={user.CODIGO} value={user.CODIGO}>
+                  {user.NOME}
                 </MenuItem>
               ))}
             </TextField>
-            <Checkbox
-              id="monit-filter:show-bots"
-              value={filters.showBots}
-              onChange={onChangeShowBots}
-            >
-              Exibir bots
-            </Checkbox>
-          </div>
-        </section>
-
-        <section className="mb-3 rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-slate-800">
-          <h2 className="mb-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Período da conversa
-          </h2>
-          <div className="flex flex-col gap-2">
-            <Checkbox
-              id="monit-filter:show-ongoing"
-              value={filters.showOngoing}
-              onChange={onChangeShowOngoing}
-            >
-              Exibir: Em andamento
-            </Checkbox>
-            <Checkbox
-              id="monit-filter:show-finished"
-              value={filters.showFinished}
-              onChange={onChangeShowFinished}
-            >
-              Exibir: Finalizados
-            </Checkbox>
-            <Checkbox
-              id="monit-filter:show-unread-only"
-              value={filters.showUnreadOnly}
-              onChange={onChangeShowUnreadOnly}
-            >
-              Apenas: Não lidas
-            </Checkbox>
-            <Checkbox
-              id="monit-filter:show-pending-response-only"
-              value={filters.showPendingResponseOnly}
-              onChange={onChangeShowPendingResponseOnly}
-            >
-              Apenas: Sem resposta
-            </Checkbox>
-            <RangeDateField
-              label="Data de Início"
-              initialFrom={filters.startedAt.from ?? ""}
-              initialTo={filters.startedAt.to ?? ""}
-              onChange={(v) => setFilters({ ...filters, startedAt: v })}
-            />
-            <RangeDateField
-              label="Data de Finalização"
-              initialFrom={filters.finishedAt.from ?? ""}
-              initialTo={filters.finishedAt.to ?? ""}
-              onChange={(v) => setFilters({ ...filters, finishedAt: v })}
-            />
-          </div>
-        </section>
-
-        <section className="mb-3 rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-slate-800">
-          <h2 className="mb-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
-            Agendamentos
-          </h2>
-          <div className="flex flex-col gap-2">
-            <Checkbox
-              id="monit-filter:show-only-scheduled"
-              value={filters.showOnlyScheduled}
-              onChange={onChangeShowOnlyScheduled}
-            >
-              Exibir: Apenas agendados
-            </Checkbox>
-            <RangeDateField
-              label="Agendado no dia"
-              initialFrom={filters.scheduledAt.from ?? ""}
-              initialTo={filters.scheduledAt.to ?? ""}
-              onChange={(v) => setFilters({ ...filters, scheduledAt: v })}
-            />
-            <RangeDateField
-              label="Agendado para o dia"
-              initialFrom={filters.scheduledTo.from ?? ""}
-              initialTo={filters.scheduledTo.to ?? ""}
-              onChange={(v) => setFilters({ ...filters, scheduledTo: v })}
-            />
-            {/*           <div className="my-2">
             <TextField
               select
-              size="small"
-              label="Agendado por"
               fullWidth
-              defaultValue="all"
-              onChange={onChangeScheduledBy}
+              size="small"
+              label="Ordenar por"
+              value={filters.sortBy}
+              onChange={(event) =>
+                update("sortBy", event.target.value as MonitorFiltersState["sortBy"])
+              }
             >
-              <MenuItem value="all">Qualquer</MenuItem>
-              {users.map((u) => (
-                <MenuItem key={u.CODIGO} value={u.CODIGO}>
-                  {u.NOME}
-                </MenuItem>
-              ))}
+              <MenuItem value="urgency">Urgência operacional</MenuItem>
+              <MenuItem value="startedAt">Data de início</MenuItem>
+              <MenuItem value="finishedAt">Data de finalização</MenuItem>
+              <MenuItem value="lastMessage">Última mensagem</MenuItem>
+              <MenuItem value="name">Nome</MenuItem>
+              <MenuItem value="scheduledAt">Agendado para</MenuItem>
             </TextField>
-          </div> */}
-            <div className="my-2">
+            <TextField
+              select
+              fullWidth
+              size="small"
+              label="Ordem"
+              value={filters.sortOrder}
+              onChange={(event) =>
+                update("sortOrder", event.target.value as MonitorFiltersState["sortOrder"])
+              }
+            >
+              <MenuItem value="desc">
+                {filters.sortBy === "urgency" ? "Mais urgentes primeiro" : "Decrescente"}
+              </MenuItem>
+              <MenuItem value="asc">
+                {filters.sortBy === "urgency" ? "Menos urgentes primeiro" : "Crescente"}
+              </MenuItem>
+            </TextField>
+          </section>
+
+          <details className={panelClass}>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Categorias e situação
+            </summary>
+            <div className="mt-3 space-y-1">
+              {(
+                [
+                  ["showCustomerChats", "Conversas com clientes"],
+                  ["showInternalChats", "Conversas internas"],
+                  ["showInternalGroups", "Grupos internos"],
+                  ["showSchedules", "Agendamentos"],
+                ] as const
+              ).map(([key, label]) => (
+                <FilterCheckbox
+                  key={key}
+                  id={`monitor-${key}`}
+                  checked={filters.categories[key]}
+                  onChange={(checked) =>
+                    setFilters((current) => ({
+                      ...current,
+                      categories: { ...current.categories, [key]: checked },
+                    }))
+                  }
+                >
+                  {label}
+                </FilterCheckbox>
+              ))}
+              <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+              {(
+                [
+                  ["showBots", "Incluir bots"],
+                  ["showOngoing", "Em andamento"],
+                  ["showFinished", "Finalizados"],
+                  ["showUnreadOnly", "Apenas não lidas"],
+                  ["showPendingResponseOnly", "Apenas sem resposta"],
+                ] as const
+              ).map(([key, label]) => (
+                <FilterCheckbox
+                  key={key}
+                  id={`monitor-${key}`}
+                  checked={filters[key]}
+                  onChange={(checked) => update(key, checked)}
+                >
+                  {label}
+                </FilterCheckbox>
+              ))}
+            </div>
+          </details>
+
+          <details className={panelClass}>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Período da conversa
+            </summary>
+            <div className="mt-3 space-y-4">
+              <FilterDateRange
+                label="Data de início"
+                value={filters.startedAt}
+                onChange={(value) => update("startedAt", value)}
+              />
+              <FilterDateRange
+                label="Data de finalização"
+                value={filters.finishedAt}
+                onChange={(value) => update("finishedAt", value)}
+              />
+            </div>
+          </details>
+
+          <details className={panelClass}>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
+              Agendamentos
+            </summary>
+            <div className="mt-3 space-y-4">
+              <FilterCheckbox
+                id="monitor-showOnlyScheduled"
+                checked={filters.showOnlyScheduled}
+                onChange={(checked) => update("showOnlyScheduled", checked)}
+              >
+                Apenas agendados
+              </FilterCheckbox>
+              <FilterDateRange
+                label="Agendado no dia"
+                value={filters.scheduledAt}
+                onChange={(value) => update("scheduledAt", value)}
+              />
+              <FilterDateRange
+                label="Agendado para o dia"
+                value={filters.scheduledTo}
+                onChange={(value) => update("scheduledTo", value)}
+              />
               <TextField
                 select
                 size="small"
                 label="Agendado para"
                 fullWidth
                 value={filters.scheduledFor}
-                onChange={onChangeScheduledFor}
+                onChange={(event) =>
+                  update(
+                    "scheduledFor",
+                    event.target.value === "all" ? "all" : Number(event.target.value),
+                  )
+                }
               >
-                <MenuItem value="all">Qualquer</MenuItem>
-                {users.map((u) => (
-                  <MenuItem key={u.CODIGO} value={u.CODIGO}>
-                    {u.NOME}
+                <MenuItem value="all">Qualquer atendente</MenuItem>
+                {users.map((user) => (
+                  <MenuItem key={user.CODIGO} value={user.CODIGO}>
+                    {user.NOME}
                   </MenuItem>
                 ))}
               </TextField>
             </div>
-          </div>
-        </section>
-      </div>
+          </details>
+        </div>
+
+        <footer
+          className={`border-t border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 lg:block ${expanded ? "block" : "hidden"}`}
+        >
+          <p
+            role="status"
+            className={`mb-2 text-xs ${hasUnappliedFilters ? "text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}
+          >
+            {hasUnappliedFilters
+              ? "Há alterações de filtros para aplicar."
+              : "Os filtros selecionados estão aplicados."}
+          </p>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            startIcon={<SearchIcon />}
+            disabled={isLoading && !hasUnappliedFilters}
+          >
+            Aplicar filtros
+          </Button>
+        </footer>
+      </form>
     </aside>
   );
 }

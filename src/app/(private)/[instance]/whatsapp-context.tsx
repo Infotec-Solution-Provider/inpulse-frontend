@@ -138,7 +138,7 @@ interface IWhatsappContext {
   currentChat: DetailedChat | DetailedInternalChat | null;
   currentChatMessages: WppMessage[];
   monitorSchedules: DetailedSchedule[];
-  openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[]) => void;
+  openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[], markAsRead?: boolean) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageOptions) => Promise<WppMessage>;
@@ -151,7 +151,7 @@ interface IWhatsappContext {
   getChatsMonitor: () => void;
   getMonitorSchedules: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
-  finishChat: (chatId: number, resultId: number, scheduleDate?: Date | null) => void;
+  finishChat: (chatId: number, resultId: number, scheduleDate?: Date | null) => Promise<void>;
   startChatByContactId: (contactId: number, template?: SendTemplateData) => Promise<any>;
   updateChatContact: (contactId: number, newName: string, newCustomer: Customer | null) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
@@ -458,7 +458,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const historyRequestId = useRef(0);
   const openChat = useCallback(
-    (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
+    (chat: DetailedChat, preloadedMessages?: WppMessage[], markAsRead = true) => {
       const requestId = ++historyRequestId.current;
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
@@ -488,7 +488,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
       }
 
-      if (chat.contactId && globalChannel.current) {
+      if (markAsRead && chat.contactId && globalChannel.current) {
         api.current.markContactMessagesAsRead(chat.contactId);
 
         setChats((prev) =>
@@ -538,9 +538,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const finishChat = useCallback(
-    (chatId: number, resultId: number, scheduleDate?: Date | null) => {
+    async (chatId: number, resultId: number, scheduleDate?: Date | null) => {
+      const scope = liveAuth.current.scope;
       api.current.setAuth(token || "");
-      api.current.finishChatById(chatId, resultId, scheduleDate);
+      await api.current.finishChatById(chatId, resultId, scheduleDate);
+      if (scope !== liveAuth.current.scope) return;
       setMonitorChats((prev) => prev.filter((c) => c.id !== chatId));
     },
     [api, token],
@@ -548,8 +550,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const transferAttendance = useCallback(
     async (chatId: number, selectedUser: number) => {
+      const scope = liveAuth.current.scope;
       api.current.setAuth(token || "");
       await api.current.transferAttendance(chatId, selectedUser).then(() => {
+        if (scope !== liveAuth.current.scope) return;
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
         setMonitorChats((previous) => previous.map((chat) =>
           chat.id === chatId ? { ...chat, userId: selectedUser } : chat,

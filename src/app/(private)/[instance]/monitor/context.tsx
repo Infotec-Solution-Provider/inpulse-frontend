@@ -1,211 +1,170 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { DetailedChat, DetailedSchedule, useWhatsappContext } from "../whatsapp-context";
-import { DetailedInternalChat } from "../internal-context";
-import { AuthContext } from "@/app/auth-context";
-import { toast } from "react-toastify";
-import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
+"use client";
 
-interface MonitorContextProps {
-  chats: (DetailedInternalChat | DetailedChat | DetailedSchedule)[];
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { AuthContext } from "@/app/auth-context";
+import { SocketContext } from "../socket-context";
+import { AppContext } from "../app-context";
+import {
+  createInitialFilters,
+  equalMonitorFilters,
+  monitorStorageKey,
+  normalizePageSize,
+  restoreMonitorPreferences,
+  serializeMonitorPreferences,
+} from "./filters-state";
+import { useMonitorData } from "./use-monitor-data";
+import type { MonitorFiltersState, MonitorOperationalStatus, MonitorPreferences } from "./types";
+
+export type {
+  MonitorFiltersState,
+  MonitorItem,
+  MonitorSummary,
+  MonitorOperational,
+  MonitorOperationalStatus,
+} from "./types";
+
+interface MonitorContextProps extends ReturnType<typeof useMonitorData> {
   filters: MonitorFiltersState;
-  setFilters: React.Dispatch<React.SetStateAction<MonitorFiltersState>>;
+  appliedFilters: MonitorFiltersState;
+  setFilters: Dispatch<SetStateAction<MonitorFiltersState>>;
+  hasUnappliedFilters: boolean;
   resetFilters: () => void;
   applyFilters: (nextFilters?: MonitorFiltersState) => void;
-  totalCount: number;
+  setOperationalStatus: (status: MonitorOperationalStatus) => void;
   page: number;
   pageSize: number;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
-  setPageSize: React.Dispatch<React.SetStateAction<number>>;
-  isLoading: boolean;
-  refetch: () => void;
+  setPage: Dispatch<SetStateAction<number>>;
+  setPageSize: Dispatch<SetStateAction<number>>;
+  autoRefresh: boolean;
+  autoRefreshPaused: boolean;
+  setAutoRefresh: Dispatch<SetStateAction<boolean>>;
+  viewMode: "cards" | "compact";
+  setViewMode: Dispatch<SetStateAction<"cards" | "compact">>;
 }
 
-interface MonitorProviderProps {
-  children: React.ReactNode;
-}
+export const MonitorContext = createContext<MonitorContextProps | null>(null);
 
-interface MonitorFiltersState {
-  searchText: string;
-  searchColumn: "all" | "name" | "phone" | "customer" | "message";
-  categories: {
-    showCustomerChats: boolean;
-    showInternalChats: boolean;
-    showInternalGroups: boolean;
-    showSchedules: boolean;
-  };
-  user: number | "all";
-  showBots: boolean;
-  showOngoing: boolean;
-  showFinished: boolean;
-  showOnlyScheduled: boolean;
-  showUnreadOnly: boolean;
-  showPendingResponseOnly: boolean;
-  sortBy: "startedAt" | "finishedAt" | "lastMessage" | "name" | "scheduledAt";
-  sortOrder: "asc" | "desc";
-  startedAt: {
-    from: string | null;
-    to: string | null;
-  };
-  finishedAt: {
-    from: string | null;
-    to: string | null;
-  };
-  scheduledAt: {
-    from: string | null;
-    to: string | null;
-  };
-  scheduledTo: {
-    from: string | null;
-    to: string | null;
-  };
-  scheduledBy: number | "all";
-  scheduledFor: number | "all";
-}
-
-const initialFilters: MonitorFiltersState = {
-  searchText: "",
-  searchColumn: "all",
-  categories: {
-    showCustomerChats: true,
-    showInternalChats: true,
-    showInternalGroups: true,
-    showSchedules: true,
-  },
-  user: "all",
-  showBots: false,
-  showOngoing: true,
-  showFinished: true,
-  showOnlyScheduled: false,
-  showUnreadOnly: false,
-  showPendingResponseOnly: false,
-  sortBy: "startedAt",
-  sortOrder: "desc",
-  startedAt: {
-    from: null,
-    to: null,
-  },
-  finishedAt: {
-    from: null,
-    to: null,
-  },
-  scheduledAt: {
-    from: null,
-    to: null,
-  },
-  scheduledTo: {
-    from: null,
-    to: null,
-  },
-  scheduledBy: "all",
-  scheduledFor: "all",
-};
-
-const STORAGE_KEY = "monitor_filters";
-
-// Função para salvar filtros no localStorage
-const saveFiltersToStorage = (filters: MonitorFiltersState) => {
-  if (typeof window === "undefined") return;
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
-  } catch (error) {
-    console.error("Erro ao salvar filtros no localStorage:", error);
-  }
-};
-
-export const MonitorContext = createContext<MonitorContextProps>({} as MonitorContextProps);
-
-export function MonitorProvider({ children }: MonitorProviderProps) {
-  const { wppApi } = useWhatsappContext();
-  const { token } = useContext(AuthContext);
-
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [chats, setChats] = useState<(DetailedInternalChat | DetailedChat | DetailedSchedule)[]>(
-    [],
+export function MonitorProvider({ children }: { children: ReactNode }) {
+  const { token, instance, user } = useContext(AuthContext);
+  const storageKey = token && instance && user ? monitorStorageKey(instance, user.CODIGO) : null;
+  // Remounting the scoped provider prevents even one rendered frame of another tenant's data.
+  return (
+    <ScopedMonitorProvider key={storageKey ?? "anonymous"} storageKey={storageKey} token={token}>
+      {children}
+    </ScopedMonitorProvider>
   );
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+}
 
-  const [filters, setFilters] = useState<MonitorFiltersState>(initialFilters);
-  const [appliedFilters, setAppliedFilters] = useState<MonitorFiltersState>(initialFilters);
-
-  const applyFilters = (nextFilters?: MonitorFiltersState) => {
-    const resolved = nextFilters ?? filters;
-    setAppliedFilters(resolved);
-    setPage(1);
-  };
-
-  const resetFilters = () => {
-    setFilters(initialFilters);
-    setAppliedFilters(initialFilters);
-    setPage(1);
-  };
-
-  const fetchData = useCallback(async () => {
-    if (!token || !wppApi.current) {
-      setChats([]);
-      setTotalCount(0);
-      return;
-    }
-
+function ScopedMonitorProvider({
+  children,
+  storageKey,
+  token,
+}: {
+  children: ReactNode;
+  storageKey: string | null;
+  token: string | null;
+}) {
+  const { socket } = useContext(SocketContext);
+  const { modal } = useContext(AppContext);
+  const [saved] = useState<MonitorPreferences>(() => {
     try {
-      setIsLoading(true);
-      wppApi.current.setAuth(token);
-
-      const clientAny = wppApi.current as any;
-      const searchFn = clientAny.searchMonitorData
-        ? clientAny.searchMonitorData.bind(clientAny)
-        : async ({ page: p, pageSize: ps, filters: f }: any) => {
-            const response = await clientAny.ax?.post?.("/api/whatsapp/monitor/search", {
-              page: p,
-              pageSize: ps,
-              filters: f,
-            });
-            return response?.data?.data ?? { items: [], totalCount: 0 };
-          };
-
-      const res = await searchFn({
-        page,
-        pageSize,
-        filters: appliedFilters,
-      });
-
-      const items = Array.isArray(res?.items) ? res.items : [];
-      const total = typeof res?.totalCount === "number" ? res.totalCount : items.length;
-      setChats(items);
-      setTotalCount(total);
-    } catch (error) {
-      if (!readRequestLimitMessage(error)) toast.error("Falha ao carregar a monitoria.");
-    } finally {
-      setIsLoading(false);
+      return restoreMonitorPreferences(
+        storageKey && typeof window !== "undefined" ? localStorage.getItem(storageKey) : null,
+      );
+    } catch {
+      return restoreMonitorPreferences(null);
     }
-  }, [token, page, pageSize, appliedFilters, wppApi]);
+  });
+  const [filters, setFilters] = useState(saved.filters);
+  const [appliedFilters, setAppliedFilters] = useState(saved.filters);
+  const [page, changePage] = useState(1);
+  const [pageSize, changePageSize] = useState(saved.pageSize);
+  const [autoRefresh, setAutoRefresh] = useState(saved.autoRefresh);
+  const [viewMode, setViewMode] = useState(saved.viewMode);
+  const data = useMonitorData({
+    token: storageKey ? token : null,
+    filters: appliedFilters,
+    page,
+    pageSize,
+    autoRefresh,
+    modalOpen: Boolean(modal),
+    socket,
+    onPageOverflow: changePage,
+  });
 
-  // Fazer consulta quando página muda ou filtros aplicados mudam
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(
+        storageKey,
+        serializeMonitorPreferences({ filters: appliedFilters, pageSize, autoRefresh, viewMode }),
+      );
+    } catch {
+      /* Storage can be unavailable; the screen remains functional. */
+    }
+  }, [storageKey, appliedFilters, pageSize, autoRefresh, viewMode]);
 
-  const refetch = () => {
-    fetchData();
-  };
+  const applyFilters = useCallback(
+    (next?: MonitorFiltersState) => {
+      const resolved = next ?? filters;
+      setFilters(resolved);
+      setAppliedFilters(resolved);
+      changePage(1);
+      if (page === 1 && equalMonitorFilters(resolved, appliedFilters)) data.refetch();
+    },
+    [filters, appliedFilters, page, data.refetch],
+  );
+
+  const resetFilters = useCallback(() => {
+    const defaults = createInitialFilters();
+    setFilters(defaults);
+    setAppliedFilters(defaults);
+    changePage(1);
+    if (page === 1 && equalMonitorFilters(defaults, appliedFilters)) data.refetch();
+  }, [appliedFilters, page, data.refetch]);
+
+  const setOperationalStatus = useCallback((status: MonitorOperationalStatus) => {
+    // Chips apply just their own condition; unsubmitted advanced filters stay as drafts.
+    setFilters((previous) => ({ ...previous, operationalStatus: status }));
+    setAppliedFilters((previous) => ({ ...previous, operationalStatus: status }));
+    changePage(1);
+  }, []);
+
+  const setPage = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    changePage((previous) => {
+      const next = typeof value === "function" ? value(previous) : value;
+      return Number.isFinite(next) ? Math.max(1, Math.trunc(next)) : 1;
+    });
+  }, []);
+
+  const setPageSize = useCallback<Dispatch<SetStateAction<number>>>((value) => {
+    changePageSize((previous) =>
+      normalizePageSize(typeof value === "function" ? value(previous) : value),
+    );
+    changePage(1);
+  }, []);
 
   return (
     <MonitorContext.Provider
       value={{
-        chats,
+        ...data,
         filters,
+        appliedFilters,
         setFilters,
+        hasUnappliedFilters: !equalMonitorFilters(filters, appliedFilters),
         resetFilters,
         applyFilters,
-        totalCount,
+        setOperationalStatus,
         page,
         pageSize,
         setPage,
         setPageSize,
-        isLoading,
-        refetch,
+        autoRefresh,
+        setAutoRefresh,
+        autoRefreshPaused: autoRefresh && Boolean(modal),
+        viewMode,
+        setViewMode,
       }}
     >
       {children}
@@ -215,9 +174,6 @@ export function MonitorProvider({ children }: MonitorProviderProps) {
 
 export default function useMonitorContext() {
   const context = useContext(MonitorContext);
-
-  if (!context) {
-    throw new Error("useMonitorContext must be used within a MonitorProvider");
-  }
+  if (!context) throw new Error("useMonitorContext must be used within a MonitorProvider");
   return context;
 }
