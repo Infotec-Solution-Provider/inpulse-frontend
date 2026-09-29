@@ -275,8 +275,10 @@ export default function GeneralPerformanceReport({
   const sectorRows = useMemo<SectorOverviewRow[]>(() => {
     const map = new Map<string, SectorOverviewRow & { responseWeight: number; handlingWeight: number }>();
 
-    for (const row of filteredOperators) {
-      const sectorName = row.userSector || "Sem setor";
+    // A linha "Sistema/Admin" (userId <= 0) entra para que a soma por setor feche com os cards.
+    for (const row of operators) {
+      const isSystemRow = row.userId <= 0;
+      const sectorName = isSystemRow ? row.userName || "Sistema/Admin" : row.userSector || "Sem setor";
       const current = map.get(sectorName) || {
         sectorName,
         operatorsCount: 0,
@@ -296,7 +298,6 @@ export default function GeneralPerformanceReport({
         handlingWeight: 0,
       };
 
-      current.operatorsCount += 1;
       current.messagesCount += row.messagesCount;
       current.previousMessagesCount += row.previousMessagesCount;
       current.chatsFinishedCount += row.chatsFinishedCount;
@@ -305,10 +306,13 @@ export default function GeneralPerformanceReport({
       current.previousPendingReturnsCount += row.previousPendingReturnsCount;
       current.transfersCount += row.transfersSentCount + row.transfersReceivedCount;
 
-      const severity = getOperatorSeverity(row);
-      if (severity === 2) current.criticalOperatorsCount += 1;
-      else if (severity === 1) current.attentionOperatorsCount += 1;
-      else current.stableOperatorsCount += 1;
+      if (!isSystemRow) {
+        current.operatorsCount += 1;
+        const severity = getOperatorSeverity(row);
+        if (severity === 2) current.criticalOperatorsCount += 1;
+        else if (severity === 1) current.attentionOperatorsCount += 1;
+        else current.stableOperatorsCount += 1;
+      }
 
       if (row.averageFirstResponseSeconds != null) {
         current.averageFirstResponseSeconds =
@@ -353,7 +357,7 @@ export default function GeneralPerformanceReport({
         }
         return right.chatsFinishedCount - left.chatsFinishedCount;
       });
-  }, [filteredOperators]);
+  }, [operators]);
 
   const topOperators = useMemo(
     () => [...filteredOperators].sort((left, right) => right.chatsFinishedCount - left.chatsFinishedCount).slice(0, 5),
