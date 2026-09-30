@@ -3,9 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import { Alert, Button, FormControlLabel, Paper, Switch, TextField } from "@mui/material";
+import { Alert, Button, FormControl, FormControlLabel, FormLabel, Paper, Radio, RadioGroup, Switch, TextField } from "@mui/material";
 import { useAuthContext } from "@/app/auth-context";
-import usersService, { type WebrtcSettingsDTO } from "../services/users.service";
+import usersService, { type WebrtcConnectionMode, type WebrtcSettingsDTO } from "../services/users.service";
+
+// Settings saved before the gateway existed have no mode or PBX address.
+function normalize(settings: WebrtcSettingsDTO): WebrtcSettingsDTO {
+  return { ...settings, mode: settings.mode ?? "direct", pbxAddress: settings.pbxAddress ?? "" };
+}
 
 export function WebrtcSettingsForm() {
   const { token, instance, user } = useAuthContext();
@@ -30,7 +35,7 @@ function SettingsForm({ token }: { token: string | null }) {
       usersService.setAuth(tokenRef.current);
       const settings = await usersService.getWebrtcSettings();
       if (request !== requestRef.current) return;
-      setForm(settings);
+      setForm(normalize(settings));
       setMustReload(false);
     } catch {
       if (request !== requestRef.current) return;
@@ -55,11 +60,12 @@ function SettingsForm({ token }: { token: string | null }) {
     setMessage(null);
     try {
       usersService.setAuth(tokenRef.current);
-      const settings = await usersService.saveWebrtcSettings({ ...form, iceServers: form.iceServers.map(server => ({
+      const { gatewayAvailable: _readOnly, ...editable } = form;
+      const settings = await usersService.saveWebrtcSettings({ ...editable, iceServers: form.iceServers.map(server => ({
         ...server, urls: server.urls.map(url => url.trim()).filter(Boolean),
       })) });
       if (request !== requestRef.current) return;
-      setForm(settings);
+      setForm(normalize({ ...settings, gatewayAvailable: settings.gatewayAvailable ?? form.gatewayAvailable }));
       setMessage({ severity: "success", text: "Telefonia web salva. Reconecte o telefone para usar a nova configuração." });
     } catch (error) {
       if (request !== requestRef.current) return;
@@ -92,14 +98,32 @@ function SettingsForm({ token }: { token: string | null }) {
     {form && <fieldset disabled={disabled} className="mt-4 grid gap-4 border-0 p-0">
       <FormControlLabel label="Habilitar telefonia web" control={<Switch checked={form.enabled} disabled={disabled}
         onChange={event => setForm({ ...form, enabled: event.target.checked })} />} />
-      <div className="grid gap-4 md:grid-cols-2">
+      <FormControl disabled={disabled}>
+        <FormLabel id="webrtc-connection-mode">Conexão com a central</FormLabel>
+        <RadioGroup aria-labelledby="webrtc-connection-mode" value={form.mode}
+          onChange={event => setForm({ ...form, mode: event.target.value as WebrtcConnectionMode })}>
+          <FormControlLabel value="direct" control={<Radio />} label="Direta com a central (central com WebRTC)" />
+          <FormControlLabel value="gateway" control={<Radio />} disabled={disabled || (!form.gatewayAvailable && form.mode !== "gateway")}
+            label="Via gateway in.pulse (central sem WebRTC, como Asterisk 1.8)" />
+        </RadioGroup>
+      </FormControl>
+      {form.mode === "direct" ? <div className="grid gap-4 md:grid-cols-2">
         <TextField label="Endereço WSS" placeholder="wss://pbx.suaempresa.com.br/ws" value={form.websocketUrl}
           disabled={disabled} size="small" fullWidth onChange={event => setForm({ ...form, websocketUrl: event.target.value })}
           helperText="Conexão segura do navegador com a central telefônica." />
         <TextField label="Domínio SIP" placeholder="pbx.suaempresa.com.br" value={form.domain}
           disabled={disabled} size="small" fullWidth onChange={event => setForm({ ...form, domain: event.target.value })}
           helperText="Domínio informado pelo responsável pela central, sem https://." />
-      </div>
+      </div> : <div className="grid gap-3">
+        {!form.gatewayAvailable && <Alert severity="warning" role="note">O gateway não está configurado neste servidor. A telefonia web não conecta neste modo até que ele seja configurado.</Alert>}
+        <TextField label="Endereço SIP da central" placeholder="172.22.0.10:5060" value={form.pbxAddress}
+          disabled={disabled} size="small" className="md:max-w-md" onChange={event => setForm({ ...form, pbxAddress: event.target.value })}
+          helperText="IP da central na rede do gateway (ZeroTier). Porta padrão: 5060." />
+        <Alert severity="info" role="note">
+          O áudio passa pelo servidor do in.pulse. O mesmo ramal não pode ficar registrado ao mesmo tempo no navegador e em um
+          telefone de mesa: as chamadas recebidas tocariam em apenas um deles.
+        </Alert>
+      </div>}
       <div>
         <h3 className="font-medium">Servidores STUN/TURN (opcional)</h3>
         <p className="text-sm text-slate-500 dark:text-slate-300">Ajudam o áudio a atravessar redes e roteadores. Preencha somente se houver servidores disponíveis para sua empresa.</p>

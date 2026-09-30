@@ -15,7 +15,7 @@ test("admin edits WebRTC and TURN settings and reloads saved values", async ({ p
   await page.getByRole("button", { name: "Salvar telefonia web" }).click();
   await expect(page.getByRole("alert")).toContainText("Telefonia web salva");
   expect(await page.evaluate(() => window.phoneHarness.settings)).toEqual({
-    enabled: true, websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test",
+    enabled: true, mode: "direct", websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", pbxAddress: "",
     iceServers: [{ urls: ["turn:relay.example.test:3478", "turns:relay.example.test:5349"], username: "test-user", credential: "test-only" }],
   });
   await page.getByLabel("Domínio SIP", { exact: true }).fill("unsaved.test");
@@ -44,4 +44,24 @@ test("read failures block writes and ambiguous saves require reload", async ({ p
   expect(await page.evaluate(() => window.phoneHarness.settingsSaveCount)).toBe(1);
   await page.getByRole("button", { name: "Atualizar telefonia web" }).click();
   await expect(page.getByRole("button", { name: "Salvar telefonia web" })).toBeEnabled();
+});
+
+test("gateway mode is offered only when the server has it and saves the PBX address", async ({ page }) => {
+  const gatewayOption = /Via gateway in\.pulse/;
+  await page.goto("/tests/telephony/settings.html");
+  await expect(page.getByLabel(gatewayOption)).toBeDisabled();
+  await page.goto("/tests/telephony/settings.html?gateway");
+  await page.getByLabel("Habilitar telefonia web").check();
+  await page.getByLabel(gatewayOption).check();
+  await expect(page.getByLabel("Endereço WSS", { exact: true })).toBeHidden();
+  await page.getByLabel("Endereço SIP da central", { exact: true }).fill("172.22.75.124");
+  await expect(page.getByText("mesmo ramal não pode ficar")).toBeVisible();
+  await page.getByRole("button", { name: "Salvar telefonia web" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Telefonia web salva" })).toBeVisible();
+  expect(await page.evaluate(() => window.phoneHarness.settings)).toEqual({
+    enabled: true, mode: "gateway", websocketUrl: "", domain: "", pbxAddress: "172.22.75.124", iceServers: [],
+  });
+  await page.screenshot({ path: "test-results/telephony-settings-gateway.png", fullPage: true });
+  await page.getByLabel(/Direta com a central/).check();
+  await expect(page.getByLabel("Endereço WSS", { exact: true })).toBeVisible();
 });

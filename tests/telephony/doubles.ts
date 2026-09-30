@@ -9,10 +9,12 @@ class Emitter {
 let authenticated = true;
 const authListeners = new Set<() => void>();
 export const harness = {
-  settings: { enabled: false, websocketUrl: "", domain: "", iceServers: [] } as WebrtcSettingsDTO,
+  // Shape saved before the gateway existed (no mode/pbxAddress), so the form's normalization is exercised.
+  settings: { enabled: false, websocketUrl: "", domain: "", iceServers: [] } as unknown as WebrtcSettingsDTO,
   settingsSaveCount: 0,
   settingsLoadError: new URLSearchParams(location.search).has("settings-load-error"),
   settingsSaveError: false,
+  gatewayAvailable: new URLSearchParams(location.search).has("gateway"),
   calls: [] as string[], reports: [] as string[], session: null as Session | null, media: null as MediaStream | null,
   logout() { authenticated = false; authListeners.forEach(callback => callback()); },
 };
@@ -25,13 +27,13 @@ export const usersService = {
   setAuth() {},
   async getWebrtcSettings() {
     if (harness.settingsLoadError) throw new Error("test read failure");
-    return structuredClone(harness.settings);
+    return { ...structuredClone(harness.settings), gatewayAvailable: harness.gatewayAvailable };
   },
   async saveWebrtcSettings(settings: WebrtcSettingsDTO) {
     harness.settingsSaveCount++;
     if (harness.settingsSaveError) throw new Error("test ambiguous write failure");
     harness.settings = structuredClone(settings);
-    return structuredClone(settings);
+    return { ...structuredClone(settings), gatewayAvailable: harness.gatewayAvailable };
   },
   async getWebrtcConfig() { return { websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", extension: "101", uri: "sip:101@pbx.example.test", authorizationUser: "101", password: "test-only", iceServers: [] }; },
 };

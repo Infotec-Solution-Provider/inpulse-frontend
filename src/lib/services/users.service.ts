@@ -4,11 +4,18 @@ import type { WebrtcConfig } from "../telephony/types";
 
 const USERS_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
 
+/** "direct": browser -> WebRTC-capable PBX. "gateway": browser -> in.pulse gateway -> SIP PBX without WebRTC. */
+export type WebrtcConnectionMode = "direct" | "gateway";
+
 export interface WebrtcSettingsDTO {
 	enabled: boolean;
+	mode: WebrtcConnectionMode;
 	websocketUrl: string;
 	domain: string;
+	pbxAddress: string;
 	iceServers: Array<{ urls: string[]; username?: string; credential?: string }>;
+	/** Read-only: whether this server has the gateway configured. Ignored on save. */
+	gatewayAvailable?: boolean;
 }
 
 export interface SipConfigDTO {
