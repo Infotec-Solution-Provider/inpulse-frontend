@@ -42,3 +42,25 @@ test("second tab cannot register the same operator until the first disconnects",
   await second.getByRole("button", { name: "Conectar telefonia" }).click();
   await expect(second.getByText("Ramal conectado")).toBeVisible();
 });
+
+test("phone stays in the attendance area and appears elsewhere only during a call", async ({ page }) => {
+  await page.goto("/tests/telephony/index.html");
+  await expect(page.getByLabel("Telefone web")).toBeVisible();
+  await page.getByRole("button", { name: "Ir para outra tela" }).click();
+  await expect(page.getByText("Outra tela")).toBeVisible();
+  await expect(page.getByLabel("Telefone web")).toHaveCount(0);
+  await page.getByRole("button", { name: "Voltar ao atendimento" }).click();
+  await page.getByRole("button", { name: "Abrir telefone" }).click();
+  await page.getByRole("button", { name: "Conectar telefonia" }).click();
+  await expect(page.getByText("Ramal conectado")).toBeVisible();
+  await page.getByLabel("Telefone ou ramal").fill("102");
+  await page.getByRole("button", { name: "Ligar", exact: true }).click();
+  await page.evaluate(() => window.phoneHarness.session?.emit("confirmed"));
+  await page.getByRole("button", { name: "Ir para outra tela" }).click();
+  await expect(page.getByLabel("Telefone web")).toHaveCount(1);
+  await page.getByRole("button", { name: "Desligar" }).click();
+  await expect(page.getByLabel("Telefone web")).toHaveCount(0);
+  await page.getByRole("button", { name: "Voltar ao atendimento" }).click();
+  await expect(page.getByLabel("Telefone web")).toHaveCount(1);
+  await expect(page.getByText("Ramal conectado")).toBeVisible();
+});

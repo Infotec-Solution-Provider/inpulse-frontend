@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuthContext } from "@/app/auth-context";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { FEATURE_FLAGS, isFeatureEnabled } from "../feature-flags";
@@ -12,6 +12,9 @@ import { initialPhoneState, isCallBusy, type PhoneState } from "./types";
 import { TelephonyPanel } from "./telephony-panel";
 
 interface TelephonyContextValue {
+  enabled: boolean;
+  /** Registers a screen that shows the phone panel itself (TelephonyPanelSlot); returns the cleanup. */
+  hostPanel: () => () => void;
   state: PhoneState;
   busy: boolean;
   audioBlocked: boolean;
@@ -70,6 +73,13 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
     return () => { mountedRef.current = false; disconnect(); };
     // Identity/feature changes remount this component; token refresh does not.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Screens hosting the panel (the attendance area). Elsewhere the panel appears only during a call.
+  const [panelHosts, setPanelHosts] = useState(0);
+  const hostPanel = useCallback(() => {
+    setPanelHosts(count => count + 1);
+    return () => setPanelHosts(count => count - 1);
   }, []);
 
   const busy = isCallBusy(state.phase);
@@ -149,7 +159,7 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
   }
 
   const value: TelephonyContextValue = {
-    state, busy, audioBlocked, syncError, connect, disconnect, playAudio,
+    enabled, hostPanel, state, busy, audioBlocked, syncError, connect, disconnect, playAudio,
     waitForSync: () => syncRef.current,
     dial: async (number, scheduleId) => {
       if (!phoneRef.current) throw new Error("Conecte a telefonia antes de ligar.");
@@ -163,6 +173,7 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
   return <TelephonyContext.Provider value={value}>
     {children}
     <audio ref={audioRef} autoPlay aria-label="Áudio da ligação" />
-    {enabled && <TelephonyPanel />}
+    {/* Outside the attendance area the phone stays out of the way, except to answer or end a call. */}
+    {enabled && panelHosts === 0 && busy && <TelephonyPanel />}
   </TelephonyContext.Provider>;
 }

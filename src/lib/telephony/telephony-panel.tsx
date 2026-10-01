@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Chip, IconButton, TextField } from "@mui/material";
 import PhoneIcon from "@mui/icons-material/Phone";
 import CallEndIcon from "@mui/icons-material/CallEnd";
@@ -8,6 +8,13 @@ import MicOffIcon from "@mui/icons-material/MicOff";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTelephony } from "./telephony-provider";
 import { callPhaseLabels } from "./types";
+
+/** Place of the phone panel: the attendance area. Other screens show it only during a call (TelephonyProvider). */
+export function TelephonyPanelSlot() {
+  const { enabled, hostPanel } = useTelephony();
+  useEffect(() => hostPanel(), [hostPanel]);
+  return enabled ? <TelephonyPanel /> : null;
+}
 
 export function TelephonyPanel() {
   const phone = useTelephony();
