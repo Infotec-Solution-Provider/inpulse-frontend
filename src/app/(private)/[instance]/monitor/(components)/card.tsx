@@ -59,7 +59,7 @@ const deliveryLabels: Record<string, string> = {
   ERROR: "Falha no envio",
   SENT: "Enviada",
   DELIVERED: "Entregue",
-  READ: "Lida",
+  // READ has no tag: a read message is the normal end state and only adds noise.
   RECEIVED: "Entregue",
   DOWNLOADED: "Mídia baixada",
   REVOKED: "Mensagem removida",
@@ -119,6 +119,8 @@ export default function MonitorCard({
   const waitTime =
     waiting && operational?.waitingSince ? elapsedTime(operational.waitingSince) : null;
   const lastMessageAt = operational?.lastMessageAt ? messageDate(operational.lastMessageAt) : null;
+  const unread = operational?.unreadCount ?? 0;
+  const unreadLabel = `${unread} ${unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`;
   const deliveryStatus = operational?.deliveryStatus?.toUpperCase();
   const deliveryLabel = deliveryStatus ? deliveryLabels[deliveryStatus] : null;
   const deliveryFailed = deliveryStatus === "FAILED" || deliveryStatus === "ERROR";
@@ -187,13 +189,6 @@ export default function MonitorCard({
                 variant="outlined"
               />
               {operational?.slaBreached && <Chip size="small" color="error" label="Fora do SLA" />}
-              {!!operational?.unreadCount && (
-                <Chip
-                  size="small"
-                  color="primary"
-                  label={`${operational.unreadCount} não ${operational.unreadCount === 1 ? "lida" : "lidas"}`}
-                />
-              )}
               {operational?.channel && (
                 <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
                   {operational.channel}
@@ -208,13 +203,24 @@ export default function MonitorCard({
                 />
               )}
             </div>
-            <p
-              className="truncate text-sm text-slate-600 dark:text-slate-300"
-              title={operational?.lastMessagePreview || undefined}
-            >
-              {operational?.lastMessagePreview ||
-                (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <p
+                className="min-w-0 truncate text-sm text-slate-600 dark:text-slate-300"
+                title={operational?.lastMessagePreview || undefined}
+              >
+                {operational?.lastMessagePreview ||
+                  (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
+              </p>
+              {unread > 0 && (
+                <span
+                  title={unreadLabel}
+                  className="inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold tabular-nums leading-none text-white"
+                >
+                  <span aria-hidden="true">{unread > 99 ? "99+" : unread}</span>
+                  <span className="sr-only">{unreadLabel}</span>
+                </span>
+              )}
+            </div>
             {(waitTime || lastMessageAt) && (
               <p className="flex flex-wrap items-center gap-x-3 text-xs">
                 {waitTime && (

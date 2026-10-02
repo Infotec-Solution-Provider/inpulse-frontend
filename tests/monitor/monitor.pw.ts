@@ -99,6 +99,9 @@ async function setup(page: Page, handler?: (route: Route, query: Query) => Promi
 test("aplica filtros, persiste preferências sem texto e pagina os resultados", async ({ page }) => {
   const { queries, errors } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
+  const first = page.getByRole("article").first();
+  await expect(first.getByText("2 mensagens não lidas", { exact: true })).toBeAttached();
+  await expect(first.getByText(/^d+ não lidas?$/)).toHaveCount(0);
   const before = queries.length;
   await page.getByLabel("Pesquisar", { exact: true }).fill("nova busca");
   await expect(page.getByText("Há alterações de filtros para aplicar.")).toBeVisible();
