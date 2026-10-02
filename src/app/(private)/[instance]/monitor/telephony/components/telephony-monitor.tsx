@@ -3,7 +3,7 @@
 import { useAuthContext } from "@/app/auth-context";
 import telephonyMonitorService from "@/lib/services/telephony-monitor.service";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
-import { Alert, Button, Dialog, Skeleton } from "@mui/material";
+import { Alert, Button, Modal, Skeleton } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import CustomerCrmDetailModal from "../../../(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import useTelephonyMonitor from "../use-telephony-monitor";
@@ -179,19 +179,24 @@ function ScopedTelephonyMonitor() {
         />
       )}
       {previewCustomerId !== null && (
-        <Dialog
+        // Same wrapper as the app-wide openModal: the detail card sizes and paints itself,
+        // so a Dialog paper around it only adds a gray strip. Kept local so it closes
+        // together with this tenant-scoped view.
+        <Modal
           open
-          fullWidth
-          maxWidth="xl"
-          aria-label="Detalhes do cliente"
-          onClose={() => setPreviewCustomerId(null)}
+          onClose={(_event, reason) => {
+            if (reason !== "backdropClick") setPreviewCustomerId(null);
+          }}
+          className="flex items-center justify-center"
         >
-          <CustomerCrmDetailModal
-            customerId={previewCustomerId}
-            canEdit={false}
-            onClose={() => setPreviewCustomerId(null)}
-          />
-        </Dialog>
+          <div role="dialog" aria-modal="true" aria-label="Detalhes do cliente" tabIndex={-1}>
+            <CustomerCrmDetailModal
+              customerId={previewCustomerId}
+              canEdit={false}
+              onClose={() => setPreviewCustomerId(null)}
+            />
+          </div>
+        </Modal>
       )}
     </section>
   );
