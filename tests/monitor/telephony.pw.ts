@@ -1,5 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { setupTelephony, telephonyItem } from "./telephony-fixtures";
+
+const openFilters = (page: Page) => page.getByRole("button", { name: /^Filtros/ }).click();
 
 test("telefonia aplica seleções múltiplas paginadas apenas após confirmar e aplicar", async ({
   page,
@@ -8,7 +10,7 @@ test("telefonia aplica seleções múltiplas paginadas apenas após confirmar e 
   await expect(
     page.getByRole("button", { name: "Ver cliente Cliente telefonia 1", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
+  await openFilters(page);
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("checkbox", { name: "Campanha 1", exact: true }).check();
@@ -27,6 +29,7 @@ test("telefonia aplica seleções múltiplas paginadas apenas após confirmar e 
     ["origens", "Origem", "originIds"],
     ["produtos", "Produto", "productIds"],
   ]) {
+    await openFilters(page);
     await page.getByRole("button", { name: `Selecionar ${label}`, exact: true }).click();
     await dialog.getByRole("checkbox", { name: `${name} 1`, exact: true }).check();
     await dialog.getByRole("checkbox", { name: `${name} 2`, exact: true }).check();
@@ -36,6 +39,7 @@ test("telefonia aplica seleções múltiplas paginadas apenas após confirmar e 
       .poll(() => queries.at(-1)?.filters[key])
       .toEqual(key === "productIds" ? ["1", "2"] : [1, 2]);
   }
+  await openFilters(page);
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "Campanha 2", exact: true }).check();
   await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
@@ -48,7 +52,7 @@ test("telefonia encadeia geografia multisseleção sem confundir cidades homôni
   page,
 }) => {
   const { queries, optionQueries } = await setupTelephony(page);
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
+  await openFilters(page);
   await expect(
     page.getByRole("button", { name: "Selecionar cidades", exact: true }),
   ).toBeDisabled();
@@ -69,6 +73,7 @@ test("telefonia encadeia geografia multisseleção sem confundir cidades homôni
     .poll(() => queries.at(-1)?.filters.cities)
     .toEqual(['["SP","Centro urbano"]', '["RJ","Centro urbano"]']);
   expect(optionQueries.find((query) => query.kind === "cities")?.states).toEqual(["SP", "RJ"]);
+  await openFilters(page);
   await page.getByRole("button", { name: "Selecionar estados", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "SP", exact: true }).uncheck();
   await dialog.getByRole("button", { name: "Confirmar seleção" }).click();
@@ -79,7 +84,7 @@ test("telefonia encadeia geografia multisseleção sem confundir cidades homôni
 
 test("telefonia envia dias completos, mês de referência e filtros de cliente", async ({ page }) => {
   const { queries } = await setupTelephony(page);
-  await page.getByRole("button", { name: /^Telefonia/ }).click();
+  await openFilters(page);
   await page.getByLabel("Data do agendamento: de", { exact: true }).fill("2026-09-25");
   await page.getByLabel("Data do agendamento: até", { exact: true }).fill("2026-09-25");
   await page.getByLabel("Previsão de recompra: de", { exact: true }).fill("2026-10-01");
@@ -91,7 +96,6 @@ test("telefonia envia dias completos, mês de referência e filtros de cliente",
   await page.getByRole("button", { name: "Selecionar operador do cliente", exact: true }).click();
   await page.getByRole("radio", { name: "Operador 2", exact: true }).check();
   await page.getByRole("button", { name: "Confirmar seleção" }).click();
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
   await page.getByLabel("Última compra: de", { exact: true }).fill("2026-09-01");
   await page.getByLabel("Último contato (qualquer canal): até", { exact: true }).fill("2026-09-24");
   await page.getByRole("button", { name: "Selecionar cliente", exact: true }).click();
@@ -136,10 +140,10 @@ test("telefonia descarta resposta lenta e fecha detalhes ao trocar instância", 
     },
   });
   await page.getByLabel("Pesquisar cliente ou telefone", { exact: true }).fill("lenta");
-  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  await page.getByRole("button", { name: "Pesquisar", exact: true }).click();
   await expect.poll(() => Boolean(release)).toBe(true);
   await page.getByLabel("Pesquisar cliente ou telefone", { exact: true }).fill("recente");
-  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  await page.getByRole("button", { name: "Pesquisar", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Ver cliente recente", exact: true }),
   ).toBeVisible();
@@ -193,8 +197,6 @@ test("telefonia tem layout desktop e móvel sem overflow de página", async ({ p
     true,
   );
   await page.setViewportSize({ width: 1440, height: 800 });
-  await page.getByRole("button", { name: /^Telefonia/ }).click();
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
   const pagination = await page
     .getByRole("navigation", { name: "Paginação da telefonia" })
     .boundingBox();
@@ -202,9 +204,13 @@ test("telefonia tem layout desktop e móvel sem overflow de página", async ({ p
   const resultArea = await page
     .getByLabel("Resultados da telefonia", { exact: true })
     .boundingBox();
-  expect(resultArea!.height).toBeGreaterThan(80);
-  await page.getByRole("button", { name: /^Telefonia/ }).click();
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
+  expect(resultArea!.height).toBeGreaterThan(400);
+  await openFilters(page);
+  const filterDialog = await page.getByRole("dialog").boundingBox();
+  expect(filterDialog!.y + filterDialog!.height).toBeLessThanOrEqual(800);
+  await expect(page.getByRole("button", { name: "Aplicar filtros", exact: true })).toBeInViewport();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.evaluate(() => window.monitorHarness.dark());
   await expect(page.getByRole("table").locator("..")).toHaveCSS(
     "background-color",
@@ -221,10 +227,10 @@ test("telefonia tem layout desktop e móvel sem overflow de página", async ({ p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
+  await openFilters(page);
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   await expect(page.getByRole("checkbox", { name: "Campanha 1", exact: true })).toBeVisible();
-  await expect(page.locator(".MuiDialog-container")).toHaveCSS("opacity", "1");
+  await expect(page.locator(".MuiDialog-container").last()).toHaveCSS("opacity", "1");
   await page.screenshot({ path: "test-results/monitor-telephony-mobile.png" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -244,16 +250,17 @@ test("telefonia separa modos e preserva rascunhos em memória sem gravar texto p
   await expect(page.getByLabel("Pesquisar cliente ou telefone", { exact: true })).toHaveValue("");
   await page.getByRole("button", { name: "Sem agendamento", exact: true }).click();
   await expect.poll(() => queries.at(-1)?.filters.mode).toBe("unscheduled");
-  await page.getByRole("button", { name: /^Telefonia/ }).click();
+  await openFilters(page);
   await expect(page.getByLabel("Data do agendamento: de", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Data da ligação: de", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await page.getByRole("button", { name: "Agendamentos", exact: true }).click();
   await expect(page.getByLabel("Pesquisar cliente ou telefone", { exact: true })).toHaveValue(
     "rascunho privado",
   );
   await expect.poll(() => queries.at(-1)?.page).toBe(2);
   expect(queries.at(-1)?.filters.searchText).toBe("");
-  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  await page.getByRole("button", { name: "Pesquisar", exact: true }).click();
   await expect.poll(() => queries.at(-1)?.filters.searchText).toBe("rascunho privado");
   expect(queries.at(-1)?.page).toBe(1);
   const stored = await page.evaluate(() =>
@@ -306,7 +313,7 @@ test("telefonia pausa eventos, atualiza manualmente e limpa listeners da aba ina
 
 test("remover filtro aplicado não submete rascunho de outro campo", async ({ page }) => {
   const { queries } = await setupTelephony(page);
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
+  await openFilters(page);
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   await page.getByRole("checkbox", { name: "Campanha 1", exact: true }).check();
   await page.getByRole("button", { name: "Confirmar seleção" }).click();
@@ -333,7 +340,7 @@ test("opções avançadas recuperam erro e preservam seleção durante nova pesq
       return true;
     },
   });
-  await page.getByRole("button", { name: /^Cliente avançado/ }).click();
+  await openFilters(page);
   await page.getByRole("button", { name: "Selecionar produtos", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("alert")).toContainText("Não foi possível carregar");

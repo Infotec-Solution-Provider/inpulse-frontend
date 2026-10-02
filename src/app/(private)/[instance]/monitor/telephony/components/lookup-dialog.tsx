@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 import { MonitorRequestGate } from "../../request-gate";
 import type { TelephonyLookupOption, TelephonyLookupResult } from "../types";
+import { dialogPaperSx } from "./presentation";
 
 export interface LookupPageRequest {
   search: string;
@@ -133,7 +134,14 @@ export default function TelephonyLookupDialog({
     });
 
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="telephony-lookup-title">
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      aria-labelledby="telephony-lookup-title"
+      slotProps={{ paper: { sx: dialogPaperSx } }}
+    >
       <DialogTitle id="telephony-lookup-title" className="flex items-center justify-between gap-2">
         {title}
         <IconButton

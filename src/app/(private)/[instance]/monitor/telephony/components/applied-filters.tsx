@@ -96,7 +96,7 @@ export default function TelephonyAppliedFilters({ state, knownOptions }: Applied
   return (
     <div
       aria-label="Filtros aplicados da telefonia"
-      className="flex max-h-24 shrink-0 flex-wrap gap-1.5 overflow-y-auto border-t border-slate-100 px-3 py-2 dark:border-slate-700"
+      className="flex max-h-16 min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-y-auto"
     >
       {chips.map((chip) => (
         <Tooltip key={chip.key} describeChild title={chip.description}>

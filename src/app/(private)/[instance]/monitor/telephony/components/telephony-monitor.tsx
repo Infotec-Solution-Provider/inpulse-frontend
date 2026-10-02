@@ -26,12 +26,13 @@ function ScopedTelephonyMonitor() {
   const [mode, setMode] = useState<TelephonyMonitorMode>("schedules");
   const [activeLookup, setActiveLookup] = useState<TelephonyLookupKind | null>(null);
   const [previewCustomerId, setPreviewCustomerId] = useState<number | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [knownOptions, setKnownOptions] = useState<
     Partial<Record<TelephonyLookupKind, TelephonyLookupOption[]>>
   >({});
   const [now, setNow] = useState(Date.now);
   const state = useTelephonyMonitor(mode, {
-    modalOpen: activeLookup !== null || previewCustomerId !== null,
+    modalOpen: filtersOpen || activeLookup !== null || previewCustomerId !== null,
   });
   const statesKey = JSON.stringify(state.filters.states);
   const citiesKey = JSON.stringify(state.filters.cities);
@@ -90,7 +91,13 @@ function ScopedTelephonyMonitor() {
       aria-label="Monitoria de telefonia"
     >
       <TelephonyToolbar mode={mode} onModeChange={setMode} state={state} now={now} />
-      <TelephonyFilters state={state} onLookup={setActiveLookup} getSelection={getSelection}>
+      <TelephonyFilters
+        state={state}
+        onLookup={setActiveLookup}
+        getSelection={getSelection}
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+      >
         <TelephonyAppliedFilters state={state} knownOptions={knownOptions} />
       </TelephonyFilters>
       {state.error && (
