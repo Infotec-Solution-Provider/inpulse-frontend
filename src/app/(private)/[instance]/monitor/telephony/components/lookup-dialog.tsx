@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 import { MonitorRequestGate } from "../../request-gate";
 import type { TelephonyLookupOption, TelephonyLookupResult } from "../types";
-import { dialogPaperSx } from "./presentation";
+import { dialogPaperSx } from "../../surface";
 
 export interface LookupPageRequest {
   search: string;

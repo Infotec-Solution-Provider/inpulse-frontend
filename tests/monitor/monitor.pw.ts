@@ -103,7 +103,7 @@ test("aplica filtros, persiste preferências sem texto e pagina os resultados", 
   await page.getByLabel("Pesquisar", { exact: true }).fill("nova busca");
   await expect(page.getByText("Há alterações de filtros para aplicar.")).toBeVisible();
   expect(queries).toHaveLength(before);
-  await page.getByRole("button", { name: "Aplicar filtros" }).click();
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(1);
   expect(queries.at(-1)?.filters.searchText).toBe("nova busca");
   await page.getByRole("button", { name: "Exibir lista compacta" }).click();
@@ -135,10 +135,10 @@ test("ignora resposta antiga e isola preferências/dados ao mudar instância", a
   });
   await expect(page.getByRole("article")).toHaveCount(20);
   await page.getByLabel("Pesquisar", { exact: true }).fill("lenta");
-  await page.getByRole("button", { name: "Aplicar filtros" }).click();
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
   await expect.poll(() => !!release).toBe(true);
   await page.getByLabel("Pesquisar", { exact: true }).fill("atual");
-  await page.getByRole("button", { name: "Aplicar filtros" }).click();
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "atual", exact: true })).toBeVisible();
   release?.();
   await page.getByRole("button", { name: "Exibir lista compacta" }).click();
@@ -246,8 +246,7 @@ test("filtro rápido não aplica rascunho e acesso direto exige administrador", 
 test("finalização aguarda confirmação e atualiza só após sucesso", async ({ page }) => {
   const { queries, errors } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
-  const applyBounds = await page.getByRole("button", { name: "Aplicar filtros" }).boundingBox();
-  expect(applyBounds!.y + applyBounds!.height).toBeLessThanOrEqual(1000);
+  await expect(page.getByRole("button", { name: /^Filtros/ })).toBeInViewport();
   const initial = queries.length;
   await page.getByRole("button", { name: /Finalizar.*Contato 1$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Finalizar conversa" });
@@ -303,7 +302,7 @@ test("visualiza histórico sem leitura automática e só abre envio por ação e
 test("datas incluem todo o dia escolhido no fuso do navegador", async ({ page }) => {
   const { queries } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
-  await page.getByText("Período da conversa", { exact: true }).click();
+  await page.getByRole("button", { name: /^Filtros/ }).click();
   await page.getByLabel("Data de início: de", { exact: true }).fill("2026-09-25");
   await page.getByLabel("Data de início: até", { exact: true }).fill("2026-09-25");
   await page.getByRole("button", { name: "Aplicar filtros" }).click();
@@ -329,12 +328,13 @@ test("layout desktop/mobile sem overflow horizontal", async ({ page }) => {
   ).toHaveCSS("background-color", "rgb(30, 41, 59)");
   await page.screenshot({ path: "test-results/monitor-compact-dark.png" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Filtros", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Aplicar filtros" })).toBeVisible();
+  await page.getByRole("button", { name: /^Filtros/ }).click();
+  await expect(page.getByRole("button", { name: "Aplicar filtros" })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
-  await page.getByRole("button", { name: "Filtros", exact: true }).click();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.screenshot({ path: "test-results/monitor-mobile.png" });
   expect(errors).toEqual([]);
 });

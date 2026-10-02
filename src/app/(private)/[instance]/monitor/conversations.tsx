@@ -11,7 +11,7 @@ import { useWhatsappContext } from "../whatsapp-context";
 import MonitorCard from "./(components)/card";
 import MonitorFilters from "./(components)/filters";
 import MonitorToolbar from "./(components)/monitor-toolbar";
-import MonitorSummary from "./(components)/summary";
+import { MonitorSummaryAlert } from "./(components)/summary";
 import MonitorPagination from "./(components)/monitor-pagination";
 import MonitorConversationPreview from "./(components)/conversation-preview";
 import getMonitorCardProps from "./(functions)/get-card-props";
@@ -24,11 +24,11 @@ export default function ConversationMonitor() {
   const { openModal } = useContext(AppContext);
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[1800px] flex-col gap-4 p-3 md:p-5 lg:h-full lg:min-h-0 lg:overflow-hidden">
+    <div className="mx-auto flex min-h-full w-full max-w-[1800px] flex-col gap-2 p-3 md:px-5 lg:h-full lg:min-h-0 lg:overflow-hidden">
       <MonitorToolbar />
-      <MonitorSummary />
-      <div className="flex min-h-0 flex-1 flex-col items-start gap-4 lg:flex-row">
-        <MonitorFilters />
+      <MonitorSummaryAlert />
+      <MonitorFilters />
+      <div className="flex min-h-0 flex-1 flex-col">
         <section
           aria-label="Conversas da monitoria"
           aria-busy={isLoading || isRefreshing}
@@ -50,12 +50,12 @@ export default function ConversationMonitor() {
           )}
           <div className="scrollbar-whatsapp min-h-0 flex-1 lg:overflow-y-auto">
             {isLoading && chats.length === 0 ? (
-              <div role="status" aria-label="Carregando conversas" className="space-y-3">
-                {[0, 1, 2, 3].map((key) => (
+              <div role="status" aria-label="Carregando conversas" className="space-y-2">
+                {[0, 1, 2, 3, 4].map((key) => (
                   <Skeleton
                     key={key}
                     variant="rounded"
-                    height={viewMode === "compact" ? 85 : 180}
+                    height={viewMode === "compact" ? 72 : 140}
                   />
                 ))}
               </div>
@@ -64,7 +64,7 @@ export default function ConversationMonitor() {
                 aria-label={
                   viewMode === "compact" ? "Lista compacta de conversas" : "Lista de conversas"
                 }
-                className="min-w-0 space-y-3"
+                className="min-w-0 space-y-2"
               >
                 {chats.map((chat) => {
                   const key = `${"chatType" in chat ? chat.chatType : "schedule"}-${chat.id}`;

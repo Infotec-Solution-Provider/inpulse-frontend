@@ -128,14 +128,18 @@ export default function MonitorCard({
 
   return (
     <li
-      className={`w-full list-none rounded-xl border border-l-4 border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${compact ? "p-3" : "p-4"}`}
+      className={`w-full list-none rounded-xl border border-l-4 border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${compact ? "px-3 py-2" : "p-3"}`}
       style={{ borderLeftColor: operational?.slaBreached ? "#dc2626" : config.color }}
     >
       <article aria-label={`${title}, ${status ? statusLabels[status] : config.label}`}>
+        {/* Actions sit on the title line (CSS order keeps the DOM order); the compact list
+            puts all three blocks on one line on wide screens. */}
         <div
-          className={`flex min-w-0 flex-col gap-3 ${compact ? "xl:flex-row xl:items-center" : ""}`}
+          className={`flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 ${compact ? "xl:flex-nowrap xl:items-center" : ""}`}
         >
-          <div className={`flex min-w-0 gap-3 ${compact ? "xl:w-64 xl:shrink-0" : ""}`}>
+          <div
+            className={`order-1 flex min-w-0 flex-1 gap-3 ${compact ? "xl:w-64 xl:flex-none" : ""}`}
+          >
             <Avatar
               alt=""
               src={imageUrl || undefined}
@@ -157,7 +161,7 @@ export default function MonitorCard({
                 )}
               </div>
               <p
-                className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400"
+                className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
                 title={[userName, sectorName].filter(Boolean).join(" · ")}
               >
                 {userName || "Sem atendente"}
@@ -166,7 +170,9 @@ export default function MonitorCard({
             </div>
           </div>
 
-          <div className="min-w-0 flex-1 space-y-2">
+          <div
+            className={`order-3 min-w-0 basis-full space-y-1 ${compact ? "xl:order-2 xl:flex-1 xl:basis-0" : ""}`}
+          >
             <div className="flex flex-wrap items-center gap-1.5">
               <Chip
                 size="small"
@@ -202,13 +208,6 @@ export default function MonitorCard({
                 />
               )}
             </div>
-            {waitTime && (
-              <p
-                className={`flex items-center gap-1 text-xs font-medium ${operational?.slaBreached ? "text-red-600 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
-              >
-                <AccessTimeIcon sx={{ fontSize: 14 }} /> Aguardando há {waitTime}
-              </p>
-            )}
             <p
               className="truncate text-sm text-slate-600 dark:text-slate-300"
               title={operational?.lastMessagePreview || undefined}
@@ -216,15 +215,28 @@ export default function MonitorCard({
               {operational?.lastMessagePreview ||
                 (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
             </p>
-            {lastMessageAt && (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Última mensagem:{" "}
-                <time dateTime={operational?.lastMessageAt || undefined}>{lastMessageAt}</time>
+            {(waitTime || lastMessageAt) && (
+              <p className="flex flex-wrap items-center gap-x-3 text-xs">
+                {waitTime && (
+                  <span
+                    className={`inline-flex items-center gap-1 font-medium ${operational?.slaBreached ? "text-red-600 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
+                  >
+                    <AccessTimeIcon sx={{ fontSize: 14 }} /> Aguardando há {waitTime}
+                  </span>
+                )}
+                {lastMessageAt && (
+                  <span className="text-slate-500 dark:text-slate-400">
+                    Última mensagem:{" "}
+                    <time dateTime={operational?.lastMessageAt || undefined}>{lastMessageAt}</time>
+                  </span>
+                )}
               </p>
             )}
           </div>
 
-          <div className={`flex shrink-0 items-center gap-1 ${compact ? "xl:ml-auto" : ""}`}>
+          <div
+            className={`order-2 flex shrink-0 items-center gap-1 ${compact ? "xl:order-3 xl:ml-auto" : ""}`}
+          >
             {handleView && (
               <Tooltip title="Visualizar conversa" arrow>
                 <IconButton
@@ -265,7 +277,7 @@ export default function MonitorCard({
         </div>
 
         {!compact && (
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
             {contactNumber && <span>Telefone: {contactNumber}</span>}
             {customerName && <span>Cliente: {customerName}</span>}
             {customerDocument && <span>Documento: {customerDocument}</span>}

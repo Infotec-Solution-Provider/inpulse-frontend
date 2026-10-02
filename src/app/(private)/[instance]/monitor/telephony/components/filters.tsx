@@ -25,7 +25,7 @@ import type useTelephonyMonitor from "../use-telephony-monitor";
 import type { TelephonyLookupKind, TelephonyLookupOption, TelephonyMonitorFilters } from "../types";
 import { TelephonyDateField, TelephonyLookupField } from "./filter-fields";
 import { lookupFields, selectedLookupIds } from "./lookup-fields";
-import { dialogPaperSx, surface, surfaceBorder } from "./presentation";
+import { dialogPaperSx, surface, surfaceBorder } from "../../surface";
 
 interface TelephonyFiltersProps {
   state: ReturnType<typeof useTelephonyMonitor>;

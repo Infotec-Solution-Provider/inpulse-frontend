@@ -12,14 +12,14 @@ export default function MonitorPagination() {
   return (
     <nav
       aria-label="Paginação da monitoria"
-      className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-800"
+      className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-800"
     >
       <TextField
         select
         size="small"
         label="Por página"
         value={pageSize}
-        sx={{ minWidth: 112 }}
+        sx={{ minWidth: 96, my: 0.5, "& .MuiSelect-select": { py: 0.5 } }}
         onChange={(event) => setPageSize(Number(event.target.value))}
       >
         {[20, 50, 100].map((size) => (

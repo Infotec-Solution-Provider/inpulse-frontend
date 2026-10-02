@@ -1,17 +1,30 @@
 "use client";
 
+import CloseIcon from "@mui/icons-material/Close";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchIcon from "@mui/icons-material/Search";
-import { Button, Chip, MenuItem, TextField } from "@mui/material";
-import type { FormEvent, ReactNode } from "react";
-import { useState } from "react";
+import {
+  Badge,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  TextField,
+  Tooltip,
+} from "@mui/material";
+import type { ReactNode } from "react";
+import { useRef, useState } from "react";
 import useInternalChatContext from "../../internal-context";
 import useMonitorContext from "../context";
+import { createInitialFilters } from "../filters-state";
+import { dialogPaperSx, surface, surfaceBorder } from "../surface";
 import type { MonitorFiltersState } from "../types";
-
-const panelClass =
-  "rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800";
+import { quickFilterLabel } from "./summary";
 
 function FilterCheckbox({
   id,
@@ -52,7 +65,7 @@ function FilterDateRange({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+      <legend className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">
         {label}
       </legend>
       <div className="grid min-w-0 grid-cols-2 gap-2">
@@ -85,18 +98,11 @@ function FilterDateRange({
   );
 }
 
-export default function MonitorFilters() {
-  const { filters, setFilters, resetFilters, applyFilters, hasUnappliedFilters, isLoading } =
-    useMonitorContext();
-  const { users = [] } = useInternalChatContext();
-  const [expanded, setExpanded] = useState(false);
-  const update = <K extends keyof MonitorFiltersState>(key: K, value: MonitorFiltersState[K]) =>
-    setFilters((current) => ({ ...current, [key]: value }));
-  const activeFiltersCount = [
-    !!filters.searchText,
+/** Filters set in the dialog; search and the quick filter have their own controls. */
+function dialogFilterCount(filters: MonitorFiltersState): number {
+  return [
     filters.user !== "all",
     filters.scheduledFor !== "all",
-    filters.operationalStatus !== "all",
     filters.showBots,
     !filters.showOngoing || !filters.showFinished,
     filters.showOnlyScheduled,
@@ -107,269 +113,373 @@ export default function MonitorFilters() {
       (range) => !!range.from || !!range.to,
     ),
   ].filter(Boolean).length;
+}
 
-  const handleApply = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    applyFilters();
+const sectionTitle =
+  "mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
+
+export default function MonitorFilters() {
+  const {
+    filters,
+    appliedFilters,
+    setFilters,
+    applyFilters,
+    hasUnappliedFilters,
+    isLoading,
+    setOperationalStatus,
+  } = useMonitorContext();
+  const { users = [] } = useInternalChatContext();
+  const [open, setOpen] = useState(false);
+  // Draft when the dialog opened; cancelling restores it, discarding only dialog edits.
+  const snapshot = useRef(filters);
+  const update = <K extends keyof MonitorFiltersState>(key: K, value: MonitorFiltersState[K]) =>
+    setFilters((current) => ({ ...current, [key]: value }));
+  const appliedCount = dialogFilterCount(appliedFilters);
+  const quickFilter = quickFilterLabel(appliedFilters.operationalStatus);
+  const openDialog = () => {
+    snapshot.current = filters;
+    setOpen(true);
+  };
+  const cancel = () => {
+    setFilters(snapshot.current);
+    setOpen(false);
   };
 
   return (
-    <aside
-      aria-label="Filtros da monitoria"
-      className={`min-h-0 w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900 lg:static lg:h-full lg:max-h-none lg:w-80 ${expanded ? "h-[34rem] max-h-[70dvh]" : ""}`}
-    >
+    <>
       <form
-        onSubmit={handleApply}
-        className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto]"
+        onSubmit={(event) => {
+          event.preventDefault();
+          applyFilters();
+        }}
+        aria-label="Filtros da monitoria"
+        className="flex shrink-0 flex-wrap items-center gap-2"
       >
-        <header className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
-            <FilterListIcon fontSize="small" />
-            <h2 className="hidden text-sm font-semibold lg:block">Filtros</h2>
-            <button
-              type="button"
-              className="flex items-center gap-1 rounded text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 lg:hidden"
-              aria-expanded={expanded}
-              aria-controls="monitor-filter-fields"
-              onClick={() => setExpanded((current) => !current)}
-            >
-              Filtros
-              <ExpandMoreIcon fontSize="small" className={expanded ? "rotate-180" : ""} />
-            </button>
-            {activeFiltersCount > 0 && (
-              <Chip
-                label={activeFiltersCount}
-                size="small"
-                color="primary"
-                aria-label={`${activeFiltersCount} filtros selecionados`}
-              />
-            )}
-          </div>
-          <Button type="button" size="small" onClick={resetFilters}>
-            Limpar
-          </Button>
-        </header>
-
-        <div
-          id="monitor-filter-fields"
-          className={`scrollbar-whatsapp min-h-0 space-y-3 overflow-y-auto p-3 lg:block ${expanded ? "block" : "hidden"}`}
+        <TextField
+          size="small"
+          label="Pesquisar"
+          placeholder="Nome, telefone ou mensagem"
+          value={filters.searchText}
+          onChange={(event) => update("searchText", event.target.value)}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    type="submit"
+                    size="small"
+                    edge="end"
+                    aria-label="Buscar"
+                    disabled={isLoading && !hasUnappliedFilters}
+                  >
+                    <SearchIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
+          sx={{
+            width: { xs: "100%", sm: 340 },
+            "& .MuiOutlinedInput-root": { bgcolor: surface },
+          }}
+        />
+        <Tooltip title="Filtros">
+          <IconButton
+            aria-label={
+              appliedCount
+                ? `Filtros, ${appliedCount} ${appliedCount === 1 ? "aplicado" : "aplicados"}`
+                : "Filtros"
+            }
+            aria-haspopup="dialog"
+            onClick={openDialog}
+            sx={{
+              border: 1,
+              borderColor: appliedCount ? "primary.main" : surfaceBorder,
+              borderRadius: 2,
+              bgcolor: surface,
+              "&:hover": { bgcolor: surface },
+            }}
+          >
+            <Badge badgeContent={appliedCount} color="primary">
+              <FilterListIcon color={appliedCount ? "primary" : "action"} />
+            </Badge>
+          </IconButton>
+        </Tooltip>
+        {quickFilter && (
+          <Chip
+            color="primary"
+            size="small"
+            variant="outlined"
+            label={`Filtro rápido: ${quickFilter}`}
+            onDelete={() => setOperationalStatus("all")}
+          />
+        )}
+        <p
+          role="status"
+          className={
+            hasUnappliedFilters && !open
+              ? "basis-full text-xs text-amber-700 dark:text-amber-300"
+              : "sr-only"
+          }
         >
-          <section className={`${panelClass} space-y-3`} aria-label="Busca">
-            <TextField
-              fullWidth
-              size="small"
-              label="Pesquisar"
-              placeholder="Nome, telefone ou mensagem"
-              value={filters.searchText}
-              onChange={(event) => update("searchText", event.target.value)}
-            />
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Buscar em"
-              value={filters.searchColumn}
-              onChange={(event) =>
-                update("searchColumn", event.target.value as MonitorFiltersState["searchColumn"])
-              }
-            >
-              <MenuItem value="all">Todos os campos</MenuItem>
-              <MenuItem value="name">Nome</MenuItem>
-              <MenuItem value="phone">Telefone</MenuItem>
-              <MenuItem value="customer">Cliente</MenuItem>
-              <MenuItem value="message">Mensagem</MenuItem>
-            </TextField>
-          </section>
-
-          <section className={`${panelClass} space-y-3`} aria-label="Responsável e ordenação">
-            <TextField
-              select
-              size="small"
-              label="Atendente / participante"
-              fullWidth
-              value={filters.user}
-              onChange={(event) =>
-                update("user", event.target.value === "all" ? "all" : Number(event.target.value))
-              }
-            >
-              <MenuItem value="all">Todos</MenuItem>
-              {users.map((user) => (
-                <MenuItem key={user.CODIGO} value={user.CODIGO}>
-                  {user.NOME}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Ordenar por"
-              value={filters.sortBy}
-              onChange={(event) =>
-                update("sortBy", event.target.value as MonitorFiltersState["sortBy"])
-              }
-            >
-              <MenuItem value="urgency">Urgência operacional</MenuItem>
-              <MenuItem value="startedAt">Data de início</MenuItem>
-              <MenuItem value="finishedAt">Data de finalização</MenuItem>
-              <MenuItem value="lastMessage">Última mensagem</MenuItem>
-              <MenuItem value="name">Nome</MenuItem>
-              <MenuItem value="scheduledAt">Agendado para</MenuItem>
-            </TextField>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Ordem"
-              value={filters.sortOrder}
-              onChange={(event) =>
-                update("sortOrder", event.target.value as MonitorFiltersState["sortOrder"])
-              }
-            >
-              <MenuItem value="desc">
-                {filters.sortBy === "urgency" ? "Mais urgentes primeiro" : "Decrescente"}
-              </MenuItem>
-              <MenuItem value="asc">
-                {filters.sortBy === "urgency" ? "Menos urgentes primeiro" : "Crescente"}
-              </MenuItem>
-            </TextField>
-          </section>
-
-          <details className={panelClass}>
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Categorias e situação
-            </summary>
-            <div className="mt-3 space-y-1">
-              {(
-                [
-                  ["showCustomerChats", "Conversas com clientes"],
-                  ["showInternalChats", "Conversas internas"],
-                  ["showInternalGroups", "Grupos internos"],
-                  ["showSchedules", "Agendamentos"],
-                ] as const
-              ).map(([key, label]) => (
-                <FilterCheckbox
-                  key={key}
-                  id={`monitor-${key}`}
-                  checked={filters.categories[key]}
-                  onChange={(checked) =>
-                    setFilters((current) => ({
-                      ...current,
-                      categories: { ...current.categories, [key]: checked },
-                    }))
+          {hasUnappliedFilters
+            ? "Há alterações de filtros para aplicar."
+            : "Os filtros selecionados estão aplicados."}
+        </p>
+      </form>
+      <Dialog
+        open={open}
+        // A stray click outside must not discard the edits; Esc and the buttons close it.
+        onClose={(_event, reason) => {
+          if (reason !== "backdropClick") cancel();
+        }}
+        fullWidth
+        maxWidth="lg"
+        aria-labelledby="monitor-filters-title"
+        slotProps={{ paper: { sx: dialogPaperSx } }}
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            applyFilters();
+            setOpen(false);
+          }}
+          // Shrink to the dialog height so only the content scrolls and the actions stay visible.
+          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
+          <DialogTitle id="monitor-filters-title" sx={{ pr: 7 }}>
+            Filtros da monitoria
+          </DialogTitle>
+          <IconButton
+            aria-label="Fechar filtros"
+            onClick={cancel}
+            sx={{ position: "absolute", right: 12, top: 12 }}
+          >
+            <CloseIcon />
+          </IconButton>
+          <DialogContent dividers className="space-y-6">
+            <section aria-labelledby="monitor-filters-search">
+              <h3 id="monitor-filters-search" className={sectionTitle}>
+                Busca, responsável e ordenação
+              </h3>
+              <div className="grid gap-3 pt-1 sm:grid-cols-2 lg:grid-cols-4">
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Buscar em"
+                  value={filters.searchColumn}
+                  onChange={(event) =>
+                    update(
+                      "searchColumn",
+                      event.target.value as MonitorFiltersState["searchColumn"],
+                    )
                   }
                 >
-                  {label}
-                </FilterCheckbox>
-              ))}
-              <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
-              {(
-                [
-                  ["showBots", "Incluir bots"],
-                  ["showOngoing", "Em andamento"],
-                  ["showFinished", "Finalizados"],
-                  ["showUnreadOnly", "Apenas não lidas"],
-                  ["showPendingResponseOnly", "Apenas sem resposta"],
-                ] as const
-              ).map(([key, label]) => (
-                <FilterCheckbox
-                  key={key}
-                  id={`monitor-${key}`}
-                  checked={filters[key]}
-                  onChange={(checked) => update(key, checked)}
+                  <MenuItem value="all">Todos os campos</MenuItem>
+                  <MenuItem value="name">Nome</MenuItem>
+                  <MenuItem value="phone">Telefone</MenuItem>
+                  <MenuItem value="customer">Cliente</MenuItem>
+                  <MenuItem value="message">Mensagem</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Atendente / participante"
+                  fullWidth
+                  value={filters.user}
+                  onChange={(event) =>
+                    update(
+                      "user",
+                      event.target.value === "all" ? "all" : Number(event.target.value),
+                    )
+                  }
                 >
-                  {label}
-                </FilterCheckbox>
-              ))}
-            </div>
-          </details>
-
-          <details className={panelClass}>
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Período da conversa
-            </summary>
-            <div className="mt-3 space-y-4">
-              <FilterDateRange
-                label="Data de início"
-                value={filters.startedAt}
-                onChange={(value) => update("startedAt", value)}
-              />
-              <FilterDateRange
-                label="Data de finalização"
-                value={filters.finishedAt}
-                onChange={(value) => update("finishedAt", value)}
-              />
-            </div>
-          </details>
-
-          <details className={panelClass}>
-            <summary className="cursor-pointer text-sm font-semibold text-slate-700 dark:text-slate-200">
-              Agendamentos
-            </summary>
-            <div className="mt-3 space-y-4">
-              <FilterCheckbox
-                id="monitor-showOnlyScheduled"
-                checked={filters.showOnlyScheduled}
-                onChange={(checked) => update("showOnlyScheduled", checked)}
-              >
-                Apenas agendados
-              </FilterCheckbox>
-              <FilterDateRange
-                label="Agendado no dia"
-                value={filters.scheduledAt}
-                onChange={(value) => update("scheduledAt", value)}
-              />
-              <FilterDateRange
-                label="Agendado para o dia"
-                value={filters.scheduledTo}
-                onChange={(value) => update("scheduledTo", value)}
-              />
-              <TextField
-                select
-                size="small"
-                label="Agendado para"
-                fullWidth
-                value={filters.scheduledFor}
-                onChange={(event) =>
-                  update(
-                    "scheduledFor",
-                    event.target.value === "all" ? "all" : Number(event.target.value),
-                  )
-                }
-              >
-                <MenuItem value="all">Qualquer atendente</MenuItem>
-                {users.map((user) => (
-                  <MenuItem key={user.CODIGO} value={user.CODIGO}>
-                    {user.NOME}
+                  <MenuItem value="all">Todos</MenuItem>
+                  {users.map((user) => (
+                    <MenuItem key={user.CODIGO} value={user.CODIGO}>
+                      {user.NOME}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Ordenar por"
+                  value={filters.sortBy}
+                  onChange={(event) =>
+                    update("sortBy", event.target.value as MonitorFiltersState["sortBy"])
+                  }
+                >
+                  <MenuItem value="urgency">Urgência operacional</MenuItem>
+                  <MenuItem value="startedAt">Data de início</MenuItem>
+                  <MenuItem value="finishedAt">Data de finalização</MenuItem>
+                  <MenuItem value="lastMessage">Última mensagem</MenuItem>
+                  <MenuItem value="name">Nome</MenuItem>
+                  <MenuItem value="scheduledAt">Agendado para</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Ordem"
+                  value={filters.sortOrder}
+                  onChange={(event) =>
+                    update("sortOrder", event.target.value as MonitorFiltersState["sortOrder"])
+                  }
+                >
+                  <MenuItem value="desc">
+                    {filters.sortBy === "urgency" ? "Mais urgentes primeiro" : "Decrescente"}
                   </MenuItem>
-                ))}
-              </TextField>
-            </div>
-          </details>
-        </div>
+                  <MenuItem value="asc">
+                    {filters.sortBy === "urgency" ? "Menos urgentes primeiro" : "Crescente"}
+                  </MenuItem>
+                </TextField>
+              </div>
+            </section>
 
-        <footer
-          className={`border-t border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 lg:block ${expanded ? "block" : "hidden"}`}
-        >
-          <p
-            role="status"
-            className={`mb-2 text-xs ${hasUnappliedFilters ? "text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-slate-400"}`}
-          >
-            {hasUnappliedFilters
-              ? "Há alterações de filtros para aplicar."
-              : "Os filtros selecionados estão aplicados."}
-          </p>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            startIcon={<SearchIcon />}
-            disabled={isLoading && !hasUnappliedFilters}
-          >
-            Aplicar filtros
-          </Button>
-        </footer>
-      </form>
-    </aside>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <section aria-labelledby="monitor-filters-categories">
+                <h3 id="monitor-filters-categories" className={sectionTitle}>
+                  Categorias
+                </h3>
+                {(
+                  [
+                    ["showCustomerChats", "Conversas com clientes"],
+                    ["showInternalChats", "Conversas internas"],
+                    ["showInternalGroups", "Grupos internos"],
+                    ["showSchedules", "Agendamentos"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <FilterCheckbox
+                    key={key}
+                    id={`monitor-${key}`}
+                    checked={filters.categories[key]}
+                    onChange={(checked) =>
+                      setFilters((current) => ({
+                        ...current,
+                        categories: { ...current.categories, [key]: checked },
+                      }))
+                    }
+                  >
+                    {label}
+                  </FilterCheckbox>
+                ))}
+              </section>
+              <section aria-labelledby="monitor-filters-situation">
+                <h3 id="monitor-filters-situation" className={sectionTitle}>
+                  Situação
+                </h3>
+                {(
+                  [
+                    ["showBots", "Incluir bots"],
+                    ["showOngoing", "Em andamento"],
+                    ["showFinished", "Finalizados"],
+                    ["showUnreadOnly", "Apenas não lidas"],
+                    ["showPendingResponseOnly", "Apenas sem resposta"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <FilterCheckbox
+                    key={key}
+                    id={`monitor-${key}`}
+                    checked={filters[key]}
+                    onChange={(checked) => update(key, checked)}
+                  >
+                    {label}
+                  </FilterCheckbox>
+                ))}
+              </section>
+            </div>
+
+            <section aria-labelledby="monitor-filters-period">
+              <h3 id="monitor-filters-period" className={sectionTitle}>
+                Período da conversa
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FilterDateRange
+                  label="Data de início"
+                  value={filters.startedAt}
+                  onChange={(value) => update("startedAt", value)}
+                />
+                <FilterDateRange
+                  label="Data de finalização"
+                  value={filters.finishedAt}
+                  onChange={(value) => update("finishedAt", value)}
+                />
+              </div>
+            </section>
+
+            <section aria-labelledby="monitor-filters-schedules">
+              <h3 id="monitor-filters-schedules" className={sectionTitle}>
+                Agendamentos
+              </h3>
+              <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <FilterDateRange
+                  label="Agendado no dia"
+                  value={filters.scheduledAt}
+                  onChange={(value) => update("scheduledAt", value)}
+                />
+                <FilterDateRange
+                  label="Agendado para o dia"
+                  value={filters.scheduledTo}
+                  onChange={(value) => update("scheduledTo", value)}
+                />
+                <TextField
+                  select
+                  size="small"
+                  label="Agendado para"
+                  fullWidth
+                  value={filters.scheduledFor}
+                  onChange={(event) =>
+                    update(
+                      "scheduledFor",
+                      event.target.value === "all" ? "all" : Number(event.target.value),
+                    )
+                  }
+                >
+                  <MenuItem value="all">Qualquer atendente</MenuItem>
+                  {users.map((user) => (
+                    <MenuItem key={user.CODIGO} value={user.CODIGO}>
+                      {user.NOME}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </div>
+              <div className="mt-2">
+                <FilterCheckbox
+                  id="monitor-showOnlyScheduled"
+                  checked={filters.showOnlyScheduled}
+                  onChange={(checked) => update("showOnlyScheduled", checked)}
+                >
+                  Apenas agendados
+                </FilterCheckbox>
+              </div>
+            </section>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, py: 1.5 }}>
+            <Button
+              type="button"
+              onClick={() =>
+                setFilters((current) => ({
+                  ...createInitialFilters(),
+                  searchText: current.searchText,
+                  operationalStatus: current.operationalStatus,
+                }))
+              }
+              sx={{ mr: "auto" }}
+            >
+              Limpar filtros
+            </Button>
+            <Button type="button" onClick={cancel}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="contained" startIcon={<SearchIcon />}>
+              Aplicar filtros
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+    </>
   );
 }

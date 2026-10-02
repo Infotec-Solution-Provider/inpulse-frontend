@@ -8,6 +8,7 @@ import ViewListOutlinedIcon from "@mui/icons-material/ViewListOutlined";
 import { Button, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
 import { useEffect, useState } from "react";
 import useMonitorContext from "../context";
+import MonitorSummary from "./summary";
 
 function sinceUpdated(milliseconds: number) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1_000));
@@ -43,34 +44,38 @@ export default function MonitorToolbar() {
     : 0;
   const updating = isLoading || isRefreshing;
 
+  // One wrapping row: title, quick-filter indicators and actions share the width so the
+  // conversation list keeps the height.
   return (
-    <header className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800 xl:flex-row xl:items-center">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+    <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="min-w-0">
+        <h1 className="text-base font-semibold leading-tight text-slate-900 dark:text-slate-100">
           Monitoria de conversas
         </h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          {isLoading
-            ? "Carregando conversas…"
-            : `${chats.length.toLocaleString("pt-BR")} de ${totalCount.toLocaleString("pt-BR")} conversas`}
-        </p>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-slate-600 dark:text-slate-300">
+            {isLoading
+              ? "Carregando conversas…"
+              : `${chats.length.toLocaleString("pt-BR")} de ${totalCount.toLocaleString("pt-BR")} conversas`}
+          </span>
+          {" · "}
           {updating
             ? "Atualizando…"
             : lastUpdatedAt
               ? sinceUpdated(now - lastUpdatedAt)
               : "Aguardando a primeira atualização"}
           {!autoRefresh && (
-            <span className="ml-2 text-amber-700 dark:text-amber-300">· Atualização pausada</span>
+            <span className="ml-1 text-amber-700 dark:text-amber-300">· Atualização pausada</span>
           )}
           {autoRefreshPaused && (
-            <span className="ml-2 text-amber-700 dark:text-amber-300">
+            <span className="ml-1 text-amber-700 dark:text-amber-300">
               · Atualização pausada durante a consulta da conversa
             </span>
           )}
         </p>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <MonitorSummary />
+      <div className="ml-auto flex flex-wrap items-center gap-2">
         <ToggleButtonGroup
           value={viewMode}
           exclusive
