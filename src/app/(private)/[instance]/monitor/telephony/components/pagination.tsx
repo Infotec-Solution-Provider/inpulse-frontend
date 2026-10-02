@@ -12,7 +12,7 @@ export default function TelephonyPagination({
   return (
     <nav
       aria-label="Paginação da telefonia"
-      className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
+      className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-800"
     >
       <TextField
         select
@@ -20,7 +20,7 @@ export default function TelephonyPagination({
         label="Por página"
         value={state.pageSize}
         onChange={(event) => state.setPageSize(Number(event.target.value))}
-        sx={{ minWidth: 112 }}
+        sx={{ minWidth: 96, my: 0.5, "& .MuiSelect-select": { py: 0.5 } }}
       >
         {[20, 50, 100].map((size) => (
           <MenuItem key={size} value={size}>

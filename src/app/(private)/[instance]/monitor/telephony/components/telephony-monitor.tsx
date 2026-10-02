@@ -86,12 +86,13 @@ function ScopedTelephonyMonitor() {
 
   return (
     <section
-      className="flex min-h-0 w-full flex-col gap-3 p-3 md:p-5 lg:h-full lg:overflow-y-auto"
+      className="flex min-h-0 w-full flex-col gap-2 p-3 md:px-5 lg:h-full lg:overflow-y-auto"
       aria-label="Monitoria de telefonia"
     >
       <TelephonyToolbar mode={mode} onModeChange={setMode} state={state} now={now} />
-      <TelephonyFilters state={state} onLookup={setActiveLookup} getSelection={getSelection} />
-      <TelephonyAppliedFilters state={state} knownOptions={knownOptions} />
+      <TelephonyFilters state={state} onLookup={setActiveLookup} getSelection={getSelection}>
+        <TelephonyAppliedFilters state={state} knownOptions={knownOptions} />
+      </TelephonyFilters>
       {state.error && (
         <Alert
           severity="error"
@@ -117,9 +118,9 @@ function ScopedTelephonyMonitor() {
         aria-busy={busy}
       >
         {state.isLoading && state.items.length === 0 ? (
-          <div role="status" aria-label="Carregando telefonia" className="space-y-3">
-            {[0, 1, 2, 3].map((key) => (
-              <Skeleton key={key} variant="rounded" height={90} />
+          <div role="status" aria-label="Carregando telefonia" className="space-y-2">
+            {[0, 1, 2, 3, 4, 5].map((key) => (
+              <Skeleton key={key} variant="rounded" height={64} />
             ))}
           </div>
         ) : state.items.length > 0 ? (

@@ -13,7 +13,7 @@ export function TelephonyDateField({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+      <legend className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">
         {label}
       </legend>
       <div className="grid min-w-0 grid-cols-2 gap-2">
@@ -68,7 +68,7 @@ export function TelephonyLookupField({
     : "Selecionar";
   return (
     <div className="min-w-0">
-      <p className="mb-2 text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>
+      <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>
       <Button
         type="button"
         variant="outlined"
