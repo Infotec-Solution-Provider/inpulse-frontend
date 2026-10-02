@@ -18,18 +18,25 @@ export function createTelephonyFilters(
   mode: TelephonyMonitorMode,
   now = new Date(),
 ): TelephonyMonitorFilters {
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   return {
     mode,
     searchText: "",
     scheduledAt: { from: null, to: null },
-    calledAt: { from: null, to: null },
+    // Without a period the CRM must assemble every call ever made (tens of seconds on
+    // large tenants, repeated by auto-refresh), so the calls view starts on this month.
+    calledAt:
+      mode === "calls"
+        ? { from: `${month}-01`, to: `${month}-${String(lastDay).padStart(2, "0")}` }
+        : { from: null, to: null },
     repurchaseAt: { from: null, to: null },
     lastPurchaseAt: { from: null, to: null },
     lastContactAt: { from: null, to: null },
     customerOperatorId: null,
     neverWorked: false,
     monthlyActivity: "all",
-    referenceMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+    referenceMonth: month,
     customerId: null,
     campaignIds: [],
     groupIds: [],
@@ -69,7 +76,8 @@ export function restoreTelephonyPreferences(
     return defaults;
   }
   const input = record(saved.filters);
-  const filters = defaults.filters;
+  const filters = defaults.filters,
+    fallback = createTelephonyFilters(mode);
   // Customer IDs, free text and precise locations are deliberately not restored from browser storage.
   for (const key of TELEPHONY_DATE_FIELDS) {
     const range = record(input[key]);
@@ -85,7 +93,7 @@ export function restoreTelephonyPreferences(
     }
     const from = telephonyDateBound(filters[key].from, false);
     const to = telephonyDateBound(filters[key].to, true);
-    if (from && to && from > to) filters[key] = { from: null, to: null };
+    if (from && to && from > to) filters[key] = fallback[key];
   }
   if (
     typeof input.customerOperatorId === "number" &&

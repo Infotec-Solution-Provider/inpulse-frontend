@@ -67,6 +67,31 @@ describe("telephony filter preferences", () => {
     expect(restored.filters.campaignIds).toHaveLength(100);
   });
 
+  it("starts the calls view on the current month and falls back to it instead of no period", () => {
+    const now = new Date(2024, 1, 10);
+    expect(createTelephonyFilters("calls", now).calledAt).toEqual({
+      from: "2024-02-01",
+      to: "2024-02-29",
+    });
+    expect(createTelephonyFilters("schedules", now).calledAt).toEqual({ from: null, to: null });
+    const month = createTelephonyFilters("calls").calledAt;
+    expect(restoreTelephonyPreferences(JSON.stringify({ filters: {} }), "calls").filters.calledAt).toEqual(
+      month,
+    );
+    expect(
+      restoreTelephonyPreferences(
+        JSON.stringify({ filters: { calledAt: { from: "2200-01-01", to: null } } }),
+        "calls",
+      ).filters.calledAt,
+    ).toEqual(month);
+    expect(
+      restoreTelephonyPreferences(
+        JSON.stringify({ filters: { calledAt: { from: "2026-08-01", to: "2026-08-31" } } }),
+        "calls",
+      ).filters.calledAt,
+    ).toEqual({ from: "2026-08-01", to: "2026-08-31" });
+  });
+
   it("distinguishes same-name cities and removes invalid or incompatible descendants", () => {
     const filters = reconcileTelephonyGeography({
       ...createTelephonyFilters("calls"),
