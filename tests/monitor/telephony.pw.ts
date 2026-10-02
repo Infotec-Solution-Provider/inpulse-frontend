@@ -413,3 +413,25 @@ test("ligação sem início conhecido mostra finalização sem inventar duraçã
   await expect(table.getByText(/Duração não informada/)).toBeVisible();
   await expect(table.getByText("0 min 0 s", { exact: true })).toHaveCount(0);
 });
+
+test("telefonia alterna entre cartões e lista compacta e lembra a escolha", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await setupTelephony(page);
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.getByRole("button", { name: "Exibir cartões", exact: true }).click();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(
+    page.getByRole("list", { name: "Agendamentos", exact: true }).getByRole("listitem"),
+  ).toHaveCount(20);
+  await page.getByRole("button", { name: "Ligações", exact: true }).click();
+  await expect(page.getByRole("list", { name: "Ligações", exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Exibir cartões", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await page.getByRole("button", { name: "Exibir lista compacta", exact: true }).click();
+  await expect(page.getByRole("table")).toBeVisible();
+});

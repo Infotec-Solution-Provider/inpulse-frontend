@@ -57,6 +57,11 @@ export function telephonyStorageKey(
   return `monitor_telephony:v1:${encodeURIComponent(instance)}:${userId}:${mode}`;
 }
 
+/** One view choice per tenant/user, shared by the three modes (unlike filter preferences). */
+export function telephonyViewStorageKey(instance: string, userId: number): string {
+  return `monitor_telephony_view:v1:${encodeURIComponent(instance)}:${userId}`;
+}
+
 function record(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)

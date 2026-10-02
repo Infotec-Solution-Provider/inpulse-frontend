@@ -1,4 +1,5 @@
 export type TelephonyMonitorMode = "schedules" | "calls" | "unscheduled";
+export type TelephonyMonitorView = "cards" | "compact";
 export type TelephonyDateRange = { from: string | null; to: string | null };
 
 export interface TelephonyMonitorFilters {

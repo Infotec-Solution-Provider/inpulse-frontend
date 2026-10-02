@@ -4,14 +4,18 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import ViewAgendaOutlinedIcon from "@mui/icons-material/ViewAgendaOutlined";
+import ViewListOutlinedIcon from "@mui/icons-material/ViewListOutlined";
 import { Button, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
-import type { TelephonyMonitorMode } from "../types";
+import type { TelephonyMonitorMode, TelephonyMonitorView } from "../types";
 import type useTelephonyMonitor from "../use-telephony-monitor";
 import { telephonyModes } from "./presentation";
 
 interface TelephonyToolbarProps {
   mode: TelephonyMonitorMode;
   onModeChange: (mode: TelephonyMonitorMode) => void;
+  view: TelephonyMonitorView;
+  onViewChange: (view: TelephonyMonitorView) => void;
   state: ReturnType<typeof useTelephonyMonitor>;
   now: number;
 }
@@ -19,6 +23,8 @@ interface TelephonyToolbarProps {
 export default function TelephonyToolbar({
   mode,
   onModeChange,
+  view,
+  onViewChange,
   state,
   now,
 }: TelephonyToolbarProps) {
@@ -103,6 +109,26 @@ export default function TelephonyToolbar({
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
+        <ToggleButtonGroup
+          value={view}
+          exclusive
+          size="small"
+          aria-label="Modo de visualização"
+          onChange={(_event, value: TelephonyMonitorView | null) => {
+            if (value) onViewChange(value);
+          }}
+        >
+          <ToggleButton value="cards" aria-label="Exibir cartões">
+            <Tooltip title="Cartões">
+              <ViewAgendaOutlinedIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="compact" aria-label="Exibir lista compacta">
+            <Tooltip title="Lista compacta">
+              <ViewListOutlinedIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
         <Button
           size="small"
           variant="outlined"

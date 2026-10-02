@@ -7,7 +7,13 @@ import { Alert, Button, Modal, Skeleton } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import CustomerCrmDetailModal from "../../../(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import useTelephonyMonitor from "../use-telephony-monitor";
-import type { TelephonyLookupKind, TelephonyLookupOption, TelephonyMonitorMode } from "../types";
+import { telephonyViewStorageKey } from "../filter-state";
+import type {
+  TelephonyLookupKind,
+  TelephonyLookupOption,
+  TelephonyMonitorMode,
+  TelephonyMonitorView,
+} from "../types";
 import TelephonyFilters from "./filters";
 import TelephonyLookupDialog, { type LookupPageRequest } from "./lookup-dialog";
 import {
@@ -23,7 +29,25 @@ import { telephonyModes } from "./presentation";
 import TelephonyAppliedFilters from "./applied-filters";
 
 function ScopedTelephonyMonitor() {
+  const { instance, user } = useAuthContext();
+  const viewKey = instance && user ? telephonyViewStorageKey(instance, user.CODIGO) : null;
   const [mode, setMode] = useState<TelephonyMonitorMode>("schedules");
+  // The table stays the default; storage is optional (private mode, quota).
+  const [view, setView] = useState<TelephonyMonitorView>(() => {
+    try {
+      return viewKey && localStorage.getItem(viewKey) === "cards" ? "cards" : "compact";
+    } catch {
+      return "compact";
+    }
+  });
+  useEffect(() => {
+    if (!viewKey) return;
+    try {
+      localStorage.setItem(viewKey, view);
+    } catch {
+      /* The choice just is not remembered. */
+    }
+  }, [viewKey, view]);
   const [activeLookup, setActiveLookup] = useState<TelephonyLookupKind | null>(null);
   const [previewCustomerId, setPreviewCustomerId] = useState<number | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -90,7 +114,14 @@ function ScopedTelephonyMonitor() {
       className="flex min-h-0 w-full flex-col gap-2 p-3 md:px-5 lg:h-full lg:overflow-y-auto"
       aria-label="Monitoria de telefonia"
     >
-      <TelephonyToolbar mode={mode} onModeChange={setMode} state={state} now={now} />
+      <TelephonyToolbar
+        mode={mode}
+        onModeChange={setMode}
+        view={view}
+        onViewChange={setView}
+        state={state}
+        now={now}
+      />
       <TelephonyFilters
         state={state}
         onLookup={setActiveLookup}
@@ -134,6 +165,7 @@ function ScopedTelephonyMonitor() {
           <TelephonyResults
             items={state.items}
             mode={mode}
+            view={view}
             referenceMonth={state.appliedFilters.referenceMonth}
             onPreview={setPreviewCustomerId}
           />
