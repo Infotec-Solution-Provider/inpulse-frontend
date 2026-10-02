@@ -203,25 +203,14 @@ export default function MonitorCard({
                 />
               )}
             </div>
-            <div className="flex min-w-0 items-center gap-2">
-              <p
-                className="min-w-0 truncate text-sm text-slate-600 dark:text-slate-300"
-                title={operational?.lastMessagePreview || undefined}
-              >
-                {operational?.lastMessagePreview ||
-                  (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
-              </p>
-              {unread > 0 && (
-                <span
-                  title={unreadLabel}
-                  className="inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-600 px-1.5 text-[11px] font-semibold tabular-nums leading-none text-white"
-                >
-                  <span aria-hidden="true">{unread > 99 ? "99+" : unread}</span>
-                  <span className="sr-only">{unreadLabel}</span>
-                </span>
-              )}
-            </div>
-            {(waitTime || lastMessageAt) && (
+            <p
+              className="truncate text-sm text-slate-600 dark:text-slate-300"
+              title={operational?.lastMessagePreview || undefined}
+            >
+              {operational?.lastMessagePreview ||
+                (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
+            </p>
+            {(waitTime || lastMessageAt || unread > 0) && (
               <p className="flex flex-wrap items-center gap-x-3 text-xs">
                 {waitTime && (
                   <span
@@ -230,10 +219,29 @@ export default function MonitorCard({
                     <AccessTimeIcon sx={{ fontSize: 14 }} /> Aguardando há {waitTime}
                   </span>
                 )}
-                {lastMessageAt && (
-                  <span className="text-slate-500 dark:text-slate-400">
-                    Última mensagem:{" "}
-                    <time dateTime={operational?.lastMessageAt || undefined}>{lastMessageAt}</time>
+                {/* Same unread marker as the attendance chat list: the last message time
+                    turns red with a plain red dot; the count is in the tooltip. */}
+                {(lastMessageAt || unread > 0) && (
+                  <span
+                    className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400"
+                    title={unread > 0 ? unreadLabel : undefined}
+                  >
+                    {lastMessageAt && (
+                      <span>
+                        Última mensagem:{" "}
+                        <time
+                          dateTime={operational?.lastMessageAt || undefined}
+                          className={unread > 0 ? "font-semibold text-red-600" : ""}
+                        >
+                          {lastMessageAt}
+                        </time>
+                      </span>
+                    )}
+                    {unread > 0 && (
+                      <span className="h-3 w-3 shrink-0 rounded-full bg-red-600">
+                        <span className="sr-only">{unreadLabel}</span>
+                      </span>
+                    )}
                   </span>
                 )}
               </p>
