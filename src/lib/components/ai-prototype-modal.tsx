@@ -5,11 +5,21 @@ import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import customersService from "@/lib/services/customers.service";
 import aiService from "@/lib/services/ai.service";
 import type { CustomerFullDetail, CustomerPurchaseDetail } from "@/app/(private)/[instance]/(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal.types";
+import {
+  MODE_COPY,
+  buildFactChips,
+  canInsertSuggestion,
+  getActiveSuggestions,
+  getAiErrorMessage,
+  getSelectedSuggestion,
+  type AIPrototypeMode,
+} from "@/lib/components/ai-prototype-modal.utils";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CloseIcon from "@mui/icons-material/Close";
 import InsightsIcon from "@mui/icons-material/Insights";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import {
   Alert,
@@ -18,7 +28,6 @@ import {
   Chip,
   CircularProgress,
   IconButton,
-  Tooltip,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -32,7 +41,9 @@ import {
 } from "recharts";
 import { toast } from "react-toastify";
 
-export type AIPrototypeMode = "suggest-response" | "summarize-chat" | "analyze-customer";
+export type { AIPrototypeMode } from "@/lib/components/ai-prototype-modal.utils";
+
+type AIRequestStatus = "idle" | "loading" | "success" | "error";
 
 interface AIPrototypeModalProps {
   mode: AIPrototypeMode;
@@ -47,19 +58,6 @@ interface AIPrototypeModalProps {
     messageCount?: number;
     lastMessage?: string | null;
   };
-}
-
-interface AIPrototypeContent {
-  title: string;
-  subtitle: string;
-  badges: string[];
-  insightTitle: string;
-  insightText: string;
-  suggestions?: string[];
-  bullets: string[];
-  primaryActionType: "copy" | "close";
-  primaryActionLabel: string;
-  primaryActionText?: string;
 }
 
 interface PurchaseTimelinePoint {
@@ -249,96 +247,6 @@ function getSemaphoreAccent(status: PurchaseAnalytics["semaphoreStatus"]) {
   };
 }
 
-function getLastMessageExcerpt(lastMessage?: string | null) {
-  if (!lastMessage) {
-    return "cliente pediu atualização do atendimento e orientação para o próximo passo";
-  }
-
-  const normalized = lastMessage.trim();
-  if (!normalized) {
-    return "cliente pediu atualização do atendimento e orientação para o próximo passo";
-  }
-
-  return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
-}
-
-function buildPrototypeContent(mode: AIPrototypeMode, context: AIPrototypeModalProps["context"]): AIPrototypeContent {
-  const customerDisplay = context.customerName || "cliente sem vínculo CRM";
-  const messageCount = context.messageCount || 0;
-  const lastMessageExcerpt = getLastMessageExcerpt(context.lastMessage);
-  const startedAt = context.startedAt
-    ? new Date(context.startedAt).toLocaleDateString("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    : "hoje";
-
-  if (mode === "suggest-response") {
-    const primaryText = `Olá, ${context.contactName}. Já revisei o seu caso e vou te orientar no melhor próximo passo agora mesmo.`;
-
-    return {
-      title: "Sugestão de resposta",
-      subtitle: `Resposta pronta para ${context.contactName}, considerando o momento atual da conversa.`,
-      badges: ["Tom consultivo", "Resposta objetiva", customerDisplay],
-      insightTitle: "Leitura da IA",
-      insightText: `A mensagem mais recente indica que o contato busca segurança e direcionamento rápido. O melhor caminho é responder com confirmação, próximo passo e senso de acompanhamento.`,
-      suggestions: [
-        primaryText,
-        `Perfeito, ${context.contactName}. Estou validando isso para você e já te retorno com a recomendação mais adequada.`,
-        `Entendi o seu ponto. Vou conduzir isso de forma prática e te sinalizar o que pode ser feito a seguir.`,
-      ],
-      bullets: [
-        `Última mensagem considerada: “${lastMessageExcerpt}”`,
-        `Contexto usado: ${messageCount} mensagem(ns) visível(is) na conversa`,
-        `Foco da recomendação: reduzir atrito e manter o cliente engajado`,
-      ],
-      primaryActionType: "copy",
-      primaryActionLabel: "Copiar sugestão principal",
-      primaryActionText: primaryText,
-    };
-  }
-
-  if (mode === "summarize-chat") {
-    return {
-      title: "Resumo da conversa",
-      subtitle: `Síntese executiva do atendimento com foco em continuidade.`,
-      badges: ["Resumo executivo", `Início ${startedAt}`, `${messageCount} mensagens`],
-      insightTitle: "Resumo gerado",
-      insightText: `${context.contactName} está em uma etapa de esclarecimento e demonstra expectativa por retorno objetivo. A conversa até aqui aponta necessidade de acompanhamento próximo, com resposta simples e direcionada.`,
-      bullets: [
-        `Cliente relacionado: ${customerDisplay}`,
-        `Tema dominante: alinhamento do próximo passo comercial`,
-        `Trecho mais relevante: “${lastMessageExcerpt}”`,
-        `Recomendação: manter resposta curta, confirmar entendimento e avançar com proposta clara`,
-      ],
-      primaryActionType: "close",
-      primaryActionLabel: "Fechar",
-    };
-  }
-
-  const hasCustomer = Boolean(context.customerId);
-  return {
-    title: "Análise do cliente",
-    subtitle: `Leitura comercial rápida para apoiar a próxima abordagem.`,
-    badges: [hasCustomer ? "Cliente identificado" : "Sem vínculo CRM", customerDisplay],
-    insightTitle: "Leitura estratégica",
-    insightText: hasCustomer
-      ? `${customerDisplay} aparenta estar em momento favorável para aprofundar conversa comercial, desde que a abordagem seja consultiva e orientada a valor.`
-      : `${context.contactName} ainda não está vinculado a um cliente CRM, então a melhor oportunidade é avançar com qualificação e captura de contexto antes de oferta.`,
-    bullets: [
-      hasCustomer
-        ? `Cliente vinculado: ${customerDisplay} (${context.customerId})`
-        : "Contato ainda sem cliente vinculado ao CRM",
-      `Sinal operacional: conversa ativa com potencial de continuidade`,
-      `Próxima melhor ação: confirmar necessidade principal e abrir caminho para proposta guiada`,
-      `Risco percebido: demora na devolutiva pode reduzir intenção de resposta`,
-    ],
-    primaryActionType: "close",
-    primaryActionLabel: "Fechar",
-  };
-}
-
 function getModeIcon(mode: AIPrototypeMode) {
   if (mode === "suggest-response") return <AutoAwesomeIcon sx={{ fontSize: 20 }} />;
   if (mode === "summarize-chat") return <SummarizeIcon sx={{ fontSize: 20 }} />;
@@ -401,13 +309,12 @@ function renderMarkdown(text: string): React.ReactNode {
 export default function AIPrototypeModal({ mode, onApplySuggestion, context }: AIPrototypeModalProps) {
   const { closeModal } = useAppContext();
   const { token } = useAuthContext();
-  const [isLoading, setIsLoading] = useState(mode !== "analyze-customer");
-  const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const [aiStatus, setAiStatus] = useState<AIRequestStatus>(mode === "analyze-customer" ? "idle" : "loading");
   const [aiAnalysisRequested, setAiAnalysisRequested] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [aiInsightError, setAiInsightError] = useState<string | null>(null);
-  const [aiInsightText, setAiInsightText] = useState<string | null>(null);
-  const [aiSuggestions, setAiSuggestions] = useState<string[] | null>(null);
+  const [aiText, setAiText] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [purchaseHistory, setPurchaseHistory] = useState<CustomerPurchaseDetail[]>([]);
   const [isPurchaseHistoryLoading, setIsPurchaseHistoryLoading] = useState(false);
@@ -416,75 +323,78 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
   useEffect(() => {
     if (mode === "analyze-customer" && !aiAnalysisRequested) return;
 
+    let isMounted = true;
+    const fail = (message: string) => {
+      if (!isMounted) return;
+      setAiError(message);
+      setAiStatus("error");
+    };
+
+    setAiError(null);
+    setAiText(null);
+    setAiSuggestions([]);
+    setSelectedSuggestionIndex(0);
+
     if (!token) {
-      setAiError("Sessão inválida. Faça login novamente.");
-      setIsLoading(false);
-      return;
+      fail("Sessão inválida. Faça login novamente.");
+      return () => { isMounted = false; };
     }
 
-    let isMounted = true;
-    if (mode === "analyze-customer") {
-      setIsInsightLoading(true);
-      setAiInsightError(null);
-    } else {
-      setIsLoading(true);
-    }
-    setAiError(null);
-    setAiInsightText(null);
-    setAiSuggestions(null);
+    setAiStatus("loading");
 
     const run = async () => {
       try {
         if (mode === "suggest-response") {
           if (!context.chatId) {
-            setAiError("Chat não identificado para esta sugestão.");
+            fail("Chat não identificado para esta sugestão.");
             return;
           }
           const res = await aiService.suggestResponse({ chatId: context.chatId }, token);
-          if (isMounted) setAiSuggestions(res.suggestions);
+          if (!isMounted) return;
+          setAiSuggestions(getActiveSuggestions(res?.suggestions));
         } else if (mode === "summarize-chat") {
           if (!context.chatId) {
-            setAiError("Chat não identificado para este resumo.");
+            fail("Chat não identificado para este resumo.");
             return;
           }
           const res = await aiService.summarizeChat({ chatId: context.chatId }, token);
-          if (isMounted) setAiInsightText(res.summary);
-        } else if (mode === "analyze-customer") {
+          if (!isMounted) return;
+          setAiText(typeof res?.summary === "string" && res.summary.trim() ? res.summary : null);
+        } else {
           if (!context.customerId) {
-            if (isMounted) setAiInsightError("Nenhum cliente vinculado para análise.");
+            fail("Nenhum cliente vinculado para análise.");
             return;
           }
           const res = await aiService.analyzeCustomer({ customerId: context.customerId }, token);
-          if (isMounted) setAiInsightText(res.analysis);
+          if (!isMounted) return;
+          setAiText(typeof res?.analysis === "string" && res.analysis.trim() ? res.analysis : null);
         }
-      } catch {
-        if (isMounted) {
-          if (mode === "analyze-customer") {
-            setAiInsightError("Não foi possível obter resposta da IA. Tente novamente.");
-          } else {
-            setAiError("Não foi possível obter resposta da IA. Tente novamente.");
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          setIsInsightLoading(false);
-        }
+
+        if (isMounted) setAiStatus("success");
+      } catch (error) {
+        console.error("Erro ao consultar a IA no modal do atendimento:", error);
+        fail(getAiErrorMessage(error));
       }
     };
 
-    run();
+    void run();
     return () => { isMounted = false; };
-  }, [mode, context.chatId, context.customerId, token, aiAnalysisRequested]);
+  }, [mode, context.chatId, context.customerId, token, aiAnalysisRequested, retryNonce]);
 
-  const content = useMemo(() => buildPrototypeContent(mode, context), [mode, context]);
-  const shouldRenderSecondaryCloseButton = content.primaryActionType !== "close";
-  const activeSuggestions = aiSuggestions ?? content.suggestions;
-  const selectedSuggestion = activeSuggestions?.[selectedSuggestionIndex] ?? content.primaryActionText;
+  const modeCopy = MODE_COPY[mode];
+  const factChips = useMemo(() => buildFactChips(context), [context]);
+  const isAiLoading = aiStatus === "loading";
+  const selectedSuggestion = getSelectedSuggestion(aiSuggestions, selectedSuggestionIndex);
+  const canInsert = canInsertSuggestion({
+    mode,
+    isLoading: isAiLoading,
+    error: aiError,
+    suggestions: aiSuggestions,
+  }) && selectedSuggestion !== null;
 
-  useEffect(() => {
-    setSelectedSuggestionIndex(0);
-  }, [mode, context]);
+  const handleRetry = () => {
+    setRetryNonce((current) => current + 1);
+  };
 
   useEffect(() => {
     if (mode !== "analyze-customer" || !context.customerId || !token) {
@@ -537,14 +447,8 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
   const isAnalysisMode = mode === "analyze-customer";
   const shouldShowPurchasePanel = isAnalysisMode && Boolean(context.customerId);
 
-  const handlePrimaryAction = async () => {
-    if (content.primaryActionType === "close") {
-      closeModal();
-      return;
-    }
-
-    if (!selectedSuggestion) {
-      closeModal();
+  const handleInsertSuggestion = async () => {
+    if (!canInsert || !selectedSuggestion) {
       return;
     }
 
@@ -562,6 +466,127 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
     }
   };
 
+  const renderRetryAlert = (severity: "error" | "warning", message: string) => (
+    <Alert
+      severity={severity}
+      action={(
+        <Button color="inherit" size="small" startIcon={<RefreshIcon fontSize="small" />} onClick={handleRetry}>
+          Tentar novamente
+        </Button>
+      )}
+      sx={{ alignItems: "center" }}
+    >
+      {message}
+    </Alert>
+  );
+
+  const renderAiSection = () => {
+    if (isAnalysisMode && !context.customerId) {
+      return (
+        <Alert severity="info">
+          Este contato não tem cliente vinculado. Vincule um cliente para analisar o histórico com IA.
+        </Alert>
+      );
+    }
+
+    if (aiStatus === "idle") {
+      return (
+        <div className="flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-4 dark:from-slate-800 dark:to-slate-800/60 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            A IA lê o cadastro e as compras recentes do cliente e escreve uma análise para apoiar o atendimento.
+          </p>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AutoAwesomeIcon fontSize="small" />}
+            onClick={() => setAiAnalysisRequested(true)}
+            sx={{ flexShrink: 0 }}
+          >
+            Analisar com IA
+          </Button>
+        </div>
+      );
+    }
+
+    if (aiStatus === "loading") {
+      return (
+        <div
+          className="flex min-h-[min(16rem,40vh)] flex-col items-center justify-center gap-4 rounded-2xl bg-slate-50 px-4 text-center dark:bg-slate-800/60"
+          aria-live="polite"
+        >
+          <CircularProgress size={30} />
+          <div>
+            <p className="text-base font-semibold">{modeCopy.loadingTitle}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Isso pode levar alguns segundos.</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (aiStatus === "error") {
+      return renderRetryAlert("error", aiError ?? getAiErrorMessage(null));
+    }
+
+    if (mode === "suggest-response") {
+      if (aiSuggestions.length === 0) {
+        return renderRetryAlert("warning", modeCopy.emptyMessage);
+      }
+
+      return (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{modeCopy.resultTitle}</p>
+          {aiSuggestions.map((suggestion, index) => (
+            <button
+              key={`${suggestion}-${index}`}
+              type="button"
+              onClick={() => setSelectedSuggestionIndex(index)}
+              aria-pressed={selectedSuggestionIndex === index}
+              className={`w-full rounded-2xl border p-3 text-left text-sm leading-6 transition-all ${
+                selectedSuggestionIndex === index
+                  ? "border-cyan-500 bg-cyan-50 text-slate-800 shadow-[0_0_0_1px_rgba(6,182,212,0.16)] dark:border-cyan-400 dark:bg-cyan-950/20 dark:text-slate-100"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600"
+              }`}
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {selectedSuggestionIndex === index ? (
+                    <CheckCircleIcon sx={{ fontSize: 18, color: "rgb(8 145 178)" }} />
+                  ) : (
+                    <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: "rgb(148 163 184)" }} />
+                  )}
+                  <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    Sugestão {index + 1}
+                  </span>
+                </div>
+                {selectedSuggestionIndex === index ? (
+                  <Box className="rounded-full bg-cyan-500/10 px-2 py-1 text-[0.68rem] font-bold text-cyan-700 dark:text-cyan-300">
+                    Selecionada
+                  </Box>
+                ) : null}
+              </div>
+              <span className="whitespace-pre-wrap">{suggestion}</span>
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    if (!aiText) {
+      return renderRetryAlert("warning", modeCopy.emptyMessage);
+    }
+
+    return (
+      <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-4 dark:from-slate-800 dark:to-slate-800/60">
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+          {modeCopy.resultTitle}
+        </p>
+        <div className="mt-2 text-[0.98rem] text-slate-700 dark:text-slate-200">
+          {renderMarkdown(aiText)}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex max-h-[calc(100vh-2rem)] w-[min(44rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl dark:bg-slate-900 dark:text-slate-100">
       <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
@@ -570,322 +595,230 @@ export default function AIPrototypeModal({ mode, onApplySuggestion, context }: A
             {getModeIcon(mode)}
           </div>
           <div>
-            <h1 className="text-xl font-semibold">{content.title}</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{content.subtitle}</p>
+            <h1 className="text-xl font-semibold">{modeCopy.title}</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{modeCopy.subtitle}</p>
           </div>
         </div>
 
-        <IconButton onClick={closeModal}>
+        <IconButton onClick={closeModal} aria-label="Fechar">
           <CloseIcon />
         </IconButton>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-        {isLoading ? (
-          <div className="flex min-h-[min(22rem,50vh)] flex-col items-center justify-center gap-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-            <CircularProgress size={34} />
-            <div className="text-center">
-              <p className="text-base font-semibold">Processando contexto do atendimento</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Analisando conversa, histórico visível e perfil do contato.
-              </p>
-            </div>
-          </div>
-        ) : aiError ? (
-          <div className="flex min-h-[min(22rem,50vh)] flex-col items-center justify-center gap-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-            <Alert severity="error" sx={{ width: "100%", maxWidth: 420 }}>{aiError}</Alert>
-          </div>
-        ) : (
-          <div className="space-y-4">
+        <div className="space-y-4">
+          {factChips.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {content.badges.map((badge) => (
+              {factChips.map((chip) => (
                 <Chip
-                  key={badge}
+                  key={chip.id}
                   size="small"
-                  label={badge}
+                  label={chip.label}
                   sx={{
                     height: 24,
+                    maxWidth: "100%",
                     borderRadius: "999px",
-                    fontWeight: 700,
-                    backgroundColor: "rgba(59, 130, 246, 0.08)",
-                    color: "rgb(37, 99, 235)",
+                    fontWeight: 600,
+                    backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgb(30 41 59)" : "rgb(241 245 249)",
+                    color: (theme) => theme.palette.mode === "dark" ? "rgb(226 232 240)" : "rgb(51 65 85)",
                     "& .MuiChip-label": { px: 1.2 },
                   }}
                 />
               ))}
             </div>
+          ) : null}
 
-            <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 p-4 dark:from-slate-800 dark:to-slate-800/60">
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                {content.insightTitle}
-              </p>
-              {isInsightLoading ? (
-                <div className="mt-3 flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                  <CircularProgress size={14} />
-                  <span className="text-sm">Gerando análise com IA...</span>
+          {renderAiSection()}
+
+          {shouldShowPurchasePanel ? (
+            <div className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+              <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Ritmo de compras
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
+                    Histórico e proximidade da próxima recompra
+                  </h2>
                 </div>
-              ) : aiInsightError ? (
-                <Alert severity="error" sx={{ mt: 1.5 }}>{aiInsightError}</Alert>
-              ) : aiInsightText ? (
-                <div className="mt-2 text-[0.98rem] text-slate-700 dark:text-slate-200">
-                  {renderMarkdown(aiInsightText)}
+                <div className="flex flex-wrap gap-2 text-sm">
+                  <Chip label={`${purchaseAnalytics.totalPurchases} compra(s)`} size="small" />
+                  <Chip label={`Ticket médio ${formatCurrency(purchaseAnalytics.averageTicket)}`} size="small" />
                 </div>
-              ) : mode === "analyze-customer" && !aiAnalysisRequested ? (
-                <div className="mt-3">
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<AutoAwesomeIcon fontSize="small" />}
-                    onClick={() => setAiAnalysisRequested(true)}
-                  >
-                    Analisar com IA
-                  </Button>
+              </div>
+
+              {isPurchaseHistoryLoading ? (
+                <div className="flex min-h-[18rem] items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800/60">
+                  <CircularProgress size={28} />
                 </div>
+              ) : purchaseHistoryError ? (
+                <Alert severity="warning">{purchaseHistoryError}</Alert>
+              ) : purchaseAnalytics.totalPurchases === 0 ? (
+                <Alert severity="info">Este cliente ainda não possui compras registradas para análise.</Alert>
               ) : (
-                <p className="mt-2 text-[0.98rem] leading-7 text-slate-700 dark:text-slate-200">
-                  {content.insightText}
-                </p>
+                <>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                        Total comprado
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                        {formatCurrency(purchaseAnalytics.totalRevenue)}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                        Média entre recompras
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                        {purchaseAnalytics.averageRepurchaseDays != null
+                          ? `${Math.round(purchaseAnalytics.averageRepurchaseDays)} dias`
+                          : "Sem base suficiente"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                        Última compra
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                        {purchaseAnalytics.daysSinceLastPurchase != null
+                          ? `${purchaseAnalytics.daysSinceLastPurchase} dias atrás`
+                          : "Sem registro"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          Linha do tempo de compras
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Pontos representam compras e o eixo Y mostra o valor faturado.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={purchaseAnalytics.chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
+                          <XAxis dataKey="dateLabel" stroke="#94a3b8" fontSize={12} />
+                          <YAxis
+                            stroke="#94a3b8"
+                            fontSize={12}
+                            tickFormatter={(value) => formatCurrency(Number(value))}
+                            width={88}
+                          />
+                          <RechartsTooltip
+                            formatter={(value: number) => [formatCurrency(Number(value)), "Valor"]}
+                            labelFormatter={(_, payload) => {
+                              const item = payload?.[0]?.payload as PurchaseTimelinePoint | undefined;
+                              return item ? `Compra #${item.purchaseCode} em ${item.fullDateLabel}` : "Compra";
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#06b6d4"
+                            strokeWidth={3}
+                            dot={{ r: 4, strokeWidth: 2, fill: "#ffffff" }}
+                            activeDot={{ r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                    <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          Semáforo de recompra
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Baseado na média atual entre compras e no tempo desde a última compra.
+                        </p>
+                      </div>
+                      <span className={`text-sm font-semibold ${semaphoreAccent.tone}`}>{semaphoreAccent.label}</span>
+                    </div>
+
+                    {purchaseAnalytics.averageRepurchaseDays == null || purchaseAnalytics.daysSinceLastPurchase == null ? (
+                      <Alert severity="info" sx={{ mt: 2 }}>
+                        São necessárias pelo menos duas compras válidas para estimar o próximo período de recompra.
+                      </Alert>
+                    ) : (
+                      <div className="mt-4 space-y-4">
+                        <div className="relative overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
+                          <div className="grid h-5 grid-cols-3">
+                            <div className="bg-rose-500/85" />
+                            <div className="bg-amber-400/90" />
+                            <div className="bg-emerald-500/85" />
+                          </div>
+                          {(() => {
+                            const markerLeft = Math.min(96, Math.max(4, (purchaseAnalytics.proximityRatio ?? 0) * 96));
+
+                            return (
+                              <div
+                                className="absolute top-1/2 h-7 w-1 -translate-y-1/2 rounded-full bg-slate-900 shadow-[0_0_0_2px_rgba(255,255,255,0.95)] dark:bg-white"
+                                style={{
+                                  left: `${markerLeft}%`,
+                                  borderColor: semaphoreAccent.marker,
+                                }}
+                              />
+                            );
+                          })()}
+                        </div>
+
+                        <div className="grid gap-3 text-sm md:grid-cols-3">
+                          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Última compra</p>
+                            <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                              {purchaseAnalytics.daysSinceLastPurchase} dias atrás
+                            </p>
+                          </div>
+                          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Próxima janela</p>
+                            <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                              {purchaseAnalytics.nextRepurchaseDate?.toLocaleDateString("pt-BR") ?? "-"}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                            <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Situação</p>
+                            <p className={`mt-1 font-semibold ${semaphoreAccent.tone}`}>
+                              {purchaseAnalytics.situationLabel}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
-
-            {shouldShowPurchasePanel ? (
-              <div className="space-y-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-                <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                      Ritmo de compras
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold text-slate-800 dark:text-slate-100">
-                      Histórico e proximidade da próxima recompra
-                    </h2>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-sm">
-                    <Chip label={`${purchaseAnalytics.totalPurchases} compra(s)`} size="small" />
-                    <Chip label={`Ticket médio ${formatCurrency(purchaseAnalytics.averageTicket)}`} size="small" />
-                  </div>
-                </div>
-
-                {isPurchaseHistoryLoading ? (
-                  <div className="flex min-h-[18rem] items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800/60">
-                    <CircularProgress size={28} />
-                  </div>
-                ) : purchaseHistoryError ? (
-                  <Alert severity="warning">{purchaseHistoryError}</Alert>
-                ) : purchaseAnalytics.totalPurchases === 0 ? (
-                  <Alert severity="info">Este cliente ainda não possui compras registradas para análise.</Alert>
-                ) : (
-                  <>
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                          Total comprado
-                        </p>
-                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                          {formatCurrency(purchaseAnalytics.totalRevenue)}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                          Média entre recompras
-                        </p>
-                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                          {purchaseAnalytics.averageRepurchaseDays != null
-                            ? `${Math.round(purchaseAnalytics.averageRepurchaseDays)} dias`
-                            : "Sem base suficiente"}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/60">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
-                          Última compra
-                        </p>
-                        <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                          {purchaseAnalytics.daysSinceLastPurchase != null
-                            ? `${purchaseAnalytics.daysSinceLastPurchase} dias atrás`
-                            : "Sem registro"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                      <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                            Linha do tempo de compras
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Pontos representam compras e o eixo Y mostra o valor faturado.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="h-64 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={purchaseAnalytics.chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.22)" />
-                            <XAxis dataKey="dateLabel" stroke="#94a3b8" fontSize={12} />
-                            <YAxis
-                              stroke="#94a3b8"
-                              fontSize={12}
-                              tickFormatter={(value) => formatCurrency(Number(value))}
-                              width={88}
-                            />
-                            <RechartsTooltip
-                              formatter={(value: number) => [formatCurrency(Number(value)), "Valor"]}
-                              labelFormatter={(_, payload) => {
-                                const item = payload?.[0]?.payload as PurchaseTimelinePoint | undefined;
-                                return item ? `Compra #${item.purchaseCode} em ${item.fullDateLabel}` : "Compra";
-                              }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="value"
-                              stroke="#06b6d4"
-                              strokeWidth={3}
-                              dot={{ r: 4, strokeWidth: 2, fill: "#ffffff" }}
-                              activeDot={{ r: 6 }}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
-                      <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                            Semáforo de recompra
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Baseado na média atual entre compras e no tempo desde a última compra.
-                          </p>
-                        </div>
-                        <span className={`text-sm font-semibold ${semaphoreAccent.tone}`}>{semaphoreAccent.label}</span>
-                      </div>
-
-                      {purchaseAnalytics.averageRepurchaseDays == null || purchaseAnalytics.daysSinceLastPurchase == null ? (
-                        <Alert severity="info" sx={{ mt: 2 }}>
-                          São necessárias pelo menos duas compras válidas para estimar o próximo período de recompra.
-                        </Alert>
-                      ) : (
-                        <div className="mt-4 space-y-4">
-                          <div className="relative overflow-hidden rounded-full border border-slate-200 dark:border-slate-700">
-                            <div className="grid h-5 grid-cols-3">
-                              <div className="bg-rose-500/85" />
-                              <div className="bg-amber-400/90" />
-                              <div className="bg-emerald-500/85" />
-                            </div>
-                            {(() => {
-                              const markerLeft = Math.min(96, Math.max(4, (purchaseAnalytics.proximityRatio ?? 0) * 96));
-
-                              return (
-                                <div
-                                  className="absolute top-1/2 h-7 w-1 -translate-y-1/2 rounded-full bg-slate-900 shadow-[0_0_0_2px_rgba(255,255,255,0.95)] dark:bg-white"
-                                  style={{
-                                    left: `${markerLeft}%`,
-                                    borderColor: semaphoreAccent.marker,
-                                  }}
-                                />
-                              );
-                            })()}
-                          </div>
-
-                          <div className="grid gap-3 text-sm md:grid-cols-3">
-                            <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Última compra</p>
-                              <p className="mt-1 font-semibold text-slate-900 dark:text-white">
-                                {purchaseAnalytics.daysSinceLastPurchase} dias atrás
-                              </p>
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Próxima janela</p>
-                              <p className="mt-1 font-semibold text-slate-900 dark:text-white">
-                                {purchaseAnalytics.nextRepurchaseDate?.toLocaleDateString("pt-BR") ?? "-"}
-                              </p>
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                              <p className="text-xs uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Situação</p>
-                              <p className={`mt-1 font-semibold ${semaphoreAccent.tone}`}>
-                                {purchaseAnalytics.situationLabel}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : null}
-
-            {activeSuggestions?.length ? (
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Respostas sugeridas</p>
-                {activeSuggestions.map((suggestion, index) => (
-                  <button
-                    key={`${suggestion}-${index}`}
-                    type="button"
-                    onClick={() => setSelectedSuggestionIndex(index)}
-                    className={`w-full rounded-2xl border p-3 text-left text-sm leading-6 transition-all ${
-                      selectedSuggestionIndex === index
-                        ? "border-cyan-500 bg-cyan-50 text-slate-800 shadow-[0_0_0_1px_rgba(6,182,212,0.16)] dark:border-cyan-400 dark:bg-cyan-950/20 dark:text-slate-100"
-                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {selectedSuggestionIndex === index ? (
-                          <CheckCircleIcon sx={{ fontSize: 18, color: "rgb(8 145 178)" }} />
-                        ) : (
-                          <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: "rgb(148 163 184)" }} />
-                        )}
-                        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                          Sugestão {index + 1}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {index === 0 && (
-                          <Tooltip title="Sugestão principal">
-                            <Box className="rounded-full bg-emerald-500/10 px-2 py-1 text-[0.68rem] font-bold text-emerald-600">
-                              Prioritária
-                            </Box>
-                          </Tooltip>
-                        )}
-                        {selectedSuggestionIndex === index ? (
-                          <Box className="rounded-full bg-cyan-500/10 px-2 py-1 text-[0.68rem] font-bold text-cyan-700 dark:text-cyan-300">
-                            Selecionada
-                          </Box>
-                        ) : null}
-                      </div>
-                    </div>
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <p className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Pontos considerados</p>
-              <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                {content.bullets.map((bullet) => (
-                  <li key={bullet} className="flex gap-2">
-                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-500" />
-                    <span>{bullet}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
 
       <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-5 py-4 dark:border-slate-800">
-        {shouldRenderSecondaryCloseButton ? (
-          <Button variant="outlined" color="inherit" onClick={closeModal}>
+        {mode === "suggest-response" ? (
+          <>
+            <Button variant="outlined" color="inherit" onClick={closeModal}>
+              Fechar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => void handleInsertSuggestion()}
+              disabled={!canInsert}
+            >
+              {onApplySuggestion ? "Inserir resposta selecionada" : "Copiar resposta selecionada"}
+            </Button>
+          </>
+        ) : (
+          <Button variant="contained" onClick={closeModal}>
             Fechar
           </Button>
-        ) : null}
-        <Button variant="contained" onClick={handlePrimaryAction}>
-          {mode === "suggest-response" ? "Inserir resposta selecionada" : content.primaryActionLabel}
-        </Button>
+        )}
       </footer>
     </div>
   );
