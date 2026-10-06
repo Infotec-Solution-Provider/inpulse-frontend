@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { InternalMessage } from "@/lib/sdk-local";
 import {
   applyInternalMessageStatusEvent,
@@ -8,6 +8,7 @@ import {
   retryErrorToastMessage,
   retryRequiresConfirmation,
   rollbackInternalMessageRetry,
+  runInternalMessageRetry,
 } from "./internal-message-retry";
 
 function message(overrides: Partial<InternalMessage> = {}): InternalMessage {
@@ -210,5 +211,76 @@ describe("retry error parsing", () => {
     expect(retryErrorToastMessage(readRetryError(new Error("Network Error")))).toBe(
       "Não foi possível reenviar a mensagem.",
     );
+  });
+});
+
+describe("runInternalMessageRetry", () => {
+  function setup(request: () => Promise<unknown>) {
+    let state = message({ whatsappRetry: { allowed: true, requiresConfirmation: false } });
+    const original = state;
+    const snapshots: InternalMessage[] = [];
+    const errors: string[] = [];
+    const successes: string[] = [];
+    const deps = {
+      request: vi.fn(request),
+      update: (_m: InternalMessage, apply: (current: InternalMessage) => InternalMessage) => {
+        state = apply(state);
+        snapshots.push(state);
+      },
+      notifyError: (text: string) => errors.push(text),
+      notifySuccess: (text: string) => successes.push(text),
+    };
+    return { deps, original, snapshots, errors, successes, get: () => state };
+  }
+
+  function conflict(code: string, message?: string) {
+    const axiosLike = Object.assign(new Error("Request failed with status code 409"), {
+      response: { status: 409, data: { code, message } },
+    });
+    return new Error(message || axiosLike.message, { cause: axiosLike });
+  }
+
+  it("shows PENDING optimistically and keeps it after the backend accepts", async () => {
+    const t = setup(async () => ({ id: 10, status: "PENDING" }));
+    expect(await runInternalMessageRetry(t.original, false, t.deps)).toBe("scheduled");
+    expect(t.deps.request).toHaveBeenCalledWith(10, false);
+    expect(t.snapshots[0].status).toBe("PENDING");
+    expect(t.get().status).toBe("PENDING");
+    expect(t.successes).toEqual(["Reenvio solicitado."]);
+    expect(t.errors).toEqual([]);
+  });
+
+  it("returns a confirmation signal and rolls back without toasting on CONFIRMATION_REQUIRED", async () => {
+    const t = setup(async () => {
+      throw conflict("CONFIRMATION_REQUIRED", "Confirme o reenvio");
+    });
+    expect(await runInternalMessageRetry(t.original, false, t.deps)).toBe("confirmation-required");
+    expect(t.get()).toMatchObject({
+      status: "ERROR",
+      whatsappRetry: { allowed: true, requiresConfirmation: true },
+    });
+    expect(t.errors).toEqual([]);
+  });
+
+  it.each(["RETRY_LIMIT", "NOT_RETRYABLE"])(
+    "rolls back to ERROR and toasts the backend message on %s",
+    async (code) => {
+      const t = setup(async () => {
+        throw conflict(code, `Mensagem do backend ${code}`);
+      });
+      expect(await runInternalMessageRetry(t.original, true, t.deps)).toBe("failed");
+      expect(t.deps.request).toHaveBeenCalledWith(10, true);
+      expect(t.get()).toMatchObject({ status: "ERROR", whatsappRetry: t.original.whatsappRetry });
+      expect(t.errors).toEqual([`Mensagem do backend ${code}`]);
+    },
+  );
+
+  it("rolls back on network failures with a generic message", async () => {
+    const t = setup(async () => {
+      throw new Error("Network Error");
+    });
+    expect(await runInternalMessageRetry(t.original, false, t.deps)).toBe("failed");
+    expect(t.get().status).toBe("ERROR");
+    expect(t.errors).toEqual(["Não foi possível reenviar a mensagem."]);
   });
 });

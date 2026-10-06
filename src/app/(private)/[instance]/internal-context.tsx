@@ -48,6 +48,10 @@ import {
 } from "@/lib/utils/message-reactions";
 import type { MessageReactionSnapshot } from "@/lib/sdk-local";
 import { MentionDirectoryContext } from "@/lib/components/message-mention-text";
+import {
+  InternalMessageRetryResult,
+  runInternalMessageRetry,
+} from "@/lib/utils/internal-message-retry";
 import { ContactsContext } from "./(cruds)/contacts/contacts-context";
 import {
   createMentionDirectory,
@@ -77,6 +81,11 @@ interface InternalChatContextType {
     message: InternalMessage,
     emoji: string,
   ) => Promise<MessageReactionSnapshot>;
+  /** Reenvia ao grupo do WhatsApp uma mensagem interna com status ERROR. */
+  retryInternalMessage: (
+    message: InternalMessage,
+    confirmUncertain?: boolean,
+  ) => Promise<InternalMessageRetryResult>;
   openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
@@ -312,6 +321,49 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       );
     },
     [channels, confirmReaction, currentChatRef, internalChats, monitorInternalChats],
+  );
+
+  const retryingMessageIds = useRef(new Set<number>());
+  const retryInternalMessage = useCallback(
+    async (
+      message: InternalMessage,
+      confirmUncertain: boolean = false,
+    ): Promise<InternalMessageRetryResult> => {
+      if (isReadOnlyMode) {
+        toast.error("Esta conversa está em modo somente leitura.");
+        return "failed";
+      }
+      const session = liveAuth.current;
+      if (!session.token || retryingMessageIds.current.has(message.id)) return "failed";
+
+      retryingMessageIds.current.add(message.id);
+      api.current.setAuth(session.token);
+      const applyToMessage =
+        (apply: (current: InternalMessage) => InternalMessage) => (current: InternalMessage) =>
+          current.id === message.id && current.internalChatId === message.internalChatId
+            ? apply(current)
+            : current;
+
+      try {
+        return await runInternalMessageRetry(message, confirmUncertain, {
+          request: (messageId, confirm) => api.current.retryWhatsappDelivery(messageId, confirm),
+          update: (target, apply) => {
+            const map = applyToMessage(apply);
+            setMessages((prev) =>
+              prev[target.internalChatId]
+                ? { ...prev, [target.internalChatId]: prev[target.internalChatId].map(map) }
+                : prev,
+            );
+            setCurrentChatMessages((prev) => prev.map(map));
+          },
+          notifyError: (text) => toast.error(text),
+          notifySuccess: (text) => toast.info(text),
+        });
+      } finally {
+        retryingMessageIds.current.delete(message.id);
+      }
+    },
+    [isReadOnlyMode, setMessages, setCurrentChatMessages],
   );
 
   useEffect(
@@ -760,6 +812,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         setCurrentChat,
         sendInternalMessage,
         reactToInternalMessage,
+        retryInternalMessage,
         startDirectChat,
         openInternalChat,
         currentInternalChatMessages,

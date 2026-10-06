@@ -152,3 +152,40 @@ export function retryErrorToastMessage(error: ReturnType<typeof readRetryError>)
   if (error.status === 404) return "Mensagem não encontrada.";
   return RETRY_DEFAULT_ERROR_MESSAGE;
 }
+
+export interface InternalMessageRetryDeps {
+  request: (messageId: number, confirmUncertain: boolean) => Promise<unknown>;
+  /** Atualiza a mensagem em todos os estados locais (lista do chat e chat aberto). */
+  update: (message: InternalMessage, apply: (current: InternalMessage) => InternalMessage) => void;
+  notifyError: (text: string) => void;
+  notifySuccess?: (text: string) => void;
+}
+
+/**
+ * Reenvio com PENDING otimista. Em 409 CONFIRMATION_REQUIRED devolve
+ * "confirmation-required" (sem toast) para o chamador abrir a confirmação;
+ * nos demais erros volta para ERROR e mostra a mensagem do backend.
+ */
+export async function runInternalMessageRetry(
+  message: InternalMessage,
+  confirmUncertain: boolean,
+  deps: InternalMessageRetryDeps,
+): Promise<InternalMessageRetryResult> {
+  deps.update(message, markInternalMessageRetryPending);
+  try {
+    await deps.request(message.id, confirmUncertain);
+    deps.notifySuccess?.("Reenvio solicitado.");
+    return "scheduled";
+  } catch (error) {
+    const parsed = readRetryError(error);
+    if (parsed.status === 409 && parsed.code === "CONFIRMATION_REQUIRED") {
+      deps.update(message, (current) =>
+        rollbackInternalMessageRetry(current, message, uncertainRetryHint()),
+      );
+      return "confirmation-required";
+    }
+    deps.update(message, (current) => rollbackInternalMessageRetry(current, message));
+    deps.notifyError(retryErrorToastMessage(parsed));
+    return "failed";
+  }
+}
