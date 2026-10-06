@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { AI_MODEL_CATALOG, modelSupportsTemperature } from "./ai-model-catalog";
+import {
+  AI_MODEL_CATALOG,
+  getOffCatalogModels,
+  isWholeCatalogSelected,
+  modelSupportsTemperature,
+} from "./ai-model-catalog";
 
 describe("AI_MODEL_CATALOG", () => {
   it("leaves out the models that were not tested", () => {
@@ -15,6 +20,40 @@ describe("AI_MODEL_CATALOG", () => {
 
     expect(values).toContain("gpt-5.4");
     expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe("isWholeCatalogSelected", () => {
+  const catalogValues = AI_MODEL_CATALOG.map((model) => model.value);
+
+  it("is true only when every catalog model is selected and nothing else", () => {
+    expect(isWholeCatalogSelected(catalogValues)).toBe(true);
+    expect(isWholeCatalogSelected([...catalogValues].reverse())).toBe(true);
+  });
+
+  it("is false for a restricted list with the same size as the catalog", () => {
+    // Lista gravada antes do corte: o mesmo tamanho do catálogo atual, mas com modelos removidos.
+    const restricted = [...catalogValues.slice(0, -3), "o3-mini", "o4-mini", "gpt-3.5-turbo"];
+
+    expect(restricted).toHaveLength(catalogValues.length);
+    expect(isWholeCatalogSelected(restricted)).toBe(false);
+  });
+
+  it("is false when a model is missing or an off-catalog model is also selected", () => {
+    expect(isWholeCatalogSelected(catalogValues.slice(1))).toBe(false);
+    expect(isWholeCatalogSelected([...catalogValues, "o3"])).toBe(false);
+    expect(isWholeCatalogSelected([])).toBe(false);
+  });
+});
+
+describe("getOffCatalogModels", () => {
+  it("returns the saved models that are not in the catalog, once and in order", () => {
+    expect(getOffCatalogModels(["gpt-5.4", "o3", "gpt-3.5-turbo", "o3", "gpt-4o"])).toEqual(["o3", "gpt-3.5-turbo"]);
+  });
+
+  it("returns an empty list when every model is in the catalog", () => {
+    expect(getOffCatalogModels(["gpt-5.4", "gpt-4o-mini"])).toEqual([]);
+    expect(getOffCatalogModels([])).toEqual([]);
   });
 });
 

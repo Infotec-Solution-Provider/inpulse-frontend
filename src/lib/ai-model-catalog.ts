@@ -24,6 +24,43 @@ export const AI_MODEL_CATALOG: AiModelOption[] = [
 ];
 
 /**
+ * Se a seleção de modelos liberados é exatamente o catálogo: todos os itens marcados e nenhum
+ * valor fora dele. Só nesse caso a tela grava `availableModels: null` (sem restrição); comparar
+ * só a quantidade trocaria uma lista restrita gravada antes do corte do catálogo por `null`.
+ */
+export function isWholeCatalogSelected(
+	selected: readonly string[],
+	catalog: readonly AiModelOption[] = AI_MODEL_CATALOG,
+): boolean {
+	const catalogValues = new Set(catalog.map((model) => model.value));
+
+	return (
+		catalog.every((model) => selected.includes(model.value)) &&
+		selected.every((value) => catalogValues.has(value))
+	);
+}
+
+/**
+ * Modelos que não estão no catálogo (por exemplo, o3 liberado antes do corte), sem repetição e
+ * na ordem recebida, para a tela mostrá-los e permitir desmarcá-los.
+ */
+export function getOffCatalogModels(
+	values: readonly string[],
+	catalog: readonly AiModelOption[] = AI_MODEL_CATALOG,
+): string[] {
+	const catalogValues = new Set(catalog.map((model) => model.value));
+	const result: string[] = [];
+
+	for (const value of values) {
+		if (!catalogValues.has(value) && !result.includes(value)) {
+			result.push(value);
+		}
+	}
+
+	return result;
+}
+
+/**
  * Se o agente envia temperatura para o modelo. Espelha a tabela de capacidades do
  * ai-service: a série o (o1, o3, o4-mini…), o gpt-5 base (gpt-5, gpt-5-mini…, exceto
  * gpt-5-chat) e a família gpt-5.6 (sem reasoning_effort "none") ignoram a temperatura.

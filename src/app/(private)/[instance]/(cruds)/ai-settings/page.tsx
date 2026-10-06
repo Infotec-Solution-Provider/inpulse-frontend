@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
-import { AI_MODEL_CATALOG } from "@/lib/ai-model-catalog";
+import { AI_MODEL_CATALOG, getOffCatalogModels, isWholeCatalogSelected } from "@/lib/ai-model-catalog";
 import aiService from "@/lib/services/ai.service";
 import usersService from "@/lib/services/users.service";
 import type {
@@ -261,7 +261,8 @@ export default function AiSettingsPage() {
 			}
 		}
 
-		const allSelected = selectedModels.length === KNOWN_MODELS.length;
+		// Compara o conteúdo: uma lista restrita do mesmo tamanho do catálogo não vira "sem restrição".
+		const allSelected = isWholeCatalogSelected(selectedModels, KNOWN_MODELS);
 
 		try {
 			setSavingConfig(true);
@@ -323,6 +324,28 @@ export default function AiSettingsPage() {
 		(acc, m) => ({ ...acc, [m.tier]: [...(acc[m.tier] ?? []), m] }),
 		{},
 	);
+
+	// Liberados antes do corte do catálogo (o3, GPT-3.5 Turbo…): continuam visíveis para poderem ser desmarcados.
+	const offCatalogModels = getOffCatalogModels([...(config?.availableModels ?? []), ...selectedModels], KNOWN_MODELS);
+
+	function renderModelButton(value: string, label: string) {
+		const checked = selectedModels.includes(value);
+		return (
+			<button
+				key={value}
+				type="button"
+				onClick={() => toggleModel(value)}
+				className={[
+					"rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
+					checked
+						? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950/50 dark:text-indigo-300"
+						: "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
+				].join(" ")}
+			>
+				{label}
+			</button>
+		);
+	}
 
 	return (
 		<div className="box-border h-full overflow-y-auto bg-white px-4 py-8 text-black dark:bg-gray-900 dark:text-white">
@@ -404,27 +427,21 @@ export default function AiSettingsPage() {
 									<div key={tier}>
 										<Label>{TIER_LABELS[tier] ?? tier}</Label>
 										<div className="mt-2 flex flex-wrap gap-2">
-											{models.map((m) => {
-												const checked = selectedModels.includes(m.value);
-												return (
-													<button
-														key={m.value}
-														type="button"
-														onClick={() => toggleModel(m.value)}
-														className={[
-															"rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-															checked
-																? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950/50 dark:text-indigo-300"
-																: "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
-														].join(" ")}
-													>
-														{m.label}
-													</button>
-												);
-											})}
+											{models.map((m) => renderModelButton(m.value, m.label))}
 										</div>
 									</div>
 								))}
+								{offCatalogModels.length > 0 && (
+									<div>
+										<Label>Fora do catálogo</Label>
+										<p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+											Modelos liberados antes que não estão mais na lista recomendada. Desmarque para revogar.
+										</p>
+										<div className="mt-2 flex flex-wrap gap-2">
+											{offCatalogModels.map((value) => renderModelButton(value, value))}
+										</div>
+									</div>
+								)}
 							</div>
 						</SectionCard>
 
@@ -451,6 +468,9 @@ export default function AiSettingsPage() {
 											<MenuItem value="">
 												<em>Padrão do tenant</em>
 											</MenuItem>
+											{featureModels[key] && !KNOWN_MODELS.some((m) => m.value === featureModels[key]) && (
+												<MenuItem value={featureModels[key]}>{featureModels[key]} (fora do catálogo)</MenuItem>
+											)}
 											{KNOWN_MODELS.map((m) => (
 												<MenuItem key={m.value} value={m.value}>
 													{m.label}
