@@ -5,6 +5,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
 import ForwardIcon from "@mui/icons-material/Forward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ReplayIcon from "@mui/icons-material/Replay";
 import ReplyIcon from "@mui/icons-material/Reply";
 import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
@@ -45,6 +46,8 @@ interface MessageProps {
   onForward?: () => void;
   onCopy?: () => void;
   onEdit?: () => void;
+  /** Reenvio ao grupo do WhatsApp; exibido apenas quando `status === "ERROR"`. */
+  onRetry?: () => void;
   styleWrapper?: React.CSSProperties;
 }
 
@@ -80,6 +83,7 @@ export default function GroupMessage({
   onForward,
   onCopy,
   onEdit,
+  onRetry,
   styleWrapper,
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -118,6 +122,12 @@ export default function GroupMessage({
 
   const handleEdit = () => {
     onEdit?.();
+    handleMenuClose();
+  };
+
+  const canRetry = status === "ERROR" && !!onRetry;
+  const handleRetry = () => {
+    onRetry?.();
     handleMenuClose();
   };
 
@@ -207,6 +217,21 @@ export default function GroupMessage({
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
             {style !== "system" && (sendStatus ?? (status && statusComponents[status]))}
+            {style !== "system" && canRetry && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-0.5 rounded px-1 font-semibold text-red-600 hover:bg-red-500/10 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500 dark:text-red-300"
+                aria-label="Reenviar para o grupo do WhatsApp"
+                title="Reenviar para o grupo do WhatsApp"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRetry?.();
+                }}
+              >
+                <ReplayIcon sx={{ fontSize: 16 }} />
+                Reenviar
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -228,6 +253,14 @@ export default function GroupMessage({
             onChange={onReaction}
           />
           <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+            {canRetry && (
+              <MenuItem onClick={handleRetry}>
+                <ListItemIcon>
+                  <ReplayIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Reenviar</ListItemText>
+              </MenuItem>
+            )}
             {onSelect && (
               <MenuItem onClick={handleSelect}>
                 <ListItemIcon>

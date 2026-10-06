@@ -2,7 +2,7 @@
 
 import { useAuthContext } from "@/app/auth-context";
 import getInternalMessageAuthor from "@/lib/utils/get-internal-message-author";
-import { InternalMessage } from "@/lib/sdk-local";
+import { InternalMessage, UserRole } from "@/lib/sdk-local";
 import { Button } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { InternalChatContext } from "../../internal-context";
@@ -13,6 +13,12 @@ import ChatPendingSends from "./chat-pending-sends";
 import PendingSendStatus from "./pending-send-status";
 import { useWhatsappContext } from "../../whatsapp-context";
 import { canReactToInternalMessage } from "@/lib/utils/message-reactions";
+import {
+  canRetryInternalMessage,
+  retryRequiresConfirmation,
+} from "@/lib/utils/internal-message-retry";
+import { AppContext } from "../../app-context";
+import RetryInternalMessageModal from "./retry-internal-message-modal";
 
 type BubbleStyle = "system" | "sent" | "received";
 
@@ -45,7 +51,9 @@ export default function RenderInternalGroupMessages({
     phoneNameMap,
     whatsappSenderNameMap,
     reactToInternalMessage,
+    retryInternalMessage,
   } = useContext(InternalChatContext);
+  const { openModal, closeModal } = useContext(AppContext);
   const { currentChat, channels } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage, pendingSends } =
     useContext(ChatContext);
@@ -87,6 +95,26 @@ export default function RenderInternalGroupMessages({
   );
 
   const hiddenFilesCount = Math.max(visibleMessageFileIds.length - visibleFileCount, 0);
+  const isAdmin = user?.NIVEL === UserRole.ADMIN;
+
+  const openRetryConfirmation = (message: InternalMessage) => {
+    openModal(
+      <RetryInternalMessageModal
+        onClose={closeModal}
+        onConfirm={() => retryInternalMessage(message, true)}
+      />,
+    );
+  };
+
+  const handleRetry = (message: InternalMessage) => {
+    if (retryRequiresConfirmation(message)) {
+      openRetryConfirmation(message);
+      return;
+    }
+    void retryInternalMessage(message, false).then((result) => {
+      if (result === "confirmation-required") openRetryConfirmation(message);
+    });
+  };
 
   return (
     <div
@@ -154,6 +182,14 @@ export default function RenderInternalGroupMessages({
             whatsappSenderNameMap,
           );
           const isMine = user?.CODIGO != null && m.from === `user:${user.CODIGO}`;
+          const canRetry = canRetryInternalMessage({
+            message: m,
+            chat: currentChat,
+            userId: user?.CODIGO,
+            isAdmin,
+            readOnly: isReadOnlyMode,
+            selectionMode: isSelectionMode,
+          });
 
           return (
             <GroupMessage
@@ -212,6 +248,7 @@ export default function RenderInternalGroupMessages({
                   ? () => handleEditMessage(m)
                   : undefined
               }
+              onRetry={canRetry ? () => handleRetry(m) : undefined}
             />
           );
         })}

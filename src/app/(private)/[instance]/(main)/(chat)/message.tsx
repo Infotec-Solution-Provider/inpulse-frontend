@@ -89,7 +89,11 @@ export const liStyleVariants = {
 };
 
 export const statusComponents: Record<WppMessageStatus, ReactNode> = {
-  PENDING: <AccessTimeIcon className="text-slate-300" />,
+  PENDING: (
+    <Tooltip title="Enviando…">
+      <AccessTimeIcon className="text-slate-300" aria-label="Enviando…" />
+    </Tooltip>
+  ),
   UNKNOWN: (
     <Tooltip title="Ainda sem confirmação de envio">
       <AccessTimeIcon className="text-amber-500" aria-label="Ainda sem confirmação de envio" />
