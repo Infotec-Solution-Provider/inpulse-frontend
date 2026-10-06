@@ -1,0 +1,214 @@
+import { describe, expect, it } from "vitest";
+import type { InternalMessage } from "@/lib/sdk-local";
+import {
+  applyInternalMessageStatusEvent,
+  canRetryInternalMessage,
+  markInternalMessageRetryPending,
+  readRetryError,
+  retryErrorToastMessage,
+  retryRequiresConfirmation,
+  rollbackInternalMessageRetry,
+} from "./internal-message-retry";
+
+function message(overrides: Partial<InternalMessage> = {}): InternalMessage {
+  return {
+    id: 10,
+    instance: "nunes",
+    from: "user:7",
+    type: "chat",
+    quotedId: null,
+    internalChatId: 132,
+    body: "texto",
+    timestamp: "1759760000000",
+    isForwarded: false,
+    isEdited: false,
+    status: "ERROR",
+    fileId: null,
+    fileName: null,
+    fileType: null,
+    fileSize: null,
+    ...overrides,
+  };
+}
+
+const linkedGroup = { chatType: "internal", wppGroupId: "1203630@g.us" };
+
+function visible(overrides: Partial<Parameters<typeof canRetryInternalMessage>[0]> = {}) {
+  return canRetryInternalMessage({
+    message: message(),
+    chat: linkedGroup,
+    userId: 7,
+    isAdmin: false,
+    readOnly: false,
+    selectionMode: false,
+    ...overrides,
+  });
+}
+
+describe("internal message retry visibility", () => {
+  it("shows Reenviar to the author of a failed message in a WhatsApp-linked group", () => {
+    expect(visible()).toBe(true);
+  });
+
+  it("shows Reenviar to an ADMIN even when the message belongs to someone else", () => {
+    expect(visible({ userId: 99, isAdmin: true })).toBe(true);
+    expect(visible({ userId: 99, isAdmin: false })).toBe(false);
+    expect(visible({ userId: null, isAdmin: false })).toBe(false);
+  });
+
+  it("hides Reenviar for non-ERROR messages", () => {
+    for (const status of ["PENDING", "UNKNOWN", "SENT", "RECEIVED", "READ"] as const) {
+      expect(visible({ message: message({ status }) })).toBe(false);
+    }
+  });
+
+  it("hides Reenviar outside WhatsApp-linked internal groups", () => {
+    expect(visible({ chat: { chatType: "internal", wppGroupId: null } })).toBe(false);
+    expect(visible({ chat: { chatType: "internal" } })).toBe(false);
+    expect(visible({ chat: { chatType: "wpp", wppGroupId: "x@g.us" } })).toBe(false);
+    expect(visible({ chat: null })).toBe(false);
+  });
+
+  it("hides Reenviar in read-only and selection modes", () => {
+    expect(visible({ readOnly: true })).toBe(false);
+    expect(visible({ selectionMode: true })).toBe(false);
+  });
+
+  it("respects an explicit backend refusal but tolerates a missing hint", () => {
+    expect(
+      visible({
+        message: message({ whatsappRetry: { allowed: false, requiresConfirmation: false, reason: "RETRY_LIMIT" } }),
+      }),
+    ).toBe(false);
+    expect(visible({ message: message({ whatsappRetry: undefined }) })).toBe(true);
+    expect(visible({ message: message({ whatsappRetry: null }) })).toBe(true);
+  });
+
+  it("asks for confirmation unless the backend proved the message was not sent", () => {
+    expect(retryRequiresConfirmation(message({ whatsappRetry: undefined }))).toBe(true);
+    expect(retryRequiresConfirmation(message({ whatsappRetry: null }))).toBe(true);
+    expect(
+      retryRequiresConfirmation(
+        message({ whatsappRetry: { allowed: true, requiresConfirmation: true } }),
+      ),
+    ).toBe(true);
+    expect(
+      retryRequiresConfirmation(
+        message({ whatsappRetry: { allowed: true, requiresConfirmation: false } }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("internal message status merge", () => {
+  const safe = { allowed: true, requiresConfirmation: false };
+
+  it("stores the retry hint carried by an ERROR status event", () => {
+    const next = applyInternalMessageStatusEvent(message({ status: "PENDING" }), {
+      status: "ERROR",
+      whatsappRetry: safe,
+    });
+    expect(next.status).toBe("ERROR");
+    expect(next.whatsappRetry).toEqual(safe);
+  });
+
+  it("keeps the previous hint when an ERROR event comes without one", () => {
+    const next = applyInternalMessageStatusEvent(message({ whatsappRetry: safe }), {
+      status: "ERROR",
+    });
+    expect(next.whatsappRetry).toEqual(safe);
+  });
+
+  it("clears the hint once the status leaves ERROR", () => {
+    const pending = applyInternalMessageStatusEvent(message({ whatsappRetry: safe }), {
+      status: "PENDING",
+      whatsappRetry: safe,
+    });
+    expect(pending.status).toBe("PENDING");
+    expect(pending.whatsappRetry).toBeNull();
+
+    const received = applyInternalMessageStatusEvent(pending, { status: "RECEIVED" });
+    expect(received.status).toBe("RECEIVED");
+    expect(received.whatsappRetry).toBeNull();
+  });
+
+  it("does not let a late status regress a confirmed delivery", () => {
+    const next = applyInternalMessageStatusEvent(message({ status: "READ" }), {
+      status: "UNKNOWN",
+    });
+    expect(next.status).toBe("READ");
+    expect(next.whatsappRetry).toBeNull();
+  });
+});
+
+describe("optimistic retry state", () => {
+  it("marks PENDING and rolls back to ERROR with the original hint", () => {
+    const original = message({ whatsappRetry: { allowed: true, requiresConfirmation: false } });
+    const pending = markInternalMessageRetryPending(original);
+    expect(pending.status).toBe("PENDING");
+    expect(pending.whatsappRetry).toBeNull();
+
+    const rolledBack = rollbackInternalMessageRetry(pending, original);
+    expect(rolledBack.status).toBe("ERROR");
+    expect(rolledBack.whatsappRetry).toEqual(original.whatsappRetry);
+  });
+
+  it("rolls back with an overriding hint when the backend requires confirmation", () => {
+    const original = message({ whatsappRetry: { allowed: true, requiresConfirmation: false } });
+    const rolledBack = rollbackInternalMessageRetry(
+      markInternalMessageRetryPending(original),
+      original,
+      { allowed: true, requiresConfirmation: true },
+    );
+    expect(rolledBack.whatsappRetry).toEqual({ allowed: true, requiresConfirmation: true });
+  });
+
+  it("keeps a newer socket status instead of rolling back", () => {
+    const original = message();
+    const received = { ...markInternalMessageRetryPending(original), status: "RECEIVED" as const };
+    expect(rollbackInternalMessageRetry(received, original)).toBe(received);
+  });
+});
+
+describe("retry error parsing", () => {
+  function apiError(status: number, data: unknown) {
+    const axiosLike = Object.assign(new Error(`Request failed with status code ${status}`), {
+      response: { status, data },
+    });
+    const message =
+      (data as { message?: string } | undefined)?.message || axiosLike.message;
+    return new Error(message, { cause: axiosLike });
+  }
+
+  it("reads the code and message wrapped by ApiClient", () => {
+    const parsed = readRetryError(
+      apiError(409, { code: "CONFIRMATION_REQUIRED", message: "Confirme o reenvio" }),
+    );
+    expect(parsed).toEqual({
+      status: 409,
+      code: "CONFIRMATION_REQUIRED",
+      message: "Confirme o reenvio",
+    });
+  });
+
+  it("reads codes nested by other error envelopes", () => {
+    expect(readRetryError(apiError(409, { message: "x", data: { code: "RETRY_LIMIT" } })).code).toBe(
+      "RETRY_LIMIT",
+    );
+    expect(
+      readRetryError(apiError(409, { message: "x", cause: { code: "NOT_RETRYABLE" } })).code,
+    ).toBe("NOT_RETRYABLE");
+  });
+
+  it("falls back to friendly messages without a backend message", () => {
+    expect(retryErrorToastMessage(readRetryError(apiError(409, { code: "RETRY_LIMIT" })))).toBe(
+      "Limite de reenvios atingido para esta mensagem.",
+    );
+    expect(retryErrorToastMessage({ status: 403 })).toBe(
+      "Apenas o autor ou um supervisor pode reenviar esta mensagem.",
+    );
+    expect(retryErrorToastMessage(readRetryError(new Error("Network Error")))).toBe(
+      "Não foi possível reenviar a mensagem.",
+    );
+  });
+});

@@ -169,6 +169,19 @@ export default class InternalChatClient extends ApiClient {
 		});
 	}
 
+	/**
+	 * Reagenda o envio ao grupo do WhatsApp de uma mensagem interna com falha,
+	 * reaproveitando a mesma mensagem (não cria outra no chat interno).
+	 * `confirmUncertain` confirma o reenvio quando não há prova de que a
+	 * mensagem deixou de chegar ao grupo (pode gerar duplicata).
+	 */
+	public async retryWhatsappDelivery(messageId: number, confirmUncertain = false) {
+		const { data: res } = await this.ax.post<
+			DataResponse<{ id: number; status: "PENDING" }>
+		>(`/api/internal/messages/${messageId}/whatsapp-retry`, { confirmUncertain });
+		return res.data;
+	}
+
 	public async updateInternalGroup(
 		groupId: number,
 		data: {

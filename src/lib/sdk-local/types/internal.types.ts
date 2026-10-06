@@ -1,5 +1,16 @@
 import { MessageMentionEntity, MessageReaction, WppMessageStatus } from "./whatsapp.types";
 
+/**
+ * Dica de reenvio ao grupo do WhatsApp calculada pelo backend para mensagens
+ * internas com status ERROR em chats vinculados a um grupo (`wppGroupId`).
+ * Considera apenas o resultado do envio; autor/ADMIN é validado à parte.
+ */
+export interface InternalMessageWhatsappRetry {
+  allowed: boolean;
+  requiresConfirmation: boolean;
+  reason?: string;
+}
+
 export interface InternalMessage {
   id: number;
   instance: string;
@@ -23,6 +34,7 @@ export interface InternalMessage {
   fileName: string | null;
   fileType: string | null;
   fileSize: string | null;
+  whatsappRetry?: InternalMessageWhatsappRetry | null;
 }
 
 export interface InternalChat {

@@ -8,7 +8,12 @@ import {
 } from "./socket-rooms.types";
 import { MessageResponse } from "./response.types";
 import { MessageMentionEntity, MessageReaction, WppMessage, WppMessageStatus } from "./whatsapp.types";
-import { InternalChat, InternalChatMember, InternalMessage } from "./internal.types";
+import {
+	InternalChat,
+	InternalChatMember,
+	InternalMessage,
+	InternalMessageWhatsappRetry,
+} from "./internal.types";
 
 export enum SocketEventType {
 	WppChatStarted = "wpp_chat_started",
@@ -288,6 +293,8 @@ export interface InternalMessageStatusEventData {
 	chatId: number;
 	internalMessageId: number;
 	status: WppMessageStatus;
+	/** Enviado pelo backend apenas quando `status === "ERROR"`. */
+	whatsappRetry?: InternalMessageWhatsappRetry | null;
 }
 
 export type ReportStatusEventData = {
