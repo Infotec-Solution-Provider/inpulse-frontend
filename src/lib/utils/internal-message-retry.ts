@@ -60,35 +60,69 @@ export function applyInternalMessageStatusEvent(
   message: InternalMessage,
   event: Pick<InternalMessageStatusEventData, "status" | "whatsappRetry">,
 ): InternalMessage {
+  // Um status vindo do servidor substitui o PENDING otimista local.
+  const base = withoutOptimisticRetry(message);
   const status = compareMessageStatus(message.status, event.status);
   if (status !== "ERROR") {
-    return { ...message, status, whatsappRetry: null };
+    return { ...base, status, whatsappRetry: null };
   }
   if (event.status === "ERROR" && event.whatsappRetry !== undefined) {
-    return { ...message, status, whatsappRetry: event.whatsappRetry };
+    return { ...base, status, whatsappRetry: event.whatsappRetry };
   }
-  return { ...message, status };
-}
-
-export function markInternalMessageRetryPending(message: InternalMessage): InternalMessage {
-  return { ...message, status: "PENDING", whatsappRetry: null };
+  return { ...base, status };
 }
 
 /**
- * Desfaz o PENDING otimista. Se outro evento já mudou o status, mantém o
- * estado mais recente.
+ * Marca local (não vem do backend) do PENDING aplicado pelo próprio clique.
+ * Só esse PENDING pode ser desfeito; um PENDING confirmado por socket não.
+ */
+const OPTIMISTIC_RETRY: unique symbol = Symbol("internalMessageOptimisticRetry");
+
+type MaybeOptimistic = InternalMessage & { [OPTIMISTIC_RETRY]?: true };
+
+export function isOptimisticRetryPending(message: InternalMessage) {
+  return message.status === "PENDING" && (message as MaybeOptimistic)[OPTIMISTIC_RETRY] === true;
+}
+
+function withoutOptimisticRetry(message: InternalMessage): InternalMessage {
+  if (!(OPTIMISTIC_RETRY in message)) return message;
+  const copy: MaybeOptimistic = { ...(message as MaybeOptimistic) };
+  delete copy[OPTIMISTIC_RETRY];
+  return copy;
+}
+
+/** PENDING otimista; só se aplica se a mensagem ainda estiver em ERROR no estado local. */
+export function markInternalMessageRetryPending(message: InternalMessage): InternalMessage {
+  if (message.status !== "ERROR") return message;
+  const pending: MaybeOptimistic = {
+    ...message,
+    status: "PENDING",
+    whatsappRetry: null,
+    [OPTIMISTIC_RETRY]: true as const,
+  };
+  return pending;
+}
+
+/**
+ * Desfaz o PENDING otimista. Se outro evento já mudou o status (inclusive um
+ * PENDING real vindo do socket), mantém o estado mais recente.
  */
 export function rollbackInternalMessageRetry(
   current: InternalMessage,
   original: InternalMessage,
   hint?: InternalMessageWhatsappRetry | null,
 ): InternalMessage {
-  if (current.status !== "PENDING") return current;
+  if (!isOptimisticRetryPending(current)) return current;
   return {
-    ...current,
+    ...withoutOptimisticRetry(current),
     status: "ERROR",
     whatsappRetry: hint !== undefined ? hint : (original.whatsappRetry ?? null),
   };
+}
+
+/** Após o 202 o PENDING passa a ser o estado real do backend. */
+export function confirmInternalMessageRetry(current: InternalMessage): InternalMessage {
+  return isOptimisticRetryPending(current) ? withoutOptimisticRetry(current) : current;
 }
 
 export function uncertainRetryHint(): InternalMessageWhatsappRetry {
@@ -148,7 +182,7 @@ export function retryErrorToastMessage(error: ReturnType<typeof readRetryError>)
   if (error.message) return error.message;
   if (error.code === "RETRY_LIMIT") return "Limite de reenvios atingido para esta mensagem.";
   if (error.code === "NOT_RETRYABLE") return "Esta mensagem não pode mais ser reenviada.";
-  if (error.status === 403) return "Apenas o autor ou um supervisor pode reenviar esta mensagem.";
+  if (error.status === 403) return "Apenas o autor ou um administrador pode reenviar esta mensagem.";
   if (error.status === 404) return "Mensagem não encontrada.";
   return RETRY_DEFAULT_ERROR_MESSAGE;
 }
@@ -174,6 +208,7 @@ export async function runInternalMessageRetry(
   deps.update(message, markInternalMessageRetryPending);
   try {
     await deps.request(message.id, confirmUncertain);
+    deps.update(message, confirmInternalMessageRetry);
     deps.notifySuccess?.("Reenvio solicitado.");
     return "scheduled";
   } catch (error) {
@@ -184,7 +219,13 @@ export async function runInternalMessageRetry(
       );
       return "confirmation-required";
     }
-    deps.update(message, (current) => rollbackInternalMessageRetry(current, message));
+    // NOT_RETRYABLE: o backend já não considera a mensagem candidata (outro
+    // reenvio venceu, já entregue etc.); esconde o botão até o próximo evento.
+    const hint: InternalMessageWhatsappRetry | undefined =
+      parsed.status === 409 && parsed.code === "NOT_RETRYABLE"
+        ? { allowed: false, requiresConfirmation: true, reason: "NOT_RETRYABLE" }
+        : undefined;
+    deps.update(message, (current) => rollbackInternalMessageRetry(current, message, hint));
     deps.notifyError(retryErrorToastMessage(parsed));
     return "failed";
   }

@@ -3,6 +3,7 @@ import type { InternalMessage } from "@/lib/sdk-local";
 import {
   applyInternalMessageStatusEvent,
   canRetryInternalMessage,
+  isOptimisticRetryPending,
   markInternalMessageRetryPending,
   readRetryError,
   retryErrorToastMessage,
@@ -164,6 +165,22 @@ describe("optimistic retry state", () => {
     expect(rolledBack.whatsappRetry).toEqual({ allowed: true, requiresConfirmation: true });
   });
 
+  it("does not apply the optimistic PENDING to a message that left ERROR", () => {
+    const received = message({ status: "RECEIVED" });
+    expect(markInternalMessageRetryPending(received)).toBe(received);
+  });
+
+  it("does not roll back a PENDING that came from the server", () => {
+    const original = message();
+    const serverPending = applyInternalMessageStatusEvent(
+      markInternalMessageRetryPending(original),
+      { status: "PENDING" },
+    );
+    expect(serverPending.status).toBe("PENDING");
+    expect(isOptimisticRetryPending(serverPending)).toBe(false);
+    expect(rollbackInternalMessageRetry(serverPending, original)).toBe(serverPending);
+  });
+
   it("keeps a newer socket status instead of rolling back", () => {
     const original = message();
     const received = { ...markInternalMessageRetryPending(original), status: "RECEIVED" as const };
@@ -206,7 +223,7 @@ describe("retry error parsing", () => {
       "Limite de reenvios atingido para esta mensagem.",
     );
     expect(retryErrorToastMessage({ status: 403 })).toBe(
-      "Apenas o autor ou um supervisor pode reenviar esta mensagem.",
+      "Apenas o autor ou um administrador pode reenviar esta mensagem.",
     );
     expect(retryErrorToastMessage(readRetryError(new Error("Network Error")))).toBe(
       "Não foi possível reenviar a mensagem.",
@@ -262,18 +279,81 @@ describe("runInternalMessageRetry", () => {
     expect(t.errors).toEqual([]);
   });
 
-  it.each(["RETRY_LIMIT", "NOT_RETRYABLE"])(
-    "rolls back to ERROR and toasts the backend message on %s",
-    async (code) => {
-      const t = setup(async () => {
-        throw conflict(code, `Mensagem do backend ${code}`);
-      });
-      expect(await runInternalMessageRetry(t.original, true, t.deps)).toBe("failed");
-      expect(t.deps.request).toHaveBeenCalledWith(10, true);
-      expect(t.get()).toMatchObject({ status: "ERROR", whatsappRetry: t.original.whatsappRetry });
-      expect(t.errors).toEqual([`Mensagem do backend ${code}`]);
-    },
-  );
+  it("rolls back to ERROR and toasts the backend message on RETRY_LIMIT", async () => {
+    const t = setup(async () => {
+      throw conflict("RETRY_LIMIT", "Mensagem do backend RETRY_LIMIT");
+    });
+    expect(await runInternalMessageRetry(t.original, true, t.deps)).toBe("failed");
+    expect(t.deps.request).toHaveBeenCalledWith(10, true);
+    expect(t.get()).toMatchObject({ status: "ERROR", whatsappRetry: t.original.whatsappRetry });
+    expect(isOptimisticRetryPending(t.get())).toBe(false);
+    expect(t.errors).toEqual(["Mensagem do backend RETRY_LIMIT"]);
+  });
+
+  it("hides Reenviar after NOT_RETRYABLE instead of restoring the old allowed hint", async () => {
+    const t = setup(async () => {
+      throw conflict("NOT_RETRYABLE", "Mensagem do backend NOT_RETRYABLE");
+    });
+    expect(await runInternalMessageRetry(t.original, true, t.deps)).toBe("failed");
+    expect(t.get()).toMatchObject({
+      status: "ERROR",
+      whatsappRetry: { allowed: false, reason: "NOT_RETRYABLE" },
+    });
+    expect(
+      canRetryInternalMessage({
+        message: t.get(),
+        chat: linkedGroup,
+        userId: 7,
+        isAdmin: false,
+        readOnly: false,
+        selectionMode: false,
+      }),
+    ).toBe(false);
+    expect(t.errors).toEqual(["Mensagem do backend NOT_RETRYABLE"]);
+
+    // O proximo ERROR do socket traz a dica nova e reabre o reenvio.
+    const next = applyInternalMessageStatusEvent(t.get(), {
+      status: "ERROR",
+      whatsappRetry: { allowed: true, requiresConfirmation: false },
+    });
+    expect(next.whatsappRetry).toEqual({ allowed: true, requiresConfirmation: false });
+  });
+
+  it("does not touch a message that is no longer ERROR when retried from a stale snapshot", async () => {
+    // Modal aberto com a mensagem em ERROR; outro usuario reenviou e chegou RECEIVED.
+    const t = setup(async () => {
+      throw conflict("NOT_RETRYABLE", "Mensagem nao esta mais com falha");
+    });
+    const snapshot = t.original;
+    t.deps.update(snapshot, (current) =>
+      applyInternalMessageStatusEvent(current, { status: "RECEIVED" }),
+    );
+    expect(await runInternalMessageRetry(snapshot, true, t.deps)).toBe("failed");
+    expect(t.get().status).toBe("RECEIVED");
+    expect(t.snapshots.every((s) => s.status === "RECEIVED")).toBe(true);
+  });
+
+  it("keeps a server-confirmed PENDING when the concurrent retry loses the claim", async () => {
+    // eslint-disable-next-line prefer-const
+    let t: ReturnType<typeof setup>;
+    t = setup(async () => {
+      // O reenvio do outro usuario venceu; o socket PENDING chega antes do 409.
+      t.deps.update(t.original, (current) =>
+        applyInternalMessageStatusEvent(current, { status: "PENDING" }),
+      );
+      throw conflict("NOT_RETRYABLE", "Reenvio ja em andamento");
+    });
+    expect(await runInternalMessageRetry(t.original, false, t.deps)).toBe("failed");
+    expect(t.get().status).toBe("PENDING");
+    expect(t.errors).toEqual(["Reenvio ja em andamento"]);
+  });
+
+  it("does not roll back after the backend accepted the retry", async () => {
+    const t = setup(async () => ({ id: 10, status: "PENDING" }));
+    await runInternalMessageRetry(t.original, false, t.deps);
+    expect(isOptimisticRetryPending(t.get())).toBe(false);
+    expect(rollbackInternalMessageRetry(t.get(), t.original)).toBe(t.get());
+  });
 
   it("rolls back on network failures with a generic message", async () => {
     const t = setup(async () => {

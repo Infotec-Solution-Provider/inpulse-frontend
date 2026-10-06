@@ -15,6 +15,8 @@ export default function processInternalChatsAndMessages(
   messages.sort((a, b) => ((a.timestamp || 0) < (b.timestamp || 0) ? -1 : 1));
 
   const lastMessages: Record<number, InternalMessage> = {};
+  // Mensagens lidas pelo `lastReadAt` mas cujo status de entrega (ERROR) precisa ser mantido
+  const readByMarkerIds = new Set<number>();
   const chatsMessages: Record<number, InternalMessage[]> = {};
 
   for (const message of messages) {
@@ -31,7 +33,13 @@ export default function processInternalChatsAndMessages(
       const isCurrentUser = message.from === `user:${userId}`;
 
       if (lastReadAtTimestamp >= messageTimestamp && message.status !== "READ" && !isCurrentUser) {
-        message.status = "READ";
+        // Falha de entrega ao grupo do WhatsApp não vira "READ": o status ERROR
+        // é o que permite ao autor/ADMIN ver a falha e reenviar.
+        if (message.status === "ERROR") {
+          readByMarkerIds.add(message.id);
+        } else {
+          message.status = "READ";
+        }
       }
     }
 
@@ -65,7 +73,10 @@ export default function processInternalChatsAndMessages(
     chatType: "internal",
     isUnread:
       Boolean(chat.isUnread) ||
-      messages.some((m) => isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ"),
+      messages.some(
+        (m) =>
+          isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ" && !readByMarkerIds.has(m.id),
+      ),
     lastMessage: lastMessages[chat.id] || null,
     users: users.filter((user) => chat.participants.some((p) => p.userId === user.CODIGO)),
   })) as DetailedInternalChat[];
