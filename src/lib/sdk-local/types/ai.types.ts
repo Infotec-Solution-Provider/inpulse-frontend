@@ -334,9 +334,14 @@ export interface AiAgentChatSession {
 	instance: string;
 	status: AiAgentChatSessionStatus;
 	turnCount: number;
-	startedAt: string;
-	finishedAt: string | null;
+	/** Gravado pelo banco; é a data de início da sessão. */
+	createdAt?: string;
+	updatedAt?: string;
+	/** Igual a `createdAt`; só vem do ai-service a partir da versão que o envia. */
+	startedAt?: string;
+	finishedAt?: string | null;
 	lastRepliedAt: string | null;
+	agent?: { id: number; name: string };
 }
 
 export interface AiAgentActionLog {
@@ -349,6 +354,11 @@ export interface AiAgentActionLog {
 	success: boolean;
 	errorMessage: string | null;
 	payload: Record<string, unknown> | null;
+	triggeredBy?: string;
+	inputTokens?: number | null;
+	outputTokens?: number | null;
+	durationMs?: number | null;
+	agent?: { id: number; name: string };
 	createdAt: string;
 }
 
