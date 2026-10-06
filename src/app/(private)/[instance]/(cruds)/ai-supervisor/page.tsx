@@ -67,7 +67,7 @@ const assistantBubbleClass = "self-start max-w-[88%] rounded-2xl rounded-bl-none
 const userBubbleClass = "self-end max-w-[88%] rounded-2xl rounded-br-none bg-green-200 px-4 py-3 text-slate-800 shadow-sm dark:bg-green-800 dark:text-slate-100";
 
 const AVAILABLE_MODELS = [
-	{ value: "", label: "Padrão do tenant" },
+	{ value: "", label: "Modelo padrão" },
 	...AI_MODEL_CATALOG,
 ];
 
@@ -76,8 +76,8 @@ const MAX_FILES = 3;
 
 const DEFAULT_SUGGESTIONS = [
 	"Mostre os indicadores de atendimento de hoje",
-	"Quais operadores precisam de atenção?",
-	"Gere um relatório de desempenho dos últimos 7 dias",
+	"Quais operadores precisam de atenção nos últimos 7 dias? Considere retornos pendentes e tempo de primeira resposta.",
+	"Gere um relatório de desempenho dos operadores dos últimos 7 dias.",
 ];
 
 const CHAT_CONTEXT_SUGGESTIONS = [
@@ -88,8 +88,8 @@ const CHAT_CONTEXT_SUGGESTIONS = [
 
 const REPORT_SUGGESTIONS = [
 	"Gere um relatório de desempenho dos operadores de hoje",
-	"Compare os atendimentos dos últimos 7 dias por setor",
-	"Crie um relatório executivo com os principais indicadores do mês",
+	"Gere um relatório de desempenho dos operadores dos últimos 7 dias e diga quem precisa de atenção",
+	"Quantos clientes temos por estado? Traga os 10 estados com mais clientes numa prévia exportável.",
 ];
 
 const SUPERVISOR_MODES: Array<{ value: SupervisorAiChatMode; label: string; description: string }> = [
@@ -153,9 +153,28 @@ function sourceLabel(type: string) {
 		case "customer": return "Cliente";
 		case "metrics": return "Métricas";
 		case "report": return "Relatório";
-		case "sql": return "SQL";
+		case "sql": return "CRM";
 		default: return "Fonte";
 	}
+}
+
+// Rótulos que o ai-service anterior gravava nas fontes de SQL (sessões antigas continuam no histórico).
+function crmSourceLabel(label?: string | null): string {
+	const trimmed = label?.trim() ?? "";
+	if (!trimmed || /^select\b/i.test(trimmed)) return "Consulta ao CRM";
+	if (/^schema crm$/i.test(trimmed)) return "Estrutura do CRM";
+	const legacyTable = /^schema\s+(.+)$/i.exec(trimmed);
+	if (legacyTable?.[1]) return `Estrutura da tabela ${legacyTable[1]}`;
+	return trimmed;
+}
+
+function sourceChipLabel(source: SupervisorAiSource): string {
+	if (source.type === "sql") return crmSourceLabel(source.label);
+	return `${sourceLabel(source.type)}: ${source.label?.trim() || "Sem rótulo"}`;
+}
+
+function isTruncatedAssistantMessage(entry: SupervisorAiMessage): boolean {
+	return entry.role === "ASSISTANT" && (entry.metadata as { truncated?: boolean } | null)?.truncated === true;
 }
 
 function buildCsv(preview: SupervisorAiReportPreview): string {
@@ -643,7 +662,7 @@ export default function AiSupervisorPage() {
 			const label = nextStatus === "ARCHIVED" ? "arquivada" : "restaurada";
 			toast.success(`Sessão ${label} com sucesso.`);
 		} catch (error) {
-			toast.error(`Erro ao arquivar sessão: ${sanitizeErrorMessage(error)}`);
+			toast.error(`Erro ao ${nextStatus === "ARCHIVED" ? "arquivar" : "restaurar"} sessão: ${sanitizeErrorMessage(error)}`);
 		} finally {
 			setArchivingId(null);
 		}
@@ -1145,8 +1164,17 @@ export default function AiSupervisorPage() {
 									{entry.role === "USER"
 										? <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{entry.content}</Typography>
 										: <AssistantMarkdown content={entry.content} />}
-									{entry.role === "ASSISTANT" && entry.metadata?.interrupted === true && (
-										<Chip size="small" color="warning" variant="outlined" label="Resposta interrompida" className="mt-3" />
+									{entry.role === "ASSISTANT" && (entry.metadata?.interrupted === true || isTruncatedAssistantMessage(entry)) && (
+										<Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="mt-3">
+											{entry.metadata?.interrupted === true && (
+												<Chip size="small" color="warning" variant="outlined" label="Resposta interrompida" />
+											)}
+											{isTruncatedAssistantMessage(entry) && (
+												<Tooltip title="A resposta atingiu o limite de tamanho. Peça “continue” para ver o restante.">
+													<Chip size="small" color="warning" variant="outlined" label="Resposta incompleta" />
+												</Tooltip>
+											)}
+										</Stack>
 									)}
 									{entry.metadata?.sources && Array.isArray(entry.metadata.sources) && entry.metadata.sources.length > 0 && (
 										<Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="mt-3">
@@ -1154,13 +1182,13 @@ export default function AiSupervisorPage() {
 												const typedSource = source as SupervisorAiSource;
 												const navigable = canOpenSource(typedSource);
 												return (
-													<Tooltip key={`${typedSource.type}-${typedSource.entityId ?? index}`} title={navigable ? "Abrir fonte" : "Fonte utilizada pela IA"}>
+													<Tooltip key={`${typedSource.type}-${typedSource.entityId ?? "fonte"}-${index}`} title={navigable ? "Abrir fonte" : "Fonte utilizada pela IA"}>
 														<Chip
 															size="small"
 															variant="outlined"
 															clickable={navigable}
 															onClick={navigable ? () => void handleSourceClick(typedSource) : undefined}
-															label={`${sourceLabel(typedSource.type)}: ${typedSource.label ?? "Sem rótulo"}`}
+															label={sourceChipLabel(typedSource)}
 															sx={{
 																backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgb(15 23 42)" : "rgb(255 255 255)",
 																borderColor: (theme) => theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(226 232 240)",
