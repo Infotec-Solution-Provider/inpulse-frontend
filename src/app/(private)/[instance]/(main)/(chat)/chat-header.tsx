@@ -79,9 +79,14 @@ export default function ChatHeader({
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiSupervisor);
   const canOpenCustomerDetail = currentChat?.chatType === "wpp" && !!customerId;
+  // O agente pode já ter saído do chat (transferência, pausa), mas as respostas dele ficam com agentId.
+  const chatHasAgentMessages = useMemo(
+    () => currentChatMessages.some((message) => !!(message as { agentId?: number | null }).agentId),
+    [currentChatMessages],
+  );
   const hasAiAgent =
     currentChat?.chatType === "wpp" &&
-    !!(currentChat as { agentId?: number | null }).agentId &&
+    (!!(currentChat as { agentId?: number | null }).agentId || chatHasAgentMessages) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
   const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || canOpenSupervisorAssistant || hasAiAgent || canInteract;

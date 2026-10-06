@@ -2,13 +2,20 @@
 import aiService from "@/lib/services/ai.service";
 import { useAuthContext } from "@/app/auth-context";
 import type { AiAgentActionLog } from "@/lib/sdk-local";
+import {
+  formatAiDateTime,
+  getExecutionModeLabel,
+  getLogActionLabel,
+  isNeutralAction,
+  isProactiveLog,
+  summarizeAgentError,
+} from "@/lib/utils/ai-agent-labels";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import {
   Chip,
   CircularProgress,
-  Divider,
   Drawer,
   IconButton,
   Tooltip,
@@ -17,16 +24,10 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-const ACTION_LABELS: Record<string, string> = {
-  REPLY: "Respondeu",
-  SEND_TEMPLATE: "Template",
-  SEND_FILE: "Arquivo",
-  ESCALATE: "Escalou",
-  CLOSE_CHAT: "Fechou",
-  UPDATE_CRM: "CRM",
-  SCHEDULE: "Agendou",
-  IGNORED: "Ignorou",
-};
+function getLogChipColor(log: AiAgentActionLog): "default" | "success" | "error" {
+  if (isNeutralAction(log)) return "default";
+  return log.success ? "success" : "error";
+}
 
 interface Props {
   chatId: number;
@@ -45,7 +46,7 @@ export default function AgentAuditDrawer({ chatId, onClose }: Props) {
       const result = await aiService.listAgentActionLogs({ chatId, perPage: 50 }, token);
       setLogs(result.data);
     } catch (err) {
-      toast.error(`Erro ao carregar logs: ${sanitizeErrorMessage(err)}`);
+      toast.error(`Erro ao carregar os logs do agente: ${sanitizeErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
@@ -59,7 +60,7 @@ export default function AgentAuditDrawer({ chatId, onClose }: Props) {
     <Drawer anchor="right" open onClose={onClose} PaperProps={{ sx: { width: 360 } }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <Typography variant="subtitle1" fontWeight="bold">
-          Logs do Agente de IA
+          Logs do agente de IA
         </Typography>
         <div className="flex items-center gap-1">
           <Tooltip title="Atualizar">
@@ -88,35 +89,56 @@ export default function AgentAuditDrawer({ chatId, onClose }: Props) {
 
         {!loading && logs.length > 0 && (
           <ul className="flex flex-col gap-3">
-            {logs.map((log) => (
-              <li
-                key={log.id}
-                className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <Chip
-                    label={ACTION_LABELS[log.actionType] ?? log.actionType}
-                    size="small"
-                    color={log.success ? "success" : "error"}
-                    variant="outlined"
-                  />
-                  <span className="text-xs text-gray-400">
-                    {new Date(log.createdAt).toLocaleString([], {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    })}
-                  </span>
-                </div>
-                {log.errorMessage && (
-                  <p className="text-xs text-red-500 mt-1">{log.errorMessage}</p>
-                )}
-                {log.payload && typeof log.payload === "object" && "replyText" in log.payload && (
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-3">
-                    {String(log.payload["replyText"])}
-                  </p>
-                )}
-              </li>
-            ))}
+            {logs.map((log) => {
+              const agentName = log.agent?.name?.trim();
+              const replyText =
+                log.payload && typeof log.payload === "object" && typeof log.payload["replyText"] === "string"
+                  ? log.payload["replyText"].trim()
+                  : "";
+              const error = log.errorMessage ? summarizeAgentError(log.errorMessage) : null;
+
+              return (
+                <li
+                  key={log.id}
+                  className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center gap-1">
+                      <Chip
+                        label={getLogActionLabel(log)}
+                        size="small"
+                        color={getLogChipColor(log)}
+                        variant="outlined"
+                        sx={{ maxWidth: "100%" }}
+                      />
+                      {isProactiveLog(log) && (
+                        <Chip label={getExecutionModeLabel(log)} size="small" color="secondary" variant="outlined" />
+                      )}
+                    </div>
+                    <span className="shrink-0 text-xs text-gray-400">{formatAiDateTime(log.createdAt)}</span>
+                  </div>
+                  {agentName && (
+                    <p className="mt-1 text-xs font-semibold text-violet-600 dark:text-violet-300">
+                      Agente: {agentName}
+                    </p>
+                  )}
+                  {error && (
+                    <div className="mt-1">
+                      <p className="text-xs text-red-500">{error.summary}</p>
+                      {error.detail && (
+                        <details className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          <summary className="cursor-pointer select-none">Detalhes técnicos</summary>
+                          <p className="mt-1 whitespace-pre-wrap break-words">{error.detail}</p>
+                        </details>
+                      )}
+                    </div>
+                  )}
+                  {replyText && (
+                    <p className="mt-1 line-clamp-3 text-xs text-gray-600 dark:text-gray-300">{replyText}</p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

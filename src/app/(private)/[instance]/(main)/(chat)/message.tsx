@@ -79,6 +79,7 @@ export const msgStyleVariants = {
   sent: "bg-green-200 text-slate-800 dark:bg-green-800 dark:text-slate-200 rounded-br-none",
   system: "bg-yellow-200 text-slate-800 dark:bg-yellow-800 dark:text-white",
   thirdparty: "bg-red-50 text-slate-900 dark:bg-red-900 dark:text-slate-100 border-red-500 border",
+  agent: "bg-violet-100 text-slate-800 dark:bg-violet-900 dark:text-slate-100 rounded-br-none",
 };
 
 export const liStyleVariants = {
@@ -206,6 +207,8 @@ export default function Message({
   }, [date]);
 
   const isOfficial = parameters["is_official"] === "true";
+  const isAgentMessage = !!agentId && style === "sent";
+  const bubbleVariant = isAgentMessage ? "agent" : style;
 
   return (
     <li
@@ -226,8 +229,19 @@ export default function Message({
       )}
 
       <div
-        className={`flex w-max max-w-[86%] flex-col items-center gap-2 rounded-md p-2 sm:max-w-[76%] lg:max-w-[66%] ${msgStyleVariants[style]}`}
+        className={`flex w-max max-w-[86%] flex-col items-center gap-2 rounded-md p-2 sm:max-w-[76%] lg:max-w-[66%] ${msgStyleVariants[bubbleVariant]}`}
       >
+        {isAgentMessage && (
+          <div className="flex w-full">
+            <Tooltip title="Mensagem enviada automaticamente pelo agente de IA">
+              <span className="inline-flex items-center gap-1 text-[0.7rem] font-semibold text-violet-700 dark:text-violet-300">
+                <SmartToyIcon sx={{ fontSize: "0.9rem" }} />
+                Agente virtual
+              </span>
+            </Tooltip>
+          </div>
+        )}
+
         {quotedMessage && (
           <div
             className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/50 p-2 dark:bg-slate-300/40 ${
@@ -307,11 +321,6 @@ export default function Message({
             )}
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
-            {agentId && (
-              <Tooltip title="Mensagem gerada por Agente de IA">
-                <SmartToyIcon sx={{ fontSize: "0.85rem", color: "#8b5cf6" }} />
-              </Tooltip>
-            )}
             {style !== "system" &&
               (sendStatus ??
                 (status &&
