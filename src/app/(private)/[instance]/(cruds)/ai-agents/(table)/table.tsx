@@ -1,11 +1,13 @@
 "use client";
 import { AiAgent } from "@/lib/sdk-local";
+import { AGENT_PRIORITY_HINT, findOverlappingAlwaysAgents } from "@/lib/utils/ai-agent-labels";
 import AddIcon from "@mui/icons-material/Add";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ManageSearchIcon from "@mui/icons-material/ManageSearch";
 import {
+  Alert,
   Button,
   Chip,
   CircularProgress,
@@ -54,18 +56,18 @@ function statusChipSx(enabled: boolean) {
 
 const ACTION_LABELS: Record<string, string> = {
   REPLY: "Responder",
-  SEND_TEMPLATE: "Template",
-  SEND_FILE: "Arquivo",
-  ESCALATE: "Escalar",
-  CLOSE_CHAT: "Fechar",
-  UPDATE_CRM: "CRM",
+  SEND_TEMPLATE: "Enviar template",
+  SEND_FILE: "Enviar arquivo",
+  ESCALATE: "Transferir para humano",
+  CLOSE_CHAT: "Encerrar conversa",
+  UPDATE_CRM: "Atualizar CRM",
   SCHEDULE: "Agendar",
-  IGNORED: "Ignorar",
+  IGNORED: "Ignorar mensagem",
 };
 
 const TRIGGER_LABELS: Record<string, string> = {
-  MESSAGE_DURING_HOURS: "Mensagem por horario",
-  RESPONSE_TIMEOUT: "Timeout",
+  MESSAGE_DURING_HOURS: "Mensagem por horário",
+  RESPONSE_TIMEOUT: "Tempo sem resposta (em breve)",
   KEYWORD: "Palavra-chave",
   ALWAYS: "Sempre",
 };
@@ -73,7 +75,7 @@ const TRIGGER_LABELS: Record<string, string> = {
 const PROACTIVE_FREQUENCY_LABELS: Record<string, string> = {
   DAILY: "Diário",
   WEEKDAYS: "Dias úteis",
-  CUSTOM_DAYS: "Dias custom.",
+  CUSTOM_DAYS: "Dias customizados",
 };
 
 function getModeFlags(agent: AiAgent) {
@@ -103,6 +105,8 @@ export default function AiAgentsTable() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AiAgent | undefined>(undefined);
   const [auditAgent, setAuditAgent] = useState<AiAgent | null>(null);
+
+  const overlappingAlwaysAgents = useMemo(() => findOverlappingAlwaysAgents(agents), [agents]);
 
   const summary = useMemo(() => {
     const active = agents.filter((agent) => agent.enabled).length;
@@ -141,7 +145,7 @@ export default function AiAgentsTable() {
               <AutoAwesomeIcon />
             </div>
             <div className="space-y-2">
-              <p className={sectionLabelClass}>Operacao de IA</p>
+              <p className={sectionLabelClass}>Operação de IA</p>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Agentes</h1>
 
             </div>
@@ -165,10 +169,20 @@ export default function AiAgentsTable() {
           <div className={insetPanelClass}>
             <p className={sectionLabelClass}>Cobertura</p>
             <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{summary.receptive}/{summary.proactive}</p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Receptivos e ativos</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Receptivos e de prospecção ativa</p>
           </div>
         </div>
       </section>
+
+      {overlappingAlwaysAgents.length > 1 && (
+        <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
+          <span className="font-semibold">
+            Há {overlappingAlwaysAgents.length} agentes ativos com o gatilho “Sempre”
+            {` (${overlappingAlwaysAgents.map((agent) => agent.name).join(", ")}).`}
+          </span>{" "}
+          {AGENT_PRIORITY_HINT}
+        </Alert>
+      )}
 
       <section className={cardClass}>
         <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-4 dark:border-slate-700">
@@ -176,7 +190,7 @@ export default function AiAgentsTable() {
           <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Tabela de agentes</h2>
             <p className="text-sm text-slate-600 dark:text-slate-400">
-              Revise modelo, gatilhos, escopo de atuacao e acoes permitidas antes de editar ou auditar.
+              Revise modelo, gatilhos, escopo de atuação e ações permitidas antes de editar ou auditar.
             </p>
           </div>
         </div>
@@ -203,12 +217,12 @@ export default function AiAgentsTable() {
               >
                 <TableCell>Nome</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Atuacao</TableCell>
+                <TableCell>Atuação</TableCell>
                 <TableCell>Modelo</TableCell>
                 <TableCell>Gatilhos</TableCell>
-                <TableCell>Acoes permitidas</TableCell>
-                <TableCell>Turnos max.</TableCell>
-                <TableCell align="right">Acoes</TableCell>
+                <TableCell>Ações permitidas</TableCell>
+                <TableCell>Turnos máx.</TableCell>
+                <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
 
@@ -277,12 +291,12 @@ export default function AiAgentsTable() {
                               sx={receptiveEnabled ? statusChipSx(true) : subtleChipSx}
                             />
                             <Chip
-                              label="Ativo"
+                              label="Prospecção ativa"
                               size="small"
                               variant="outlined"
                               sx={proactiveEnabled ? statusChipSx(true) : subtleChipSx}
                             />
-                            {hybridEnabled && <Chip label="Hibrido" size="small" variant="outlined" sx={subtleChipSx} />}
+                            {hybridEnabled && <Chip label="Híbrido" size="small" variant="outlined" sx={subtleChipSx} />}
                           </div>
 
                           {proactiveSummary && (

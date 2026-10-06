@@ -3,6 +3,17 @@
 import { useAuthContext } from "@/app/auth-context";
 import aiService from "@/lib/services/ai.service";
 import type { AiAgent, AiAgentActionLog, AiAgentChatSession } from "@/lib/types/sdk-local.types";
+import {
+  formatAiDateTime,
+  getActionTypeLabel,
+  getExecutionModeLabel,
+  getLogActionLabel,
+  getSessionStartedAt,
+  getSessionStatusLabel,
+  isNeutralAction,
+  isProactiveLog,
+  summarizeAgentError,
+} from "@/lib/utils/ai-agent-labels";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -21,24 +32,8 @@ import { alpha, useTheme } from "@mui/material/styles";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 
-const ACTION_LABELS: Record<string, string> = {
-  REPLY: "Respondeu",
-  SEND_TEMPLATE: "Template",
-  SEND_FILE: "Arquivo",
-  ESCALATE: "Escalou",
-  CLOSE_CHAT: "Fechou",
-  UPDATE_CRM: "CRM",
-  SCHEDULE: "Agendou",
-  IGNORED: "Ignorou",
-};
-
-function getExecutionMode(log: AiAgentActionLog) {
-  if (log.payload && typeof log.payload === "object" && "proactiveRunId" in log.payload) {
-    return "Ativo";
-  }
-
-  return "Receptivo";
-}
+/** O SDK vendorizado ainda tipa só `startedAt`; o ai-service devolve as colunas do banco. */
+type SessionRow = AiAgentChatSession & { createdAt?: string; updatedAt?: string };
 
 function getPayloadSummary(log: AiAgentActionLog) {
   if (!log.payload || typeof log.payload !== "object") {
@@ -54,7 +49,7 @@ function getPayloadSummary(log: AiAgentActionLog) {
   }
 
   if ("action" in log.payload && typeof log.payload["action"] === "string") {
-    return `Decisão: ${String(log.payload["action"])}`;
+    return `Decisão: ${getActionTypeLabel(String(log.payload["action"]))}`;
   }
 
   return null;
@@ -69,7 +64,7 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
   const theme = useTheme();
   const { token } = useAuthContext();
   const [logs, setLogs] = useState<AiAgentActionLog[]>([]);
-  const [sessions, setSessions] = useState<AiAgentChatSession[]>([]);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -101,7 +96,7 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
   const summary = useMemo(() => {
     const successCount = logs.filter((log) => log.success).length;
     const failureCount = logs.length - successCount;
-    const proactiveCount = logs.filter((log) => getExecutionMode(log) === "Ativo").length;
+    const proactiveCount = logs.filter((log) => isProactiveLog(log)).length;
 
     return { successCount, failureCount, proactiveCount };
   }, [logs]);
@@ -212,14 +207,19 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                           Turnos: {session.turnCount}
                         </Typography>
                       </Box>
-                      <Chip size="small" label={session.status} color="primary" variant="outlined" />
+                      <Chip
+                        size="small"
+                        label={getSessionStatusLabel(session.status)}
+                        color={session.status === "ACTIVE" ? "primary" : "default"}
+                        variant="outlined"
+                      />
                     </Stack>
                     <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-                      Iniciada em {new Date(session.startedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                      Iniciada em {formatAiDateTime(getSessionStartedAt(session))}
                     </Typography>
                     {session.lastRepliedAt && (
                       <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                        Última resposta em {new Date(session.lastRepliedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                        Última resposta em {formatAiDateTime(session.lastRepliedAt)}
                       </Typography>
                     )}
                   </Box>
@@ -235,7 +235,7 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
               <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
                 Últimas ações
               </Typography>
-              <Chip size="small" label={`${summary.proactiveCount} ativas`} variant="outlined" />
+              <Chip size="small" label={`${summary.proactiveCount} de prospecção ativa`} variant="outlined" />
             </Stack>
 
             {loading && logs.length === 0 ? (
@@ -250,7 +250,15 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
               <Stack spacing={1.5}>
                 {logs.map((log) => {
                   const payloadSummary = getPayloadSummary(log);
-                  const executionMode = getExecutionMode(log);
+                  const executionMode = getExecutionModeLabel(log);
+                  const proactiveLog = isProactiveLog(log);
+                  const neutral = isNeutralAction(log);
+                  const toneColor = neutral
+                    ? theme.palette.text.secondary
+                    : log.success
+                      ? theme.palette.success.main
+                      : theme.palette.error.main;
+                  const error = log.errorMessage ? summarizeAgentError(log.errorMessage) : null;
 
                   return (
                     <Box
@@ -258,14 +266,8 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                       sx={{
                         borderRadius: 2.5,
                         border: "1px solid",
-                        borderColor: alpha(
-                          log.success ? theme.palette.success.main : theme.palette.error.main,
-                          0.22,
-                        ),
-                        bgcolor: alpha(
-                          log.success ? theme.palette.success.main : theme.palette.error.main,
-                          0.06,
-                        ),
+                        borderColor: alpha(toneColor, 0.22),
+                        bgcolor: alpha(toneColor, 0.06),
                         px: 1.5,
                         py: 1.25,
                       }}
@@ -275,25 +277,22 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                             <Chip
                               size="small"
-                              label={ACTION_LABELS[log.actionType] ?? log.actionType}
-                              color={log.success ? "success" : "error"}
+                              label={getLogActionLabel(log)}
+                              color={neutral ? "default" : log.success ? "success" : "error"}
                               variant="outlined"
                             />
                             <Chip
                               size="small"
                               label={executionMode}
-                              color={executionMode === "Ativo" ? "secondary" : "primary"}
+                              color={proactiveLog ? "secondary" : "primary"}
                               variant="outlined"
                             />
                             <Chip size="small" label={`Chat #${log.chatId}`} variant="outlined" />
                           </Stack>
                         </Box>
 
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(log.createdAt).toLocaleString([], {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
+                        <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                          {formatAiDateTime(log.createdAt)}
                         </Typography>
                       </Stack>
 
@@ -303,10 +302,29 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                         </Typography>
                       )}
 
-                      {log.errorMessage && (
-                        <Typography variant="body2" sx={{ mt: 1.25, color: "error.main" }}>
-                          {log.errorMessage}
-                        </Typography>
+                      {error && (
+                        <Box sx={{ mt: 1.25 }}>
+                          <Typography variant="body2" sx={{ color: "error.main" }}>
+                            {error.summary}
+                          </Typography>
+                          {error.detail && (
+                            <Box component="details" sx={{ mt: 0.75, color: "text.secondary" }}>
+                              <Box
+                                component="summary"
+                                sx={{ cursor: "pointer", userSelect: "none", fontSize: "0.75rem" }}
+                              >
+                                Detalhes técnicos
+                              </Box>
+                              <Typography
+                                variant="caption"
+                                component="p"
+                                sx={{ mt: 0.5, whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                              >
+                                {error.detail}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
                       )}
                     </Box>
                   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
-import { AI_MODEL_CATALOG } from "@/lib/ai-model-catalog";
+import { AI_MODEL_CATALOG, modelSupportsTemperature } from "@/lib/ai-model-catalog";
 import filesService from "@/lib/services/files.service";
 import type {
   AiAgent,
@@ -24,6 +24,11 @@ import type {
 } from "@/lib/types/sdk-local.types";
 import instancesService, { type GeoStateOption } from "@/lib/services/instances.service";
 import { FileDirType } from "@/lib/sdk-local";
+import {
+  AGENT_HUMAN_PAUSE_HINT,
+  AGENT_PRIORITY_HINT,
+  AUTO_REPLY_PRECEDENCE_HINT,
+} from "@/lib/utils/ai-agent-labels";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { type MessageTemplate, useWhatsappContext } from "../../../whatsapp-context";
 import AddIcon from "@mui/icons-material/Add";
@@ -75,30 +80,32 @@ const ALL_ACTIONS: { value: AiAgentActionType; label: string; description: strin
   },
   { value: "SEND_FILE", label: "Enviar arquivo", description: "Autoriza o envio de anexos e materiais de apoio." },
   { value: "ESCALATE", label: "Transferir para humano", description: "Transfere a conversa para um operador humano." },
-  { value: "CLOSE_CHAT", label: "Fechar conversa", description: "Permite encerrar o atendimento automaticamente." },
-  { value: "IGNORED", label: "Ignorar mensagem", description: "Permite decidir que uma mensagem nao deve receber resposta." },
+  { value: "CLOSE_CHAT", label: "Encerrar conversa", description: "Permite encerrar o atendimento automaticamente." },
+  { value: "IGNORED", label: "Ignorar mensagem", description: "Permite decidir que uma mensagem não deve receber resposta." },
 ];
 
-const ALL_TRIGGERS: { value: AiAgentTriggerType; label: string; description: string }[] = [
+const ALL_TRIGGERS: { value: AiAgentTriggerType; label: string; description: string; comingSoon?: boolean }[] = [
   {
     value: "MESSAGE_DURING_HOURS",
-    label: "Mensagem dentro do horario",
-    description: "Aciona quando chega uma nova mensagem do cliente dentro da janela de horario configurada.",
+    label: "Mensagem dentro do horário",
+    description: "Aciona quando chega uma nova mensagem do cliente dentro da janela de horário configurada.",
   },
   {
     value: "RESPONSE_TIMEOUT",
-    label: "Timeout de resposta",
-    description: "Reage quando o cliente fica sem retorno pelo tempo configurado para espera.",
+    label: "Tempo sem resposta",
+    description: "Em breve: o agente poderá assumir conversas sem resposta depois de alguns minutos.",
+    comingSoon: true,
   },
   {
     value: "KEYWORD",
     label: "Palavra-chave",
-    description: "Aciona para mensagens que batem com palavras configuradas no gatilho.",
+    description:
+      "Aciona quando a mensagem do cliente contém uma das palavras ou frases inteiras cadastradas (sem diferenciar acentos e maiúsculas). Cadastre também as variações, como o plural. Vale para iniciar o atendimento do agente.",
   },
   {
     value: "ALWAYS",
     label: "Sempre",
-    description: "Mantem o agente elegivel em qualquer mensagem compatível com o publico.",
+    description: "Mantém o agente elegível em qualquer mensagem compatível com o público.",
   },
 ];
 
@@ -106,11 +113,11 @@ const PROACTIVE_FREQUENCY_OPTIONS: { value: AiAgentProactiveFrequency; label: st
   {
     value: "DAILY",
     label: "Todos os dias",
-    description: "Executa uma rodada por dia no horario informado.",
+    description: "Executa uma rodada por dia no horário informado.",
   },
   {
     value: "WEEKDAYS",
-    label: "Dias uteis",
+    label: "Dias úteis",
     description: "Executa automaticamente de segunda a sexta.",
   },
   {
@@ -140,7 +147,7 @@ const WEEKDAY_OPTIONS = [
   { value: 3, label: "Qua" },
   { value: 4, label: "Qui" },
   { value: 5, label: "Sex" },
-  { value: 6, label: "Sab" },
+  { value: 6, label: "Sáb" },
 ];
 
 const TIMEZONE_OPTIONS = [
@@ -166,34 +173,34 @@ const MODEL_OPTIONS = AI_MODEL_CATALOG.map((model) => model.value);
 const PROFILE_LEVEL_OPTIONS: { value: CustomerProfileSummaryLevel; label: string }[] = [
   { value: "potencial_de_compra", label: "Potencial de compra" },
   { value: "consolidado", label: "Consolidado" },
-  { value: "precisa_mais_interacao", label: "Precisa de mais interacao" },
-  { value: "em_observacao", label: "Em observacao" },
+  { value: "precisa_mais_interacao", label: "Precisa de mais interação" },
+  { value: "em_observacao", label: "Em observação" },
 ];
 
 const INTERACTION_LEVEL_OPTIONS: { value: CustomerInteractionLevel; label: string }[] = [
-  { value: "sem_interacao", label: "Sem interacao" },
-  { value: "pouca_interacao", label: "Pouca interacao" },
-  { value: "interacao_media", label: "Interacao media" },
-  { value: "interacao_alta", label: "Interacao alta" },
+  { value: "sem_interacao", label: "Sem interação" },
+  { value: "pouca_interacao", label: "Pouca interação" },
+  { value: "interacao_media", label: "Interação média" },
+  { value: "interacao_alta", label: "Interação alta" },
 ];
 
 const PURCHASE_LEVEL_OPTIONS: { value: CustomerPurchaseLevel; label: string }[] = [
   { value: "sem_compras", label: "Sem compras" },
   { value: "poucas_compras", label: "Poucas compras" },
-  { value: "compras_medias", label: "Compras medias" },
+  { value: "compras_medias", label: "Compras médias" },
   { value: "muitas_compras", label: "Muitas compras" },
 ];
 
 const AGE_LEVEL_OPTIONS: { value: CustomerAgeLevel; label: string }[] = [
   { value: "sem_data_cadastro", label: "Sem data de cadastro" },
   { value: "cliente_novo", label: "Cliente novo" },
-  { value: "ate_6_meses", label: "Ate 6 meses" },
-  { value: "ate_12_meses", label: "Ate 12 meses" },
+  { value: "ate_6_meses", label: "Até 6 meses" },
+  { value: "ate_12_meses", label: "Até 12 meses" },
   { value: "mais_de_12_meses", label: "Mais de 12 meses" },
 ];
 
 const PURCHASE_INTEREST_OPTIONS: { value: CustomerPurchaseInterestLevel; label: string }[] = [
-  { value: "nao_analisado", label: "Nao analisado" },
+  { value: "nao_analisado", label: "Não analisado" },
   { value: "baixo_interesse", label: "Baixo interesse" },
   { value: "interesse_moderado", label: "Interesse moderado" },
   { value: "alto_interesse", label: "Alto interesse" },
@@ -256,7 +263,7 @@ const DEFAULT_FORM: FormState = {
   systemPrompt: "",
   model: "gpt-5.4",
   temperature: 0.7,
-  maxTokens: 1000,
+  maxTokens: 2000,
   maxTurnsPerChat: 10,
   allowedActions: ["REPLY"],
   templateName: "",
@@ -396,8 +403,15 @@ function audienceSnapshot(audience: AudienceFormState) {
   return JSON.stringify(buildAudienceInput(audience).filters ?? {});
 }
 
+function hasManualInclusions(agent?: AiAgent) {
+  const manualInclude = agent?.audience?.manualIncludeJson;
+  if (!manualInclude || typeof manualInclude !== "object") return false;
+
+  return Object.values(manualInclude).some((value) => Array.isArray(value) && value.length > 0);
+}
+
 function getLookupLabel(option: CustomerLookupOption) {
-  return option.NOME?.trim() || `Codigo ${option.CODIGO}`;
+  return option.NOME?.trim() || `Código ${option.CODIGO}`;
 }
 
 function getCustomerLabel(agentContact: WppContactWithCustomer) {
@@ -557,7 +571,7 @@ export default function AgentModal({ agent, onClose }: Props) {
     }
     if (audience.interactionLevel) {
       chips.push(
-        INTERACTION_LEVEL_OPTIONS.find((option) => option.value === audience.interactionLevel)?.label ?? "Interacao",
+        INTERACTION_LEVEL_OPTIONS.find((option) => option.value === audience.interactionLevel)?.label ?? "Interação",
       );
     }
     if (audience.purchaseLevel) {
@@ -579,7 +593,7 @@ export default function AgentModal({ agent, onClose }: Props) {
     if (audience.city.trim()) chips.push(`Cidade: ${audience.city.trim()}`);
     if (audience.segmentIds.length > 0) chips.push(`Segmentos: ${audience.segmentIds.length}`);
     if (audience.campaignIds.length > 0) chips.push(`Campanhas: ${audience.campaignIds.length}`);
-    if (audience.operatorIds.length > 0) chips.push(`Fidelizacao: ${audience.operatorIds.length}`);
+    if (audience.operatorIds.length > 0) chips.push(`Fidelização: ${audience.operatorIds.length}`);
 
     return chips;
   }, [audience, stateOptions]);
@@ -653,7 +667,7 @@ export default function AgentModal({ agent, onClose }: Props) {
           !TIME_PATTERN.test(trigger.config?.endTime ?? "") ||
           !(trigger.config?.timezone ?? "").trim())
       ) {
-        errors[trigger.type] = "Informe horario inicial, horario final e fuso para este gatilho.";
+        errors[trigger.type] = "Informe horário inicial, horário final e fuso para este gatilho.";
       }
 
       if (trigger.type === "RESPONSE_TIMEOUT" && !trigger.config?.timeoutMinutes) {
@@ -678,6 +692,11 @@ export default function AgentModal({ agent, onClose }: Props) {
   const proactiveNeedsTemplate = proactive.enabled && proactive.entryMessageMode === "WABA_TEMPLATE";
   const proactiveHasTemplateError = proactiveNeedsTemplate && form.templateName.trim().length === 0;
   const hasEscalationTargetError = form.allowedActions.includes("ESCALATE") && form.escalateToUserIds.length === 0;
+  const temperatureSupported = modelSupportsTemperature(form.model);
+  const alwaysTriggerSelected = receptiveEnabled && triggers.some((trigger) => trigger.type === "ALWAYS");
+  const duringHoursTriggerSelected =
+    receptiveEnabled && triggers.some((trigger) => trigger.type === "MESSAGE_DURING_HOURS");
+  const hasEmptyAudience = !hasAnyAudienceFilter && !hasManualInclusions(currentAgent);
   const receptiveSummary = useMemo(() => {
     if (!receptiveEnabled) {
       return ["Desligado"];
@@ -1010,7 +1029,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                 {isEdit ? `Editar agente: ${agent.name}` : "Novo agente de IA"}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Configure identidade, modo receptivo e modo ativo no mesmo cadastro do agente.
+                Configure identidade, modo receptivo e prospecção ativa no mesmo cadastro do agente.
               </Typography>
             </Box>
           </Stack>
@@ -1041,9 +1060,9 @@ export default function AgentModal({ agent, onClose }: Props) {
         }}
       >
         <Tab label="Geral" />
-        <Tab label="Atuacao" />
-        <Tab label="Acoes" />
-        <Tab label="Publico" />
+        <Tab label="Atuação" />
+        <Tab label="Ações" />
+        <Tab label="Público" />
         {isEdit && <Tab label="Conhecimento" />}
       </Tabs>
 
@@ -1088,7 +1107,7 @@ export default function AgentModal({ agent, onClose }: Props) {
               </Box>
 
               <TextField
-                label="Descricao"
+                label="Descrição"
                 fullWidth
                 value={form.description}
                 onChange={(event) => setField("description", event.target.value)}
@@ -1100,22 +1119,22 @@ export default function AgentModal({ agent, onClose }: Props) {
               <HelpLabel
                 label="Prompt do sistema"
                 required
-                tooltip="Define tom, limites e objetivos do agente. Use esse campo para orientar como ele deve responder e quando escalar."
+                tooltip="Define tom, limites e objetivos do agente. Use esse campo para orientar como ele deve responder e quando transferir para uma pessoa da equipe."
               />
               <TextField
                 fullWidth
                 multiline
                 minRows={5}
-                placeholder="Ex.: Voce atende clientes com tom cordial, objetivo e sempre confirma o contexto antes de sugerir uma acao."
+                placeholder="Ex.: Você atende clientes com tom cordial, objetivo e sempre confirma o contexto antes de sugerir uma ação."
                 value={form.systemPrompt}
                 onChange={(event) => setField("systemPrompt", event.target.value)}
-                helperText="Escreva as instrucoes em texto livre. Este campo nao substitui marcadores como {NOME_CLIENTE} ou {EMPRESA}; hoje o agente recebe automaticamente o historico recente da conversa e a base de conhecimento cadastrada."
+                helperText="Escreva as instruções em texto livre. Este campo não substitui marcadores como {NOME_CLIENTE} ou {EMPRESA}; hoje o agente recebe automaticamente o histórico recente da conversa e a base de conhecimento cadastrada."
               />
             </Box>
 
             <Box sx={surfaceSx}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                Configuracao do modelo
+                Configuração do modelo
               </Typography>
               <Box
                 sx={{
@@ -1127,7 +1146,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                 <Box>
                   <HelpLabel
                     label="Modelo"
-                    tooltip="Escolhe o modelo usado nas respostas. Voce pode usar uma sugestao da lista ou digitar manualmente o nome exato do modelo liberado para sua conta."
+                    tooltip="Escolhe o modelo usado nas respostas. Você pode usar uma sugestão da lista ou digitar manualmente o nome exato de um modelo liberado para a empresa."
                   />
                   <Autocomplete
                     freeSolo
@@ -1144,7 +1163,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                         {...params}
                         fullWidth
                         placeholder="Ex.: gpt-5.4"
-                        helperText="Sugestoes rapidas: gpt-5.4, gpt-4o e gpt-4o-mini. Se precisar, digite outro modelo manualmente."
+                        helperText="Sugestões rápidas: gpt-5.4, gpt-4o e gpt-4o-mini. Se precisar, digite outro modelo manualmente."
                       />
                     )}
                   />
@@ -1153,20 +1172,36 @@ export default function AgentModal({ agent, onClose }: Props) {
                 <Box>
                   <HelpLabel
                     label="Temperatura"
-                    tooltip="Controla variacao criativa. Valores baixos deixam as respostas mais previsiveis; valores altos deixam as respostas mais livres."
+                    tooltip="Controla a variação criativa. Valores baixos deixam as respostas mais previsíveis; valores altos deixam as respostas mais livres."
                   />
-                  <TextField
-                    type="number"
-                    fullWidth
-                    value={form.temperature}
-                    onChange={(event) => setNumericField("temperature")(event.target.value)}
-                    inputProps={{ min: 0, max: 2, step: 0.1 }}
-                  />
+                  {temperatureSupported ? (
+                    <TextField
+                      type="number"
+                      fullWidth
+                      value={form.temperature}
+                      onChange={(event) => setNumericField("temperature")(event.target.value)}
+                      inputProps={{ min: 0, max: 2, step: 0.1 }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        borderRadius: 1,
+                        border: "1px dashed",
+                        borderColor: alpha(theme.palette.divider, 0.9),
+                        px: 1.75,
+                        py: 1.75,
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary">
+                        Este modelo não usa temperatura.
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
 
                 <Box>
                   <HelpLabel
-                    label="Maximo de tokens"
+                    label="Máximo de tokens"
                     tooltip="Limita o tamanho da resposta gerada. Aumente apenas quando precisar de respostas mais longas ou estruturadas."
                   />
                   <TextField
@@ -1180,8 +1215,8 @@ export default function AgentModal({ agent, onClose }: Props) {
 
                 <Box>
                   <HelpLabel
-                    label="Turnos maximos por chat"
-                    tooltip="Define quantas interacoes o agente pode conduzir na mesma conversa antes de parar ou depender de outra regra."
+                    label="Turnos máximos por chat"
+                    tooltip="Define quantas interações o agente pode conduzir na mesma conversa antes de parar ou depender de outra regra."
                   />
                   <TextField
                     type="number"
@@ -1199,12 +1234,12 @@ export default function AgentModal({ agent, onClose }: Props) {
         {tab === 1 && (
           <Stack spacing={3}>
             <Alert severity="info" sx={{ borderRadius: 3 }}>
-              Um mesmo agente pode operar de forma receptiva, ativa ou hibrida. Os dois modos compartilham identidade, acoes, conhecimento e o mesmo publico salvo.
+              Um mesmo agente pode operar de forma receptiva, em prospecção ativa ou híbrida. Os dois modos compartilham identidade, ações, conhecimento e o mesmo público salvo.
             </Alert>
 
             {!hasAnyModeEnabled && (
               <Alert severity="warning" sx={{ borderRadius: 3 }}>
-                Ative ao menos um modo de atuacao para salvar o agente.
+                Ative ao menos um modo de atuação para salvar o agente.
               </Alert>
             )}
 
@@ -1216,25 +1251,25 @@ export default function AgentModal({ agent, onClose }: Props) {
 
             {hasInvalidTriggerConfig && (
               <Alert severity="warning" sx={{ borderRadius: 3 }}>
-                Alguns gatilhos do modo receptivo ainda precisam de configuracao antes de salvar.
+                Alguns gatilhos do modo receptivo ainda precisam de configuração antes de salvar.
               </Alert>
             )}
 
             {proactiveHasCustomDaysError && (
               <Alert severity="warning" sx={{ borderRadius: 3 }}>
-                No modo ativo com dias customizados, selecione ao menos um dia da semana.
+                Na prospecção ativa com dias customizados, selecione ao menos um dia da semana.
               </Alert>
             )}
 
             {proactiveHasTemplateError && (
               <Alert severity="warning" sx={{ borderRadius: 3 }}>
-                O modo ativo com template exige um template configurado na aba Acoes.
+                A prospecção ativa com template exige um template configurado na aba Ações.
               </Alert>
             )}
 
             <Box sx={surfaceSx}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                Modo de atuacao
+                Modo de atuação
               </Typography>
               <Box
                 sx={{
@@ -1307,9 +1342,9 @@ export default function AgentModal({ agent, onClose }: Props) {
                   <Stack spacing={1.5}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
                       <Box>
-                        <Typography sx={{ fontWeight: 800 }}>Ativo</Typography>
+                        <Typography sx={{ fontWeight: 800 }}>Prospecção ativa</Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Agenda rodadas recorrentes para iniciar conversas de forma automatica.
+                          Agenda rodadas recorrentes para iniciar conversas de forma automática.
                         </Typography>
                       </Box>
                       <FormControlLabel
@@ -1351,7 +1386,7 @@ export default function AgentModal({ agent, onClose }: Props) {
 
               {!receptiveEnabled && (
                 <Alert severity="info" sx={{ borderRadius: 3, mb: 2 }}>
-                  Ative o modo receptivo acima para configurar os gatilhos que tornam o agente elegivel em conversas recebidas.
+                  Ative o modo receptivo acima para configurar os gatilhos que tornam o agente elegível em conversas recebidas.
                 </Alert>
               )}
 
@@ -1367,6 +1402,8 @@ export default function AgentModal({ agent, onClose }: Props) {
                   const selectedTrigger = getSelectedTrigger(trigger.value);
                   const config = selectedTrigger ? getTriggerConfig(selectedTrigger) : {};
                   const triggerError = triggerErrors[trigger.value];
+                  // Gatilho “Em breve”: não pode ser marcado, mas um agente antigo que já o tem consegue desmarcá-lo.
+                  const lockedComingSoon = !!trigger.comingSoon && !selected;
                   return (
                     <Box
                       key={trigger.value}
@@ -1379,7 +1416,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                         bgcolor: selected
                           ? alpha(theme.palette.primary.main, 0.08)
                           : alpha(theme.palette.background.default, 0.2),
-                        opacity: receptiveEnabled ? 1 : 0.6,
+                        opacity: receptiveEnabled && !lockedComingSoon ? 1 : 0.6,
                         px: 1.5,
                         py: 1,
                       }}
@@ -1389,13 +1426,18 @@ export default function AgentModal({ agent, onClose }: Props) {
                         control={
                           <Checkbox
                             checked={selected}
-                            disabled={!receptiveEnabled}
+                            disabled={!receptiveEnabled || lockedComingSoon}
                             onChange={() => toggleTrigger(trigger.value)}
                           />
                         }
                         label={
                           <Box sx={{ pt: 0.6 }}>
-                            <Typography sx={{ fontWeight: 700 }}>{trigger.label}</Typography>
+                            <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                              <Typography sx={{ fontWeight: 700 }}>{trigger.label}</Typography>
+                              {trigger.comingSoon && (
+                                <Chip size="small" label="Em breve" variant="outlined" sx={{ borderRadius: 999 }} />
+                              )}
+                            </Stack>
                             <Typography variant="body2" color="text.secondary">
                               {trigger.description}
                             </Typography>
@@ -1418,7 +1460,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                                   }}
                                   inputProps={{ min: 1 }}
                                   error={!!triggerError}
-                                  helperText={triggerError ?? "Depois desse intervalo sem retorno, o agente pode assumir a conversa."}
+                                  helperText={triggerError ?? "Valor guardado para quando o gatilho estiver disponível."}
                                   onClick={(event) => event.stopPropagation()}
                                 />
                               </Box>
@@ -1454,7 +1496,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                               <Stack sx={{ mt: 1.5, maxWidth: 420 }} spacing={1.5}>
                                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                                   <TextField
-                                    label="Inicio"
+                                    label="Início"
                                     placeholder="09:00"
                                     fullWidth
                                     disabled={!receptiveEnabled}
@@ -1466,7 +1508,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                                       });
                                     }}
                                     error={!!triggerError}
-                                    helperText={triggerError ?? "Use HH:MM para o inicio da janela."}
+                                    helperText={triggerError ?? "Use HH:MM para o início da janela."}
                                     onClick={(event) => event.stopPropagation()}
                                   />
 
@@ -1483,14 +1525,14 @@ export default function AgentModal({ agent, onClose }: Props) {
                                       });
                                     }}
                                     error={!!triggerError}
-                                    helperText={triggerError ?? "Pode cruzar meia-noite, por exemplo 22:00 ate 06:00."}
+                                    helperText={triggerError ?? "Pode cruzar meia-noite, por exemplo 22:00 até 06:00."}
                                     onClick={(event) => event.stopPropagation()}
                                   />
                                 </Stack>
 
                                 <TextField
                                   select
-                                  label="Fuso horario"
+                                  label="Fuso horário"
                                   fullWidth
                                   disabled={!receptiveEnabled}
                                   value={String(config.timezone ?? DEFAULT_MESSAGE_DURING_HOURS_TRIGGER_CONFIG.timezone)}
@@ -1501,7 +1543,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                                     });
                                   }}
                                   error={!!triggerError}
-                                  helperText={triggerError ?? "A mensagem so aciona o agente se chegar dentro dessa janela no fuso escolhido."}
+                                  helperText={triggerError ?? "A mensagem só aciona o agente se chegar dentro dessa janela no fuso escolhido."}
                                   onClick={(event) => event.stopPropagation()}
                                 >
                                   {TIMEZONE_OPTIONS.map((timezone) => (
@@ -1515,29 +1557,57 @@ export default function AgentModal({ agent, onClose }: Props) {
 
                             {selected && trigger.value === "ALWAYS" && (
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
-                                Este gatilho nao exige configuracao adicional.
+                                Este gatilho não exige configuração adicional.
                               </Typography>
                             )}
                           </Box>
                         }
                       />
+
+                      {/* Fora do label: clicar no aviso não pode desmarcar o gatilho. */}
+                      {selected && trigger.comingSoon && (
+                        <Alert severity="warning" sx={{ mt: 1, mb: 0.5, ml: { xs: 0, sm: 5.25 }, borderRadius: 2 }}>
+                          Este gatilho ainda não dispara. Remova-o ou mantenha outro gatilho ativo.
+                        </Alert>
+                      )}
                     </Box>
                   );
                 })}
               </Box>
+
+              <Stack spacing={1.5} sx={{ mt: 2 }}>
+                {alwaysTriggerSelected && hasEmptyAudience && (
+                  <Alert severity="info" sx={{ borderRadius: 3 }}>
+                    Com o gatilho “Sempre” e sem público definido, este agente pode responder a qualquer contato da empresa que ainda não esteja com outro agente ou com uma pessoa da equipe.
+                  </Alert>
+                )}
+
+                {(alwaysTriggerSelected || duringHoursTriggerSelected) && (
+                  <Alert severity="info" sx={{ borderRadius: 3 }}>
+                    {AUTO_REPLY_PRECEDENCE_HINT}
+                  </Alert>
+                )}
+
+                <Alert severity="info" variant="outlined" sx={{ borderRadius: 3 }}>
+                  <Typography variant="body2">{AGENT_PRIORITY_HINT}</Typography>
+                  <Typography variant="body2" sx={{ mt: 0.75 }}>
+                    {AGENT_HUMAN_PAUSE_HINT}
+                  </Typography>
+                </Alert>
+              </Stack>
             </Box>
 
             <Box sx={surfaceSx}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                Ativo: agenda recorrente
+                Prospecção ativa: agenda recorrente
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                O modo ativo usa o mesmo publico salvo para abrir conversas novas em lotes recorrentes, sem depender de mensagem recebida.
+                A prospecção ativa usa o mesmo público salvo para abrir conversas novas em lotes recorrentes, sem depender de mensagem recebida.
               </Typography>
 
               {!proactive.enabled && (
                 <Alert severity="info" sx={{ borderRadius: 3, mb: 2 }}>
-                  Ative o modo ativo acima para definir frequencia, horario, lote e a forma de primeiro contato.
+                  Ative a prospecção ativa acima para definir frequência, horário, lote e a forma de primeiro contato.
                 </Alert>
               )}
 
@@ -1550,7 +1620,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                 }}
               >
                 <TextField
-                  label="Frequencia"
+                  label="Frequência"
                   select
                   fullWidth
                   disabled={!proactive.enabled}
@@ -1579,14 +1649,14 @@ export default function AgentModal({ agent, onClose }: Props) {
                 </TextField>
 
                 <TextField
-                  label="Horario de inicio"
+                  label="Horário de início"
                   type="time"
                   fullWidth
                   disabled={!proactive.enabled}
                   value={proactive.startTime}
                   onChange={(event) => setProactiveField("startTime", event.target.value)}
                   error={proactiveHasTimeError}
-                  helperText={proactiveHasTimeError ? "Use um horario valido no formato HH:MM." : "Horario base da rodada automatica."}
+                  helperText={proactiveHasTimeError ? "Use um horário válido no formato HH:MM." : "Horário base da rodada automática."}
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ step: 60 }}
                 />
@@ -1605,8 +1675,8 @@ export default function AgentModal({ agent, onClose }: Props) {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Timezone"
-                      helperText="Pode usar uma sugestao ou digitar outra timezone IANA valida."
+                      label="Fuso horário"
+                      helperText="Escolha uma sugestão ou digite outro fuso horário válido no formato IANA, como America/Sao_Paulo."
                     />
                   )}
                 />
@@ -1623,7 +1693,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   }}
                   inputProps={{ min: 1, max: 500 }}
                   error={proactiveHasBatchSizeError}
-                  helperText={proactiveHasBatchSizeError ? "Informe um lote entre 1 e 500 contatos." : "Quantidade maxima de contatos por rodada."}
+                  helperText={proactiveHasBatchSizeError ? "Informe um lote entre 1 e 500 contatos." : "Quantidade máxima de contatos por rodada."}
                 />
 
                 <TextField
@@ -1652,7 +1722,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   <HelpLabel
                     label="Dias da semana"
                     required
-                    tooltip="Esses dias sao usados apenas quando a frequencia esta como dias customizados."
+                    tooltip="Esses dias são usados apenas quando a frequência está como dias customizados."
                   />
                   <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                     {WEEKDAY_OPTIONS.map((day) => {
@@ -1683,12 +1753,12 @@ export default function AgentModal({ agent, onClose }: Props) {
                     onChange={(event) => setProactiveField("skipContactsWithOpenChat", event.target.checked)}
                   />
                 }
-                label="Pular contatos que ja tenham chat aberto"
+                label="Pular contatos que já tenham chat aberto"
               />
 
               {proactiveNeedsTemplate && (
                 <Alert severity="info" sx={{ borderRadius: 3, mt: 2 }}>
-                  Como a abertura ativa esta em modo template, selecione o template na aba Acoes.
+                  Como a abertura da prospecção ativa está em modo template, selecione o template na aba Ações.
                 </Alert>
               )}
             </Box>
@@ -1699,7 +1769,7 @@ export default function AgentModal({ agent, onClose }: Props) {
           <Stack spacing={3}>
             <Box sx={surfaceSx}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                Permissoes do agente
+                Permissões do agente
               </Typography>
               <FormGroup>
                 <Box
@@ -1754,10 +1824,10 @@ export default function AgentModal({ agent, onClose }: Props) {
             {(form.allowedActions.includes("SEND_TEMPLATE") || proactiveNeedsTemplate) && (
               <Box sx={surfaceSx}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                  Configuracao de template WABA
+                  Configuração de template WABA
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Este template pode ser reutilizado tanto nas acoes do agente quanto como primeira mensagem do modo ativo.
+                  Este template pode ser reutilizado tanto nas ações do agente quanto como primeira mensagem da prospecção ativa.
                 </Typography>
                 <Box>
                   <Autocomplete
@@ -1795,7 +1865,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                         error={proactiveHasTemplateError}
                         helperText={
                           proactiveHasTemplateError
-                            ? "Selecione um template existente para o modo ativo."
+                            ? "Selecione um template existente para a prospecção ativa."
                             : availableTemplates.length === 0
                               ? "Nenhum template foi carregado para a sessão atual do WhatsApp."
                               : "Pesquise e selecione um dos templates existentes da operação."
@@ -1833,9 +1903,15 @@ export default function AgentModal({ agent, onClose }: Props) {
             {form.allowedActions.includes("ESCALATE") && (
               <Box sx={surfaceSx}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                  Destino da transferencia
+                  Destino da transferência
                 </Typography>
                 <Stack spacing={2}>
+                  {hasEscalationTargetError && (
+                    <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                      Sem operador de transferência, o agente não oferece a transferência ao cliente.
+                    </Alert>
+                  )}
+
                   <Autocomplete
                     multiple
                     disableCloseOnSelect
@@ -1869,15 +1945,15 @@ export default function AgentModal({ agent, onClose }: Props) {
                         error={hasEscalationTargetError}
                         helperText={
                           hasEscalationTargetError
-                            ? "Selecione pelo menos um operador para a transferencia."
-                            : "A IA escolhe um operador por vez em round-robin."
+                            ? "Selecione pelo menos um operador para a transferência."
+                            : "A IA escolhe um operador por vez, em rodízio."
                         }
                       />
                     )}
                   />
 
                   <Alert severity="info" sx={{ borderRadius: 2 }}>
-                    Carteira de destino representa a carteira ou setor para onde o chat seria encaminhado. Essa transferencia por carteira esta desabilitada no momento; use os operadores acima.
+                    Carteira de destino representa a carteira ou setor para onde o chat seria encaminhado. Essa transferência por carteira está desabilitada no momento; use os operadores acima.
                     {form.escalateToWalletId ? ` Valor salvo atualmente: ${form.escalateToWalletId}.` : ""}
                   </Alert>
                 </Stack>
@@ -1894,7 +1970,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   Escopo de atendimento
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  O mesmo publico salvo aqui vale para o modo receptivo e para o modo ativo. Sem filtros, o agente considera toda a base elegivel.
+                  O mesmo público salvo aqui vale para o modo receptivo e para a prospecção ativa. Sem filtros, o agente considera toda a base elegível.
                 </Typography>
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                   {selectedFilterChips.length > 0 ? (
@@ -1916,7 +1992,7 @@ export default function AgentModal({ agent, onClose }: Props) {
 
             <Box sx={surfaceSx}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
-                Tags automaticas de perfil
+                Tags automáticas de perfil
               </Typography>
               <Box
                 sx={{
@@ -1941,7 +2017,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                 </TextField>
 
                 <TextField
-                  label="Nivel de interacao"
+                  label="Nível de interação"
                   select
                   fullWidth
                   value={audience.interactionLevel}
@@ -1958,7 +2034,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                 </TextField>
 
                 <TextField
-                  label="Nivel de compras"
+                  label="Nível de compras"
                   select
                   fullWidth
                   value={audience.purchaseLevel}
@@ -2033,7 +2109,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                     <TextField
                       {...params}
                       label="Estado"
-                      helperText="Selecione o estado a partir da base geografica do sistema."
+                      helperText="Selecione o estado a partir da base geográfica do sistema."
                     />
                   )}
                 />
@@ -2144,8 +2220,8 @@ export default function AgentModal({ agent, onClose }: Props) {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Fidelizacao"
-                      helperText="Selecione os usuarios responsaveis pela fidelizacao que este agente pode atender."
+                      label="Fidelização"
+                      helperText="Selecione os usuários responsáveis pela fidelização que este agente pode atender."
                     />
                   )}
                 />
@@ -2162,10 +2238,10 @@ export default function AgentModal({ agent, onClose }: Props) {
                 >
                   <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                      Previa do publico
+                      Prévia do público
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Gere a lista de contatos elegiveis sob demanda. O preview representa o publico compartilhado pelos dois modos de atuacao.
+                      Gere a lista de contatos elegíveis sob demanda. A prévia representa o público compartilhado pelos dois modos de atuação.
                     </Typography>
                   </Box>
 
@@ -2175,26 +2251,26 @@ export default function AgentModal({ agent, onClose }: Props) {
                     onClick={() => handlePreview(1)}
                     disabled={!isEdit || audiencePreviewLoading}
                   >
-                    {audiencePreviewLoading ? "Gerando previa..." : "Gerar previa"}
+                    {audiencePreviewLoading ? "Gerando prévia..." : "Gerar prévia"}
                   </Button>
                 </Stack>
 
                 {!isEdit && (
                   <Alert severity="info" sx={{ borderRadius: 3 }}>
-                    Salve o agente primeiro para habilitar a previa do publico.
+                    Salve o agente primeiro para habilitar a prévia do público.
                   </Alert>
                 )}
 
                 {isEdit && audienceDirty && (
                   <Alert severity="warning" sx={{ borderRadius: 3 }}>
-                    A previa considera o publico salvo por ultimo. Salve o agente para refletir alteracoes recentes nesta aba.
+                    A prévia considera o público salvo por último. Salve o agente para refletir alterações recentes nesta aba.
                   </Alert>
                 )}
 
                 {audiencePreview && (
                   <>
                     <Typography variant="body2" color="text.secondary">
-                      {audiencePreview.page.totalRows} contato(s) elegivel(is).
+                      {audiencePreview.page.totalRows} contato(s) elegível(is).
                     </Typography>
 
                     {audiencePreview.data.length === 0 ? (
@@ -2354,13 +2430,13 @@ export default function AgentModal({ agent, onClose }: Props) {
               </Typography>
               <Stack spacing={2}>
                 <TextField
-                  label="Titulo"
+                  label="Título"
                   fullWidth
                   value={newKnowledge.title}
                   onChange={(event) => setNewKnowledge((prev) => ({ ...prev, title: event.target.value }))}
                 />
                 <TextField
-                  label="Conteudo"
+                  label="Conteúdo"
                   fullWidth
                   multiline
                   minRows={4}
@@ -2399,10 +2475,10 @@ export default function AgentModal({ agent, onClose }: Props) {
         >
           <Typography variant="body2" color="text.secondary">
             {tab === 1
-              ? "Ative ao menos um modo. Receptivo depende de gatilhos; ativo depende da agenda recorrente configurada."
+              ? "Ative ao menos um modo. O receptivo depende de gatilhos; a prospecção ativa depende da agenda recorrente configurada."
               : tab === 3
-                ? "O publico salvo aqui e reutilizado tanto no modo receptivo quanto no ativo."
-                : "Campos obrigatorios: nome, prompt do sistema, ao menos uma acao permitida e um modo de atuacao ativo."}
+                ? "O público salvo aqui é reutilizado tanto no modo receptivo quanto na prospecção ativa."
+                : "Campos obrigatórios: nome, prompt do sistema, ao menos uma ação permitida e um modo de atuação ativo."}
           </Typography>
 
           <Stack direction="row" spacing={1.5}>
