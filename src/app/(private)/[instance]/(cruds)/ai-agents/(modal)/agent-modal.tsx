@@ -1202,14 +1202,14 @@ export default function AgentModal({ agent, onClose }: Props) {
                 <Box>
                   <HelpLabel
                     label="Máximo de tokens"
-                    tooltip="Limita o tamanho da resposta gerada. Aumente apenas quando precisar de respostas mais longas ou estruturadas."
+                    tooltip="Limita o tamanho da resposta gerada, de 100 a 16000. Modelos de raciocínio, como os da família GPT-5, gastam parte desse limite pensando antes de responder; se as respostas vierem cortadas, aumente o valor."
                   />
                   <TextField
                     type="number"
                     fullWidth
                     value={form.maxTokens}
                     onChange={(event) => setNumericField("maxTokens")(event.target.value)}
-                    inputProps={{ min: 100, max: 4000 }}
+                    inputProps={{ min: 100, max: 16000 }}
                   />
                 </Box>
 
