@@ -119,11 +119,47 @@ describe("buildFactChips", () => {
 });
 
 describe("getAiErrorMessage", () => {
-  it("usa a mensagem de negócio do backend", () => {
-    expect(getAiErrorMessage(new Error("Chat não encontrado."))).toBe("Chat não encontrado.");
+  /** Mesmo formato do ApiClient do sdk-local: `Error.message` do servidor e o AxiosError em `cause`. */
+  function serverError(message: string, status?: number): Error {
+    return new Error(message, { cause: { isAxiosError: true, response: status === undefined ? undefined : { status } } });
+  }
+
+  it("usa a mensagem de negócio do backend nos status do catálogo de erros", () => {
+    expect(getAiErrorMessage(serverError("Chat não encontrado.", 404))).toBe("Chat não encontrado.");
     expect(
-      getAiErrorMessage(new Error("A IA ainda não foi configurada neste ambiente. Avise o administrador.")),
+      getAiErrorMessage(serverError("A IA ainda não foi configurada neste ambiente. Avise o administrador.", 503)),
     ).toBe("A IA ainda não foi configurada neste ambiente. Avise o administrador.");
+    expect(
+      getAiErrorMessage(serverError("A conversa ainda não tem mensagens de texto para a IA analisar.", 422)),
+    ).toBe("A conversa ainda não tem mensagens de texto para a IA analisar.");
+    expect(
+      getAiErrorMessage(serverError("A IA recusou a solicitação. Tente novamente ou escolha outro modelo.", 502)),
+    ).toBe("A IA recusou a solicitação. Tente novamente ou escolha outro modelo.");
+    expect(
+      getAiErrorMessage(serverError("Sua sessão não tem permissão para esta consulta. Entre novamente.", 403)),
+    ).toBe("Sua sessão não tem permissão para esta consulta. Entre novamente.");
+  });
+
+  it("não mostra a mensagem de um erro 500, que pode trazer texto técnico", () => {
+    expect(
+      getAiErrorMessage(
+        serverError(
+          "Invalid `prisma.tenantAiConfig.findUnique()` invocation: The table `tenant_ai_configs` does not exist",
+          500,
+        ),
+      ),
+    ).toBe(DEFAULT_AI_ERROR_MESSAGE);
+    expect(getAiErrorMessage(serverError("Can't reach database server at `db:3306`", 500))).toBe(
+      DEFAULT_AI_ERROR_MESSAGE,
+    );
+  });
+
+  it("não mostra a mensagem de status fora do catálogo nem de erro sem status", () => {
+    expect(getAiErrorMessage(serverError("401 Incorrect API key provided: sk-proj-abc", 401))).toBe(
+      DEFAULT_AI_ERROR_MESSAGE,
+    );
+    expect(getAiErrorMessage(serverError("Chat não encontrado."))).toBe(DEFAULT_AI_ERROR_MESSAGE);
+    expect(getAiErrorMessage(new Error("authentication session changed"))).toBe(DEFAULT_AI_ERROR_MESSAGE);
   });
 
   it("usa o texto padrão com valor que não é Error", () => {

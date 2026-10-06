@@ -132,9 +132,28 @@ const GENERIC_HTTP_ERROR_PATTERN = /^request failed with status code \d+$/i;
 const CANCELED_PATTERN = /^(canceled|cancelled|aborted)$/i;
 
 /**
- * Mensagem para o usuário a partir do erro da chamada à IA. O interceptor do sdk-local já
- * converte a resposta do backend em `Error.message` (em linguagem de negócio); mensagens
- * técnicas do axios, sem resposta do servidor, viram textos equivalentes aos do ai-service.
+ * Status do catálogo de erros do ai-service, que respondem com mensagem de negócio.
+ * Um 500 é falha inesperada: a mensagem pode trazer texto técnico (Prisma, host do banco)
+ * e não vai para a tela.
+ */
+const BUSINESS_ERROR_STATUSES: ReadonlySet<number> = new Set([400, 403, 404, 422, 429, 502, 503, 504]);
+
+/** Status HTTP da resposta, lido do AxiosError que o sdk-local guarda em `Error.cause`. */
+function getResponseStatus(error: Error): number | null {
+  const cause: unknown = error.cause;
+  if (!cause || typeof cause !== "object") {
+    return null;
+  }
+
+  const status = (cause as { response?: { status?: unknown } | null }).response?.status;
+  return typeof status === "number" ? status : null;
+}
+
+/**
+ * Mensagem para o usuário a partir do erro da chamada à IA. O interceptor do sdk-local
+ * converte a resposta do backend em `Error.message`; ela só é exibida quando o status é do
+ * catálogo de erros de negócio do ai-service. Mensagens técnicas do axios, sem resposta do
+ * servidor, viram textos equivalentes aos do ai-service; o resto cai no texto padrão.
  */
 export function getAiErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) {
@@ -155,6 +174,11 @@ export function getAiErrorMessage(error: unknown): string {
   }
 
   if (GENERIC_HTTP_ERROR_PATTERN.test(message) || CANCELED_PATTERN.test(message)) {
+    return DEFAULT_AI_ERROR_MESSAGE;
+  }
+
+  const status = getResponseStatus(error);
+  if (status === null || !BUSINESS_ERROR_STATUSES.has(status)) {
     return DEFAULT_AI_ERROR_MESSAGE;
   }
 
