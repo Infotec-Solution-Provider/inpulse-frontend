@@ -168,14 +168,34 @@ const AGENT_ERROR_RULES: ReadonlyArray<{ pattern: RegExp; summary: string }> = [
     summary: "A IA respondeu fora do formato esperado.",
   },
   {
+    // Antes da regra de 404: o modelo inexistente na conta da OpenAI chega como 502 com “(OpenAI 404 …)”.
+    pattern: /modelo .*n[ãa]o est[áa] dispon[íi]vel|n[ãa]o est[áa] liberado/i,
+    summary: "O modelo configurado não está disponível para a IA.",
+  },
+  {
     pattern: /n[ãa]o encontrad[oa]|\b404\b/i,
     summary: "Conversa ou recurso não encontrado.",
   },
 ];
 
+/** Textos técnicos (Prisma, Node, axios) que não servem de resumo para quem lê a auditoria. */
+const TECHNICAL_MESSAGE_PATTERN =
+  /`|prisma|invocation|request failed with status code|cannot read propert|is not a function|is not defined|unexpected token|\b(?:type|reference|syntax|range)error\b/i;
+
 /**
- * Resume o `errorMessage` da auditoria em linguagem de negócio. `detail` guarda a mensagem
- * original (com o detalhe técnico), para ser exibida recolhida.
+ * O ai-service grava `mensagem de negócio (detalhe técnico)`; a parte de negócio é o texto
+ * antes do primeiro “ (”. Mensagens sem detalhe voltam inteiras.
+ */
+function getBusinessPart(message: string): string {
+  const detailStart = message.indexOf(" (");
+  return detailStart > 0 ? message.slice(0, detailStart).trim() : message;
+}
+
+/**
+ * Resume o `errorMessage` da auditoria em linguagem de negócio. As regras olham só a parte de
+ * negócio (um “404” do detalhe não vira “não encontrado”); sem regra, o resumo é a própria parte
+ * de negócio, ou o texto genérico quando ela é técnica. `detail` guarda a mensagem original
+ * (com o detalhe técnico), para ser exibida recolhida.
  */
 export function summarizeAgentError(message?: string | null): { summary: string; detail: string | null } {
   const original = typeof message === "string" ? message.trim() : "";
@@ -184,9 +204,33 @@ export function summarizeAgentError(message?: string | null): { summary: string;
     return { summary: DEFAULT_ERROR_SUMMARY, detail: null };
   }
 
-  const rule = AGENT_ERROR_RULES.find(({ pattern }) => pattern.test(original));
+  const businessPart = getBusinessPart(original);
+  const rule = AGENT_ERROR_RULES.find(({ pattern }) => pattern.test(businessPart));
+  if (rule) {
+    return { summary: rule.summary, detail: original };
+  }
 
-  return { summary: rule?.summary ?? DEFAULT_ERROR_SUMMARY, detail: original };
+  const summary = TECHNICAL_MESSAGE_PATTERN.test(businessPart) ? DEFAULT_ERROR_SUMMARY : businessPart;
+
+  return { summary, detail: original };
+}
+
+type MessageWithAgentLike = {
+  chatId?: number | null;
+  agentId?: number | null;
+};
+
+/**
+ * Se o agente respondeu neste atendimento. As mensagens abertas na tela são as do contato
+ * inteiro (todos os atendimentos); só contam as do chat atual.
+ */
+export function chatHasAgentMessages(
+  messages: ReadonlyArray<MessageWithAgentLike>,
+  chatId: number | null | undefined,
+): boolean {
+  if (typeof chatId !== "number") return false;
+
+  return messages.some((message) => message.chatId === chatId && !!message.agentId);
 }
 
 /** Agentes habilitados com o gatilho “Sempre”, do mais antigo para o mais novo (ordem de desempate). */

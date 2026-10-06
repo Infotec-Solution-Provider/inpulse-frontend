@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AGENT_ACTION_LABELS,
+  chatHasAgentMessages,
   findOverlappingAlwaysAgents,
   formatAiDateTime,
   getExecutionModeLabel,
@@ -160,6 +161,11 @@ describe("summarizeAgentError", () => {
     ["Resposta do modelo não é um JSON válido.", "A IA respondeu fora do formato esperado."],
     ["Chat não encontrado.", "Conversa ou recurso não encontrado."],
     ["Request failed with status code 404", "Conversa ou recurso não encontrado."],
+    [
+      "O modelo configurado não está disponível na conta da OpenAI. Avise o administrador. (OpenAI 404 (modelo gpt-5.6-sol): The model `gpt-5.6-sol` does not exist or you do not have access to it.)",
+      "O modelo configurado não está disponível para a IA.",
+    ],
+    ["O modelo o3 não está liberado para esta empresa.", "O modelo configurado não está disponível para a IA."],
   ];
 
   it.each(cases)("summarizes %j", (message, summary) => {
@@ -174,20 +180,77 @@ describe("summarizeAgentError", () => {
 
   it("does not confuse palavra-chave with the API key", () => {
     expect(summarizeAgentError("Adicione ao menos uma palavra-chave.").summary).toBe(
-      "Falha ao executar a ação do agente.",
+      "Adicione ao menos uma palavra-chave.",
     );
   });
 
-  it("falls back to a generic summary and keeps the original message as detail", () => {
-    expect(summarizeAgentError("Ação não permitida pelo agente: UPDATE_CRM")).toEqual({
-      summary: "Falha ao executar a ação do agente.",
-      detail: "Ação não permitida pelo agente: UPDATE_CRM",
-    });
+  it("only matches the rules against the business part, not the technical detail", () => {
+    expect(
+      summarizeAgentError(
+        "O serviço de WhatsApp não conseguiu concluir “transferir o atendimento”. Tente novamente em instantes. (whatsapp-service 429: timeout)",
+      ).summary,
+    ).toBe("O serviço de WhatsApp não conseguiu concluir “transferir o atendimento”. Tente novamente em instantes.");
+  });
+
+  it("uses the business part of an unmatched message as summary and keeps the original as detail", () => {
+    const cases: Array<[string, string]> = [
+      [
+        "A IA recusou a solicitação. Tente novamente ou escolha outro modelo. (OpenAI 400 (modelo gpt-5.4): Unsupported parameter: 'temperature')",
+        "A IA recusou a solicitação. Tente novamente ou escolha outro modelo.",
+      ],
+      [
+        "A IA está instável no momento. Tente novamente em instantes. (OpenAI 503 (modelo gpt-5.4): Service Unavailable)",
+        "A IA está instável no momento. Tente novamente em instantes.",
+      ],
+      [
+        "Sua sessão não tem permissão para esta consulta. Entre novamente.",
+        "Sua sessão não tem permissão para esta consulta. Entre novamente.",
+      ],
+      ["Ação não permitida pelo agente: UPDATE_CRM", "Ação não permitida pelo agente: UPDATE_CRM"],
+    ];
+
+    for (const [message, summary] of cases) {
+      expect(summarizeAgentError(message)).toEqual({ summary, detail: message });
+    }
+  });
+
+  it("falls back to a generic summary for technical messages", () => {
+    const messages = [
+      "Invalid `prisma.aiAgentChatSession.update()` invocation: Record to update not found.",
+      "Cannot read properties of undefined (reading 'id')",
+      "TypeError: agent.triggers is not iterable",
+      "Request failed with status code 500",
+    ];
+
+    for (const message of messages) {
+      expect(summarizeAgentError(message)).toEqual({ summary: "Falha ao executar a ação do agente.", detail: message });
+    }
   });
 
   it("has no detail when there is no message", () => {
     expect(summarizeAgentError(null)).toEqual({ summary: "Falha ao executar a ação do agente.", detail: null });
     expect(summarizeAgentError("   ")).toEqual({ summary: "Falha ao executar a ação do agente.", detail: null });
+  });
+});
+
+describe("chatHasAgentMessages", () => {
+  const messages = [
+    { chatId: 10, agentId: 4 },
+    { chatId: 11, agentId: null },
+    { chatId: 11 },
+    { chatId: null, agentId: 4 },
+  ];
+
+  it("only counts agent replies of the current chat", () => {
+    expect(chatHasAgentMessages(messages, 10)).toBe(true);
+    // O contato teve resposta do agente num atendimento anterior (chat 10), não neste.
+    expect(chatHasAgentMessages(messages, 11)).toBe(false);
+  });
+
+  it("is false without a current chat", () => {
+    expect(chatHasAgentMessages(messages, null)).toBe(false);
+    expect(chatHasAgentMessages(messages, undefined)).toBe(false);
+    expect(chatHasAgentMessages([], 10)).toBe(false);
   });
 });
 

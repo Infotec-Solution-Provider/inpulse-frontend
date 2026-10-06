@@ -30,6 +30,7 @@ import TransferChatModal from "./(actions)/transfer-chat-modal";
 import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
 import { useAuthContext } from "@/app/auth-context";
+import { chatHasAgentMessages } from "@/lib/utils/ai-agent-labels";
 
 const safeFormatPhone = (phone: string | null): string => {
   try {
@@ -80,13 +81,15 @@ export default function ChatHeader({
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiSupervisor);
   const canOpenCustomerDetail = currentChat?.chatType === "wpp" && !!customerId;
   // O agente pode já ter saído do chat (transferência, pausa), mas as respostas dele ficam com agentId.
-  const chatHasAgentMessages = useMemo(
-    () => currentChatMessages.some((message) => !!(message as { agentId?: number | null }).agentId),
-    [currentChatMessages],
+  // As mensagens abertas são as do contato inteiro: só contam as deste atendimento.
+  const currentChatId = currentChat?.id;
+  const hasAgentMessages = useMemo(
+    () => chatHasAgentMessages(currentChatMessages, currentChatId),
+    [currentChatMessages, currentChatId],
   );
   const hasAiAgent =
     currentChat?.chatType === "wpp" &&
-    (!!(currentChat as { agentId?: number | null }).agentId || chatHasAgentMessages) &&
+    (!!(currentChat as { agentId?: number | null }).agentId || hasAgentMessages) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
   const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || canOpenSupervisorAssistant || hasAiAgent || canInteract;
