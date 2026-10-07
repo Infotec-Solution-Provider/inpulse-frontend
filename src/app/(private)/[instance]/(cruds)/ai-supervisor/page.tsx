@@ -5,7 +5,7 @@ import { AppContext } from "@/app/(private)/[instance]/app-context";
 import { useCustomersContext } from "@/app/(private)/[instance]/(cruds)/customers/customers-context";
 import { DetailedChat, useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import CustomerCrmDetailModal from "@/app/(private)/[instance]/(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
-import { AI_MODEL_CATALOG } from "@/lib/ai-model-catalog";
+import { ASSISTANT_MODEL_CATALOG } from "@/lib/ai-model-catalog";
 import AssistantMarkdown from "@/lib/components/assistant-markdown";
 import aiService from "@/lib/services/ai.service";
 import { executeGeneratedReport } from "@/lib/reports/api";
@@ -66,9 +66,10 @@ import { toast } from "react-toastify";
 const assistantBubbleClass = "self-start max-w-[88%] rounded-2xl rounded-bl-none border border-slate-200 bg-white px-4 py-3 text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200";
 const userBubbleClass = "self-end max-w-[88%] rounded-2xl rounded-br-none bg-green-200 px-4 py-3 text-slate-800 shadow-sm dark:bg-green-800 dark:text-slate-100";
 
+// Só os modelos que aceitam as ferramentas do Assistente (GPT-6 Astra e GPT-6.1 Sol ficam fora).
 const AVAILABLE_MODELS = [
 	{ value: "", label: "Modelo padrão" },
-	...AI_MODEL_CATALOG,
+	...ASSISTANT_MODEL_CATALOG,
 ];
 
 const ACCEPTED_FILE_TYPES = ".txt,.md,.csv,.json,.log";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
-import { AI_MODEL_CATALOG, modelSupportsTemperature } from "@/lib/ai-model-catalog";
+import { AI_MODEL_CATALOG, AI_MODEL_TIERS, findCatalogModel, modelSupportsTemperature } from "@/lib/ai-model-catalog";
 import filesService from "@/lib/services/files.service";
 import type {
   AiAgent,
@@ -169,6 +169,11 @@ const DEFAULT_MESSAGE_DURING_HOURS_TRIGGER_CONFIG = {
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const MODEL_OPTIONS = AI_MODEL_CATALOG.map((model) => model.value);
+
+function modelGroup(value: string): string {
+  const tier = findCatalogModel(value)?.tier;
+  return AI_MODEL_TIERS.find((entry) => entry.value === tier)?.label ?? "Outros";
+}
 
 const PROFILE_LEVEL_OPTIONS: { value: CustomerProfileSummaryLevel; label: string }[] = [
   { value: "potencial_de_compra", label: "Potencial de compra" },
@@ -1151,6 +1156,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   <Autocomplete
                     freeSolo
                     options={MODEL_OPTIONS}
+                    groupBy={modelGroup}
                     value={form.model}
                     onChange={(_, value) => setField("model", value ?? "")}
                     onInputChange={(_, value, reason) => {
@@ -1163,7 +1169,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                         {...params}
                         fullWidth
                         placeholder="Ex.: gpt-5.4"
-                        helperText="Sugestões rápidas: gpt-5.4, gpt-4o e gpt-4o-mini. Se precisar, digite outro modelo manualmente."
+                        helperText="Sugestões por geração, do GPT-6 ao GPT-4o. Se precisar, digite outro modelo manualmente."
                       />
                     )}
                   />

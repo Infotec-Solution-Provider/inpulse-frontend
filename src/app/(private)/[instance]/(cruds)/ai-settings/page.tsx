@@ -1,872 +1,346 @@
 "use client";
 
 import { useAuthContext } from "@/app/auth-context";
-import { AI_MODEL_CATALOG, getOffCatalogModels, isWholeCatalogSelected } from "@/lib/ai-model-catalog";
+import { ASSISTANT_MODEL_CATALOG, getOffCatalogModels, isWholeCatalogSelected } from "@/lib/ai-model-catalog";
 import aiService from "@/lib/services/ai.service";
 import usersService from "@/lib/services/users.service";
-import type {
-	AiFeatureModels,
-	AiOpenAiKeyStatus,
-	AiOperatorUsageStat,
-	AiTenantConfig,
-	AiUsageSummary,
-} from "@/lib/types/sdk-local.types";
+import type { AiOpenAiKeyStatus, AiTenantConfig, AiUsageSummary } from "@/lib/types/sdk-local.types";
 import { User, UserRole } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import KeyIcon from "@mui/icons-material/Key";
 import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
-import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
+import SavingsOutlinedIcon from "@mui/icons-material/SavingsOutlined";
 import TuneIcon from "@mui/icons-material/Tune";
-import {
-	Alert,
-	Button,
-	CircularProgress,
-	FormControl,
-	InputAdornment,
-	InputLabel,
-	LinearProgress,
-	MenuItem,
-	Select,
-	Skeleton,
-	TextField,
-	Tooltip,
-} from "@mui/material";
-import { useEffect, useState } from "react";
+import { Alert, Button, CircularProgress, Skeleton } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import BudgetPanel from "./budget-panel";
+import FeatureModelsPanel from "./feature-models-panel";
+import ModelsPanel, { ModelsPanelActions } from "./models-panel";
 import OpenAiKeyPanel from "./openai-key-panel";
-import {
-	Bar,
-	BarChart,
-	CartesianGrid,
-	Cell,
-	ResponsiveContainer,
-	Tooltip as ChartTooltip,
-	XAxis,
-	YAxis,
-} from "recharts";
+import { SectionCard } from "./presentation";
+import { formFromConfig, formKey, parsePositiveUsd, validateForm, type AiSettingsForm } from "./settings-form";
+import UsagePanel, { UsagePanelActions, type UsagePeriod, type UsageView } from "./usage-panel";
 
-// Catálogo compartilhado entre configurações, Assistente IA e agentes.
+/** Consumo do período; `period` null não carrega nada. */
+function useUsageSummary(period: UsagePeriod | null, token: string | null | undefined, enabled: boolean) {
+	const [state, setState] = useState<{ data: AiUsageSummary | null; loading: boolean; failed: boolean }>({
+		data: null,
+		loading: false,
+		failed: false,
+	});
 
-const KNOWN_MODELS = AI_MODEL_CATALOG;
+	useEffect(() => {
+		if (!enabled || period === null || typeof token !== "string") return;
+		let cancelled = false;
+		setState((current) => ({ data: current.data, loading: true, failed: false }));
+		aiService
+			.getUsageSummary(period, token)
+			.then((data) => {
+				if (!cancelled) setState({ data, loading: false, failed: false });
+			})
+			.catch((error) => {
+				if (cancelled) return;
+				setState({ data: null, loading: false, failed: true });
+				toast.error(`Falha ao carregar o consumo: ${sanitizeErrorMessage(error)}`);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [period, token, enabled]);
 
-const TIER_LABELS: Record<string, string> = {
-	gpt56:     "GPT-5.6",
-	flagship:  "Flagship",
-	mini:      "Mini / Nano",
-	reasoning: "Raciocínio",
-	legacy:    "Geração anterior",
-};
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const FEATURE_LABELS: Record<keyof AiFeatureModels, string> = {
-	suggest_response: "Sugerir Resposta",
-	summarize_chat:   "Resumir Conversa",
-	analyze_customer: "Analisar Cliente",
-	supervisor_chat:  "Assistente IA",
-};
-
-const PERIOD_OPTIONS = [
-	{ value: "current_month", label: "Mês atual" },
-	{ value: "last_30d",      label: "Últimos 30 dias" },
-	{ value: "all",           label: "Todo o período" },
-];
-
-const CHART_COLORS = ["#6366f1", "#8b5cf6", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444"];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatUsd(value: number): string {
-	return value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 4 });
+	return state;
 }
 
-function formatTokens(value: number): string {
-	if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
-	if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-	return String(value);
-}
-
-// ─── Visual building blocks ───────────────────────────────────────────────────
-
-function SectionCard({
-	icon,
-	title,
-	description,
-	children,
-}: {
-	icon: React.ReactNode;
-	title: string;
-	description?: string;
-	children: React.ReactNode;
-}) {
+function PageShell({ children, header }: { children: React.ReactNode; header?: React.ReactNode }) {
 	return (
-		<section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-			<header className="mb-5 flex items-start gap-3">
-				<span className="rounded-md bg-slate-100 p-2 dark:bg-slate-800">{icon}</span>
-				<div>
-					<h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
-					{description && (
-						<p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{description}</p>
-					)}
-				</div>
-			</header>
-			{children}
-		</section>
-	);
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-	return (
-		<span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-			{children}
-		</span>
-	);
-}
-
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-	return (
-		<div className="rounded-md bg-slate-50 p-4 dark:bg-slate-800/40">
-			<Label>{label}</Label>
-			<p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</p>
-			{sub && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{sub}</p>}
+		<div className="box-border h-full overflow-y-auto bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+			{header}
+			<div className="mx-auto grid w-full max-w-[1480px] gap-4 px-4 py-4 md:px-6 md:py-5">{children}</div>
 		</div>
 	);
 }
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function AiSettingsPage() {
 	const { token, user, instance } = useAuthContext();
-	const userLevel = String(user?.NIVEL ?? "");
-	const isAdmin = userLevel === UserRole.ADMIN;
+	const isAdmin = String(user?.NIVEL ?? "") === UserRole.ADMIN;
 
-	// ── Config state ────────────────────────────────────────────────────────────
 	const [config, setConfig] = useState<AiTenantConfig | null>(null);
 	const [loadingConfig, setLoadingConfig] = useState(true);
-	const [savingConfig, setSavingConfig] = useState(false);
 	const [openaiKey, setOpenaiKey] = useState<AiOpenAiKeyStatus | null>(null);
-
-	const [budgetInput, setBudgetInput] = useState("");
-	const [selectedModels, setSelectedModels] = useState<string[]>([]);
-	const [featureModels, setFeatureModels] = useState<AiFeatureModels>({});
-
-	// Per-operator budgets: Record<operatorId, budgetUsd as string>
-	const [operatorBudgetInputs, setOperatorBudgetInputs] = useState<Record<string, string>>({});
-
-	// ── Usage state ─────────────────────────────────────────────────────────────
-	const [period, setPeriod] = useState("current_month");
-	const [usage, setUsage] = useState<AiUsageSummary | null>(null);
-	const [loadingUsage, setLoadingUsage] = useState(false);
-
-	// Usage view tab
-	const [usageTab, setUsageTab] = useState<"feature" | "operator">("feature");
-
-	// Operators (for budget select)
+	const [form, setForm] = useState<AiSettingsForm | null>(null);
+	const [savedForm, setSavedForm] = useState<AiSettingsForm | null>(null);
+	const [saving, setSaving] = useState(false);
+	const [invalidField, setInvalidField] = useState<string | null>(null);
 	const [operators, setOperators] = useState<User[]>([]);
 
-	// ── Load config ─────────────────────────────────────────────────────────────
+	const [period, setPeriod] = useState<UsagePeriod>("current_month");
+	const [usageView, setUsageView] = useState<UsageView>("feature");
+	const monthUsage = useUsageSummary("current_month", token, isAdmin);
+	const periodUsage = useUsageSummary(period === "current_month" ? null : period, token, isAdmin);
+	const usage = period === "current_month" ? monthUsage : periodUsage;
+
 	useEffect(() => {
-		if (typeof token !== "string" || !instance) return;
-		const authToken = token;
-		const inst = instance;
+		if (!isAdmin || typeof token !== "string" || !instance) return;
+		let cancelled = false;
 
-		async function load() {
-			try {
-				setLoadingConfig(true);
-				const c = await aiService.getTenantConfig(inst, authToken);
-				setConfig(c);
-				setOpenaiKey(c.openaiKey && "storageAvailable" in c.openaiKey ? c.openaiKey : null);
-				setBudgetInput(c.monthlyBudgetUsd != null ? String(c.monthlyBudgetUsd) : "");
-				setSelectedModels(c.availableModels ?? KNOWN_MODELS.map((m) => m.value));
-				setFeatureModels(c.featureModels ?? {});
+		setLoadingConfig(true);
+		aiService
+			.getTenantConfig(instance, token)
+			.then((loaded) => {
+				if (cancelled) return;
+				const initial = formFromConfig(loaded);
+				setConfig(loaded);
+				setOpenaiKey(loaded.openaiKey && "storageAvailable" in loaded.openaiKey ? loaded.openaiKey : null);
+				setForm(initial);
+				setSavedForm(initial);
+			})
+			.catch((error) => {
+				if (!cancelled) toast.error(`Falha ao carregar as configurações: ${sanitizeErrorMessage(error)}`);
+			})
+			.finally(() => {
+				if (!cancelled) setLoadingConfig(false);
+			});
 
-				// Populate operator budget inputs
-				const budgets = c.operatorBudgets as Record<string, number> | null | undefined;
-				if (budgets && typeof budgets === "object") {
-					const inputs: Record<string, string> = {};
-					for (const [id, val] of Object.entries(budgets)) {
-						inputs[id] = String(val);
-					}
-					setOperatorBudgetInputs(inputs);
-				}
-			} catch (error) {
-				toast.error(`Falha ao carregar configurações: ${sanitizeErrorMessage(error)}`);
-			} finally {
-				setLoadingConfig(false);
-			}
-		}
+		return () => {
+			cancelled = true;
+		};
+	}, [isAdmin, token, instance]);
 
-		void load();
-	}, [token, instance]);
-
-	// ── Load usage ──────────────────────────────────────────────────────────────
 	useEffect(() => {
-		if (typeof token !== "string") return;
-		const authToken = token;
-
-		async function load() {
-			try {
-				setLoadingUsage(true);
-				const data = await aiService.getUsageSummary(period, authToken);
-				setUsage(data);
-			} catch (error) {
-				toast.error(`Falha ao carregar uso: ${sanitizeErrorMessage(error)}`);
-			} finally {
-				setLoadingUsage(false);
-			}
-		}
-
-		void load();
-	}, [token, period]);
-
-	// ── Load operators ──────────────────────────────────────────────────────────
-	useEffect(() => {
-		if (typeof token !== "string") return;
+		if (!isAdmin || typeof token !== "string") return;
 		usersService
 			.getUsers({ perPage: "500" })
 			.then(({ data }) => setOperators(data))
-			.catch(() => {});
-	}, [token]);
+			.catch(() => setOperators([]));
+	}, [isAdmin, token]);
 
-	// ── Handlers ────────────────────────────────────────────────────────────────
-	function toggleModel(value: string) {
-		setSelectedModels((current) =>
-			current.includes(value) ? current.filter((m) => m !== value) : [...current, value],
-		);
+	const dirty = useMemo(
+		() => form !== null && savedForm !== null && formKey(form) !== formKey(savedForm),
+		[form, savedForm],
+	);
+
+	const operatorMonthCosts = useMemo(() => {
+		if (!monthUsage.data) return null;
+		return new Map(monthUsage.data.byOperator.map((row) => [row.operatorId, row.estimatedCostUsd]));
+	}, [monthUsage.data]);
+
+	const operatorLimits = useMemo(() => {
+		const limits: Record<string, number> = {};
+		for (const [id, raw] of Object.entries(form?.operatorBudgets ?? {})) {
+			const value = parsePositiveUsd(raw);
+			if (value !== null) limits[id] = value;
+		}
+		return limits;
+	}, [form?.operatorBudgets]);
+
+	function update(patch: Partial<AiSettingsForm>) {
+		setForm((current) => (current ? { ...current, ...patch } : current));
+		setInvalidField(null);
 	}
 
-	function setOperatorBudget(operatorId: string, value: string) {
-		setOperatorBudgetInputs((prev) => {
-			if (value === "") {
-				const next = { ...prev };
-				delete next[operatorId];
-				return next;
-			}
-			return { ...prev, [operatorId]: value };
-		});
+	function operatorName(operatorId: number): string {
+		const operator = operators.find((entry) => entry.CODIGO === operatorId);
+		return operator ? operator.NOME : `Operador #${operatorId}`;
 	}
 
-	async function handleSaveConfig() {
-		if (typeof token !== "string" || !instance) return;
+	async function handleSave() {
+		if (!form || typeof token !== "string" || !instance) return;
 
-		const parsedBudget = budgetInput.trim() === "" ? null : Number(budgetInput);
-		if (budgetInput.trim() !== "" && (isNaN(parsedBudget!) || parsedBudget! <= 0)) {
-			toast.error("Orçamento inválido. Informe um número positivo ou deixe em branco para ilimitado.");
+		const result = validateForm(form);
+		if (!result.ok) {
+			setInvalidField(result.field);
+			toast.error(result.error);
 			return;
 		}
 
-		// Parse per-operator budgets
-		const parsedOperatorBudgets: Record<string, number> = {};
-		for (const [id, raw] of Object.entries(operatorBudgetInputs)) {
-			const n = Number(raw);
-			if (!isNaN(n) && n > 0) {
-				parsedOperatorBudgets[id] = n;
-			}
-		}
-
-		// Compara o conteúdo: uma lista restrita do mesmo tamanho do catálogo não vira "sem restrição".
-		const allSelected = isWholeCatalogSelected(selectedModels, KNOWN_MODELS);
-
 		try {
-			setSavingConfig(true);
-			const updated = await aiService.upsertTenantConfig(
-				instance,
-				{
-					monthlyBudgetUsd: parsedBudget,
-					availableModels: allSelected ? null : selectedModels,
-					featureModels: Object.keys(featureModels).length === 0 ? null : featureModels,
-					operatorBudgets: Object.keys(parsedOperatorBudgets).length === 0 ? null : parsedOperatorBudgets,
-				},
-				token,
-			);
+			setSaving(true);
+			const updated = await aiService.upsertTenantConfig(instance, result.payload, token);
+			const next = formFromConfig(updated);
 			setConfig(updated);
-			toast.success("Configurações salvas com sucesso.");
+			setForm(next);
+			setSavedForm(next);
+			toast.success("Configurações de IA salvas.");
 		} catch (error) {
 			toast.error(`Falha ao salvar: ${sanitizeErrorMessage(error)}`);
 		} finally {
-			setSavingConfig(false);
+			setSaving(false);
 		}
 	}
 
-	// ── Guard ────────────────────────────────────────────────────────────────────
+	function handleDiscard() {
+		setForm(savedForm);
+		setInvalidField(null);
+	}
+
 	if (!isAdmin) {
 		return (
-			<div className="box-border h-full overflow-y-auto bg-white px-4 py-8 text-black dark:bg-gray-900 dark:text-white">
+			<PageShell>
 				<Alert severity="warning">Acesso restrito a administradores.</Alert>
-			</div>
+			</PageShell>
 		);
 	}
 
-	// ── Computed values ──────────────────────────────────────────────────────────
-	const budgetValue = budgetInput.trim() === "" ? null : Number(budgetInput);
-	const currentMonthCost = period === "current_month" ? (usage?.estimatedCostUsd ?? null) : null;
-	const budgetPercent =
-		budgetValue != null && budgetValue > 0 && currentMonthCost != null
-			? Math.min(100, (currentMonthCost / budgetValue) * 100)
-			: null;
-
-	// Per-operator usage enriched with budget info
-	const getOperatorName = (id: number) => {
-		const op = operators.find((o) => o.CODIGO === id);
-		return op ? `${op.NOME} (#${id})` : `#${id}`;
-	};
-	const operatorUsageRows: Array<AiOperatorUsageStat & { budgetUsd: number | null; budgetPercent: number | null }> =
-		(usage?.byOperator ?? []).map((op) => {
-			const key = String(op.operatorId);
-			const budgetRaw = operatorBudgetInputs[key];
-			const budgetUsd = budgetRaw != null && budgetRaw !== "" ? Number(budgetRaw) : null;
-			const bPct =
-				budgetUsd != null && budgetUsd > 0
-					? Math.min(100, (op.estimatedCostUsd / budgetUsd) * 100)
-					: null;
-			return { ...op, budgetUsd, budgetPercent: bPct };
-		});
-
-	// Group models by tier for display
-	const modelsByTier = KNOWN_MODELS.reduce<Record<string, typeof KNOWN_MODELS>>(
-		(acc, m) => ({ ...acc, [m.tier]: [...(acc[m.tier] ?? []), m] }),
-		{},
-	);
-
-	// Liberados antes do corte do catálogo (o3, GPT-3.5 Turbo…): continuam visíveis para poderem ser desmarcados.
-	const offCatalogModels = getOffCatalogModels([...(config?.availableModels ?? []), ...selectedModels], KNOWN_MODELS);
-
-	function renderModelButton(value: string, label: string) {
-		const checked = selectedModels.includes(value);
-		return (
-			<button
-				key={value}
-				type="button"
-				onClick={() => toggleModel(value)}
-				className={[
-					"rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-					checked
-						? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-400 dark:bg-indigo-950/50 dark:text-indigo-300"
-						: "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
-				].join(" ")}
-			>
-				{label}
-			</button>
-		);
-	}
-
-	return (
-		<div className="box-border h-full overflow-y-auto bg-white px-4 py-8 text-black dark:bg-gray-900 dark:text-white">
-			<div className="mx-auto grid w-full max-w-[1480px] gap-6">
-
-				{/* ── Page header ───────────────────────────────────────────────── */}
-				<div>
-					<h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Configurações de IA</h1>
-					<p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-						Gerencie modelos, orçamentos e visualize o consumo de IA por funcionalidade e operador.
-					</p>
+	const header = (
+		<header className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+			<div className="mx-auto flex w-full max-w-[1480px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 md:px-6">
+				<div className="flex min-w-0 items-center gap-3">
+					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white dark:bg-indigo-500">
+						<AutoAwesomeIcon fontSize="small" />
+					</span>
+					<div className="min-w-0">
+						<h1 className="text-lg font-semibold leading-tight text-slate-900 dark:text-slate-100">Configurações de IA</h1>
+						<p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
+							Chave da OpenAI, modelos, limites de gasto e consumo desta empresa.
+						</p>
+					</div>
 				</div>
 
+				<div className="ml-auto flex items-center gap-2">
+					{dirty && (
+						<span className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+							<span className="h-2 w-2 rounded-full bg-amber-500" aria-hidden />
+							Alterações não salvas
+						</span>
+					)}
+					<Button variant="text" onClick={handleDiscard} disabled={!dirty || saving}>
+						Descartar
+					</Button>
+					<Button
+						variant="contained"
+						onClick={() => void handleSave()}
+						disabled={!dirty || saving}
+						startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
+						disableElevation
+					>
+						{saving ? "Salvando…" : "Salvar"}
+					</Button>
+				</div>
+			</div>
+		</header>
+	);
+
+	if (loadingConfig || !form) {
+		return (
+			<PageShell header={header}>
 				{loadingConfig ? (
 					<>
-						<Skeleton variant="rectangular" height={140} className="rounded-md" />
-						<Skeleton variant="rectangular" height={240} className="rounded-md" />
-						<Skeleton variant="rectangular" height={180} className="rounded-md" />
+						<div className="grid gap-4 lg:grid-cols-2">
+							<Skeleton variant="rounded" height={200} />
+							<Skeleton variant="rounded" height={200} />
+						</div>
+						<Skeleton variant="rounded" height={420} />
+						<Skeleton variant="rounded" height={160} />
 					</>
 				) : (
-					<>
-						{/* ── Section: OpenAI key ───────────────────────────────── */}
-						<SectionCard
-							icon={<KeyIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
-							title="Chave da OpenAI"
-							description="A IA desta empresa usa a chave da conta da empresa na OpenAI. Só administradores veem e alteram esta configuração."
-						>
-							{typeof token === "string" && instance ? (
-								<OpenAiKeyPanel instance={instance} token={token} status={openaiKey} onChange={setOpenaiKey} />
-							) : null}
-						</SectionCard>
-
-						{/* ── Section: Budget ───────────────────────────────────── */}
-						<SectionCard
-							icon={<AttachMoneyIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
-							title="Orçamento mensal"
-							description="Defina um limite de gasto em USD para o mês corrente. Deixe em branco para uso ilimitado."
-						>
-							<div className="flex flex-col gap-5">
-								<div className="max-w-xs">
-									<TextField
-										label="Limite mensal"
-										type="number"
-										size="small"
-										fullWidth
-										value={budgetInput}
-										onChange={(e) => setBudgetInput(e.target.value)}
-										placeholder="Ilimitado"
-										inputProps={{ min: 0, step: 0.01 }}
-										InputProps={{
-											startAdornment: <InputAdornment position="start">$</InputAdornment>,
-										}}
-									/>
-								</div>
-
-								{budgetPercent !== null && (
-									<div className="max-w-sm">
-										<p className="mb-2 text-sm text-slate-600 dark:text-slate-400">
-											Uso no mês atual:{" "}
-											<strong className="text-slate-900 dark:text-slate-100">
-												{formatUsd(currentMonthCost!)}
-											</strong>{" "}
-											de{" "}
-											<strong className="text-slate-900 dark:text-slate-100">
-												{formatUsd(budgetValue!)}
-											</strong>{" "}
-											<span className={budgetPercent >= 90 ? "text-red-600" : "text-slate-500"}>
-												({budgetPercent.toFixed(1)}%)
-											</span>
-										</p>
-										<LinearProgress
-											variant="determinate"
-											value={budgetPercent}
-											color={budgetPercent >= 90 ? "error" : budgetPercent >= 70 ? "warning" : "primary"}
-											sx={{ height: 8, borderRadius: 4 }}
-										/>
-									</div>
-								)}
-							</div>
-						</SectionCard>
-
-						{/* ── Section: Available Models ─────────────────────────── */}
-						<SectionCard
-							icon={<ModelTrainingIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
-							title="Modelos disponíveis"
-							description="Selecione os modelos que os operadores podem usar no Assistente IA. Sem seleção = todos liberados."
-						>
-							<div className="grid gap-5">
-								{Object.entries(modelsByTier).map(([tier, models]) => (
-									<div key={tier}>
-										<Label>{TIER_LABELS[tier] ?? tier}</Label>
-										<div className="mt-2 flex flex-wrap gap-2">
-											{models.map((m) => renderModelButton(m.value, m.label))}
-										</div>
-									</div>
-								))}
-								{offCatalogModels.length > 0 && (
-									<div>
-										<Label>Fora do catálogo</Label>
-										<p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-											Modelos liberados antes que não estão mais na lista recomendada. Desmarque para revogar.
-										</p>
-										<div className="mt-2 flex flex-wrap gap-2">
-											{offCatalogModels.map((value) => renderModelButton(value, value))}
-										</div>
-									</div>
-								)}
-							</div>
-						</SectionCard>
-
-						{/* ── Section: Per-feature Models ───────────────────────── */}
-						<SectionCard
-							icon={<TuneIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
-							title="Modelo por funcionalidade"
-							description="Sobrescreve o modelo padrão do tenant para cada funcionalidade específica."
-						>
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-								{(Object.keys(FEATURE_LABELS) as (keyof AiFeatureModels)[]).map((key) => (
-									<FormControl key={key} size="small" fullWidth>
-										<InputLabel>{FEATURE_LABELS[key]}</InputLabel>
-										<Select
-											label={FEATURE_LABELS[key]}
-											value={featureModels[key] ?? ""}
-											onChange={(e) =>
-												setFeatureModels((prev) => ({
-													...prev,
-													[key]: e.target.value === "" ? undefined : e.target.value,
-												}))
-											}
-										>
-											<MenuItem value="">
-												<em>Padrão do tenant</em>
-											</MenuItem>
-											{featureModels[key] && !KNOWN_MODELS.some((m) => m.value === featureModels[key]) && (
-												<MenuItem value={featureModels[key]}>{featureModels[key]} (fora do catálogo)</MenuItem>
-											)}
-											{KNOWN_MODELS.map((m) => (
-												<MenuItem key={m.value} value={m.value}>
-													{m.label}
-												</MenuItem>
-											))}
-										</Select>
-									</FormControl>
-								))}
-							</div>
-						</SectionCard>
-
-						{/* ── Section: Per-operator budgets ─────────────────────── */}
-						<SectionCard
-							icon={<PeopleAltIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
-							title="Orçamento por operador"
-							description="Defina limites mensais individuais de gasto em USD por operador."
-						>
-							<div className="space-y-4">
-								<div className="rounded-md bg-slate-50 p-4 dark:bg-slate-800/40">
-									<Label>Operadores com limite definido</Label>
-									<div className="mt-3 flex flex-col gap-3">
-										{Object.keys(operatorBudgetInputs).length === 0 ? (
-											<p className="text-sm text-slate-500 dark:text-slate-400">
-												Nenhum limite por operador configurado.
-											</p>
-										) : (
-											Object.entries(operatorBudgetInputs).map(([opId, val]) => (
-												<div key={opId} className="flex items-center gap-3">
-													<span className="min-w-40 text-sm font-medium text-slate-700 dark:text-slate-300">
-														{getOperatorName(Number(opId))}
-													</span>
-													<TextField
-														size="small"
-														type="number"
-														value={val}
-														onChange={(e) => setOperatorBudget(opId, e.target.value)}
-														placeholder="USD/mês"
-														inputProps={{ min: 0, step: 0.01 }}
-														InputProps={{
-															startAdornment: <InputAdornment position="start">$</InputAdornment>,
-														}}
-														sx={{ maxWidth: 180 }}
-													/>
-													<button
-														type="button"
-														onClick={() => setOperatorBudget(opId, "")}
-														className="text-xs text-slate-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
-													>
-														Remover
-													</button>
-												</div>
-											))
-										)}
-									</div>
-								</div>
-
-								<AddOperatorBudgetRow onAdd={setOperatorBudget} operators={operators} />
-							</div>
-						</SectionCard>
-
-						{/* Save button */}
-						<div className="flex justify-end">
-							<Button
-								variant="contained"
-								onClick={handleSaveConfig}
-								disabled={savingConfig}
-								startIcon={savingConfig ? <CircularProgress size={16} color="inherit" /> : undefined}
-								sx={{ px: 4 }}
-							>
-								Salvar configurações
-							</Button>
-						</div>
-					</>
+					<Alert severity="error">Não foi possível carregar as configurações de IA. Recarregue a página.</Alert>
 				)}
-
-				{/* ── Divider ───────────────────────────────────────────────────── */}
-				<hr className="border-slate-200 dark:border-slate-700" />
-
-				{/* ── Section: Usage ────────────────────────────────────────────── */}
-				<SectionCard
-					icon={<QueryStatsIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
-					title="Consumo de IA"
-					description="Tokens consumidos e custo estimado por funcionalidade e por operador."
-				>
-					{/* Controls */}
-					<div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-						{/* Tab switcher */}
-						<div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
-							{(["feature", "operator"] as const).map((tab) => (
-								<button
-									key={tab}
-									type="button"
-									onClick={() => setUsageTab(tab)}
-									className={[
-										"px-4 py-1.5 text-sm font-medium transition-colors",
-										usageTab === tab
-											? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-											: "bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800",
-									].join(" ")}
-								>
-									{tab === "feature" ? "Por funcionalidade" : "Por operador"}
-								</button>
-							))}
-						</div>
-
-						<FormControl size="small" sx={{ minWidth: 180 }}>
-							<InputLabel>Período</InputLabel>
-							<Select
-								label="Período"
-								value={period}
-								onChange={(e) => setPeriod(e.target.value)}
-							>
-								{PERIOD_OPTIONS.map(({ value, label }) => (
-									<MenuItem key={value} value={value}>
-										{label}
-									</MenuItem>
-								))}
-							</Select>
-						</FormControl>
-					</div>
-
-					{loadingUsage ? (
-						<div className="flex items-center justify-center py-16">
-							<CircularProgress />
-						</div>
-					) : usage ? (
-						<div className="space-y-6">
-							{/* Summary stat cards */}
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-								<StatCard
-									label="Tokens de entrada"
-									value={formatTokens(usage.totalInputTokens)}
-								/>
-								<StatCard
-									label="Tokens de saída"
-									value={formatTokens(usage.totalOutputTokens)}
-								/>
-								<StatCard
-									label="Custo estimado"
-									value={formatUsd(usage.estimatedCostUsd)}
-									sub="Estimativa baseada nos preços da OpenAI"
-								/>
-							</div>
-
-							{/* ── Feature view ───────────────────────────────────── */}
-							{usageTab === "feature" && (
-								<>
-									{usage.byFeature.length > 0 ? (
-										<>
-											<Label>Custo por funcionalidade (USD)</Label>
-											<ResponsiveContainer width="100%" height={200} className="mt-2">
-												<BarChart data={usage.byFeature} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-													<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-													<XAxis dataKey="feature" tick={{ fontSize: 12 }} />
-													<YAxis
-														tickFormatter={(v: number) => `$${v.toFixed(4)}`}
-														tick={{ fontSize: 11 }}
-														width={76}
-													/>
-													<ChartTooltip
-														formatter={(v: unknown) => [
-															typeof v === "number" ? formatUsd(v) : String(v),
-															"Custo estimado",
-														]}
-													/>
-													<Bar dataKey="estimatedCostUsd" radius={[4, 4, 0, 0]}>
-														{usage.byFeature.map((_, idx) => (
-															<Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-														))}
-													</Bar>
-												</BarChart>
-											</ResponsiveContainer>
-
-											<div className="overflow-x-auto">
-												<table className="w-full text-sm">
-													<thead>
-														<tr className="border-b border-slate-200 dark:border-slate-700">
-															<th className="pb-2 text-left"><Label>Funcionalidade</Label></th>
-															<th className="pb-2 text-right"><Label>Chamadas</Label></th>
-															<th className="pb-2 text-right"><Label>Tokens entrada</Label></th>
-															<th className="pb-2 text-right"><Label>Tokens saída</Label></th>
-															<th className="pb-2 text-right"><Label>Custo estimado</Label></th>
-														</tr>
-													</thead>
-													<tbody>
-														{usage.byFeature.map((row) => (
-															<tr
-																key={row.feature}
-																className="border-b border-slate-100 dark:border-slate-800"
-															>
-																<td className="py-2 text-slate-900 dark:text-slate-100">{row.feature}</td>
-																<td className="py-2 text-right text-slate-700 dark:text-slate-300">{row.callCount}</td>
-																<td className="py-2 text-right text-slate-700 dark:text-slate-300">{formatTokens(row.inputTokens)}</td>
-																<td className="py-2 text-right text-slate-700 dark:text-slate-300">{formatTokens(row.outputTokens)}</td>
-																<td className="py-2 text-right font-medium text-slate-900 dark:text-slate-100">{formatUsd(row.estimatedCostUsd)}</td>
-															</tr>
-														))}
-													</tbody>
-												</table>
-											</div>
-										</>
-									) : (
-										<p className="text-sm text-slate-500 dark:text-slate-400">
-											Nenhum dado de uso disponível para o período selecionado.
-										</p>
-									)}
-								</>
-							)}
-
-							{/* ── Operator view ──────────────────────────────────── */}
-							{usageTab === "operator" && (
-								<>
-									{operatorUsageRows.length > 0 ? (
-										<>
-											<Label>Custo por operador (USD)</Label>
-											<ResponsiveContainer width="100%" height={200} className="mt-2">
-												<BarChart
-													data={operatorUsageRows.map((r) => ({
-														name: getOperatorName(r.operatorId),
-														estimatedCostUsd: r.estimatedCostUsd,
-													}))}
-													margin={{ top: 4, right: 16, left: 0, bottom: 4 }}
-												>
-													<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-													<XAxis dataKey="name" tick={{ fontSize: 12 }} />
-													<YAxis
-														tickFormatter={(v: number) => `$${v.toFixed(4)}`}
-														tick={{ fontSize: 11 }}
-														width={76}
-													/>
-													<ChartTooltip
-														formatter={(v: unknown) => [
-															typeof v === "number" ? formatUsd(v) : String(v),
-															"Custo estimado",
-														]}
-													/>
-													<Bar dataKey="estimatedCostUsd" radius={[4, 4, 0, 0]}>
-														{operatorUsageRows.map((_, idx) => (
-															<Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
-														))}
-													</Bar>
-												</BarChart>
-											</ResponsiveContainer>
-
-											<div className="overflow-x-auto">
-												<table className="w-full text-sm">
-													<thead>
-														<tr className="border-b border-slate-200 dark:border-slate-700">
-															<th className="pb-2 text-left"><Label>Operador</Label></th>
-															<th className="pb-2 text-right"><Label>Chamadas</Label></th>
-															<th className="pb-2 text-right"><Label>Tokens entrada</Label></th>
-															<th className="pb-2 text-right"><Label>Tokens saída</Label></th>
-															<th className="pb-2 text-right"><Label>Custo estimado</Label></th>
-															<th className="pb-2 text-right"><Label>Orçamento</Label></th>
-															<th className="pb-2 text-right"><Label>% do limite</Label></th>
-														</tr>
-													</thead>
-													<tbody>
-														{operatorUsageRows.map((row) => (
-															<tr
-																key={row.operatorId}
-																className="border-b border-slate-100 dark:border-slate-800"
-															>
-																<td className="py-2 text-slate-900 dark:text-slate-100">{getOperatorName(row.operatorId)}</td>
-																<td className="py-2 text-right text-slate-700 dark:text-slate-300">{row.callCount}</td>
-																<td className="py-2 text-right text-slate-700 dark:text-slate-300">{formatTokens(row.inputTokens)}</td>
-																<td className="py-2 text-right text-slate-700 dark:text-slate-300">{formatTokens(row.outputTokens)}</td>
-																<td className="py-2 text-right font-medium text-slate-900 dark:text-slate-100">
-																	{formatUsd(row.estimatedCostUsd)}
-																</td>
-																<td className="py-2 text-right text-slate-500 dark:text-slate-400">
-																	{row.budgetUsd != null ? formatUsd(row.budgetUsd) : "—"}
-																</td>
-																<td className="py-2 text-right">
-																	{row.budgetPercent != null ? (
-																		<span
-																			className={
-																				row.budgetPercent >= 90
-																					? "font-semibold text-red-600 dark:text-red-400"
-																					: row.budgetPercent >= 70
-																					? "font-semibold text-yellow-600 dark:text-yellow-400"
-																					: "text-slate-700 dark:text-slate-300"
-																			}
-																		>
-																			{row.budgetPercent.toFixed(1)}%
-																		</span>
-																	) : (
-																		<span className="text-slate-400">—</span>
-																	)}
-																</td>
-															</tr>
-														))}
-													</tbody>
-												</table>
-											</div>
-										</>
-									) : (
-										<p className="text-sm text-slate-500 dark:text-slate-400">
-											Nenhum dado de uso por operador disponível para o período selecionado.
-											<br />
-											<span className="mt-1 block text-xs">
-												Os logs por operador são gerados pelas funcionalidades de IA usadas pelos operadores
-												(sugerir resposta, resumir conversa, analisar cliente, assistente IA).
-											</span>
-										</p>
-									)}
-								</>
-							)}
-						</div>
-					) : (
-						<p className="text-sm text-slate-500 dark:text-slate-400">Nenhum dado disponível.</p>
-					)}
-				</SectionCard>
-			</div>
-		</div>
-	);
-}
-
-// ─── Add operator budget row ──────────────────────────────────────────────────
-
-function AddOperatorBudgetRow({
-	onAdd,
-	operators,
-}: {
-	onAdd: (id: string, val: string) => void;
-	operators: User[];
-}) {
-	const [selectedId, setSelectedId] = useState("");
-	const [valInput, setValInput] = useState("");
-
-	function handleAdd() {
-		const n = Number(valInput);
-		if (!selectedId || isNaN(n) || n <= 0) {
-			toast.error("Selecione um operador e informe um valor positivo.");
-			return;
-		}
-		onAdd(selectedId, valInput);
-		setSelectedId("");
-		setValInput("");
+			</PageShell>
+		);
 	}
 
+	const offCatalog = getOffCatalogModels([...(config?.availableModels ?? []), ...form.selectedModels], ASSISTANT_MODEL_CATALOG);
+	const unrestricted =
+		form.selectedModels.length === 0 || isWholeCatalogSelected(form.selectedModels, ASSISTANT_MODEL_CATALOG);
+	const releasedCount = form.selectedModels.filter((value) => ASSISTANT_MODEL_CATALOG.some((model) => model.value === value)).length;
+
 	return (
-		<div className="flex flex-wrap items-end gap-3 pt-1">
-			<FormControl size="small" sx={{ minWidth: 220 }}>
-				<InputLabel>Operador</InputLabel>
-				<Select
-					label="Operador"
-					value={selectedId}
-					onChange={(e) => setSelectedId(String(e.target.value))}
+		<PageShell header={header}>
+			<div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+				<SectionCard
+					icon={<KeyIcon fontSize="small" />}
+					title="Chave da OpenAI"
+					description="A IA desta empresa usa a conta da empresa na OpenAI. A chave é salva na hora, separada das demais configurações."
 				>
-					{operators.length === 0 ? (
-						<MenuItem disabled value="">
-							Carregando…
-						</MenuItem>
-					) : (
-						operators.map((op) => (
-							<MenuItem key={op.CODIGO} value={String(op.CODIGO)}>
-								{op.NOME} (#{op.CODIGO})
-							</MenuItem>
-						))
-					)}
-				</Select>
-			</FormControl>
-			<TextField
-				size="small"
-				label="Limite (USD/mês)"
-				type="number"
-				value={valInput}
-				onChange={(e) => setValInput(e.target.value)}
-				inputProps={{ min: 0, step: 0.01 }}
-				InputProps={{
-					startAdornment: <InputAdornment position="start">$</InputAdornment>,
-				}}
-				sx={{ maxWidth: 180 }}
-			/>
-			<Tooltip title="Adicionar limite para este operador">
-				<Button variant="outlined" size="small" onClick={handleAdd}>
-					Adicionar
-				</Button>
-			</Tooltip>
-		</div>
+					{typeof token === "string" && instance ? (
+						<OpenAiKeyPanel instance={instance} token={token} status={openaiKey} onChange={setOpenaiKey} />
+					) : null}
+				</SectionCard>
+
+				<SectionCard
+					icon={<SavingsOutlinedIcon fontSize="small" />}
+					title="Limites de gasto"
+					description="Limites mensais em US$. Ao atingir um limite, o copiloto e o Assistente IA ficam bloqueados até o mês seguinte."
+				>
+					<BudgetPanel
+						budget={form.budget}
+						budgetError={invalidField === "budget"}
+						onBudgetChange={(budget) => update({ budget })}
+						monthCost={monthUsage.data ? monthUsage.data.estimatedCostUsd : monthUsage.failed ? undefined : null}
+						operatorMonthCosts={operatorMonthCosts}
+						operatorBudgets={form.operatorBudgets}
+						invalidOperatorId={invalidField?.startsWith("operator:") ? invalidField.slice("operator:".length) : null}
+						operators={operators}
+						onOperatorBudgetChange={(id, value) => update({ operatorBudgets: { ...form.operatorBudgets, [id]: value } })}
+						onRemoveOperator={(id) => {
+							const next = { ...form.operatorBudgets };
+							delete next[id];
+							update({ operatorBudgets: next });
+						}}
+					/>
+				</SectionCard>
+			</div>
+
+			<SectionCard
+				icon={<ModelTrainingIcon fontSize="small" />}
+				title="Modelos"
+				description={
+					<>
+						Marque os modelos que os operadores podem escolher no Assistente IA
+						{" · "}
+						<span className="font-medium text-slate-700 dark:text-slate-300">
+							{unrestricted ? "todos liberados" : `${releasedCount} de ${ASSISTANT_MODEL_CATALOG.length} liberados`}
+						</span>
+						. Preços em US$ por 1 milhão de tokens, conforme a tabela da OpenAI de 07/10/2026.
+					</>
+				}
+				actions={<ModelsPanelActions selected={form.selectedModels} onChange={(selectedModels) => update({ selectedModels })} />}
+			>
+				<ModelsPanel
+					selected={form.selectedModels}
+					offCatalog={offCatalog}
+					defaultModel={form.defaultModel}
+					onChange={(selectedModels) => update({ selectedModels })}
+				/>
+			</SectionCard>
+
+			<SectionCard
+				icon={<TuneIcon fontSize="small" />}
+				title="Modelo por funcionalidade"
+				description="O modelo padrão vale para tudo; troque só onde precisar de mais qualidade ou de menos custo."
+			>
+				<FeatureModelsPanel
+					defaultModel={form.defaultModel}
+					featureModels={form.featureModels}
+					onDefaultModelChange={(defaultModel) => update({ defaultModel })}
+					onFeatureModelChange={(feature, value) => {
+						const next = { ...form.featureModels };
+						if (value) next[feature] = value;
+						else delete next[feature];
+						update({ featureModels: next });
+					}}
+				/>
+			</SectionCard>
+
+			<SectionCard
+				icon={<QueryStatsIcon fontSize="small" />}
+				title="Consumo"
+				description="Tokens e custo estimado por funcionalidade e por operador."
+				actions={
+					<UsagePanelActions view={usageView} period={period} onViewChange={setUsageView} onPeriodChange={setPeriod} />
+				}
+			>
+				<UsagePanel
+					usage={usage.data}
+					loading={usage.loading}
+					view={usageView}
+					operatorName={operatorName}
+					operatorLimits={operatorLimits}
+				/>
+			</SectionCard>
+		</PageShell>
 	);
 }

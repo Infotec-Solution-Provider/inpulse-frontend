@@ -133,7 +133,7 @@ export default function OpenAiKeyPanel({
 						inputProps={{ spellCheck: false, "data-lpignore": "true" }}
 					/>
 				</div>
-				<div className="flex gap-2">
+				<div className="flex shrink-0 gap-2 [&>button]:whitespace-nowrap">
 					<Button
 						type="submit"
 						variant="contained"

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   AI_MODEL_CATALOG,
+  AI_MODEL_TIERS,
+  ASSISTANT_MODEL_CATALOG,
   getOffCatalogModels,
   isWholeCatalogSelected,
+  modelLabel,
+  modelSupportsAssistant,
   modelSupportsTemperature,
 } from "./ai-model-catalog";
 
@@ -20,6 +24,54 @@ describe("AI_MODEL_CATALOG", () => {
 
     expect(values).toContain("gpt-5.4");
     expect(new Set(values).size).toBe(values.length);
+  });
+
+  it("lists the GPT-6 generation first", () => {
+    expect(AI_MODEL_CATALOG.slice(0, 4).map((model) => model.value)).toEqual([
+      "gpt-6-astra",
+      "gpt-6.1-sol",
+      "gpt-6-sol",
+      "gpt-6-luna",
+    ]);
+  });
+
+  it("gives every model a known tier, a description and a positive price", () => {
+    const tiers = new Set(AI_MODEL_TIERS.map((tier) => tier.value));
+
+    for (const model of AI_MODEL_CATALOG) {
+      expect(tiers.has(model.tier)).toBe(true);
+      expect(model.description.length).toBeGreaterThan(0);
+      expect(model.pricing.input).toBeGreaterThan(0);
+      expect(model.pricing.output).toBeGreaterThanOrEqual(model.pricing.input);
+    }
+  });
+
+  it("points deprecated models to a replacement that is in the catalog", () => {
+    const values = AI_MODEL_CATALOG.map((model) => model.value);
+
+    for (const model of AI_MODEL_CATALOG.filter((entry) => entry.deprecation)) {
+      expect(values).toContain(model.deprecation!.replacement);
+      expect(model.deprecation!.shutdownAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+});
+
+describe("Assistant compatibility", () => {
+  it("keeps GPT-6 Astra and GPT-6.1 Sol out of the Assistant", () => {
+    const values = ASSISTANT_MODEL_CATALOG.map((model) => model.value);
+
+    expect(values).not.toContain("gpt-6-astra");
+    expect(values).not.toContain("gpt-6.1-sol");
+    expect(values).toContain("gpt-6-sol");
+    expect(values).toContain("gpt-6-luna");
+    expect(modelSupportsAssistant("gpt-6-astra")).toBe(false);
+    expect(modelSupportsAssistant("gpt-5.4")).toBe(true);
+  });
+
+  it("leaves off-catalog models to the ai-service", () => {
+    expect(modelSupportsAssistant("o3")).toBe(true);
+    expect(modelLabel("o3")).toBe("o3");
+    expect(modelLabel("gpt-6-luna")).toBe("GPT-6 Luna");
   });
 });
 
@@ -68,6 +120,12 @@ describe("modelSupportsTemperature", () => {
     expect(modelSupportsTemperature("gpt-5")).toBe(false);
     expect(modelSupportsTemperature("gpt-5-mini")).toBe(false);
     expect(modelSupportsTemperature("gpt-5-chat-latest")).toBe(true);
+  });
+
+  it("returns false for the gpt-6 family", () => {
+    expect(modelSupportsTemperature("gpt-6-astra")).toBe(false);
+    expect(modelSupportsTemperature("gpt-6.1-sol")).toBe(false);
+    expect(modelSupportsTemperature("gpt-6-luna")).toBe(false);
   });
 
   it("returns false for the gpt-5.6 family", () => {
