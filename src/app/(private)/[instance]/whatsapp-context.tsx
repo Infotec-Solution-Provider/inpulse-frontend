@@ -1133,20 +1133,28 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               );
               if (!isCurrent()) return;
               const parameters: Record<string, string> = parametersResponse.data["parameters"];
-              if (parameters["is_official"] === "true" && activeChannel?.id) {
-                const templatesResponse = await api.current.ax.get(
-                  `/api/whatsapp/${activeChannel.id}/templates`,
-                );
-                if (!isCurrent()) return;
-                setTemplates(templatesResponse.data.templates);
-              } else {
-                setTemplates([]);
-              }
               setParameters(parameters);
               console.log("Loaded parameters:", parameters);
 
               setChannels(channelsData);
               setLoaded(true);
+
+              // An unavailable channel must not hide the session's parameters and features.
+              if (parameters["is_official"] === "true" && activeChannel?.id) {
+                try {
+                  const templatesResponse = await api.current.ax.get(
+                    `/api/whatsapp/${activeChannel.id}/templates`,
+                  );
+                  if (!isCurrent()) return;
+                  setTemplates(templatesResponse.data.templates ?? []);
+                } catch (error) {
+                  if (!isCurrent()) return;
+                  console.error("Falha ao carregar templates do canal", error);
+                  setTemplates([]);
+                }
+              } else {
+                setTemplates([]);
+              }
             })
             .catch((error) => {
               if (isCurrent()) console.error("Falha ao carregar canais da sessão", error);
