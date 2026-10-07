@@ -10,6 +10,8 @@ import AssistantMarkdown from "@/lib/components/assistant-markdown";
 import aiService from "@/lib/services/ai.service";
 import { executeGeneratedReport } from "@/lib/reports/api";
 import usersService from "@/lib/services/users.service";
+import { messageSteps, upsertLiveStep, type LiveSupervisorStep } from "@/lib/utils/supervisor-steps";
+import { LiveSteps, ResponseSteps } from "./assistant-steps";
 import type {
 	SupervisorAiAction,
 	SupervisorAiChatMode,
@@ -176,6 +178,11 @@ function sourceChipLabel(source: SupervisorAiSource): string {
 
 function isTruncatedAssistantMessage(entry: SupervisorAiMessage): boolean {
 	return entry.role === "ASSISTANT" && (entry.metadata as { truncated?: boolean } | null)?.truncated === true;
+}
+
+function appendMessages(current: SupervisorAiMessage[], incoming: SupervisorAiMessage[]): SupervisorAiMessage[] {
+	const ids = new Set(incoming.map((entry) => entry.id));
+	return [...current.filter((entry) => !ids.has(entry.id)), ...incoming];
 }
 
 function buildCsv(preview: SupervisorAiReportPreview): string {
@@ -418,6 +425,7 @@ export default function AiSupervisorPage() {
 	const [actionToConfirm, setActionToConfirm] = useState<SupervisorAiAction | null>(null);
 	const [streamingQuestion, setStreamingQuestion] = useState("");
 	const [streamingContent, setStreamingContent] = useState("");
+	const [streamingSteps, setStreamingSteps] = useState<LiveSupervisorStep[]>([]);
 	const [messageContext, setMessageContext] = useState<SupervisorAiContextInput>({});
 	const [contextDialogOpen, setContextDialogOpen] = useState(false);
 	const [contextDraft, setContextDraft] = useState<ContextDraft>(EMPTY_CONTEXT_DRAFT);
@@ -434,6 +442,8 @@ export default function AiSupervisorPage() {
 	const messagesEndRef = useRef<HTMLDivElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const sendAbortRef = useRef<AbortController | null>(null);
+	// Sessão recém-criada pelo envio: já sabemos que está vazia, e recarregá-la apagaria a pergunta em andamento.
+	const skipDetailLoadRef = useRef<number | null>(null);
 	const lastSuggestedContextKeyRef = useRef<string | null>(null);
 	const hasMessageContext = hasContextValues(messageContext);
 	const selectedMode: SupervisorAiChatMode = selectedSession?.mode ?? "STANDARD";
@@ -581,6 +591,10 @@ export default function AiSupervisorPage() {
 	// Load detail when session changes
 	useEffect(() => {
 		if (typeof token !== "string" || !selectedSession) return;
+		if (skipDetailLoadRef.current === selectedSession.id) {
+			skipDetailLoadRef.current = null;
+			return;
+		}
 		const authToken = token;
 		const currentSession = selectedSession;
 
@@ -604,7 +618,7 @@ export default function AiSupervisorPage() {
 	// Auto-scroll
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-	}, [messages.length, selectedSession?.id, streamingContent]);
+	}, [messages.length, selectedSession?.id, streamingContent, streamingSteps.length]);
 
 	useEffect(() => () => sendAbortRef.current?.abort(), []);
 
@@ -670,10 +684,10 @@ export default function AiSupervisorPage() {
 	}
 
 	async function handleSendMessage() {
-		if (typeof token !== "string" || !selectedSession || !message.trim() || sending) return;
+		if (typeof token !== "string" || !message.trim() || sending || changingMode || showArchived) return;
 		const sentMessage = message.trim();
 		const sentFiles = attachedFiles;
-		const sessionId = selectedSession.id;
+		let sessionId = selectedSession?.id ?? null;
 		const abortController = new AbortController();
 		sendAbortRef.current = abortController;
 		try {
@@ -682,6 +696,18 @@ export default function AiSupervisorPage() {
 			setAttachedFiles([]);
 			setStreamingQuestion(sentMessage);
 			setStreamingContent("");
+			setStreamingSteps([]);
+
+			if (sessionId === null) {
+				const session = await aiService.createSupervisorSession({ mode: selectedMode }, token);
+				skipDetailLoadRef.current = session.id;
+				setSessions((current) => [session, ...current.filter((entry) => entry.id !== session.id)]);
+				setSelectedSession(session);
+				setMessages([]);
+				setActions([]);
+				sessionId = session.id;
+			}
+
 			const result = await aiService.streamSupervisorMessage(
 				sessionId,
 				{
@@ -694,6 +720,8 @@ export default function AiSupervisorPage() {
 				{
 					signal: abortController.signal,
 					onDelta: (text) => setStreamingContent((current) => current + text),
+					onStep: (step) => setStreamingSteps((current) => upsertLiveStep(current, step, Date.now())),
+					onReset: () => setStreamingContent(""),
 				},
 			);
 			setSelectedSession(result.session);
@@ -701,11 +729,12 @@ export default function AiSupervisorPage() {
 				const next = current.filter((s) => s.id !== result.session.id);
 				return [result.session, ...next];
 			});
-			setMessages((current) => [...current, result.userMessage, result.assistantMessage]);
+			setMessages((current) => appendMessages(current, [result.userMessage, result.assistantMessage]));
 			setActions((current) => [...current, ...(result.actions ?? [])]);
 		} catch (error) {
 			if (abortController.signal.aborted) {
 				toast.info("Resposta interrompida. O conteúdo parcial foi salvo no histórico.");
+				if (sessionId === null) return;
 				await new Promise((resolve) => setTimeout(resolve, 400));
 				try {
 					const detail = await aiService.getSupervisorSession(sessionId, token);
@@ -718,12 +747,15 @@ export default function AiSupervisorPage() {
 			} else {
 				setMessage(sentMessage);
 				setAttachedFiles(sentFiles);
-				toast.error(`Falha ao enviar mensagem: ${sanitizeErrorMessage(error)}`);
+				toast.error(sessionId === null
+					? `Falha ao criar a conversa: ${sanitizeErrorMessage(error)}`
+					: `Falha ao enviar mensagem: ${sanitizeErrorMessage(error)}`);
 			}
 		} finally {
 			sendAbortRef.current = null;
 			setStreamingQuestion("");
 			setStreamingContent("");
+			setStreamingSteps([]);
 			setSending(false);
 		}
 	}
@@ -1216,6 +1248,7 @@ export default function AiSupervisorPage() {
 												onCancel={() => void handleActionDecision(action, "CANCEL")}
 											/>
 										))}
+									{entry.role === "ASSISTANT" && <ResponseSteps steps={messageSteps(entry.metadata)} />}
 								</div>
 							))}
 
@@ -1225,10 +1258,13 @@ export default function AiSupervisorPage() {
 										<Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{streamingQuestion}</Typography>
 									</div>
 									<div className={assistantBubbleClass} aria-live="polite">
-										{streamingContent
-											? <AssistantMarkdown content={streamingContent} />
-											: <span className="text-sm text-slate-400">Consultando dados e preparando a resposta…</span>}
-										<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-slate-400 align-middle" />
+										<LiveSteps steps={streamingSteps} hasText={streamingContent.length > 0} />
+										{streamingContent && (
+											<>
+												<AssistantMarkdown content={streamingContent} />
+												<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-slate-400 align-middle" />
+											</>
+										)}
 									</div>
 								</>
 							)}
@@ -1239,11 +1275,11 @@ export default function AiSupervisorPage() {
 								</div>
 							)}
 
-							{!selectedSession && (
+							{!selectedSession && !sending && (
 								<div className="rounded-xl border border-dashed border-slate-200 px-5 py-12 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
 									{showArchived
 										? "Selecione uma sessão arquivada para visualizar."
-										: "Crie ou selecione uma sessão para conversar com o assistente."}
+										: "Faça sua primeira pergunta abaixo. A conversa é criada automaticamente."}
 								</div>
 							)}
 
@@ -1253,7 +1289,7 @@ export default function AiSupervisorPage() {
 
 					{/* Composer */}
 					<div className="shrink-0 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-						{selectedSession && !showArchived && (
+						{!showArchived && (
 							<Stack direction="row" spacing={1} useFlexGap className="mb-2 overflow-x-auto pb-1">
 								{suggestions.map((suggestion) => (
 									<Chip
@@ -1331,7 +1367,7 @@ export default function AiSupervisorPage() {
 															size="small"
 															color={sending ? "error" : "primary"}
 															onClick={sending ? handleStopStreaming : handleSendMessage}
-															disabled={!sending && (!selectedSession || !message.trim() || showArchived)}
+															disabled={!sending && (!message.trim() || showArchived || changingMode)}
 														>
 															{sending
 																? <StopCircleOutlinedIcon fontSize="small" />

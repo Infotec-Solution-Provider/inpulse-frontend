@@ -64,6 +64,28 @@ export interface SupervisorAiGeneratedReportArtifact {
     updatedAt: string;
     savedAt?: string;
 }
+export type SupervisorAiStepKind = "thinking" | "tool";
+export type SupervisorAiStepStatus = "running" | "done" | "error";
+export interface SupervisorAiStreamStep {
+    id: string;
+    kind: SupervisorAiStepKind;
+    label: string;
+    status: SupervisorAiStepStatus;
+    round: number;
+    durationMs?: number;
+}
+export interface SupervisorAiMessageStep {
+    label: string;
+    kind: SupervisorAiStepKind;
+    status: SupervisorAiStepStatus;
+    durationMs?: number;
+}
+export type SupervisorAiErrorCode = "budget" | "disabled" | "model" | "rate_limit" | "timeout" | "provider" | "connection" | "unknown";
+export interface SupervisorAiMessageError {
+    code: SupervisorAiErrorCode;
+    retryable: boolean;
+    message: string;
+}
 export interface SupervisorAiMessageMetadata {
     mode?: SupervisorAiChatMode;
     context?: SupervisorAiContextInput;
@@ -71,6 +93,8 @@ export interface SupervisorAiMessageMetadata {
     reportPreview?: SupervisorAiReportPreview | null;
     reportArtifact?: SupervisorAiGeneratedReportArtifact | null;
     interrupted?: boolean;
+    steps?: SupervisorAiMessageStep[];
+    error?: SupervisorAiMessageError;
 }
 export interface SupervisorAiSession {
     id: number;
@@ -130,6 +154,7 @@ export interface SendSupervisorAiMessageRequest {
     model?: string;
     reasoningEffort?: SupervisorAiReasoningEffort;
     fileContext?: SupervisorAiFileContext[];
+    retryOfMessageId?: number;
 }
 export interface SendSupervisorAiMessageResponse {
     session: SupervisorAiSession;
@@ -140,6 +165,13 @@ export interface SendSupervisorAiMessageResponse {
     reportPreview: SupervisorAiReportPreview | null;
     reportArtifact?: SupervisorAiGeneratedReportArtifact | null;
     interrupted?: boolean;
+}
+export interface SupervisorAiStreamErrorPayload {
+    message: string;
+    code?: SupervisorAiErrorCode;
+    retryable?: boolean;
+    userMessage?: SupervisorAiMessage;
+    assistantMessage?: SupervisorAiMessage;
 }
 export interface SupervisorAiSessionDetail {
     session: SupervisorAiSession;

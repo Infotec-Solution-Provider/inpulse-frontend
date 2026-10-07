@@ -16,6 +16,15 @@ import type {
   UpdateAiAgentInput,
 } from "@/lib/types/sdk-local.types";
 import { authenticatedFetch } from "@/lib/auth-session";
+import {
+  readSupervisorStream,
+  STREAM_CONNECTION_ERROR_MESSAGE,
+  streamErrorFromResponse,
+  SupervisorStreamError,
+  type SupervisorStreamHandlers,
+} from "@/lib/utils/supervisor-stream";
+
+export { SupervisorStreamError } from "@/lib/utils/supervisor-stream";
 
 const NEXT_PUBLIC_AI_URL = process.env.NEXT_PUBLIC_AI_URL || "http://localhost:8008";
 
@@ -28,67 +37,48 @@ class FrontendAiService extends AiClient {
     };
   }
 
+  /**
+   * Envia a pergunta ao Assistente do gestor e acompanha a resposta por streaming.
+   * Falhas chegam como SupervisorStreamError (code, retryable e, quando a pergunta
+   * já foi gravada, as mensagens persistidas); a interrupção pelo usuário mantém o AbortError.
+   */
   public async streamSupervisorMessage(
 		sessionId: number,
 		data: SendSupervisorAiMessageRequest,
 		token: string,
-		options: { signal: AbortSignal; onDelta: (text: string) => void },
+		options: { signal: AbortSignal } & SupervisorStreamHandlers,
 	): Promise<SendSupervisorAiMessageResponse> {
 		const baseUrl = String(this.ax.defaults.baseURL ?? "").replace(/\/$/, "");
-		const response = await authenticatedFetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
-			},
-			body: JSON.stringify(data),
-			signal: options.signal,
-		});
+		let response: Response;
+		try {
+			response = await authenticatedFetch(`${baseUrl}/api/ai/supervisor-chat/sessions/${sessionId}/messages/stream`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
+				},
+				body: JSON.stringify(data),
+				signal: options.signal,
+			});
+		} catch (error) {
+			if (options.signal.aborted) throw error;
+			throw new SupervisorStreamError(STREAM_CONNECTION_ERROR_MESSAGE, { code: "connection", retryable: true });
+		}
 
 		if (!response.ok) {
-			const errorBody = await response.json().catch(() => null) as { message?: string } | null;
-			throw new Error(errorBody?.message || `Falha ao iniciar streaming (${response.status}).`);
+			const errorBody = await response.json().catch(() => null) as unknown;
+			throw streamErrorFromResponse(response.status, errorBody);
 		}
 
 		if (!response.body) {
-			throw new Error("O navegador não disponibilizou o fluxo da resposta.");
+			throw new SupervisorStreamError("O navegador não conseguiu acompanhar a resposta do assistente.", { code: "connection", retryable: true });
 		}
 
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder();
-		let buffer = "";
-		let result: SendSupervisorAiMessageResponse | null = null;
-
-		const processBlock = (block: string) => {
-			let event = "message";
-			const dataLines: string[] = [];
-			for (const line of block.split("\n")) {
-				if (line.startsWith("event:")) event = line.slice(6).trim();
-				if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
-			}
-			if (dataLines.length === 0) return;
-			const payload = JSON.parse(dataLines.join("\n")) as Record<string, unknown>;
-			if (event === "delta" && typeof payload.text === "string") options.onDelta(payload.text);
-			if (event === "result") result = payload as unknown as SendSupervisorAiMessageResponse;
-			if (event === "error") throw new Error(typeof payload.message === "string" ? payload.message : "Falha no streaming da IA.");
-		};
-
-		while (true) {
-			const { done, value } = await reader.read();
-			buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n");
-			let boundary = buffer.indexOf("\n\n");
-			while (boundary >= 0) {
-				const block = buffer.slice(0, boundary);
-				buffer = buffer.slice(boundary + 2);
-				if (block.trim()) processBlock(block);
-				boundary = buffer.indexOf("\n\n");
-			}
-			if (done) break;
-		}
-
-		if (buffer.trim()) processBlock(buffer);
-		if (!result) throw new Error("O streaming terminou sem confirmar a resposta persistida.");
-		return result;
+		return readSupervisorStream(response.body, {
+			onDelta: options.onDelta,
+			onStep: options.onStep,
+			onReset: options.onReset,
+		}, options.signal);
 	}
 
   public async listAgents(token: string) {
