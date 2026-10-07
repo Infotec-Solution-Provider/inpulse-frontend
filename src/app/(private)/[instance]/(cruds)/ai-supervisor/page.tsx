@@ -10,8 +10,25 @@ import AssistantMarkdown from "@/lib/components/assistant-markdown";
 import aiService from "@/lib/services/ai.service";
 import { executeGeneratedReport } from "@/lib/reports/api";
 import usersService from "@/lib/services/users.service";
+import { startChatOutcome } from "@/lib/utils/supervisor-actions";
+import { messageLengthHint, SUPERVISOR_MESSAGE_MAX_LENGTH } from "@/lib/utils/supervisor-composer";
+import {
+	describeSendFailure,
+	errorNoticeMessage,
+	errorNoticeTitle,
+	messageError,
+	resolveDroppedSend,
+	retryQuestionFor,
+	withoutRetriedErrors,
+} from "@/lib/utils/supervisor-errors";
+import { messageSteps, upsertLiveStep, type LiveSupervisorStep } from "@/lib/utils/supervisor-steps";
+import { SupervisorStreamError } from "@/lib/utils/supervisor-stream";
+import { dialogPaperSx, surface, surfaceBorder } from "../../monitor/surface";
+import { AssistantErrorNotice } from "./assistant-error-notice";
+import { LiveSteps, ResponseSteps } from "./assistant-steps";
 import type {
 	SupervisorAiAction,
+	SupervisorAiActionStatus,
 	SupervisorAiChatMode,
 	SupervisorAiContextInput,
 	SupervisorAiGeneratedReportArtifact,
@@ -35,6 +52,7 @@ import StopCircleOutlinedIcon from "@mui/icons-material/StopCircleOutlined";
 import UnarchiveOutlinedIcon from "@mui/icons-material/UnarchiveOutlined";
 import {
 	Alert,
+	type AlertColor,
 	Autocomplete,
 	Button,
 	Chip,
@@ -98,6 +116,9 @@ const SUPERVISOR_MODES: Array<{ value: SupervisorAiChatMode; label: string; desc
 	{ value: "REPORTS", label: "Relatórios", description: "Análises somente leitura com prévias e exportação de dados." },
 ];
 
+// Listas suspensas do diálogo de contexto na mesma paleta slate do diálogo.
+const popupPaperSx = { bgcolor: surface, backgroundImage: "none", border: 1, borderColor: surfaceBorder } as const;
+
 function supervisorModeLabel(mode?: SupervisorAiChatMode): string {
 	return SUPERVISOR_MODES.find((entry) => entry.value === mode)?.label ?? "Padrão";
 }
@@ -120,6 +141,22 @@ const EMPTY_CONTEXT_DRAFT: ContextDraft = {
 	operatorIds: [],
 	sectorIds: [],
 	includeMetrics: false,
+};
+
+type AttachedFile = { name: string; content: string };
+
+/** Pergunta nova ou repetição de uma pergunta já gravada (retryOfMessageId). */
+type SendRequest =
+	| { kind: "new"; text: string; files: AttachedFile[]; context?: SupervisorAiContextInput }
+	| { kind: "retry"; userMessage: SupervisorAiMessage };
+
+/** Falha sem aviso gravado no histórico: aparece só nesta tela, com "Tentar novamente". */
+type SendFailure = {
+	sessionId: number | null;
+	request: SendRequest;
+	title: string;
+	message: string;
+	retryable: boolean;
 };
 
 function toLocalDateTime(value?: string): string {
@@ -176,6 +213,11 @@ function sourceChipLabel(source: SupervisorAiSource): string {
 
 function isTruncatedAssistantMessage(entry: SupervisorAiMessage): boolean {
 	return entry.role === "ASSISTANT" && (entry.metadata as { truncated?: boolean } | null)?.truncated === true;
+}
+
+function appendMessages(current: SupervisorAiMessage[], incoming: SupervisorAiMessage[]): SupervisorAiMessage[] {
+	const ids = new Set(incoming.map((entry) => entry.id));
+	return [...current.filter((entry) => !ids.has(entry.id)), ...incoming];
 }
 
 function buildCsv(preview: SupervisorAiReportPreview): string {
@@ -312,22 +354,26 @@ function SupervisorActionCard({
 	disabled,
 	onConfirm,
 	onCancel,
+	onOpenChat,
 }: {
 	action: SupervisorAiAction;
 	busy: boolean;
 	disabled: boolean;
 	onConfirm: () => void;
 	onCancel: () => void;
+	onOpenChat: (chatId: number) => void;
 }) {
-	const executedChatId = typeof action.result?.chatId === "number" ? action.result.chatId : null;
+	const outcome = startChatOutcome(action);
+	const openChatId = outcome?.chatId ?? null;
 	const decisionAt = action.executedAt ?? action.cancelledAt ?? action.confirmedAt;
-	const status = {
-		PENDING: { severity: "warning" as const, text: "Aguardando sua confirmação" },
-		EXECUTING: { severity: "info" as const, text: "Executando ação confirmada" },
-		EXECUTED: { severity: "success" as const, text: executedChatId ? `Chat #${executedChatId} iniciado` : "Ação executada" },
-		CANCELLED: { severity: "info" as const, text: "Ação cancelada" },
-		FAILED: { severity: "error" as const, text: action.errorMessage || "Falha ao executar a ação" },
-	}[action.status];
+	const statuses: Record<SupervisorAiActionStatus, { severity: AlertColor; text: string }> = {
+		PENDING: { severity: "warning", text: "Aguardando sua confirmação" },
+		EXECUTING: { severity: "info", text: "Executando ação confirmada" },
+		EXECUTED: { severity: outcome?.status === "already_exists" ? "info" : "success", text: outcome?.title ?? "Ação executada" },
+		CANCELLED: { severity: "info", text: "Ação cancelada" },
+		FAILED: { severity: "error", text: action.errorMessage || "Falha ao executar a ação" },
+	};
+	const status = statuses[action.status];
 
 	return (
 		<Alert
@@ -338,11 +384,16 @@ function SupervisorActionCard({
 					<Button size="small" color="inherit" onClick={onCancel} disabled={busy || disabled}>Cancelar</Button>
 					<Button size="small" variant="contained" onClick={onConfirm} disabled={busy || disabled}>Revisar e confirmar</Button>
 				</Stack>
+			) : openChatId !== null ? (
+				<Button size="small" variant="outlined" color="inherit" onClick={() => onOpenChat(openChatId)} sx={{ whiteSpace: "nowrap" }}>
+					Abrir chat
+				</Button>
 			) : undefined}
 		>
 			<p className="text-sm font-semibold">{action.label}</p>
 			<p className="mt-0.5 text-xs">{actionTarget(action)}</p>
-			<p className="mt-1 text-xs">{status.text}</p>
+			<p className={`mt-1 text-xs ${action.status === "EXECUTED" ? "font-semibold" : ""}`}>{status.text}</p>
+			{outcome?.detail && <p className="mt-0.5 text-xs">{outcome.detail}</p>}
 			{action.status !== "PENDING" && action.decidedByUserName && (
 				<p className="mt-1 text-xs">
 					Decisão registrada por {action.decidedByUserName}
@@ -413,11 +464,13 @@ export default function AiSupervisorPage() {
 	const [sending, setSending] = useState(false);
 	const [message, setMessage] = useState("");
 	const [selectedModel, setSelectedModel] = useState("");
-	const [attachedFiles, setAttachedFiles] = useState<Array<{ name: string; content: string }>>([]);
+	const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+	const [sendFailure, setSendFailure] = useState<SendFailure | null>(null);
 	const [decidingActionId, setDecidingActionId] = useState<number | null>(null);
 	const [actionToConfirm, setActionToConfirm] = useState<SupervisorAiAction | null>(null);
 	const [streamingQuestion, setStreamingQuestion] = useState("");
 	const [streamingContent, setStreamingContent] = useState("");
+	const [streamingSteps, setStreamingSteps] = useState<LiveSupervisorStep[]>([]);
 	const [messageContext, setMessageContext] = useState<SupervisorAiContextInput>({});
 	const [contextDialogOpen, setContextDialogOpen] = useState(false);
 	const [contextDraft, setContextDraft] = useState<ContextDraft>(EMPTY_CONTEXT_DRAFT);
@@ -434,6 +487,9 @@ export default function AiSupervisorPage() {
 	const messagesEndRef = useRef<HTMLDivElement | null>(null);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const sendAbortRef = useRef<AbortController | null>(null);
+	// Sessão recém-criada pelo envio: já sabemos que está vazia, e recarregá-la apagaria a pergunta em andamento.
+	const skipDetailLoadRef = useRef<number | null>(null);
+	const loadedSessionIdRef = useRef<number | null>(null);
 	const lastSuggestedContextKeyRef = useRef<string | null>(null);
 	const hasMessageContext = hasContextValues(messageContext);
 	const selectedMode: SupervisorAiChatMode = selectedSession?.mode ?? "STANDARD";
@@ -446,6 +502,10 @@ export default function AiSupervisorPage() {
 		for (const chat of [...availableChats, ...extraChatOptions]) unique.set(chat.id, chat);
 		return Array.from(unique.values());
 	}, [availableChats, extraChatOptions]);
+	const visibleSendFailure = !sending && sendFailure && sendFailure.sessionId === (selectedSession?.id ?? null)
+		? sendFailure
+		: null;
+	const lengthHint = messageLengthHint(message.length);
 
 	// Visible models — filtered by tenant config if set
 	const visibleModels = AVAILABLE_MODELS.filter(
@@ -581,6 +641,14 @@ export default function AiSupervisorPage() {
 	// Load detail when session changes
 	useEffect(() => {
 		if (typeof token !== "string" || !selectedSession) return;
+		if (skipDetailLoadRef.current === selectedSession.id) {
+			skipDetailLoadRef.current = null;
+			loadedSessionIdRef.current = selectedSession.id;
+			return;
+		}
+		// Token renovado no meio de uma resposta: recarregar agora apagaria a resposta em andamento.
+		if (sendAbortRef.current && loadedSessionIdRef.current === selectedSession.id) return;
+		loadedSessionIdRef.current = selectedSession.id;
 		const authToken = token;
 		const currentSession = selectedSession;
 
@@ -601,10 +669,16 @@ export default function AiSupervisorPage() {
 		void loadSessionDetail();
 	}, [selectedSession?.id, token]);
 
+	// O aviso de falha temporário pertence à conversa em que aconteceu.
+	useEffect(() => {
+		const sessionId = selectedSession?.id ?? null;
+		setSendFailure((current) => current && current.sessionId === sessionId ? current : null);
+	}, [selectedSession?.id]);
+
 	// Auto-scroll
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-	}, [messages.length, selectedSession?.id, streamingContent]);
+	}, [messages.length, selectedSession?.id, streamingContent, streamingSteps.length, sendFailure]);
 
 	useEffect(() => () => sendAbortRef.current?.abort(), []);
 
@@ -669,31 +743,84 @@ export default function AiSupervisorPage() {
 		}
 	}
 
-	async function handleSendMessage() {
-		if (typeof token !== "string" || !selectedSession || !message.trim() || sending) return;
-		const sentMessage = message.trim();
-		const sentFiles = attachedFiles;
-		const sessionId = selectedSession.id;
+	function handleSendMessage() {
+		const text = message.trim();
+		if (!text) return;
+		void sendQuestion(
+			{ kind: "new", text, files: attachedFiles, ...(hasMessageContext ? { context: messageContext } : {}) },
+			{ clearComposer: true },
+		);
+	}
+
+	function handleRetryFailure() {
+		const failure = visibleSendFailure;
+		if (!failure) return;
+		const { request } = failure;
+		void sendQuestion(request, { clearComposer: request.kind === "new" && message.trim() === request.text });
+	}
+
+	function touchSession(sessionId: number, lastMessageAt: string) {
+		setSessions((current) => {
+			const session = current.find((entry) => entry.id === sessionId);
+			if (!session) return current;
+			return [{ ...session, lastMessageAt }, ...current.filter((entry) => entry.id !== sessionId)];
+		});
+		setSelectedSession((current) => current?.id === sessionId ? { ...current, lastMessageAt } : current);
+	}
+
+	async function sendQuestion(request: SendRequest, { clearComposer }: { clearComposer: boolean }) {
+		if (typeof token !== "string" || sending || changingMode || showArchived) return;
+		if (request.kind === "retry" && !selectedSession) return;
+		const authToken = token;
+		let sessionId = selectedSession?.id ?? null;
+		const knownIds = new Set(messages.map((entry) => entry.id));
 		const abortController = new AbortController();
 		sendAbortRef.current = abortController;
 		try {
 			setSending(true);
-			setMessage("");
-			setAttachedFiles([]);
-			setStreamingQuestion(sentMessage);
+			setSendFailure(null);
+			if (clearComposer) {
+				setMessage("");
+				setAttachedFiles([]);
+			}
+			// Na repetição a pergunta já está na tela: some só o aviso de erro.
+			if (request.kind === "retry") setMessages((current) => withoutRetriedErrors(current, request.userMessage.id));
+			setStreamingQuestion(request.kind === "new" ? request.text : "");
 			setStreamingContent("");
+			setStreamingSteps([]);
+
+			if (sessionId === null) {
+				const session = await aiService.createSupervisorSession({ mode: selectedMode }, authToken);
+				skipDetailLoadRef.current = session.id;
+				setSessions((current) => [session, ...current.filter((entry) => entry.id !== session.id)]);
+				setSelectedSession(session);
+				setMessages([]);
+				setActions([]);
+				sessionId = session.id;
+			}
+
+			const retryContext = request.kind === "retry" ? request.userMessage.metadata?.context : undefined;
 			const result = await aiService.streamSupervisorMessage(
 				sessionId,
-				{
-					message: sentMessage,
-					...(hasMessageContext ? { context: messageContext } : {}),
-					...(selectedModel ? { model: selectedModel } : {}),
-					...(sentFiles.length > 0 ? { fileContext: sentFiles } : {}),
-				},
-				token,
+				request.kind === "new"
+					? {
+						message: request.text,
+						...(request.context ? { context: request.context } : {}),
+						...(selectedModel ? { model: selectedModel } : {}),
+						...(request.files.length > 0 ? { fileContext: request.files } : {}),
+					}
+					: {
+						message: request.userMessage.content,
+						retryOfMessageId: request.userMessage.id,
+						...(retryContext && hasContextValues(retryContext) ? { context: retryContext } : {}),
+						...(selectedModel ? { model: selectedModel } : {}),
+					},
+				authToken,
 				{
 					signal: abortController.signal,
 					onDelta: (text) => setStreamingContent((current) => current + text),
+					onStep: (step) => setStreamingSteps((current) => upsertLiveStep(current, step, Date.now())),
+					onReset: () => setStreamingContent(""),
 				},
 			);
 			setSelectedSession(result.session);
@@ -701,31 +828,107 @@ export default function AiSupervisorPage() {
 				const next = current.filter((s) => s.id !== result.session.id);
 				return [result.session, ...next];
 			});
-			setMessages((current) => [...current, result.userMessage, result.assistantMessage]);
+			setMessages((current) => appendMessages(current, [result.userMessage, result.assistantMessage]));
 			setActions((current) => [...current, ...(result.actions ?? [])]);
 		} catch (error) {
 			if (abortController.signal.aborted) {
-				toast.info("Resposta interrompida. O conteúdo parcial foi salvo no histórico.");
+				// Parar antes de a pergunta chegar ao servidor: nada foi gravado e o texto volta ao campo.
+				const restoreComposer = () => {
+					if (request.kind !== "new") return;
+					setMessage((current) => current.trim() ? current : request.text);
+					setAttachedFiles((current) => current.length > 0 ? current : request.files);
+				};
+				if (sessionId === null) {
+					restoreComposer();
+					toast.info("Envio cancelado.");
+					return;
+				}
 				await new Promise((resolve) => setTimeout(resolve, 400));
-				try {
-					const detail = await aiService.getSupervisorSession(sessionId, token);
-					setSelectedSession(detail.session);
-					setMessages(detail.messages);
-					setActions(detail.actions ?? []);
-				} catch {
+				const detail = await aiService.getSupervisorSession(sessionId, authToken).catch(() => null);
+				if (!detail) {
 					// A próxima abertura da sessão recupera o conteúdo parcial persistido.
+					toast.info("Resposta interrompida.");
+					return;
+				}
+				setSelectedSession(detail.session);
+				setMessages(detail.messages);
+				setActions(detail.actions ?? []);
+				if (detail.messages.some((entry) => !knownIds.has(entry.id))) {
+					toast.info("Resposta interrompida. O conteúdo parcial foi salvo no histórico.");
+				} else {
+					restoreComposer();
+					toast.info("Envio cancelado.");
 				}
 			} else {
-				setMessage(sentMessage);
-				setAttachedFiles(sentFiles);
-				toast.error(`Falha ao enviar mensagem: ${sanitizeErrorMessage(error)}`);
+				await handleSendError(error, request, sessionId, knownIds, authToken);
 			}
 		} finally {
 			sendAbortRef.current = null;
 			setStreamingQuestion("");
 			setStreamingContent("");
+			setStreamingSteps([]);
 			setSending(false);
 		}
+	}
+
+	/**
+	 * Falha do envio vira estado da conversa: o aviso gravado pelo ai-service entra no
+	 * histórico; sem ele, um aviso temporário com "Tentar novamente" (e, se a pergunta
+	 * não chegou ao servidor, o texto volta ao campo).
+	 */
+	async function handleSendError(
+		error: unknown,
+		request: SendRequest,
+		sessionId: number | null,
+		knownIds: Set<number>,
+		authToken: string,
+	) {
+		const failure = describeSendFailure(error);
+		const savedQuestion = error instanceof SupervisorStreamError ? error.userMessage : null;
+		const savedNotice = error instanceof SupervisorStreamError ? error.assistantMessage : null;
+
+		if (sessionId !== null && (savedQuestion || savedNotice)) {
+			const saved = [savedQuestion, savedNotice].filter((entry): entry is SupervisorAiMessage => entry !== null);
+			setMessages((current) => appendMessages(current, saved));
+			touchSession(sessionId, saved.at(-1)!.createdAt);
+			if (savedNotice) {
+				// O ai-service também dá título à conversa nova; o evento de erro não traz a sessão.
+				void aiService.getSupervisorSession(sessionId, authToken).then((detail) => {
+					setSelectedSession((current) => current?.id === detail.session.id ? detail.session : current);
+					setSessions((current) => current.map((entry) => entry.id === detail.session.id ? detail.session : entry));
+				}).catch(() => undefined);
+				return;
+			}
+		}
+
+		let next: SendRequest = savedQuestion ? { kind: "retry", userMessage: savedQuestion } : request;
+		if (!savedQuestion && failure.code === "connection" && sessionId !== null) {
+			// A conexão caiu: o histórico do servidor diz se a pergunta chegou a ser gravada.
+			const detail = await aiService.getSupervisorSession(sessionId, authToken).catch(() => null);
+			if (detail) {
+				setSelectedSession(detail.session);
+				setMessages(detail.messages);
+				setActions(detail.actions ?? []);
+				const resolution = resolveDroppedSend(detail.messages, request.kind === "retry"
+					? { knownIds, userMessageId: request.userMessage.id }
+					: { knownIds, text: request.text });
+				if (resolution.kind === "error_shown" || resolution.kind === "answered") return;
+				if (resolution.kind === "retry") next = { kind: "retry", userMessage: resolution.userMessage };
+			}
+		}
+
+		if (next.kind === "new") {
+			const { text, files } = next;
+			setMessage((current) => current.trim() ? current : text);
+			setAttachedFiles((current) => current.length > 0 ? current : files);
+		}
+		setSendFailure({
+			sessionId,
+			request: next,
+			title: next.kind === "new" ? "Sua pergunta não foi enviada" : "A resposta não foi concluída",
+			message: failure.message,
+			retryable: failure.retryable,
+		});
 	}
 
 	function handleStopStreaming() {
@@ -853,20 +1056,33 @@ export default function AiSupervisorPage() {
 		return typeof source.entityId === "number" && ["chat", "contact", "customer"].includes(source.type);
 	}
 
+	async function openChatById(chatId: number) {
+		const loaded = await wppApi.current.getChatById(chatId);
+		const loadedMessages = loaded.messages ?? [];
+		const chat = {
+			...loaded,
+			chatType: "wpp" as const,
+			isUnread: false,
+			lastMessage: loadedMessages.at(-1) ?? null,
+		} as DetailedChat;
+		openChat(chat, loadedMessages);
+		router.push(`/${instance}`);
+	}
+
+	async function handleOpenActionChat(chatId: number) {
+		if (!instance) return;
+		try {
+			await openChatById(chatId);
+		} catch {
+			toast.error("Não foi possível abrir o chat agora. Tente de novo em instantes.");
+		}
+	}
+
 	async function handleSourceClick(source: SupervisorAiSource) {
 		if (!instance || !canOpenSource(source)) return;
 		try {
 			if (source.type === "chat" && source.entityId) {
-				const loaded = await wppApi.current.getChatById(source.entityId);
-				const loadedMessages = loaded.messages ?? [];
-				const chat = {
-					...loaded,
-					chatType: "wpp" as const,
-					isUnread: false,
-					lastMessage: loadedMessages.at(-1) ?? null,
-				} as DetailedChat;
-				openChat(chat, loadedMessages);
-				router.push(`/${instance}`);
+				await openChatById(source.entityId);
 				return;
 			}
 
@@ -906,8 +1122,10 @@ export default function AiSupervisorPage() {
 			);
 			setActions((current) => current.map((entry) => entry.id === updated.id ? updated : entry));
 
-			if (updated.status === "EXECUTED") {
-				toast.success("Chat de WhatsApp iniciado após sua confirmação.");
+			const outcome = startChatOutcome(updated);
+			if (outcome) {
+				if (outcome.status === "already_exists") toast.info(outcome.toast);
+				else toast.success(outcome.toast);
 			} else if (updated.status === "CANCELLED") {
 				toast.info("Ação cancelada e registrada na auditoria.");
 			} else if (updated.status === "FAILED") {
@@ -1160,90 +1378,124 @@ export default function AiSupervisorPage() {
 					{/* Messages */}
 					<div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
 						<Stack spacing={3}>
-							{messages.map((entry) => (
-								<div key={entry.id} className={entry.role === "USER" ? userBubbleClass : assistantBubbleClass}>
-									{entry.role === "USER"
-										? <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{entry.content}</Typography>
-										: <AssistantMarkdown content={entry.content} />}
-									{entry.role === "ASSISTANT" && (entry.metadata?.interrupted === true || isTruncatedAssistantMessage(entry)) && (
-										<Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="mt-3">
-											{entry.metadata?.interrupted === true && (
-												<Chip size="small" color="warning" variant="outlined" label="Resposta interrompida" />
-											)}
-											{isTruncatedAssistantMessage(entry) && (
-												<Tooltip title="A resposta atingiu o limite de tamanho. Peça “continue” para ver o restante.">
-													<Chip size="small" color="warning" variant="outlined" label="Resposta incompleta" />
-												</Tooltip>
-											)}
-										</Stack>
-									)}
-									{entry.metadata?.sources && Array.isArray(entry.metadata.sources) && entry.metadata.sources.length > 0 && (
-										<Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="mt-3">
-											{entry.metadata.sources.map((source, index) => {
-												const typedSource = source as SupervisorAiSource;
-												const navigable = canOpenSource(typedSource);
-												return (
-													<Tooltip key={`${typedSource.type}-${typedSource.entityId ?? "fonte"}-${index}`} title={navigable ? "Abrir fonte" : "Fonte utilizada pela IA"}>
-														<Chip
-															size="small"
-															variant="outlined"
-															clickable={navigable}
-															onClick={navigable ? () => void handleSourceClick(typedSource) : undefined}
-															label={sourceChipLabel(typedSource)}
-															sx={{
-																backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgb(15 23 42)" : "rgb(255 255 255)",
-																borderColor: (theme) => theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(226 232 240)",
-																color: (theme) => theme.palette.mode === "dark" ? "rgb(226 232 240)" : "rgb(51 65 85)",
-															}}
-														/>
+							{messages.map((entry) => {
+								const entryError = messageError(entry);
+								if (entryError) {
+									const retryQuestion = showArchived ? null : retryQuestionFor(messages, entry.id);
+									return (
+										<AssistantErrorNotice
+											key={entry.id}
+											title={errorNoticeTitle(entryError.code)}
+											message={errorNoticeMessage(entry, entryError)}
+											onRetry={retryQuestion
+												? () => void sendQuestion({ kind: "retry", userMessage: retryQuestion }, { clearComposer: false })
+												: undefined}
+											retryDisabled={sending || changingMode}
+										/>
+									);
+								}
+								return (
+									<div key={entry.id} className={entry.role === "USER" ? userBubbleClass : assistantBubbleClass}>
+										{entry.role === "USER"
+											? <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{entry.content}</Typography>
+											: <AssistantMarkdown content={entry.content} />}
+										{entry.role === "ASSISTANT" && (entry.metadata?.interrupted === true || isTruncatedAssistantMessage(entry)) && (
+											<Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="mt-3">
+												{entry.metadata?.interrupted === true && (
+													<Chip size="small" color="warning" variant="outlined" label="Resposta interrompida" />
+												)}
+												{isTruncatedAssistantMessage(entry) && (
+													<Tooltip title="A resposta atingiu o limite de tamanho. Peça “continue” para ver o restante.">
+														<Chip size="small" color="warning" variant="outlined" label="Resposta incompleta" />
 													</Tooltip>
-												);
-											})}
-										</Stack>
-									)}
-									{entry.metadata?.reportPreview && (
-										<ReportPreviewPanel preview={entry.metadata.reportPreview as SupervisorAiReportPreview} artifact={entry.metadata.reportArtifact} />
-									)}
-									{entry.role === "ASSISTANT" && actions
-										.filter((action) => action.assistantMessageId === entry.id)
-										.map((action) => (
-											<SupervisorActionCard
-												key={action.id}
-												action={action}
-												busy={decidingActionId === action.id}
-												disabled={showArchived}
-												onConfirm={() => setActionToConfirm(action)}
-												onCancel={() => void handleActionDecision(action, "CANCEL")}
-											/>
-										))}
-								</div>
-							))}
-
-							{sending && streamingQuestion && (
-								<>
-									<div className={userBubbleClass}>
-										<Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{streamingQuestion}</Typography>
+												)}
+											</Stack>
+										)}
+										{entry.metadata?.sources && Array.isArray(entry.metadata.sources) && entry.metadata.sources.length > 0 && (
+											<Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" className="mt-3">
+												{entry.metadata.sources.map((source, index) => {
+													const typedSource = source as SupervisorAiSource;
+													const navigable = canOpenSource(typedSource);
+													return (
+														<Tooltip key={`${typedSource.type}-${typedSource.entityId ?? "fonte"}-${index}`} title={navigable ? "Abrir fonte" : "Fonte utilizada pela IA"}>
+															<Chip
+																size="small"
+																variant="outlined"
+																clickable={navigable}
+																onClick={navigable ? () => void handleSourceClick(typedSource) : undefined}
+																label={sourceChipLabel(typedSource)}
+																sx={{
+																	backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgb(15 23 42)" : "rgb(255 255 255)",
+																	borderColor: (theme) => theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(226 232 240)",
+																	color: (theme) => theme.palette.mode === "dark" ? "rgb(226 232 240)" : "rgb(51 65 85)",
+																}}
+															/>
+														</Tooltip>
+													);
+												})}
+											</Stack>
+										)}
+										{entry.metadata?.reportPreview && (
+											<ReportPreviewPanel preview={entry.metadata.reportPreview as SupervisorAiReportPreview} artifact={entry.metadata.reportArtifact} />
+										)}
+										{entry.role === "ASSISTANT" && actions
+											.filter((action) => action.assistantMessageId === entry.id)
+											.map((action) => (
+												<SupervisorActionCard
+													key={action.id}
+													action={action}
+													busy={decidingActionId === action.id}
+													disabled={showArchived}
+													onConfirm={() => setActionToConfirm(action)}
+													onCancel={() => void handleActionDecision(action, "CANCEL")}
+													onOpenChat={(chatId) => void handleOpenActionChat(chatId)}
+												/>
+											))}
+										{entry.role === "ASSISTANT" && <ResponseSteps steps={messageSteps(entry.metadata)} />}
 									</div>
+								);
+							})}
+
+							{sending && (
+								<>
+									{streamingQuestion && (
+										<div className={userBubbleClass}>
+											<Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>{streamingQuestion}</Typography>
+										</div>
+									)}
 									<div className={assistantBubbleClass} aria-live="polite">
-										{streamingContent
-											? <AssistantMarkdown content={streamingContent} />
-											: <span className="text-sm text-slate-400">Consultando dados e preparando a resposta…</span>}
-										<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-slate-400 align-middle" />
+										<LiveSteps steps={streamingSteps} hasText={streamingContent.length > 0} />
+										{streamingContent && (
+											<>
+												<AssistantMarkdown content={streamingContent} />
+												<span className="ml-1 inline-block h-4 w-1 animate-pulse bg-slate-400 align-middle" />
+											</>
+										)}
 									</div>
 								</>
 							)}
 
-							{!loadingDetail && !sending && selectedSession && messages.length === 0 && (
+							{visibleSendFailure && (
+								<AssistantErrorNotice
+									live
+									title={visibleSendFailure.title}
+									message={visibleSendFailure.message}
+									onRetry={visibleSendFailure.retryable && !showArchived ? handleRetryFailure : undefined}
+									retryDisabled={changingMode}
+								/>
+							)}
+
+							{!loadingDetail && !sending && !visibleSendFailure && selectedSession && messages.length === 0 && (
 								<div className="rounded-xl border border-dashed border-slate-200 px-5 py-12 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
 									Envie a primeira pergunta para começar a conversa.
 								</div>
 							)}
 
-							{!selectedSession && (
+							{!selectedSession && !sending && !visibleSendFailure && (
 								<div className="rounded-xl border border-dashed border-slate-200 px-5 py-12 text-center text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
 									{showArchived
 										? "Selecione uma sessão arquivada para visualizar."
-										: "Crie ou selecione uma sessão para conversar com o assistente."}
+										: "Faça sua primeira pergunta abaixo. A conversa é criada automaticamente."}
 								</div>
 							)}
 
@@ -1253,7 +1505,7 @@ export default function AiSupervisorPage() {
 
 					{/* Composer */}
 					<div className="shrink-0 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-						{selectedSession && !showArchived && (
+						{!showArchived && (
 							<Stack direction="row" spacing={1} useFlexGap className="mb-2 overflow-x-auto pb-1">
 								{suggestions.map((suggestion) => (
 									<Chip
@@ -1314,7 +1566,7 @@ export default function AiSupervisorPage() {
 								onKeyDown={(event) => {
 									if (event.key === "Enter" && !event.shiftKey) {
 										event.preventDefault();
-										void handleSendMessage();
+										handleSendMessage();
 									}
 								}}
 								placeholder={isReportsMode
@@ -1322,6 +1574,7 @@ export default function AiSupervisorPage() {
 									: "Escreva sua pergunta... (Shift+Enter para nova linha)"}
 								disabled={showArchived || sending}
 								slotProps={{
+									htmlInput: { maxLength: SUPERVISOR_MESSAGE_MAX_LENGTH },
 									input: {
 										endAdornment: (
 											<InputAdornment position="end" sx={{ alignSelf: "flex-end", pb: 0.5 }}>
@@ -1331,7 +1584,7 @@ export default function AiSupervisorPage() {
 															size="small"
 															color={sending ? "error" : "primary"}
 															onClick={sending ? handleStopStreaming : handleSendMessage}
-															disabled={!sending && (!selectedSession || !message.trim() || showArchived)}
+															disabled={!sending && (!message.trim() || showArchived || changingMode)}
 														>
 															{sending
 																? <StopCircleOutlinedIcon fontSize="small" />
@@ -1356,6 +1609,14 @@ export default function AiSupervisorPage() {
 								}}
 							/>
 						</Stack>
+						{lengthHint && !showArchived && (
+							<p
+								aria-live="polite"
+								className={`mt-1 text-right text-[11px] tabular-nums ${lengthHint.atLimit ? "text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-slate-500"}`}
+							>
+								{lengthHint.atLimit ? `Limite de caracteres atingido · ${lengthHint.label}` : lengthHint.label}
+							</p>
+						)}
 
 						<input
 							ref={fileInputRef}
@@ -1369,7 +1630,7 @@ export default function AiSupervisorPage() {
 				</section>
 			</div>
 
-			<Dialog open={contextDialogOpen} onClose={() => setContextDialogOpen(false)} maxWidth="sm" fullWidth>
+			<Dialog open={contextDialogOpen} onClose={() => setContextDialogOpen(false)} maxWidth="sm" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
 				<DialogTitle>Gerenciar contexto</DialogTitle>
 				<DialogContent>
 					<p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
@@ -1424,6 +1685,7 @@ export default function AiSupervisorPage() {
 								setChatSearchTerm(value ? chatLabel(value) : "");
 								setContextDraft((current) => ({ ...current, chatId: value ? String(value.id) : "" }));
 							}}
+							slotProps={{ paper: { sx: popupPaperSx } }}
 							loadingText="Buscando conversa..."
 							noOptionsText="Nenhuma conversa encontrada"
 							renderInput={(params) => (
@@ -1457,6 +1719,7 @@ export default function AiSupervisorPage() {
 								setCustomerSearchTerm(value ? customerLabel(value) : "");
 								setContextDraft((current) => ({ ...current, customerId: value ? String(value.CODIGO) : "" }));
 							}}
+							slotProps={{ paper: { sx: popupPaperSx } }}
 							loadingText="Buscando clientes..."
 							noOptionsText={customerSearchTerm.trim() ? "Nenhum cliente encontrado" : "Digite para buscar"}
 							renderOption={(props, option) => {
@@ -1503,6 +1766,7 @@ export default function AiSupervisorPage() {
 								labelId="context-operators-label"
 								label="Operadores"
 								multiple
+								MenuProps={{ slotProps: { paper: { sx: popupPaperSx } } }}
 								value={contextDraft.operatorIds}
 								onChange={(event) => {
 									const value = event.target.value;
@@ -1524,6 +1788,7 @@ export default function AiSupervisorPage() {
 								labelId="context-sectors-label"
 								label="Setores"
 								multiple
+								MenuProps={{ slotProps: { paper: { sx: popupPaperSx } } }}
 								value={contextDraft.sectorIds}
 								onChange={(event) => {
 									const value = event.target.value;
@@ -1564,17 +1829,20 @@ export default function AiSupervisorPage() {
 				</DialogActions>
 			</Dialog>
 
-			<Dialog open={actionToConfirm !== null} onClose={() => setActionToConfirm(null)} maxWidth="xs" fullWidth>
-				<DialogTitle>Confirmar abertura do chat?</DialogTitle>
+			<Dialog open={actionToConfirm !== null} onClose={() => setActionToConfirm(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: dialogPaperSx } }}>
+				<DialogTitle className="text-slate-900 dark:text-slate-100">Confirmar abertura do chat?</DialogTitle>
 				<DialogContent>
 					<p className="text-sm text-slate-700 dark:text-slate-200">
 						O assistente solicita autorização para iniciar um chat de WhatsApp com:
 					</p>
-					<p className="mt-3 rounded-lg bg-slate-100 p-3 text-sm font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-100">
+					<p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-100">
 						{actionToConfirm ? actionTarget(actionToConfirm) : ""}
 					</p>
-					<p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-						A ação e sua decisão ficarão registradas na auditoria. Nenhuma mensagem será enviada automaticamente.
+					<p className="mt-3 text-sm text-slate-700 dark:text-slate-200">
+						O chat fica com você, no setor do contato, e nenhuma mensagem é enviada ao cliente.
+					</p>
+					<p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+						Se o contato já tiver um atendimento aberto, nada novo é criado. A ação e sua decisão ficam registradas na auditoria.
 					</p>
 				</DialogContent>
 				<DialogActions>

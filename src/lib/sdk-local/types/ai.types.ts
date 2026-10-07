@@ -88,6 +88,44 @@ export interface SupervisorAiGeneratedReportArtifact {
 	savedAt?: string;
 }
 
+export type SupervisorAiStepKind = "thinking" | "tool";
+
+export type SupervisorAiStepStatus = "running" | "done" | "error";
+
+/** Etapa transmitida ao vivo pelo evento "step" do streaming. */
+export interface SupervisorAiStreamStep {
+	id: string;
+	kind: SupervisorAiStepKind;
+	label: string;
+	status: SupervisorAiStepStatus;
+	round: number;
+	durationMs?: number;
+}
+
+/** Etapa gravada na resposta concluída (só as consultas, na ordem). */
+export interface SupervisorAiMessageStep {
+	label: string;
+	kind: SupervisorAiStepKind;
+	status: SupervisorAiStepStatus;
+	durationMs?: number;
+}
+
+export type SupervisorAiErrorCode =
+	| "budget"
+	| "disabled"
+	| "model"
+	| "rate_limit"
+	| "timeout"
+	| "provider"
+	| "connection"
+	| "unknown";
+
+export interface SupervisorAiMessageError {
+	code: SupervisorAiErrorCode;
+	retryable: boolean;
+	message: string;
+}
+
 export interface SupervisorAiMessageMetadata {
 	mode?: SupervisorAiChatMode;
 	context?: SupervisorAiContextInput;
@@ -95,6 +133,8 @@ export interface SupervisorAiMessageMetadata {
 	reportPreview?: SupervisorAiReportPreview | null;
 	reportArtifact?: SupervisorAiGeneratedReportArtifact | null;
 	interrupted?: boolean;
+	steps?: SupervisorAiMessageStep[];
+	error?: SupervisorAiMessageError;
 }
 
 export interface SupervisorAiSession {
@@ -162,6 +202,8 @@ export interface SendSupervisorAiMessageRequest {
 	model?: string;
 	reasoningEffort?: SupervisorAiReasoningEffort;
 	fileContext?: SupervisorAiFileContext[];
+	/** Repete a pergunta (mensagem USER) indicada em vez de gravar uma nova. */
+	retryOfMessageId?: number;
 }
 
 export interface SendSupervisorAiMessageResponse {
@@ -173,6 +215,15 @@ export interface SendSupervisorAiMessageResponse {
 	reportPreview: SupervisorAiReportPreview | null;
 	reportArtifact?: SupervisorAiGeneratedReportArtifact | null;
 	interrupted?: boolean;
+}
+
+/** Corpo do evento "error" do streaming; as mensagens vêm quando a pergunta já tinha sido gravada. */
+export interface SupervisorAiStreamErrorPayload {
+	message: string;
+	code?: SupervisorAiErrorCode;
+	retryable?: boolean;
+	userMessage?: SupervisorAiMessage;
+	assistantMessage?: SupervisorAiMessage;
 }
 
 export interface SupervisorAiSessionDetail {
