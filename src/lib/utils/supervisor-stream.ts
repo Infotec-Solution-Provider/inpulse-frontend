@@ -22,7 +22,7 @@ const STEP_KINDS: readonly SupervisorAiStepKind[] = ["thinking", "tool"];
 const STEP_STATUSES: readonly SupervisorAiStepStatus[] = ["running", "done", "error"];
 
 export const STREAM_FALLBACK_ERROR_MESSAGE = "Não foi possível concluir a resposta do assistente. Tente novamente.";
-export const STREAM_CONNECTION_ERROR_MESSAGE = "Não foi possível falar com o assistente. Verifique sua conexão e tente novamente.";
+export const STREAM_CONNECTION_ERROR_MESSAGE = "Sem conexão com o servidor. Confira a internet e tente de novo.";
 export const STREAM_INTERRUPTED_ERROR_MESSAGE = "A conexão com o assistente caiu antes de a resposta ficar pronta. Tente novamente.";
 
 /** Falha do streaming do Assistente do gestor, já classificada para a tela decidir o que mostrar. */
@@ -56,7 +56,7 @@ export function isRetryableByDefault(code: SupervisorAiErrorCode): boolean {
 	return !NON_RETRYABLE_CODES.includes(code);
 }
 
-function toErrorCode(value: unknown): SupervisorAiErrorCode {
+export function toErrorCode(value: unknown): SupervisorAiErrorCode {
 	return ERROR_CODES.includes(value as SupervisorAiErrorCode) ? value as SupervisorAiErrorCode : "unknown";
 }
 
