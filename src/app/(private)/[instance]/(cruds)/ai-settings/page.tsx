@@ -6,6 +6,7 @@ import aiService from "@/lib/services/ai.service";
 import usersService from "@/lib/services/users.service";
 import type {
 	AiFeatureModels,
+	AiOpenAiKeyStatus,
 	AiOperatorUsageStat,
 	AiTenantConfig,
 	AiUsageSummary,
@@ -13,6 +14,7 @@ import type {
 import { User, UserRole } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import KeyIcon from "@mui/icons-material/Key";
 import ModelTrainingIcon from "@mui/icons-material/ModelTraining";
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
@@ -33,6 +35,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import OpenAiKeyPanel from "./openai-key-panel";
 import {
 	Bar,
 	BarChart,
@@ -143,6 +146,7 @@ export default function AiSettingsPage() {
 	const [config, setConfig] = useState<AiTenantConfig | null>(null);
 	const [loadingConfig, setLoadingConfig] = useState(true);
 	const [savingConfig, setSavingConfig] = useState(false);
+	const [openaiKey, setOpenaiKey] = useState<AiOpenAiKeyStatus | null>(null);
 
 	const [budgetInput, setBudgetInput] = useState("");
 	const [selectedModels, setSelectedModels] = useState<string[]>([]);
@@ -173,6 +177,7 @@ export default function AiSettingsPage() {
 				setLoadingConfig(true);
 				const c = await aiService.getTenantConfig(inst, authToken);
 				setConfig(c);
+				setOpenaiKey(c.openaiKey && "storageAvailable" in c.openaiKey ? c.openaiKey : null);
 				setBudgetInput(c.monthlyBudgetUsd != null ? String(c.monthlyBudgetUsd) : "");
 				setSelectedModels(c.availableModels ?? KNOWN_MODELS.map((m) => m.value));
 				setFeatureModels(c.featureModels ?? {});
@@ -367,6 +372,17 @@ export default function AiSettingsPage() {
 					</>
 				) : (
 					<>
+						{/* ── Section: OpenAI key ───────────────────────────────── */}
+						<SectionCard
+							icon={<KeyIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}
+							title="Chave da OpenAI"
+							description="A IA desta empresa usa a chave da conta da empresa na OpenAI. Só administradores veem e alteram esta configuração."
+						>
+							{typeof token === "string" && instance ? (
+								<OpenAiKeyPanel instance={instance} token={token} status={openaiKey} onChange={setOpenaiKey} />
+							) : null}
+						</SectionCard>
+
 						{/* ── Section: Budget ───────────────────────────────────── */}
 						<SectionCard
 							icon={<AttachMoneyIcon className="text-slate-500 dark:text-slate-400" fontSize="small" />}

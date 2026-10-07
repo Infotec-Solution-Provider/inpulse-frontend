@@ -6,6 +6,7 @@ import type {
   AiAgentChatSession,
   AiAgentKnowledgeEntryInput,
   AiFeatureModels,
+  AiOpenAiKeyStatus,
   AiTenantConfig,
   AiUsageSummary,
   CreateAiAgentInput,
@@ -227,6 +228,24 @@ class FrontendAiService extends AiClient {
     const response = await this.ax.put<{ message: string; data: AiTenantConfig }>(
       `/api/ai/tenant-config/${instance}`,
       data,
+      this.buildAuthConfig(token),
+    );
+    return response.data.data;
+  }
+
+  /** Cadastra (ou troca) a chave da OpenAI do tenant; o ai-service confere a chave antes de gravar. */
+  public async setOpenAiKey(instance: string, apiKey: string, token: string): Promise<AiOpenAiKeyStatus> {
+    const response = await this.ax.put<{ message: string; data: AiOpenAiKeyStatus }>(
+      `/api/ai/tenant-config/${instance}/openai-key`,
+      { apiKey },
+      this.buildAuthConfig(token),
+    );
+    return response.data.data;
+  }
+
+  public async clearOpenAiKey(instance: string, token: string): Promise<AiOpenAiKeyStatus> {
+    const response = await this.ax.delete<{ message: string; data: AiOpenAiKeyStatus }>(
+      `/api/ai/tenant-config/${instance}/openai-key`,
       this.buildAuthConfig(token),
     );
     return response.data.data;

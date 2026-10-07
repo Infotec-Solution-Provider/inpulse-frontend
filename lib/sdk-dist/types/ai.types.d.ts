@@ -165,6 +165,16 @@ export interface AiTenantConfig {
     availableModels?: string[] | null;
     featureModels?: AiFeatureModels | null;
     operatorBudgets?: Record<string, number> | null;
+    openaiKey?: AiOpenAiKeyStatus | Pick<AiOpenAiKeyStatus, "configured">;
+}
+export interface AiOpenAiKeyStatus {
+    configured: boolean;
+    source: "tenant" | "environment" | null;
+    last4: string | null;
+    updatedAt: string | null;
+    updatedBy: number | null;
+    storageAvailable: boolean;
+    unreadable: boolean;
 }
 export interface AiFeatureUsageStat {
     feature: string;

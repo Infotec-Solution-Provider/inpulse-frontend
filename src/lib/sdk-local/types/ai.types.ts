@@ -202,6 +202,21 @@ export interface AiTenantConfig {
 	availableModels?: string[] | null;
 	featureModels?: AiFeatureModels | null;
 	operatorBudgets?: Record<string, number> | null;
+	/** Chave da OpenAI do tenant: detalhes só para o administrador; os demais recebem só `configured`. */
+	openaiKey?: AiOpenAiKeyStatus | Pick<AiOpenAiKeyStatus, "configured">;
+}
+
+export interface AiOpenAiKeyStatus {
+	configured: boolean;
+	/** "tenant": chave cadastrada pela empresa; "environment": chave global do servidor (legado). */
+	source: "tenant" | "environment" | null;
+	last4: string | null;
+	updatedAt: string | null;
+	updatedBy: number | null;
+	/** false quando o servidor não consegue guardar chaves (AI_SECRETS_KEY ausente). */
+	storageAvailable: boolean;
+	/** Há chave salva, mas ela não pode mais ser lida. */
+	unreadable: boolean;
 }
 
 export interface AiFeatureUsageStat {

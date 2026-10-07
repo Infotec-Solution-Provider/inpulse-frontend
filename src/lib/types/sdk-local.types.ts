@@ -21,6 +21,7 @@ export type {
   AiFeatureModels,
   AiFeatureUsageStat,
   AiOperatorUsageStat,
+  AiOpenAiKeyStatus,
   AiTenantConfig,
   AiUsageSummary,
   CreateAiAgentInput,
