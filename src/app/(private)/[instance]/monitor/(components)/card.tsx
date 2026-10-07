@@ -1,20 +1,19 @@
 "use client";
-import { Avatar, Tooltip, IconButton } from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
-import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import PhoneIcon from "@mui/icons-material/Phone";
-import BusinessIcon from "@mui/icons-material/Business";
-import GroupIcon from "@mui/icons-material/Group";
-import PersonIcon from "@mui/icons-material/Person";
 
-interface MonitorCardProps {
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import GroupIcon from "@mui/icons-material/Group";
+import SyncAltIcon from "@mui/icons-material/SyncAlt";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { Avatar, Chip, IconButton, Tooltip } from "@mui/material";
+import type { MonitorOperational } from "../types";
+
+export interface MonitorCardProps {
   type: "external-chat" | "internal-chat" | "internal-group" | "schedule" | "finished-chat";
   startDate?: string | null | false;
   endDate?: string | null | false;
   userName: string;
-  sectorName: string;
+  sectorName?: string | null;
   imageUrl?: string | null;
   chatTitle: string;
   customerName?: string | null;
@@ -27,223 +26,295 @@ interface MonitorCardProps {
   groupDescription?: string | null;
   isScheduled?: boolean;
   isFinished?: boolean;
+  operational?: MonitorOperational;
+  compact?: boolean;
   handleTransfer?: (() => void) | null;
   handleView?: (() => void) | null;
   handleFinish?: (() => void) | null;
 }
 
+const typeConfig = {
+  "external-chat": { color: "#4f46e5", label: "Atendimento" },
+  "finished-chat": { color: "#64748b", label: "Finalizado" },
+  "internal-chat": { color: "#9333ea", label: "Conversa interna" },
+  "internal-group": { color: "#0d9488", label: "Grupo interno" },
+  schedule: { color: "#d97706", label: "Agendamento" },
+};
+
+const statusLabels = {
+  in_progress: "Em atendimento",
+  waiting_agent: "Aguardando atendente",
+  waiting_customer: "Aguardando cliente",
+  finished: "Finalizado",
+  scheduled: "Agendado",
+};
+
+const deliveryLabels: Record<string, string> = {
+  PENDING: "Envio pendente",
+  QUEUED: "Na fila de envio",
+  SENDING: "Enviando",
+  PROCESSING: "Envio em processamento",
+  UNKNOWN: "Envio sem confirmação",
+  FAILED: "Falha no envio",
+  ERROR: "Falha no envio",
+  SENT: "Enviada",
+  DELIVERED: "Entregue",
+  // READ has no tag: a read message is the normal end state and only adds noise.
+  RECEIVED: "Entregue",
+  DOWNLOADED: "Mídia baixada",
+  REVOKED: "Mensagem removida",
+};
+
+function elapsedTime(value: string) {
+  const milliseconds = Date.now() - new Date(value).getTime();
+  if (!Number.isFinite(milliseconds)) return null;
+  const minutes = Math.max(0, Math.floor(milliseconds / 60_000));
+  if (minutes < 1) return "menos de 1 min";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h${minutes % 60 ? ` ${minutes % 60} min` : ""}`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "dia" : "dias"}${hours % 24 ? ` ${hours % 24} h` : ""}`;
+}
+
+function messageDate(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? date.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+}
+
 export default function MonitorCard({
-  type = "external-chat",
+  type,
   startDate,
   endDate,
   userName,
-  sectorName = "Suporte",
+  sectorName,
   imageUrl,
-  chatTitle = "Diego Souza",
+  chatTitle,
   customerName,
   contactNumber,
   customerDocument,
-  scheduledAt = null,
-  scheduledFor = null,
+  scheduledAt,
+  scheduledFor,
   isScheduled = false,
   participants,
   groupName,
   groupDescription,
+  operational,
+  compact = false,
   handleTransfer,
   handleView,
   handleFinish,
 }: MonitorCardProps) {
-  const typeConfig = {
-    "external-chat": {
-      borderColor: "#2563eb", // blue-600
-      bgColor: "bg-blue-50/40 dark:bg-blue-950/10",
-      labelColor: "text-blue-700 dark:text-blue-400",
-      label: "Atendimento",
-    },
-    "finished-chat": {
-      borderColor: "#6b7280", // gray-500
-      bgColor: "bg-gray-50/40 dark:bg-gray-950/10",
-      labelColor: "text-gray-700 dark:text-gray-400",
-      label: "Finalizado",
-    },
-    "internal-chat": {
-      borderColor: "#9333ea", // purple-600
-      bgColor: "bg-purple-50/60 dark:bg-purple-950/20",
-      labelColor: "text-purple-700 dark:text-purple-400",
-      label: "Conversa Interna",
-    },
-    "internal-group": {
-      borderColor: "#0d9488", // teal-600
-      bgColor: "bg-teal-50/40 dark:bg-teal-950/10",
-      labelColor: "text-teal-700 dark:text-teal-400",
-      label: "Grupo Interno",
-    },
-    schedule: {
-      borderColor: "#d97706", // amber-600
-      bgColor: "bg-amber-50/40 dark:bg-amber-950/10",
-      labelColor: "text-amber-700 dark:text-amber-400",
-      label: "Agendamento",
-    },
-  };
-
   const config = typeConfig[type];
+  const title = groupName || chatTitle || "Conversa sem título";
+  const status = operational?.status;
+  const waiting = status === "waiting_agent" || status === "waiting_customer";
+  const waitTime =
+    waiting && operational?.waitingSince ? elapsedTime(operational.waitingSince) : null;
+  const lastMessageAt = operational?.lastMessageAt ? messageDate(operational.lastMessageAt) : null;
+  const unread = operational?.unreadCount ?? 0;
+  const unreadLabel = `${unread} ${unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`;
+  const deliveryStatus = operational?.deliveryStatus?.toUpperCase();
+  const deliveryLabel = deliveryStatus ? deliveryLabels[deliveryStatus] : null;
+  const deliveryFailed = deliveryStatus === "FAILED" || deliveryStatus === "ERROR";
+  const deliveryPending =
+    deliveryStatus &&
+    ["PENDING", "QUEUED", "SENDING", "PROCESSING", "UNKNOWN"].includes(deliveryStatus);
 
   return (
-    <div
-      className={`mb-3 w-full rounded-lg border border-l-8 shadow-sm transition-shadow duration-200 hover:shadow-md border-gray-200 bg-white dark:border-gray-700 dark:bg-slate-800 ${config.bgColor}`}
-      style={{ borderLeftColor: config.borderColor }}
+    <li
+      className={`w-full list-none rounded-xl border border-l-4 border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${compact ? "px-3 py-2" : "p-3"}`}
+      style={{ borderLeftColor: operational?.slaBreached ? "#dc2626" : config.color }}
     >
-      <div className={`rounded-s-md py-2 pl-2 pr-4`}>
-        <div className="flex gap-3">
-          <div className="w-44 px-2 text-xs">
-            <span className={`font-semibold ${config.labelColor}`}>{config.label}</span>
-            <span className="mt-1 block text-gray-600 dark:text-gray-400">
-              <span className="text-[10px] uppercase tracking-wide text-gray-500">Início:</span>{" "}
-              {startDate ? startDate : "Não Iniciado"}
-            </span>
-            {endDate && (
-              <span className="block text-gray-600 dark:text-gray-400">
-                <span className="text-[10px] uppercase tracking-wide text-gray-500">Fim:</span>{" "}
-                {endDate}
-              </span>
-            )}
-            <span className="mt-2 block border-t border-gray-200 pt-2 text-sm font-semibold text-gray-800 dark:border-gray-700 dark:text-gray-200">
-              {userName || "N/A"}
-            </span>
-            {sectorName && (
-              <span className="block text-xs text-gray-600 dark:text-gray-400">{sectorName}</span>
+      <article aria-label={`${title}, ${status ? statusLabels[status] : config.label}`}>
+        {/* Actions sit on the title line (CSS order keeps the DOM order); the compact list
+            puts all three blocks on one line on wide screens. */}
+        <div
+          className={`flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 ${compact ? "xl:flex-nowrap xl:items-center" : ""}`}
+        >
+          <div
+            className={`order-1 flex min-w-0 flex-1 gap-3 ${compact ? "xl:w-64 xl:flex-none" : ""}`}
+          >
+            <Avatar
+              alt=""
+              src={imageUrl || undefined}
+              sx={{ width: compact ? 36 : 44, height: compact ? 36 : 44, flexShrink: 0 }}
+            >
+              {type === "internal-group" ? (
+                <GroupIcon fontSize="small" />
+              ) : (
+                title.charAt(0).toUpperCase()
+              )}
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h3 className="min-w-0 break-words text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {title}
+                </h3>
+                {!compact && (
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{config.label}</span>
+                )}
+              </div>
+              <p
+                className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
+                title={[userName, sectorName].filter(Boolean).join(" · ")}
+              >
+                {userName || "Sem atendente"}
+                {sectorName && ` · ${sectorName}`}
+              </p>
+            </div>
+          </div>
+
+          <div
+            className={`order-3 min-w-0 basis-full space-y-1 ${compact ? "xl:order-2 xl:flex-1 xl:basis-0" : ""}`}
+          >
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Chip
+                size="small"
+                label={status ? statusLabels[status] : config.label}
+                color={
+                  status === "waiting_agent"
+                    ? "warning"
+                    : status === "finished"
+                      ? "default"
+                      : "primary"
+                }
+                variant="outlined"
+              />
+              {operational?.slaBreached && <Chip size="small" color="error" label="Fora do SLA" />}
+              {operational?.channel && (
+                <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+                  {operational.channel}
+                </span>
+              )}
+              {deliveryLabel && (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  color={deliveryFailed ? "error" : deliveryPending ? "warning" : "default"}
+                  label={deliveryLabel}
+                />
+              )}
+            </div>
+            <p
+              className="truncate text-sm text-slate-600 dark:text-slate-300"
+              title={operational?.lastMessagePreview || undefined}
+            >
+              {operational?.lastMessagePreview ||
+                (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
+            </p>
+            {(waitTime || lastMessageAt || unread > 0) && (
+              <p className="flex flex-wrap items-center gap-x-3 text-xs">
+                {waitTime && (
+                  <span
+                    className={`inline-flex items-center gap-1 font-medium ${operational?.slaBreached ? "text-red-600 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
+                  >
+                    <AccessTimeIcon sx={{ fontSize: 14 }} /> Aguardando há {waitTime}
+                  </span>
+                )}
+                {/* Same unread marker as the attendance chat list: the last message time
+                    turns red with a plain red dot; the count is in the tooltip. */}
+                {(lastMessageAt || unread > 0) && (
+                  <span
+                    className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400"
+                    title={unread > 0 ? unreadLabel : undefined}
+                  >
+                    {lastMessageAt && (
+                      <span>
+                        Última mensagem:{" "}
+                        <time
+                          dateTime={operational?.lastMessageAt || undefined}
+                          className={unread > 0 ? "font-semibold text-red-600" : ""}
+                        >
+                          {lastMessageAt}
+                        </time>
+                      </span>
+                    )}
+                    {unread > 0 && (
+                      <span className="h-3 w-3 shrink-0 rounded-full bg-red-600">
+                        <span className="sr-only">{unreadLabel}</span>
+                      </span>
+                    )}
+                  </span>
+                )}
+              </p>
             )}
           </div>
-          <Avatar
-            alt={chatTitle}
-            src={imageUrl || ""}
-            sx={{
-              width: 64,
-              height: 64,
-              border: "2px solid rgb(229, 231, 235)",
-            }}
-          />
-          {(type === "external-chat" || type === "schedule" || type === "finished-chat") && (
-            <div className="flex flex-1 flex-col gap-1 text-xs">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">{chatTitle}</h3>
-              {contactNumber && (
-                <p className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                  <PhoneIcon sx={{ fontSize: 14 }} />
-                  {contactNumber}
-                </p>
-              )}
-              {customerName && (
-                <p className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <BusinessIcon sx={{ fontSize: 14 }} />
-                  {customerName}
-                </p>
-              )}
-              {customerDocument && <p className="text-xs text-gray-500">{customerDocument}</p>}
-            </div>
-          )}
 
-          {type === "internal-chat" && (
-            <div className="flex flex-1 flex-col gap-2 text-xs">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                {chatTitle}
-              </h3>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-1 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
-                  <PersonIcon sx={{ fontSize: 12 }} />
-                  Conversa Interna
-                </span>
-              </div>
-            </div>
-          )}
-          {type === "internal-group" && (
-            <div className="flex flex-1 flex-col gap-1 text-xs">
-              <h3 className="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white">
-                <GroupIcon sx={{ fontSize: 18 }} />
-                {groupName}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {groupDescription || "Sem descrição"}
-              </p>
-              <span className="text-xs text-gray-500">
-                {participants?.length || 0} participantes
-              </span>
-            </div>
-          )}
-          {isScheduled && (
-            <div className="flex flex-col border-l border-amber-200 pl-3 text-xs dark:border-amber-800">
-              <div className="mb-1 flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-400">
-                <AccessTimeIcon sx={{ fontSize: 14 }} />
-                Agendamento
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <span className="text-[10px] uppercase tracking-wide text-gray-500">
-                    Agendado em:
-                  </span>
-                  <p className="font-medium text-gray-700 dark:text-gray-300">{scheduledAt}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase tracking-wide text-gray-500">Para:</span>
-                  <p className="font-medium text-gray-700 dark:text-gray-300">{scheduledFor}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="ml-auto flex flex-col items-end gap-2 w-16 ">
+          <div
+            className={`order-2 flex shrink-0 items-center gap-1 ${compact ? "xl:order-3 xl:ml-auto" : ""}`}
+          >
             {handleView && (
-              <Tooltip title="Visualizar" arrow placement="left">
+              <Tooltip title="Visualizar conversa" arrow>
                 <IconButton
+                  aria-label={`Visualizar conversa de ${title}`}
                   onClick={handleView}
                   size="small"
-                  sx={{
-                    border: "1px solid rgb(229, 231, 235)",
-                    "&:hover": {
-                      borderColor: "rgb(59, 130, 246)",
-                      backgroundColor: "rgb(239, 246, 255)",
-                    },
-                  }}
+                  color="primary"
                 >
-                  <VisibilityIcon sx={{ fontSize: 18, color: "rgb(59, 130, 246)" }} />
+                  <VisibilityIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
             {handleTransfer && (
-              <Tooltip title="Transferir" arrow placement="left">
+              <Tooltip title="Transferir atendimento" arrow>
                 <IconButton
+                  aria-label={`Transferir atendimento de ${title}`}
                   onClick={handleTransfer}
                   size="small"
-                  sx={{
-                    border: "1px solid rgb(229, 231, 235)",
-                    "&:hover": {
-                      borderColor: "rgb(99, 102, 241)",
-                      backgroundColor: "rgb(238, 242, 255)",
-                    },
-                  }}
+                  color="primary"
                 >
-                  <SyncAltIcon sx={{ fontSize: 18, color: "rgb(99, 102, 241)" }} />
+                  <SyncAltIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
             {handleFinish && (
-              <Tooltip title="Finalizar" arrow placement="left">
+              <Tooltip title="Finalizar atendimento" arrow>
                 <IconButton
+                  aria-label={`Finalizar atendimento de ${title}`}
                   onClick={handleFinish}
                   size="small"
-                  sx={{
-                    border: "1px solid rgb(229, 231, 235)",
-                    "&:hover": {
-                      borderColor: "rgb(34, 197, 94)",
-                      backgroundColor: "rgb(240, 253, 244)",
-                    },
-                  }}
+                  color="success"
                 >
-                  <AssignmentTurnedInIcon sx={{ fontSize: 18, color: "rgb(34, 197, 94)" }} />
+                  <AssignmentTurnedInIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             )}
           </div>
         </div>
-      </div>
-    </div>
+
+        {!compact && (
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            {contactNumber && <span>Telefone: {contactNumber}</span>}
+            {customerName && <span>Cliente: {customerName}</span>}
+            {customerDocument && <span>Documento: {customerDocument}</span>}
+            {type === "internal-group" && (
+              <span>
+                {participants?.length || 0} participantes
+                {groupDescription ? ` · ${groupDescription}` : ""}
+              </span>
+            )}
+            {startDate && <span>Início: {startDate}</span>}
+            {endDate && <span>Fim: {endDate}</span>}
+          </div>
+        )}
+        {(isScheduled || type === "schedule") && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1">
+              <AccessTimeIcon sx={{ fontSize: 14 }} /> Agendado para:{" "}
+              {scheduledFor || "Data não informada"}
+            </span>
+            {!compact && scheduledAt && <span>Criado em: {scheduledAt}</span>}
+          </div>
+        )}
+      </article>
+    </li>
   );
 }

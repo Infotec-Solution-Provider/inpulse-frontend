@@ -27,6 +27,10 @@ interface TelephonyScheduleCallStatus {
 }
 
 class FrontendCustomersService extends CustomersClient {
+	public async reportTelephonyCall(scheduleId: number, callId: string, state: "answered" | "ended" | "failed") {
+		await this.ax.post(`/api/customers/schedules/telephony/${scheduleId}/call/end`, { callId, state });
+	}
+
 	public async finishTelephonySchedule(
 		scheduleId: number,
 		data: FinishTelephonySchedulePayload,

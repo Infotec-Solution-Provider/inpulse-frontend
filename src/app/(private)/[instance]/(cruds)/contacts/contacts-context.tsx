@@ -15,6 +15,8 @@ import { getContactRegistrationConflict } from "@/lib/utils/contact-registration
 import { Logger } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
+import { usePathname } from "next/navigation";
+import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
 import { useWhatsappContext } from "../../whatsapp-context";
@@ -70,6 +72,7 @@ export const useContactsContext = () => {
 };
 
 export default function ContactsProvider({ children }: IContactsProviderProps) {
+  const pathname = usePathname();
   const { token } = useAuthContext();
   const [state, dispatch] = useReducer(contactsReducer, {
     contacts: [],
@@ -346,7 +349,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       });
     } catch (err) {
       Logger.error("Error loading contacts", err as Error);
-      toast.error("Falha ao carregar clientes!");
+      if (!readRequestLimitMessage(err)) toast.error("Falha ao carregar clientes!");
     } finally {
       dispatch({ type: "change-loading", isLoading: false });
     }
@@ -358,10 +361,10 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   }, [token, wppApi]);
 
   useEffect(() => {
-    if (token) {
+    if (token && pathname.endsWith("/contacts")) {
       loadContacts();
     }
-  }, [token, state.filters.page, state.filters.perPage, loadContacts]);
+  }, [token, pathname, state.filters.page, state.filters.perPage, loadContacts]);
 
   return (
     <ContactsContext.Provider

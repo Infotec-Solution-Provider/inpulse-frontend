@@ -86,7 +86,7 @@ interface InternalChatContextType {
     message: InternalMessage,
     confirmUncertain?: boolean,
   ) => Promise<InternalMessageRetryResult>;
-  openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean) => void;
+  openInternalChat: (chat: DetailedInternalChat, markAsRead?: boolean, preloadedMessages?: InternalMessage[]) => void;
   startDirectChat: (userId: number) => void;
   setCurrentChat: (chat: DetailedChat | DetailedInternalChat | null) => void;
   monitorInternalChats: DetailedInternalChat[];
@@ -424,9 +424,10 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   }, [internalChats, wppChats]);
 
   const openInternalChat = useCallback(
-    (chat: DetailedInternalChat, markAsRead: boolean = true) => {
+    (chat: DetailedInternalChat, markAsRead: boolean = true, preloadedMessages?: InternalMessage[]) => {
       setCurrentChat(chat);
-      setCurrentChatMessages(messages[chat.id] || monitorMessages[chat.id] || []);
+      setCurrentChatMessages(preloadedMessages ?? messages[chat.id] ?? monitorMessages[chat.id] ?? []);
+      if (preloadedMessages) setMonitorMessages((previous) => ({ ...previous, [chat.id]: preloadedMessages }));
       setWppCurrMsgs([]);
       currentChatRef.current = chat as unknown as DetailedChat;
 
@@ -446,7 +447,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         );
       }
     },
-    [messages],
+    [messages, monitorMessages, setMonitorMessages],
   );
 
   const updateChatPreference = useCallback(

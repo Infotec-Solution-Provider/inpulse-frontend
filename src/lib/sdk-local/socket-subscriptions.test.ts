@@ -19,6 +19,19 @@ vi.mock("socket.io-client", () => ({ io: () => transport }));
 beforeEach(() => transport.listeners.clear());
 
 describe("independent socket subscriptions", () => {
+  it("observes reconnection and removes only the monitor connection listener", () => {
+    const client = new SocketClient("http://localhost");
+    const first = vi.fn();
+    const second = vi.fn();
+    const remove = client.subscribeConnection(first);
+    client.subscribeConnection(second);
+    transport.listeners.get("connect")?.forEach(callback => callback(undefined));
+    remove();
+    transport.listeners.get("connect")?.forEach(callback => callback(undefined));
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps both message domains subscribed and removes only the owner callback", () => {
     const client = new SocketClient("http://localhost");
     const wpp = vi.fn();

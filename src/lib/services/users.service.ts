@@ -1,7 +1,22 @@
 import { UsersClient } from "@/lib/sdk-local";
 import { UserNotificationPreferences } from "@/lib/sdk-local/types/user.types";
+import type { WebrtcConfig } from "../telephony/types";
 
 const USERS_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
+
+/** "direct": browser -> WebRTC-capable PBX. "gateway": browser -> in.pulse gateway -> SIP PBX without WebRTC. */
+export type WebrtcConnectionMode = "direct" | "gateway";
+
+export interface WebrtcSettingsDTO {
+	enabled: boolean;
+	mode: WebrtcConnectionMode;
+	websocketUrl: string;
+	domain: string;
+	pbxAddress: string;
+	iceServers: Array<{ urls: string[]; username?: string; credential?: string }>;
+	/** Read-only: whether this server has the gateway configured. Ignored on save. */
+	gatewayAvailable?: boolean;
+}
 
 export interface SipConfigDTO {
 	COD_CONFIG_SIP: number;
@@ -80,6 +95,21 @@ export interface PushSubscriptionPayload {
 }
 
 class FrontendUsersService extends UsersClient {
+	public async getWebrtcSettings() {
+		const response = await this.ax.get<{ data: WebrtcSettingsDTO }>("/api/telephony/webrtc-settings");
+		return response.data.data;
+	}
+
+	public async saveWebrtcSettings(settings: WebrtcSettingsDTO) {
+		const response = await this.ax.put<{ data: WebrtcSettingsDTO }>("/api/telephony/webrtc-settings", settings);
+		return response.data.data;
+	}
+
+	public async getWebrtcConfig() {
+		const response = await this.ax.get<{ data: WebrtcConfig }>("/api/telephony/webrtc-config");
+		return response.data.data;
+	}
+
 	public async getUserNotificationPreferences(userId: number) {
 		const response = await this.ax.get<{ message: string; data: UserNotificationPreferences }>(
 			`/api/users/${userId}/notification-preferences`,

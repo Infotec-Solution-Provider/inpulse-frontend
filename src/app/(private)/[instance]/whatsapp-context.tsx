@@ -12,6 +12,7 @@ import MessageReactionHandler from "@/lib/event-handlers/message-reaction";
 import MessageStatusHandler from "@/lib/event-handlers/message-status";
 import ReadChatHandler from "@/lib/event-handlers/read-chat";
 import processChatsAndMessages from "@/lib/process-chats-and-messages";
+import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 import chatsFilterReducer, {
   ChangeFiltersAction,
   ChatsFiltersState,
@@ -137,7 +138,7 @@ interface IWhatsappContext {
   currentChat: DetailedChat | DetailedInternalChat | null;
   currentChatMessages: WppMessage[];
   monitorSchedules: DetailedSchedule[];
-  openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[]) => void;
+  openChat: (chat: DetailedChat, preloadedMessages?: WppMessage[], markAsRead?: boolean) => void;
   setCurrentChat: Dispatch<SetStateAction<DetailedChat | DetailedInternalChat | null>>;
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>;
   sendMessage: (to: string, data: SendMessageOptions) => Promise<WppMessage>;
@@ -150,7 +151,7 @@ interface IWhatsappContext {
   getChatsMonitor: () => void;
   getMonitorSchedules: () => void;
   changeChatFilters: ActionDispatch<[ChangeFiltersAction]>;
-  finishChat: (chatId: number, resultId: number, scheduleDate?: Date | null) => void;
+  finishChat: (chatId: number, resultId: number, scheduleDate?: Date | null) => Promise<void>;
   startChatByContactId: (contactId: number, template?: SendTemplateData) => Promise<any>;
   updateChatContact: (contactId: number, newName: string, newCustomer: Customer | null) => void;
   currentChatRef: React.RefObject<DetailedChat | DetailedInternalChat | null>;
@@ -455,8 +456,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     sortOrder: "desc",
   });
 
+  const historyRequestId = useRef(0);
   const openChat = useCallback(
-    (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
+    (chat: DetailedChat, preloadedMessages?: WppMessage[], markAsRead = true) => {
+      const requestId = ++historyRequestId.current;
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
 
@@ -466,7 +469,26 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
 
-      if (chat.contactId && globalChannel.current) {
+      // Initial loading only fetches summaries. Load history for the opened chat.
+      if (preloadedMessages === undefined && chat.id && chat.contactId) {
+        const scope = liveAuth.current.scope;
+        void api.current.getChatById(chat.id).then((result) => {
+          if (requestId !== historyRequestId.current || liveAuth.current.scope !== scope || currentChatRef.current?.id !== chat.id ||
+              currentChatRef.current?.chatType !== "wpp") return;
+          setUniqueCurrentChatMessages((current) => {
+            const merged = new Map((result.messages || []).map((message) => [message.id, message]));
+            // Keep socket updates received while the history request was pending.
+            for (const message of current) merged.set(message.id, message);
+            return [...merged.values()].sort((a, b) => a.id - b.id);
+          });
+        }).catch(() => {
+          if (requestId === historyRequestId.current && liveAuth.current.scope === scope && currentChatRef.current?.id === chat.id) {
+            toast.error("Falha ao carregar o histórico. Abra a conversa novamente para tentar.");
+          }
+        });
+      }
+
+      if (markAsRead && chat.contactId && globalChannel.current) {
         api.current.markContactMessagesAsRead(chat.contactId);
 
         setChats((prev) =>
@@ -516,9 +538,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const finishChat = useCallback(
-    (chatId: number, resultId: number, scheduleDate?: Date | null) => {
+    async (chatId: number, resultId: number, scheduleDate?: Date | null) => {
+      const scope = liveAuth.current.scope;
       api.current.setAuth(token || "");
-      api.current.finishChatById(chatId, resultId, scheduleDate);
+      await api.current.finishChatById(chatId, resultId, scheduleDate);
+      if (scope !== liveAuth.current.scope) return;
       setMonitorChats((prev) => prev.filter((c) => c.id !== chatId));
     },
     [api, token],
@@ -526,10 +550,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const transferAttendance = useCallback(
     async (chatId: number, selectedUser: number) => {
+      const scope = liveAuth.current.scope;
       api.current.setAuth(token || "");
       await api.current.transferAttendance(chatId, selectedUser).then(() => {
+        if (scope !== liveAuth.current.scope) return;
         setChats((prev) => prev.filter((chat) => chat.id !== chatId));
-        getChatsMonitor();
+        setMonitorChats((previous) => previous.map((chat) =>
+          chat.id === chatId ? { ...chat, userId: selectedUser } : chat,
+        ));
       });
     },
     [api, token],
@@ -847,6 +875,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
         setMonitorChats(detailedChats);
         setMessages(chatsMessages);
+      }).catch((error) => {
+        if (!readRequestLimitMessage(error)) toast.error("Falha ao carregar a monitoria.");
       });
     } else {
       setMonitorChats([]);
@@ -1006,11 +1036,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const getChats = useCallback(() => {
     if (typeof token === "string" && token.length > 0 && api.current) {
       api.current.setAuth(token);
-      api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
+      api.current.getChatsBySession(false, true).then(({ chats, messages }) => {
         const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
 
         setChats(detailedChats);
         setMessages(chatsMessages);
+      }).catch((error) => {
+        if (!readRequestLimitMessage(error)) toast.error("Falha ao carregar conversas.");
       });
     } else {
       setChats([]);
@@ -1062,7 +1094,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           setSectors(secs);
 
           api.current
-            .getChatsBySession(true, true)
+            .getChatsBySession(false, true)
             .then((payload) => {
               if (!isCurrent()) return;
               const chats = Array.isArray(payload?.chats) ? payload.chats : [];

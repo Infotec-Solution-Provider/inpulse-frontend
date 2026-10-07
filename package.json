@@ -11,6 +11,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "vitest run src",
+    "test:monitor": "vitest run monitor socket-subscriptions",
+    "test:monitor:e2e": "playwright test --config tests/monitor.config.ts",
     "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
     "test:e2e": "playwright test --project=chromium"
   },
@@ -32,6 +34,7 @@
     "dayjs": "^1.11.13",
     "emoji-picker-react": "^4.12.2",
     "form-data": "^4.0.2",
+    "jssip": "3.13.8",
     "linkify-react": "^4.3.1",
     "lucide-react": "^0.542.0",
     "next": "^16.0.7",

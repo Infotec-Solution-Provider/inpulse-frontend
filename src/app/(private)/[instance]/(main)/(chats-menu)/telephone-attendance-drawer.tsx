@@ -38,6 +38,9 @@ interface TelephoneAttendanceDrawerProps {
   open: boolean;
   appointment: TelephoneQueueItem | null;
   isDialing: boolean;
+  callStatusLabel: string;
+  canStartCall: boolean;
+  canFinish: boolean;
   dialedPhone: string;
   onClose: () => void;
   onSelectPhone: (phone: string) => void;
@@ -98,6 +101,9 @@ export default function TelephoneAttendanceDrawer({
   open,
   appointment,
   isDialing,
+  callStatusLabel,
+  canStartCall,
+  canFinish,
   dialedPhone,
   onClose,
   onSelectPhone,
@@ -314,7 +320,7 @@ export default function TelephoneAttendanceDrawer({
                 <Chip
                   size="small"
                   color={isDialing ? "success" : "warning"}
-                  label={isDialing ? "Em discagem" : "Na fila"}
+                  label={callStatusLabel}
                 />
               </div>
               <h2 className="mt-2 truncate text-lg font-semibold">
@@ -350,6 +356,7 @@ export default function TelephoneAttendanceDrawer({
               color="success"
               startIcon={<PhoneInTalkIcon />}
               onClick={onStartDial}
+              disabled={!canStartCall}
             >
               {isDialing ? "Ligacao em andamento" : "Iniciar ligacao"}
             </Button>
@@ -358,6 +365,7 @@ export default function TelephoneAttendanceDrawer({
               color="secondary"
               startIcon={<AssignmentTurnedInIcon />}
               onClick={onOpenFinishModal}
+              disabled={!canFinish}
             >
               Finalizar atendimento
             </Button>
@@ -383,6 +391,7 @@ export default function TelephoneAttendanceDrawer({
               Detalhes do cliente
             </Button>
           </div>
+          {!canStartCall && !isDialing && <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">Conecte o ramal no painel Telefone e encerre qualquer outra ligação para iniciar este atendimento.</p>}
         </header>
 
         <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -398,6 +407,7 @@ export default function TelephoneAttendanceDrawer({
                     <button
                       key={`${appointment.id}-${phoneOption.phone}`}
                       type="button"
+                      disabled={isDialing}
                       onClick={() => onSelectPhone(phoneOption.phone)}
                       className={`rounded-full border px-3 py-2 text-left text-sm transition ${
                         dialedPhone === phoneOption.phone

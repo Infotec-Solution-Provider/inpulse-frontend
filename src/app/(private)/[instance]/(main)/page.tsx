@@ -5,6 +5,7 @@ import React, { useContext } from "react";
 import { WhatsappContext } from "../whatsapp-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
+import { TelephonyPanelSlot } from "@/lib/telephony/telephony-panel";
 
 export default function Home() {
   const { currentChat, setCurrentChat } = useContext(WhatsappContext);
@@ -102,6 +103,8 @@ export default function Home() {
           )}
         </div>
       </div>
+      {/* The phone lives in the attendance area; other screens show it only during a call. */}
+      <TelephonyPanelSlot />
     </>
   );
 }
