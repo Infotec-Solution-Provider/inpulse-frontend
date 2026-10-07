@@ -489,6 +489,7 @@ export default function AiSupervisorPage() {
 	const sendAbortRef = useRef<AbortController | null>(null);
 	// Sessão recém-criada pelo envio: já sabemos que está vazia, e recarregá-la apagaria a pergunta em andamento.
 	const skipDetailLoadRef = useRef<number | null>(null);
+	const loadedSessionIdRef = useRef<number | null>(null);
 	const lastSuggestedContextKeyRef = useRef<string | null>(null);
 	const hasMessageContext = hasContextValues(messageContext);
 	const selectedMode: SupervisorAiChatMode = selectedSession?.mode ?? "STANDARD";
@@ -642,8 +643,12 @@ export default function AiSupervisorPage() {
 		if (typeof token !== "string" || !selectedSession) return;
 		if (skipDetailLoadRef.current === selectedSession.id) {
 			skipDetailLoadRef.current = null;
+			loadedSessionIdRef.current = selectedSession.id;
 			return;
 		}
+		// Token renovado no meio de uma resposta: recarregar agora apagaria a resposta em andamento.
+		if (sendAbortRef.current && loadedSessionIdRef.current === selectedSession.id) return;
+		loadedSessionIdRef.current = selectedSession.id;
 		const authToken = token;
 		const currentSession = selectedSession;
 
@@ -827,16 +832,32 @@ export default function AiSupervisorPage() {
 			setActions((current) => [...current, ...(result.actions ?? [])]);
 		} catch (error) {
 			if (abortController.signal.aborted) {
-				toast.info("Resposta interrompida. O conteúdo parcial foi salvo no histórico.");
-				if (sessionId === null) return;
+				// Parar antes de a pergunta chegar ao servidor: nada foi gravado e o texto volta ao campo.
+				const restoreComposer = () => {
+					if (request.kind !== "new") return;
+					setMessage((current) => current.trim() ? current : request.text);
+					setAttachedFiles((current) => current.length > 0 ? current : request.files);
+				};
+				if (sessionId === null) {
+					restoreComposer();
+					toast.info("Envio cancelado.");
+					return;
+				}
 				await new Promise((resolve) => setTimeout(resolve, 400));
-				try {
-					const detail = await aiService.getSupervisorSession(sessionId, authToken);
-					setSelectedSession(detail.session);
-					setMessages(detail.messages);
-					setActions(detail.actions ?? []);
-				} catch {
+				const detail = await aiService.getSupervisorSession(sessionId, authToken).catch(() => null);
+				if (!detail) {
 					// A próxima abertura da sessão recupera o conteúdo parcial persistido.
+					toast.info("Resposta interrompida.");
+					return;
+				}
+				setSelectedSession(detail.session);
+				setMessages(detail.messages);
+				setActions(detail.actions ?? []);
+				if (detail.messages.some((entry) => !knownIds.has(entry.id))) {
+					toast.info("Resposta interrompida. O conteúdo parcial foi salvo no histórico.");
+				} else {
+					restoreComposer();
+					toast.info("Envio cancelado.");
 				}
 			} else {
 				await handleSendError(error, request, sessionId, knownIds, authToken);
@@ -870,7 +891,14 @@ export default function AiSupervisorPage() {
 			const saved = [savedQuestion, savedNotice].filter((entry): entry is SupervisorAiMessage => entry !== null);
 			setMessages((current) => appendMessages(current, saved));
 			touchSession(sessionId, saved.at(-1)!.createdAt);
-			if (savedNotice) return;
+			if (savedNotice) {
+				// O ai-service também dá título à conversa nova; o evento de erro não traz a sessão.
+				void aiService.getSupervisorSession(sessionId, authToken).then((detail) => {
+					setSelectedSession((current) => current?.id === detail.session.id ? detail.session : current);
+					setSessions((current) => current.map((entry) => entry.id === detail.session.id ? detail.session : entry));
+				}).catch(() => undefined);
+				return;
+			}
 		}
 
 		let next: SendRequest = savedQuestion ? { kind: "retry", userMessage: savedQuestion } : request;
