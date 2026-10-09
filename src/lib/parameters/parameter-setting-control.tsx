@@ -2,7 +2,11 @@
 
 import { Button, Chip, MenuItem, Switch, TextField, Typography } from "@mui/material";
 import RestoreIcon from "@mui/icons-material/Restore";
-import type { ParameterSetting, ParameterSource } from "./parameter-settings.types";
+import type {
+  ParameterSetting,
+  ParameterSource,
+  ParameterSettingsSnapshot,
+} from "./parameter-settings.types";
 
 interface Props {
   setting: ParameterSetting;
@@ -12,6 +16,8 @@ interface Props {
   resetting: boolean;
   disabled: boolean;
   error?: string;
+  scoped?: boolean;
+  inherited?: NonNullable<ParameterSettingsSnapshot["inherited"]>[string];
   onChange: (value: string) => void;
   onReset: () => void;
 }
@@ -24,19 +30,27 @@ export function ParameterSettingControl({
   resetting,
   disabled,
   error,
+  scoped = false,
+  inherited,
   onChange,
   onReset,
 }: Props) {
   const effectiveValue =
-    resetting || (source === "whatsapp" && value === null) ? setting.defaultValue : value;
+    resetting || (source === "whatsapp" && value === null)
+      ? (inherited?.value ?? setting.defaultValue)
+      : value;
   const multiplier = setting.multiplier ?? 1;
   const isDefault = source === "whatsapp" ? value === null : value === setting.defaultValue;
   const stateLabel = resetting
-    ? "Padrão ao salvar"
+    ? scoped
+      ? "Herdado ao salvar"
+      : "Padrão ao salvar"
     : changed
       ? "Alterado"
       : isDefault
-        ? "Padrão"
+        ? scoped
+          ? "Herdado"
+          : "Padrão"
         : value === null
           ? "Não definido"
           : "Personalizado";
@@ -61,6 +75,27 @@ export function ParameterSettingControl({
         <Typography variant="body2" color="text.secondary">
           {setting.description}
         </Typography>
+        {scoped && inherited && (
+          <Typography variant="caption" color="text.secondary" display="block">
+            Valor herdado{" "}
+            {inherited.source === "SECTOR"
+              ? "do setor"
+              : inherited.source === "INSTANCE"
+                ? "da instância"
+                : "do padrão"}
+            :{" "}
+            {setting.type === "boolean"
+              ? inherited.value === null
+                ? "Padrão do provedor"
+                : inherited.value === setting.trueValue
+                  ? "Ativado"
+                  : "Desativado"
+              : inherited.value === null
+                ? "Não definido"
+                : `${Number(inherited.value) / multiplier} ${setting.unit ?? ""}`}
+            .
+          </Typography>
+        )}
         {source === "whatsapp" &&
           setting.type === "boolean" &&
           setting.defaultValue === null &&
@@ -128,15 +163,26 @@ export function ParameterSettingControl({
             }
           />
         )}
-        <Button
-          size="small"
-          startIcon={<RestoreIcon />}
-          onClick={onReset}
-          disabled={disabled || resetting || isDefault || setting.canReset === false}
-          aria-label={`Usar padrão: ${setting.label}`}
-        >
-          Usar padrão
-        </Button>
+        {scoped && isDefault && !resetting && effectiveValue !== null ? (
+          <Button
+            size="small"
+            disabled={disabled}
+            onClick={() => onChange(effectiveValue)}
+            aria-label={`Personalizar: ${setting.label}`}
+          >
+            Personalizar
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            startIcon={<RestoreIcon />}
+            onClick={onReset}
+            disabled={disabled || resetting || isDefault || setting.canReset === false}
+            aria-label={`${scoped ? "Usar valor herdado" : "Usar padrão"}: ${setting.label}`}
+          >
+            {scoped ? "Usar valor herdado" : "Usar padrão"}
+          </Button>
+        )}
       </div>
     </div>
   );

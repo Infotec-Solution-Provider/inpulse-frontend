@@ -1,4 +1,14 @@
 import { test, expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+async function scope(page: Page, name: "Instância" | "Setor" | "Usuário") {
+  await page.getByRole("combobox", { name: "Escopo", exact: true }).click();
+  await page.getByRole("option", { name, exact: true }).click();
+}
+async function selectTarget(page: Page, kind: "Setor" | "Usuário", name: string) {
+  await page.getByRole("combobox", { name: kind, exact: true }).click();
+  await page.getByRole("option", { name, exact: true }).click();
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/tests/parameters/index.html");
@@ -138,4 +148,120 @@ test("renders the existing dark appearance", async ({ page }) => {
     page.getByRole("checkbox", { name: "Aprovar exclusão de contatos", exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: "test-results/parameters-dark.png" });
+});
+
+test("configures sector and user overrides, showing inheritance and restoring it", async ({
+  page,
+}) => {
+  const time = page.getByRole("spinbutton", { name: "Tempo de inatividade", exact: true });
+  await scope(page, "Setor");
+  await selectTarget(page, "Setor", "Comercial (#11)");
+  await expect(time).toHaveValue("60");
+  await expect(page.getByTestId("parameter-chat_auto_finish_idle_time")).toContainText(
+    "Valor herdado da instância: 60 minutos",
+  );
+  await expect(
+    page.getByRole("checkbox", { name: "Aprovar exclusão de contatos", exact: true }),
+  ).toHaveCount(0);
+  await time.fill("45");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Nenhuma alteração pendente" }),
+  ).toBeVisible();
+  await scope(page, "Usuário");
+  await selectTarget(page, "Usuário", "Ana (#7)");
+  await expect(time).toHaveValue("45");
+  await expect(page.getByTestId("parameter-chat_auto_finish_idle_time")).toContainText(
+    "Valor herdado do setor: 45 minutos",
+  );
+  await expect(
+    page.getByRole("checkbox", { name: "Vincular clientes automaticamente", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Personalizar: Tempo de inatividade", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Nenhuma alteração pendente" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Usar valor herdado: Tempo de inatividade", exact: true })
+    .click();
+  await expect(time).toHaveValue("45");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Nenhuma alteração pendente" }),
+  ).toBeVisible();
+  const calls = await page.evaluate(() => window.parameterTest.calls);
+  expect(calls.map((call) => call.target)).toEqual([
+    { scope: "SECTOR", sectorId: 11 },
+    { scope: "USER", userId: 7 },
+    { scope: "USER", userId: 7 },
+  ]);
+  expect(calls[2].changes).toEqual([
+    { key: "chat_auto_finish_idle_time", value: null, previousValue: "2700000" },
+  ]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: "test-results/parameters-user-mobile.png", fullPage: true });
+  await scope(page, "Instância");
+  await expect(time).toHaveValue("60");
+});
+
+test("asks before changing a dirty scope or user and keeps drafts when cancelled", async ({
+  page,
+}) => {
+  const time = page.getByRole("spinbutton", { name: "Tempo de inatividade", exact: true });
+  await time.fill("40");
+  await scope(page, "Usuário");
+  await expect(page.getByRole("dialog")).toContainText("Alterações pendentes");
+  await page.getByRole("button", { name: "Continuar editando", exact: true }).click();
+  await expect(time).toHaveValue("40");
+  await scope(page, "Usuário");
+  await page.getByRole("button", { name: "Descartar e trocar", exact: true }).click();
+  await selectTarget(page, "Usuário", "Ana (#7)");
+  await time.fill("20");
+  await page.getByRole("combobox", { name: "Usuário", exact: true }).fill("Bruno");
+  await page.getByRole("option", { name: "Bruno (#8) · Inativo", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar editando", exact: true }).click();
+  await expect(time).toHaveValue("20");
+  await expect(page.getByRole("combobox", { name: "Usuário", exact: true })).toHaveValue(
+    "Ana (#7)",
+  );
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Nenhuma alteração pendente" }),
+  ).toBeVisible();
+  expect((await page.evaluate(() => window.parameterTest.calls))[0].target).toEqual({
+    scope: "USER",
+    userId: 7,
+  });
+});
+
+test("ignores a delayed response from the previously selected sector", async ({ page }) => {
+  await page.evaluate(() => {
+    window.parameterTest.delays["SECTOR:11"] = 1500;
+  });
+  await scope(page, "Setor");
+  await selectTarget(page, "Setor", "Comercial (#11)");
+  await selectTarget(page, "Setor", "Suporte (#12)");
+  await expect(page.getByText("Configurando:").filter({ hasText: "Suporte" })).toBeVisible();
+  await expect(
+    page.getByRole("spinbutton", { name: "Tempo de inatividade", exact: true }),
+  ).toHaveValue("60");
+  await expect
+    .poll(() => page.evaluate(() => window.parameterTest.completedReads), { timeout: 3000 })
+    .toContain("SECTOR:11");
+  await expect(page.getByText("Configurando:")).toContainText("Suporte");
+  await page.getByRole("spinbutton", { name: "Tempo de inatividade", exact: true }).fill("15");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Nenhuma alteração pendente" }),
+  ).toBeVisible();
+  expect((await page.evaluate(() => window.parameterTest.calls))[0].target).toEqual({
+    scope: "SECTOR",
+    sectorId: 12,
+  });
 });
