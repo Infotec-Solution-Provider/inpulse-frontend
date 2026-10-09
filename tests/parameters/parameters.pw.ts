@@ -208,6 +208,7 @@ test("configures sector and user overrides, showing inheritance and restoring it
   await page.screenshot({ path: "test-results/parameters-user-mobile.png", fullPage: true });
   await scope(page, "Instância");
   await expect(time).toHaveValue("60");
+  await expect(page.getByLabel("Carregando setores e usuários")).toHaveCount(0);
 });
 
 test("asks before changing a dirty scope or user and keeps drafts when cancelled", async ({
