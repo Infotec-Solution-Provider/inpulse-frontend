@@ -50,6 +50,7 @@ const crudsRoutes = (
   }
 
   if (isAdmin) {
+    arr.push({ title: "Parâmetros", href: "/parameters" });
     arr.push({ title: "Usuários", href: "/users" });
     if (isFeatureEnabled(params, FEATURE_FLAGS.sipConfig)) {
       arr.push({ title: "Configuração SIP", href: "/sip-config" });
