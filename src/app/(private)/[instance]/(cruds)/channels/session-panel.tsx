@@ -37,6 +37,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { AxiosInstance } from "axios";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
+import ChannelHealthSummary, {
+  ChannelFunctionalHealth,
+  ChannelMessageHealth,
+} from "./channel-health-summary";
 
 interface SessionOperation {
   id: string;
@@ -78,6 +82,8 @@ interface ChannelSession {
   snapshot: SessionSnapshot | null;
   stability: "STABLE" | "ATTENTION" | "UNSTABLE" | "LOGGED_OUT" | "NO_DATA";
   stabilityReason: string;
+  functionalHealth?: ChannelFunctionalHealth | null;
+  messageHealth?: ChannelMessageHealth | null;
   disconnections24h: number;
   connectedUptimeSeconds: number;
   events?: SessionEvent[];
@@ -346,7 +352,7 @@ export default function ChannelSessionPanel() {
     const busy = !!channel.snapshot?.currentOperationId || pending?.clientId === channel.id;
     return (
       <div className="flex min-w-[132px] justify-end gap-1">
-        <Tooltip title="Histórico de 24 horas">
+        <Tooltip title="Saúde do canal e histórico de 24 horas">
           <span>
             <IconButton size="small" onClick={() => void showDetails(channel)}>
               <HistoryIcon fontSize="small" />
@@ -445,6 +451,12 @@ export default function ChannelSessionPanel() {
                   <StateChip state={channel.snapshot?.state} />
                   <StabilityChip value={channel.stability} />
                 </div>
+                <ChannelHealthSummary
+                  functionalHealth={channel.functionalHealth}
+                  messageHealth={channel.messageHealth}
+                  reason={channel.stabilityReason}
+                  now={now}
+                />
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-slate-500">Conexão</span>
@@ -500,6 +512,12 @@ export default function ChannelSessionPanel() {
                             <StabilityChip value={channel.stability} />
                           </span>
                         </Tooltip>
+                        <ChannelHealthSummary
+                          functionalHealth={channel.functionalHealth}
+                          messageHealth={channel.messageHealth}
+                          reason={channel.stabilityReason}
+                          now={now}
+                        />
                       </TableCell>
                       <TableCell>{duration(channel.connectedUptimeSeconds)}</TableCell>
                       <TableCell>{channel.disconnections24h}</TableCell>
@@ -774,10 +792,19 @@ function SessionDetail({ channel, onClose }: { channel: ChannelSession; onClose:
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">{channel.name}</h2>
-          <p className="text-sm text-slate-500">Janela de estabilidade: 24 horas</p>
+          <p className="text-sm text-slate-500">
+            Saúde atual e mensagens dos últimos 15 minutos · histórico de quedas: 24 horas
+          </p>
         </div>
         <Button onClick={onClose}>Fechar</Button>
       </div>
+      <ChannelHealthSummary
+        functionalHealth={channel.functionalHealth}
+        messageHealth={channel.messageHealth}
+        reason={channel.stabilityReason}
+        now={Date.now()}
+        detailed
+      />
       <div className="my-5 grid gap-3 border-y border-slate-200 py-4 dark:border-slate-700 sm:grid-cols-3">
         <div>
           <span className="text-xs text-slate-500">Processo iniciado</span>
