@@ -1,10 +1,13 @@
-import { whatsappParameterSettings } from "../../../whatsapp-service/src/parameters/parameter-settings.catalog";
-import { crmParameterSettings } from "../../../users-service/src/parameters/crm-parameter-settings.catalog";
+import catalogFixtures from "./catalog-fixtures.json";
 import type {
   ParameterChange,
   ParameterSettingsSnapshot,
   ParameterSource,
+  ParameterSetting,
 } from "../../src/lib/parameters/parameter-settings.types";
+
+const whatsappParameterSettings = catalogFixtures.whatsapp as ParameterSetting[];
+const crmParameterSettings = catalogFixtures.crm as Omit<ParameterSetting, "defaultValue">[];
 
 const snapshots: Record<ParameterSource, ParameterSettingsSnapshot> = {
   whatsapp: {

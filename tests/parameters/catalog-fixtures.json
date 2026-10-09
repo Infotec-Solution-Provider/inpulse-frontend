@@ -1,0 +1,605 @@
+{
+  "whatsapp": [
+    {
+      "key": "require_supervisor_approval_for_contact_reactivation",
+      "label": "Aprovar reativação de contatos",
+      "description": "Solicitar aprovação de um supervisor antes de reativar contatos.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "require_supervisor_approval_for_contact_deletion",
+      "label": "Aprovar exclusão de contatos",
+      "description": "Solicitar aprovação de um supervisor antes de excluir contatos.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "customer_detail_modal_enabled",
+      "label": "Detalhes do cliente",
+      "description": "Exibir os detalhes do cliente ao iniciar um atendimento.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "customer_detail_edit_enabled",
+      "label": "Editar dados do cliente",
+      "description": "Permitir editar os dados do cliente na janela de detalhes.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "update_only_own_contacts",
+      "label": "Editar apenas contatos próprios",
+      "description": "Restringir operadores à edição dos seus próprios contatos. Administradores mantêm o acesso.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "customer_linking_bot_enabled",
+      "label": "Vincular clientes automaticamente",
+      "description": "Habilitar o bot de vinculação de clientes aos contatos.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "disable_contacts_crud",
+      "label": "Bloquear cadastro de contatos",
+      "description": "Ocultar o cadastro de contatos no menu.",
+      "group": "Contatos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "disable_internal_chats",
+      "label": "Bloquear conversas internas",
+      "description": "Bloquear o acesso às conversas internas.",
+      "group": "Conversas",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "disable_internal_groups",
+      "label": "Bloquear grupos internos",
+      "description": "Bloquear o acesso aos grupos internos.",
+      "group": "Conversas",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "disable_channel_switch",
+      "label": "Bloquear troca de canal",
+      "description": "Impedir que o operador altere o canal do atendimento.",
+      "group": "Conversas",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "start_chats_as_admin",
+      "label": "Iniciar atendimentos como administrador",
+      "description": "Aplicar o comportamento administrativo ao iniciar atendimentos.",
+      "group": "Conversas",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_chat_export_enabled",
+      "label": "Exportar conversas",
+      "description": "Disponibilizar a exportação de conversas.",
+      "group": "Conversas",
+      "type": "boolean",
+      "defaultValue": "true",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_internal_group_whatsapp_sync_enabled",
+      "label": "Sincronizar grupos internos com WhatsApp",
+      "description": "Controlar o encaminhamento de mensagens entre grupos internos e WhatsApp. O padrão depende do provedor.",
+      "group": "Conversas",
+      "type": "boolean",
+      "defaultValue": null,
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "chat_auto_finish_enabled",
+      "label": "Finalizar atendimentos por inatividade",
+      "description": "Finalizar automaticamente atendimentos sem interação, conforme a rotina de inatividade.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "chat_auto_finish_idle_time",
+      "label": "Tempo de inatividade",
+      "description": "Tempo sem interação antes da finalização automática.",
+      "group": "Atendimento",
+      "type": "number",
+      "defaultValue": "1800000",
+      "unit": "minutos",
+      "multiplier": 60000,
+      "min": 1,
+      "max": 10080
+    },
+    {
+      "key": "feature_whatsapp_session_monitoring_enabled",
+      "label": "Monitorar sessões WhatsApp",
+      "description": "Disponibilizar o monitoramento operacional das sessões WhatsApp.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_mass_messages_enabled",
+      "label": "Mensagens em massa",
+      "description": "Disponibilizar a ferramenta de mensagens em massa.",
+      "group": "Recursos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_customer_profile_tags_enabled",
+      "label": "Classificação de clientes",
+      "description": "Disponibilizar as classificações do perfil do cliente.",
+      "group": "Recursos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_funnels_enabled",
+      "label": "Funis",
+      "description": "Disponibilizar os funis de atendimento e vendas.",
+      "group": "Recursos",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_ai_enabled",
+      "label": "Inteligência artificial",
+      "description": "Habilitar os recursos de IA. As opções abaixo também precisam ser ativadas para aparecerem.",
+      "group": "Inteligência artificial",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_ai_agents_enabled",
+      "label": "Agentes de IA",
+      "description": "Disponibilizar agentes de IA quando a inteligência artificial estiver habilitada.",
+      "group": "Inteligência artificial",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_ai_supervisor_enabled",
+      "label": "Assistente de IA",
+      "description": "Disponibilizar o assistente quando a inteligência artificial estiver habilitada.",
+      "group": "Inteligência artificial",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_ai_settings_enabled",
+      "label": "Configurações de IA",
+      "description": "Disponibilizar as configurações quando a inteligência artificial estiver habilitada.",
+      "group": "Inteligência artificial",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_reports_advanced_enabled",
+      "label": "Relatórios avançados",
+      "description": "Disponibilizar relatórios avançados de operadores, metas e qualidade.",
+      "group": "Relatórios",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_reports_dashboards_enabled",
+      "label": "Dashboards de relatórios",
+      "description": "Habilitar o parâmetro de dashboards para os consumidores que o utilizam.",
+      "group": "Relatórios",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_sales_reports_enabled",
+      "label": "Relatórios de vendas",
+      "description": "Disponibilizar relatórios de vendas e desempenho.",
+      "group": "Relatórios",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_sip_config_enabled",
+      "label": "Configuração SIP",
+      "description": "Disponibilizar a tela de configuração SIP para administradores.",
+      "group": "Telefonia",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "feature_telephony_dialer_enabled",
+      "label": "Discador de telefonia",
+      "description": "Disponibilizar o discador. A conexão com a central também deve estar configurada.",
+      "group": "Telefonia",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "use_local_contacts_sync",
+      "label": "Sincronizar contatos com o CRM legado",
+      "description": "Utilizar a sincronização local de contatos quando a integração estiver configurada.",
+      "group": "Integrações",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    },
+    {
+      "key": "use_old_crm_schedule",
+      "label": "Utilizar agenda do CRM legado",
+      "description": "Consultar os agendamentos do CRM legado pela integração de agendas.",
+      "group": "Integrações",
+      "type": "boolean",
+      "defaultValue": "false",
+      "trueValue": "true",
+      "falseValue": "false"
+    }
+  ],
+  "crm": [
+    {
+      "key": "VALIDA_CPF_CNPJ",
+      "label": "Validar CPF e CNPJ",
+      "description": "Ativar a validação de documentos no CRM legado.",
+      "group": "Clientes",
+      "type": "boolean",
+      "trueValue": "SIM",
+      "falseValue": "NAO"
+    },
+    {
+      "key": "UTILIZA_API_CEP",
+      "label": "Consultar endereço pelo CEP",
+      "description": "Utilizar a integração de CEP configurada no CRM legado.",
+      "group": "Clientes",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "ALERTA_API_CEP",
+      "label": "Alertas da consulta de CEP",
+      "description": "Exibir alertas relacionados à consulta de CEP.",
+      "group": "Clientes",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "ATIVO_ALTERAR_RAZAO",
+      "label": "Alterar razão social no atendimento ativo",
+      "description": "Permitir a alteração da razão social no módulo ativo.",
+      "group": "Clientes",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "HABILITAR_CLIENTES_BLOQUEADOS",
+      "label": "Habilitar clientes bloqueados",
+      "description": "Habilitar o recurso de clientes bloqueados no CRM legado.",
+      "group": "Clientes",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "QTD_HISTORICO_CLI",
+      "label": "Quantidade de históricos do cliente",
+      "description": "Quantidade usada pelo histórico de clientes do CRM legado.",
+      "group": "Clientes",
+      "type": "number",
+      "min": 0,
+      "max": 2147483647
+    },
+    {
+      "key": "AGENDA_FERIADO",
+      "label": "Agendar em feriados",
+      "description": "Permitir agendamentos em feriados.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "SIM",
+      "falseValue": "NAO"
+    },
+    {
+      "key": "AGENDA_SABADO",
+      "label": "Agendar aos sábados",
+      "description": "Permitir agendamentos aos sábados.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "SIM",
+      "falseValue": "NAO"
+    },
+    {
+      "key": "AGENDA_DOMINGO",
+      "label": "Agendar aos domingos",
+      "description": "Permitir agendamentos aos domingos.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "SIM",
+      "falseValue": "NAO"
+    },
+    {
+      "key": "VALIDA_AGENDAMENTOS",
+      "label": "Validar agendamentos",
+      "description": "Ativar as validações de agendamento do CRM legado.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "AGENDAMENTO_SUPERVISOR",
+      "label": "Agendamento pelo supervisor",
+      "description": "Habilitar o agendamento pelo supervisor.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "EXIBIR_TODOS_AGENDAMENTOS",
+      "label": "Exibir todos os agendamentos",
+      "description": "Exibir todos os agendamentos no CRM legado.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "BLOQ_LIMITE_AGENDAMENTO_DIA",
+      "label": "Bloquear ao atingir o limite diário",
+      "description": "Aplicar o bloqueio pelo limite de agendamentos do dia.",
+      "group": "Agendamento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "LIMITE_AGENDAMENTO_DIA",
+      "label": "Limite diário de agendamentos",
+      "description": "Quantidade limite de agendamentos por dia.",
+      "group": "Agendamento",
+      "type": "number",
+      "min": 0,
+      "max": 2147483647
+    },
+    {
+      "key": "DIAS_LIMITE_AGENDAMENTO",
+      "label": "Limite de dias para agendamento",
+      "description": "Limite de dias usado pelo agendamento do CRM legado.",
+      "group": "Agendamento",
+      "type": "number",
+      "min": 0,
+      "max": 2147483647
+    },
+    {
+      "key": "EXIBIR_PRODUTIVIDADE",
+      "label": "Exibir produtividade",
+      "description": "Exibir os indicadores de produtividade no CRM legado.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "EXIBIR_PEDIDOS_FECHADOS",
+      "label": "Exibir pedidos fechados",
+      "description": "Exibir pedidos fechados no atendimento.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "EXIBIR_FASE_CONTATO",
+      "label": "Exibir fase do contato",
+      "description": "Exibir a fase do contato no CRM legado.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "EXIGIR_FASE_CONTATO",
+      "label": "Exigir fase do contato",
+      "description": "Exigir o preenchimento da fase do contato.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "CARTEIRA_FIXA_OPERADOR",
+      "label": "Carteira fixa por operador",
+      "description": "Utilizar carteiras fixas por operador.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "MANTER_REPRESENTANTE",
+      "label": "Manter representante",
+      "description": "Manter o representante associado ao cliente.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "OCULTAR_BOTAO_TRANSFERENCIA",
+      "label": "Ocultar botão de transferência",
+      "description": "Ocultar o botão de transferência no CRM legado.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "OCULTAR_OPERADORES_CHAT",
+      "label": "Ocultar operadores no chat",
+      "description": "Ocultar operadores no chat do CRM legado.",
+      "group": "Atendimento",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "IMPORTAR_CLIENTES",
+      "label": "Importar clientes",
+      "description": "Habilitar a importação de clientes.",
+      "group": "Importação",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "IMPORTAR_COMPRAS",
+      "label": "Importar compras",
+      "description": "Habilitar a importação de compras.",
+      "group": "Importação",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "IMPORTAR_CLIENTE_EXISTENTE",
+      "label": "Importar clientes existentes",
+      "description": "Permitir que a importação atualize clientes existentes.",
+      "group": "Importação",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "IMP_POR_CPFNCPJ_CLIENTE",
+      "label": "Identificar clientes por CPF ou CNPJ",
+      "description": "Utilizar CPF ou CNPJ para identificar clientes durante a importação.",
+      "group": "Importação",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "AVISO_RECOMPRA_SUPERVISOR",
+      "label": "Avisar supervisor sobre recompra",
+      "description": "Exibir avisos de recompra para o supervisor.",
+      "group": "Recompra",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "AVISO_RECOMPRA_OPERADOR",
+      "label": "Avisar operador sobre recompra",
+      "description": "Exibir avisos de recompra para o operador.",
+      "group": "Recompra",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "BLOQUEAR_AGENDAMENTO_FORA_PERIODO_RECOMPRA",
+      "label": "Bloquear agendamento fora da recompra",
+      "description": "Bloquear agendamentos fora do período de recompra.",
+      "group": "Recompra",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "DIAS_VALIDAR_PERIODO_RECOMPRA",
+      "label": "Dias para validar período de recompra",
+      "description": "Quantidade de dias usada na validação do período de recompra.",
+      "group": "Recompra",
+      "type": "number",
+      "min": 0,
+      "max": 2147483647
+    },
+    {
+      "key": "EXPIRAR_TRANSFERENCIA_CLIENTES",
+      "label": "Expirar transferências de clientes",
+      "description": "Aplicar expiração às transferências de clientes.",
+      "group": "Transferência",
+      "type": "boolean",
+      "trueValue": "S",
+      "falseValue": "N"
+    },
+    {
+      "key": "DIAS_EXPIRAR_TRANSFERENCIA_CLIENTES",
+      "label": "Dias para expirar transferências",
+      "description": "Quantidade de dias até a expiração de uma transferência.",
+      "group": "Transferência",
+      "type": "number",
+      "min": 0,
+      "max": 2147483647
+    }
+  ]
+}
