@@ -36,7 +36,11 @@ export function WhatsappParameterSettings({ onSaved }: { onSaved: () => Promise<
   const [selections, setSelections] = useState<Record<string, { id: number; name: string }>>({});
 
   useEffect(() => {
-    if (target.scope === "INSTANCE") return;
+    if (target.scope === "INSTANCE") {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
     setTargets(null);
