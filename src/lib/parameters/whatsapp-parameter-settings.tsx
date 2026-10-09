@@ -12,7 +12,6 @@ import {
   DialogContentText,
   DialogTitle,
   MenuItem,
-  Paper,
   TextField,
   Typography,
 } from "@mui/material";
@@ -91,8 +90,8 @@ export function WhatsappParameterSettings({ onSaved }: { onSaved: () => Promise<
 
   return (
     <div className="space-y-5">
-      <Paper variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-        <Typography fontWeight={600} sx={{ mb: 2 }}>
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-5">
+        <Typography fontWeight={600} variant="body2" sx={{ mb: 2 }}>
           Aplicar configurações para
         </Typography>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -171,7 +170,7 @@ export function WhatsappParameterSettings({ onSaved }: { onSaved: () => Promise<
             {error}
           </Alert>
         )}
-      </Paper>
+      </section>
       {ready ? (
         <ParameterSettingsPanel
           key={identity(target)}
