@@ -3,6 +3,8 @@ import type {
   ParameterChange,
   ParameterSettingsSnapshot,
   ParameterSource,
+  ParameterTarget,
+  ParameterTargets,
 } from "@/lib/parameters/parameter-settings.types";
 
 const clients = {
@@ -12,17 +14,24 @@ const clients = {
 const paths = { whatsapp: "/api/whatsapp/parameter-settings", crm: "/api/crm/parameter-settings" };
 
 const parameterSettingsService = {
-  async get(source: ParameterSource, signal?: AbortSignal) {
-    const response = await clients[source].ax.get<{ data: ParameterSettingsSnapshot }>(
-      paths[source],
-      { signal },
+  async getTargets(scope: "SECTOR" | "USER", search: string, signal?: AbortSignal) {
+    const response = await clients.whatsapp.ax.get<{ data: ParameterTargets }>(
+      `${paths.whatsapp}/targets`,
+      { params: { scope, search }, signal },
     );
     return response.data.data;
   },
-  async save(source: ParameterSource, changes: ParameterChange[]) {
+  async get(source: ParameterSource, signal?: AbortSignal, target?: ParameterTarget) {
+    const response = await clients[source].ax.get<{ data: ParameterSettingsSnapshot }>(
+      paths[source],
+      { signal, params: source === "whatsapp" ? target : undefined },
+    );
+    return response.data.data;
+  },
+  async save(source: ParameterSource, changes: ParameterChange[], target?: ParameterTarget) {
     const response = await clients[source].ax.patch<{ data: ParameterSettingsSnapshot }>(
       paths[source],
-      { changes },
+      { changes, ...(source === "whatsapp" && target ? { target } : {}) },
     );
     return response.data.data;
   },

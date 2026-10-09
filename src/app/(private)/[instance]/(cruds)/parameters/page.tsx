@@ -2,6 +2,7 @@
 
 import { useAuthContext } from "@/app/auth-context";
 import { ParameterSettingsPanel } from "@/lib/parameters/parameter-settings-panel";
+import { WhatsappParameterSettings } from "@/lib/parameters/whatsapp-parameter-settings";
 import { UserRole } from "@/lib/sdk-local";
 import { Alert, Paper, Tab, Tabs, Typography } from "@mui/material";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -45,7 +46,7 @@ function ParametersScreen() {
         aria-labelledby="tab-whatsapp"
         hidden={tab !== "whatsapp"}
       >
-        <ParameterSettingsPanel source="whatsapp" onSaved={refreshParameters} />
+        <WhatsappParameterSettings onSaved={refreshParameters} />
       </div>
       <div role="tabpanel" id="panel-crm" aria-labelledby="tab-crm" hidden={tab !== "crm"}>
         {visitedCrm && <ParameterSettingsPanel source="crm" />}

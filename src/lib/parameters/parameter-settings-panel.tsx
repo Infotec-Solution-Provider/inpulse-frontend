@@ -21,11 +21,15 @@ import type {
   ParameterChange,
   ParameterSettingsSnapshot,
   ParameterSource,
+  ParameterTarget,
 } from "./parameter-settings.types";
 
 interface Props {
   source: ParameterSource;
   onSaved?: () => Promise<void>;
+  target?: ParameterTarget;
+  onDirtyChange?: (dirty: boolean) => void;
+  onSavingChange?: (saving: boolean) => void;
 }
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "Não foi possível concluir a operação.";
@@ -35,7 +39,13 @@ const searchable = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-export function ParameterSettingsPanel({ source, onSaved }: Props) {
+export function ParameterSettingsPanel({
+  source,
+  onSaved,
+  target,
+  onDirtyChange,
+  onSavingChange,
+}: Props) {
   const [snapshot, setSnapshot] = useState<ParameterSettingsSnapshot | null>(null);
   const [draft, setDraft] = useState<Record<string, string | null>>({});
   const [resets, setResets] = useState<Set<string>>(new Set());
@@ -60,7 +70,7 @@ export function ParameterSettingsPanel({ source, onSaved }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const data = await parameterSettingsService.get(source, controller.signal);
+      const data = await parameterSettingsService.get(source, controller.signal, target);
       if (mounted.current && !controller.signal.aborted) accept(data);
     } catch (err) {
       if (mounted.current && !controller.signal.aborted) setError(message(err));
@@ -68,6 +78,10 @@ export function ParameterSettingsPanel({ source, onSaved }: Props) {
       if (mounted.current && !controller.signal.aborted) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    onSavingChange?.(saving);
+  }, [saving, onSavingChange]);
 
   useEffect(() => {
     mounted.current = true;
@@ -104,6 +118,10 @@ export function ParameterSettingsPanel({ source, onSaved }: Props) {
   }
 
   useEffect(() => {
+    onDirtyChange?.(changes.length > 0);
+  }, [changes.length, onDirtyChange]);
+
+  useEffect(() => {
     if (!changes.length) return;
     const warn = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -119,7 +137,7 @@ export function ParameterSettingsPanel({ source, onSaved }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const data = await parameterSettingsService.save(source, changes);
+      const data = await parameterSettingsService.save(source, changes, target);
       if (!mounted.current) return;
       accept(data);
       toast.success(`Parâmetros do ${source === "whatsapp" ? "WhatsApp" : "CRM"} salvos.`);
@@ -155,9 +173,18 @@ export function ParameterSettingsPanel({ source, onSaved }: Props) {
     <div className="space-y-5">
       <Alert severity="info">
         {source === "whatsapp"
-          ? "Estas opções configuram a instância. Ajustes específicos de setor ou usuário continuam prevalecendo quando aplicáveis. Os recursos da sua sessão são atualizados ao salvar."
+          ? "Prioridade: usuário → setor → instância → padrão. Personalizar define uma exceção neste escopo; restaurar remove a exceção e volta ao valor herdado. São exibidas as opções compatíveis com o escopo escolhido. Outras sessões recebem as mudanças no próximo carregamento."
           : "Estas opções configuram o CRM legado. Algumas mudanças são percebidas no próximo carregamento do CRM. Usar padrão restaura o valor definido pelo banco para aquela opção."}
       </Alert>
+      {source === "whatsapp" && snapshot?.target && (
+        <Typography variant="body2" color="text.secondary">
+          Configurando: <strong>{snapshot.target.name}</strong>
+          {snapshot.target.scope === "USER" &&
+            (snapshot.target.inheritedSectorName
+              ? ` · Herda do setor ${snapshot.target.inheritedSectorName}, da instância e do padrão.`
+              : " · Sem setor WhatsApp vinculado; herda da instância e do padrão.")}
+        </Typography>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <TextField
           placeholder="Buscar configuração"
@@ -227,6 +254,12 @@ export function ParameterSettingsPanel({ source, onSaved }: Props) {
                       key={setting.key}
                       setting={setting}
                       source={source}
+                      scoped={
+                        source === "whatsapp" &&
+                        target?.scope !== undefined &&
+                        target.scope !== "INSTANCE"
+                      }
+                      inherited={snapshot.inherited?.[setting.key]}
                       value={draft[setting.key] ?? null}
                       disabled={disabled}
                       changed={changes.some((change) => change.key === setting.key)}
