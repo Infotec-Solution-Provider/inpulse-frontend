@@ -57,12 +57,12 @@ export function ParameterSettingControl({
 
   return (
     <div
-      className="flex flex-col gap-4 border-t border-slate-200 py-5 first:border-t-0 dark:border-slate-700 sm:flex-row sm:items-start sm:justify-between"
+      className="flex flex-col gap-3 border-t border-slate-200 py-4 first:border-t-0 dark:border-slate-700 md:flex-row md:items-start md:justify-between"
       data-testid={`parameter-${setting.key}`}
     >
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
-          <Typography component="h3" fontWeight={600}>
+          <Typography component="h3" variant="body2" fontWeight={600}>
             {setting.label}
           </Typography>
           <Chip
@@ -105,7 +105,7 @@ export function ParameterSettingControl({
             </Typography>
           )}
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 md:justify-end">
         {setting.type === "boolean" && source === "whatsapp" && setting.defaultValue === null ? (
           <TextField
             select

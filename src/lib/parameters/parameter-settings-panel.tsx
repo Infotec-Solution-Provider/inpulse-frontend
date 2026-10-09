@@ -7,7 +7,6 @@ import {
   Chip,
   CircularProgress,
   InputAdornment,
-  Paper,
   TextField,
   Typography,
 } from "@mui/material";
@@ -171,11 +170,11 @@ export function ParameterSettingsPanel({
 
   return (
     <div className="space-y-5">
-      <Alert severity="info">
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
         {source === "whatsapp"
-          ? "Prioridade: usuário → setor → instância → padrão. Personalizar define uma exceção neste escopo; restaurar remove a exceção e volta ao valor herdado. São exibidas as opções compatíveis com o escopo escolhido. Outras sessões recebem as mudanças no próximo carregamento."
-          : "Estas opções configuram o CRM legado. Algumas mudanças são percebidas no próximo carregamento do CRM. Usar padrão restaura o valor definido pelo banco para aquela opção."}
-      </Alert>
+          ? "Prioridade: usuário → setor → instância → padrão. Personalize uma opção para definir uma exceção ou restaure o valor herdado. As mudanças chegam às outras sessões no próximo carregamento."
+          : "Configuração global do CRM legado. Usar padrão restaura o valor definido pelo banco. Algumas mudanças são percebidas no próximo carregamento do CRM."}
+      </div>
       {source === "whatsapp" && snapshot?.target && (
         <Typography variant="body2" color="text.secondary">
           Configurando: <strong>{snapshot.target.name}</strong>
@@ -185,7 +184,7 @@ export function ParameterSettingsPanel({
               : " · Sem setor WhatsApp vinculado; herda da instância e do padrão.")}
         </Typography>
       )}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row sm:items-center sm:justify-between">
         <TextField
           placeholder="Buscar configuração"
           size="small"
@@ -233,13 +232,12 @@ export function ParameterSettingsPanel({
         snapshot && (
           <>
             {groups.map((group) => (
-              <Paper
+              <section
                 key={group}
-                variant="outlined"
-                sx={{ px: { xs: 2, sm: 3 }, py: 1, borderRadius: 3 }}
+                className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800"
               >
-                <div className="flex items-center gap-2 py-3">
-                  <Typography component="h2" variant="h6" fontWeight={700}>
+                <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-4 py-3 dark:border-slate-700 dark:bg-slate-800 sm:px-5">
+                  <Typography component="h2" variant="subtitle1" fontWeight={600}>
                     {group}
                   </Typography>
                   <Chip
@@ -247,50 +245,49 @@ export function ParameterSettingsPanel({
                     size="small"
                   />
                 </div>
-                {catalog
-                  .filter((setting) => setting.group === group)
-                  .map((setting) => (
-                    <ParameterSettingControl
-                      key={setting.key}
-                      setting={setting}
-                      source={source}
-                      scoped={
-                        source === "whatsapp" &&
-                        target?.scope !== undefined &&
-                        target.scope !== "INSTANCE"
-                      }
-                      inherited={snapshot.inherited?.[setting.key]}
-                      value={draft[setting.key] ?? null}
-                      disabled={disabled}
-                      changed={changes.some((change) => change.key === setting.key)}
-                      resetting={resets.has(setting.key)}
-                      error={errors[setting.key]}
-                      onChange={(value) => {
-                        setDraft((current) => ({ ...current, [setting.key]: value }));
-                        setResets((current) => {
-                          const next = new Set(current);
-                          next.delete(setting.key);
-                          return next;
-                        });
-                      }}
-                      onReset={() => setResets((current) => new Set(current).add(setting.key))}
-                    />
-                  ))}
-              </Paper>
+                <div className="px-4 sm:px-5">
+                  {catalog
+                    .filter((setting) => setting.group === group)
+                    .map((setting) => (
+                      <ParameterSettingControl
+                        key={setting.key}
+                        setting={setting}
+                        source={source}
+                        scoped={
+                          source === "whatsapp" &&
+                          target?.scope !== undefined &&
+                          target.scope !== "INSTANCE"
+                        }
+                        inherited={snapshot.inherited?.[setting.key]}
+                        value={draft[setting.key] ?? null}
+                        disabled={disabled}
+                        changed={changes.some((change) => change.key === setting.key)}
+                        resetting={resets.has(setting.key)}
+                        error={errors[setting.key]}
+                        onChange={(value) => {
+                          setDraft((current) => ({ ...current, [setting.key]: value }));
+                          setResets((current) => {
+                            const next = new Set(current);
+                            next.delete(setting.key);
+                            return next;
+                          });
+                        }}
+                        onReset={() => setResets((current) => new Set(current).add(setting.key))}
+                      />
+                    ))}
+                </div>
+              </section>
             ))}
             {!catalog.length && (
-              <Paper variant="outlined" sx={{ p: 4, textAlign: "center" }}>
+              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <Typography color="text.secondary">
                   {snapshot.catalog.length
                     ? "Nenhuma configuração encontrada para esta busca."
                     : "Nenhuma das configurações suportadas está disponível nesta instância."}
                 </Typography>
-              </Paper>
+              </div>
             )}
-            <Paper
-              elevation={3}
-              sx={{ p: 2, borderRadius: 3, position: "sticky", bottom: 12, zIndex: 1 }}
-            >
+            <div className="sticky bottom-0 z-10 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Typography variant="body2" color="text.secondary" role="status">
                   {changes.length
@@ -313,7 +310,7 @@ export function ParameterSettingsPanel({
                   </Button>
                 </div>
               </div>
-            </Paper>
+            </div>
           </>
         )
       )}
