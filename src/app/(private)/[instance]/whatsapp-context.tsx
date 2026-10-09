@@ -168,6 +168,7 @@ interface IWhatsappContext {
   refreshNotificationPreferences: () => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
+  refreshParameters: () => Promise<void>;
   loadChatMessages: (chat: DetailedChat) => Promise<WppMessage[]>;
   globalChannel: React.RefObject<WppClient | null>;
   chatsChannels: React.RefObject<Map<number, number>>;
@@ -302,6 +303,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
+  const refreshParameters = useCallback(async () => {
+    const scope = liveAuth.current.scope;
+    const response = await api.current.ax.get<{ parameters: Record<string, string> }>("/api/whatsapp/session/parameters");
+    if (scope === liveAuth.current.scope) setParameters(response.data.parameters);
+  }, []);
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
   const sendScope = JSON.stringify([instance, user?.CODIGO, !!token]);
   const sendSession = useRef({ scope: sendScope, controller: new AbortController() });
@@ -1317,6 +1323,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         markAllAsReadNotification,
         templates,
         parameters,
+        refreshParameters,
         loadChatMessages,
         notificationPreferences,
         updateNotificationPreferences,
