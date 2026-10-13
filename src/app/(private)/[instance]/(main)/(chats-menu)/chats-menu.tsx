@@ -4,22 +4,26 @@ import ChatsMenuList from "./chats-menu-list";
 import TelephoneDialerCard from "./telephone-dialer-card";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
+import { TelephonyPanelSlot } from "@/lib/telephony/telephony-panel";
+import ConversationSidebar from "./conversation-sidebar";
 
 export default function ChatsMenu() {
   const { parameters } = useWhatsappChatList();
   const showTelephonyDialer = isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyDialer);
 
   return (
-    <aside className="flex h-full min-h-0 flex-col bg-slate-200 text-black dark:bg-slate-800 dark:text-slate-300 md:rounded-md md:shadow-md">
-      <ChatsMenuFilters />
-      {showTelephonyDialer && (
-        <div className="sticky top-0 z-10 bg-slate-200 pt-3 dark:bg-slate-800">
-          <TelephoneDialerCard />
-        </div>
-      )}
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <ChatsMenuList />
-      </div>
-    </aside>
+    <ConversationSidebar
+      filters={<ChatsMenuFilters />}
+      telephony={
+        showTelephonyDialer ? (
+          <>
+            <TelephonyPanelSlot className="mx-3" />
+            <TelephoneDialerCard />
+          </>
+        ) : undefined
+      }
+    >
+      <ChatsMenuList />
+    </ConversationSidebar>
   );
 }

@@ -174,6 +174,6 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
     {children}
     <audio ref={audioRef} autoPlay aria-label="Áudio da ligação" />
     {/* Outside the attendance area the phone stays out of the way, except to answer or end a call. */}
-    {enabled && panelHosts === 0 && busy && <TelephonyPanel />}
+    {enabled && panelHosts === 0 && busy && <TelephonyPanel placement="floating" />}
   </TelephonyContext.Provider>;
 }

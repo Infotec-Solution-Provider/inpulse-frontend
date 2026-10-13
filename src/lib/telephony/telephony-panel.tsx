@@ -9,14 +9,14 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useTelephony } from "./telephony-provider";
 import { callPhaseLabels } from "./types";
 
-/** Place of the phone panel: the attendance area. Other screens show it only during a call (TelephonyProvider). */
-export function TelephonyPanelSlot() {
+/** The attendance area hosts phone controls in its own layout. */
+export function TelephonyPanelSlot({ className }: { className?: string }) {
   const { enabled, hostPanel } = useTelephony();
   useEffect(() => hostPanel(), [hostPanel]);
-  return enabled ? <TelephonyPanel /> : null;
+  return enabled ? <div className={className}><TelephonyPanel /></div> : null;
 }
 
-export function TelephonyPanel() {
+export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar" | "floating" }) {
   const phone = useTelephony();
   const { state, busy } = phone;
   const [expanded, setExpanded] = useState(busy);
@@ -31,7 +31,10 @@ export function TelephonyPanel() {
     setError(null);
     try { await phone.dial(number); } catch (err) { setError(err instanceof Error ? err.message : "Falha ao ligar."); }
   };
-  return <section aria-label="Telefone web" className="fixed right-4 top-20 z-[1250] flex max-h-[calc(100dvh-14rem)] w-[330px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-slate-300 bg-white p-3 text-slate-800 shadow-xl dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+  const position = placement === "floating"
+    ? "fixed right-4 top-20 z-[1250] max-h-[calc(100dvh-14rem)] w-[330px] max-w-[calc(100vw-2rem)] shadow-xl"
+    : "w-full min-w-0 shadow-sm";
+  return <section aria-label="Telefone web" className={`${position} flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white p-3 text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100`}>
     <div className="flex shrink-0 items-center justify-between gap-2">
       <button type="button" className="flex flex-1 items-center gap-2 text-left text-sm font-semibold" onClick={() => setExpanded(!expanded)} aria-expanded={open}>
         <PhoneIcon fontSize="small" /> Telefone {state.extension && `· ${state.extension}`}
@@ -39,7 +42,7 @@ export function TelephonyPanel() {
       <Chip size="small" color={state.connection === "ready" ? "success" : "default"} label={busy ? callPhaseLabels[state.phase] : labels[state.connection]} />
       <IconButton size="small" onClick={() => setExpanded(!expanded)} aria-label={open ? "Recolher telefone" : "Abrir telefone"}><ExpandMoreIcon className={open ? "rotate-180" : ""} /></IconButton>
     </div>
-    {open && <div className="mt-3 min-h-0 space-y-3 overflow-y-auto">
+    {open && <div className="mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
       {(state.error || error) && <Alert severity="error">{error || state.error}</Alert>}
       {phone.syncError && <Alert severity="warning">{phone.syncError}</Alert>}
       {phone.audioBlocked && <Button size="small" variant="contained" onClick={phone.playAudio}>Ativar áudio da ligação</Button>}

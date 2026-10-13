@@ -45,7 +45,7 @@ body {
 }
 
 /* Melhorias para dispositivos móveis */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   /* Hide list when a chat is open */
   .chat-open .chats-menu {
     display: none !important;

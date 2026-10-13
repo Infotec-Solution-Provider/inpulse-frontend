@@ -46,6 +46,7 @@ test("second tab cannot register the same operator until the first disconnects",
 test("phone stays in the attendance area and appears elsewhere only during a call", async ({ page }) => {
   await page.goto("/tests/telephony/index.html");
   await expect(page.getByLabel("Telefone web")).toBeVisible();
+  expect(await page.getByLabel("Telefone web").evaluate(element => getComputedStyle(element).position)).not.toBe("fixed");
   await page.getByRole("button", { name: "Ir para outra tela" }).click();
   await expect(page.getByText("Outra tela")).toBeVisible();
   await expect(page.getByLabel("Telefone web")).toHaveCount(0);
@@ -58,9 +59,11 @@ test("phone stays in the attendance area and appears elsewhere only during a cal
   await page.evaluate(() => window.phoneHarness.session?.emit("confirmed"));
   await page.getByRole("button", { name: "Ir para outra tela" }).click();
   await expect(page.getByLabel("Telefone web")).toHaveCount(1);
+  expect(await page.getByLabel("Telefone web").evaluate(element => getComputedStyle(element).position)).toBe("fixed");
   await page.getByRole("button", { name: "Desligar" }).click();
   await expect(page.getByLabel("Telefone web")).toHaveCount(0);
   await page.getByRole("button", { name: "Voltar ao atendimento" }).click();
   await expect(page.getByLabel("Telefone web")).toHaveCount(1);
   await expect(page.getByText("Ramal conectado")).toBeVisible();
+  expect(await page.getByLabel("Telefone web").evaluate(element => getComputedStyle(element).position)).not.toBe("fixed");
 });
