@@ -22,7 +22,7 @@ import {
   MenuItem,
   Tooltip,
 } from "@mui/material";
-import React, { ReactNode, useMemo, useState } from "react";
+import React, { ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useWhatsappSession } from "../../whatsapp-session-context";
 import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
@@ -448,4 +448,31 @@ function areMessagePropsEqual(previous: MessageProps, next: MessageProps) {
   );
 }
 
-export default React.memo(Message, areMessagePropsEqual);
+const MemoizedMessage = React.memo(Message, areMessagePropsEqual);
+
+export default function MessageWithCurrentActions(props: MessageProps) {
+  const actions = useRef(props);
+  useLayoutEffect(() => {
+    actions.current = props;
+  });
+  // Message rows receive fresh closures whenever the conversation changes. Keep
+  // their actions current without rendering every unchanged message in a burst.
+  const onQuote = useCallback(() => actions.current.onQuote?.(), []);
+  const onForward = useCallback(() => actions.current.onForward?.(), []);
+  const onEdit = useCallback(() => actions.current.onEdit?.(), []);
+  const onCopy = useCallback(() => actions.current.onCopy?.(), []);
+  const onSelect = useCallback((id: number | string) => actions.current.onSelect?.(id), []);
+  const onReaction = useCallback(async (emoji: string) => actions.current.onReaction?.(emoji), []);
+
+  return (
+    <MemoizedMessage
+      {...props}
+      onQuote={props.onQuote ? onQuote : undefined}
+      onForward={props.onForward ? onForward : undefined}
+      onEdit={props.onEdit ? onEdit : undefined}
+      onCopy={props.onCopy ? onCopy : undefined}
+      onSelect={props.onSelect ? onSelect : undefined}
+      onReaction={props.onReaction ? onReaction : undefined}
+    />
+  );
+}

@@ -1,6 +1,6 @@
 import { WhatsappClient, WppMessage } from "@/lib/sdk-local";
 import { Formatter, Logger } from "@in.pulse-crm/utils";
-import { Dispatch, RefObject, SetStateAction } from "react";
+import { Dispatch, RefObject, SetStateAction, startTransition } from "react";
 import { DetailedChat } from "@/app/(private)/[instance]/whatsapp-context";
 import { DetailedInternalChat } from "@/app/(private)/[instance]/internal-context";
 import {
@@ -80,54 +80,58 @@ export default function ReceiveMessageHandler(
       });
     }
 
-    setMessages((prev) => {
-      const contactId = message.contactId || 0;
-      const previous = prev[contactId] ?? [];
-      return {
-        ...prev,
-        [contactId]: mergeMessagesById(previous, [message], mergeMessageUpdate),
-      };
-    });
+    startTransition(() => {
+      setMessages((prev) => {
+        const contactId = message.contactId || 0;
+        const previous = prev[contactId] ?? [];
+        return {
+          ...prev,
+          [contactId]: mergeMessagesById(previous, [message], mergeMessageUpdate),
+        };
+      });
 
-    const x = chatRef.current;
+      const x = chatRef.current;
 
-    setChats((prev) =>
-      prev
-        .map((chat) => {
-          if (chat.contactId === message.contactId) {
-            const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
-            const isFromMe = message.from.startsWith("me");
-            const isUnread = !isCurrentWppChat && !isFromMe;
+      setChats((prev) =>
+        prev
+          .map((chat) => {
+            if (chat.contactId === message.contactId) {
+              const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
+              const isFromMe = message.from.startsWith("me");
+              const isUnread = !isCurrentWppChat && !isFromMe;
 
-            return {
-              ...chat,
-              isUnread: isUnread,
-              lastMessage: chat.lastMessage && compareMessageChronology(message, chat.lastMessage) < 0
-                ? chat.lastMessage : chat.lastMessage?.id === message.id
-                  ? mergeMessageUpdate(chat.lastMessage, message)
-                  : preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
-            };
-          }
+              return {
+                ...chat,
+                isUnread: isUnread,
+                lastMessage:
+                  chat.lastMessage && compareMessageChronology(message, chat.lastMessage) < 0
+                    ? chat.lastMessage
+                    : chat.lastMessage?.id === message.id
+                      ? mergeMessageUpdate(chat.lastMessage, message)
+                      : preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
+              };
+            }
 
-          return chat;
-        })
-        .sort((a, b) =>
-          (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
-        ),
-    );
+            return chat;
+          })
+          .sort((a, b) =>
+            (a.lastMessage?.timestamp || 0) < (b.lastMessage?.timestamp || 0) ? 1 : -1,
+          ),
+      );
 
-    if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
-      setCurrentChatMessages((prev) => mergeMessagesById(prev, [message], mergeMessageUpdate));
+      if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
+        setCurrentChatMessages((prev) => mergeMessagesById(prev, [message], mergeMessageUpdate));
 
-      // TODO: Change the logic to only update the received message;
-      if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
-        api.markContactMessagesAsRead(message.contactId || 0).catch((error) => {
-          Logger.error(
-            `[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`,
-            error,
-          );
-        });
+        // TODO: Change the logic to only update the received message;
+        if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {
+          api.markContactMessagesAsRead(message.contactId || 0).catch((error) => {
+            Logger.error(
+              `[WPP_MESSAGE] markContactMessagesAsRead error | chatId: ${message.chatId} | contactId: ${message.contactId}`,
+              error,
+            );
+          });
+        }
       }
-    }
+    });
   };
 }

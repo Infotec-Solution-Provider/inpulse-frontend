@@ -122,6 +122,17 @@ async function mockApis(page: Page) {
     if (path === "/api/internal/session/chats") {
       return route.fulfill({ json: { data: { chats: [], messages: [] } } });
     }
+    if (/^\/api\/whatsapp\/chats\/\d+$/.test(path)) {
+      const chatId = Number(path.split("/")[4]);
+      return route.fulfill({
+        json: {
+          data: {
+            ...chats.find((chat) => chat.id === chatId),
+            messages: messages(chatId, 51, 100),
+          },
+        },
+      });
+    }
     if (/^\/api\/whatsapp\/chats\/\d+\/messages$/.test(path)) {
       const chatId = Number(path.split("/")[4]);
       const beforeId = Number(url.searchParams.get("beforeId"));
@@ -162,7 +173,6 @@ test("virtualiza 500 conversas e preserva o comportamento do Carregar mais", asy
 
   const messageScroller = page.locator(".scrollbar-whatsapp").last();
   const loadMore = page.getByRole("button", { name: "Carregar mais" });
-  await loadMore.click();
   await loadMore.click();
   await expect(page.getByText("Mensagem 1")).toBeVisible();
   expect(await messageScroller.evaluate((element) => element.scrollTop)).toBe(0);

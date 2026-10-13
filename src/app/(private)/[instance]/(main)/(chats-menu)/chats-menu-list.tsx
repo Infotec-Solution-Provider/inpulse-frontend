@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { DetailedInternalChat, InternalChatContext } from "../../internal-context";
 import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
 import ChatsMenuItem from "./chats-menu-item";
+import { Virtuoso } from "react-virtuoso";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
@@ -170,8 +171,12 @@ export default function ChatsMenuList() {
   }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder]);
 
   return (
-    <menu className="scrollbar-whatsapp flex flex-col gap-2 bg-slate-300/5 p-3 dark:bg-slate-800/50">
-      {sortedChats.map((chat) => {
+    <Virtuoso
+      className="scrollbar-whatsapp h-full bg-slate-300/5 dark:bg-slate-800/50"
+      data={sortedChats}
+      increaseViewportBy={240}
+      computeItemKey={(_, chat) => `${chat.chatType}:${chat.id}`}
+      itemContent={(_, chat) => {
         if (chat.chatType === "internal") {
           const names = chat.isGroup ? chat.groupName! : chat.users.map((u) => u.NOME).join(" e ");
           const tagName = chat.isGroup ? "Grupo Interno" : "Chat Interno";
@@ -251,7 +256,7 @@ export default function ChatsMenuList() {
             onClick={() => openChat(chat)}
           />
         );
-      })}
-    </menu>
+      }}
+    />
   );
 }

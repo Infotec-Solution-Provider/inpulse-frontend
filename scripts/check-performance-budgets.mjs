@@ -11,18 +11,18 @@ const ENTRIES = [
 
 async function readManifest(relativePath) {
   const source = await readFile(path.join(ROOT, relativePath), "utf8");
-  const assignment = source
-    .split(/\r?\n/)
-    .find((line) => line.includes(" = {") && line.includes("entryJSFiles"));
+  const assignment = source.match(
+    /__RSC_MANIFEST\["(?:\\.|[^"\\])*"\]\s*=\s*(\{[\s\S]*\})\s*;?\s*$/,
+  );
   if (!assignment) throw new Error(`Unable to parse ${relativePath}`);
-  return JSON.parse(assignment.slice(assignment.indexOf(" = ") + 3).replace(/;$/, ""));
+  return JSON.parse(assignment[1]);
 }
 
 async function entrySize(chunks) {
   let rawBytes = 0;
   let gzipBytes = 0;
   for (const chunk of new Set(chunks)) {
-    const filePath = path.join(ROOT, ".next", chunk.replaceAll("/", path.sep));
+    const filePath = path.join(ROOT, ".next", decodeURIComponent(chunk).replaceAll("/", path.sep));
     rawBytes += (await stat(filePath)).size;
     gzipBytes += gzipSync(await readFile(filePath)).byteLength;
   }
@@ -36,11 +36,13 @@ for (const target of ENTRIES) {
       ? ".next/server/app/(private)/[instance]/(main)/page_client-reference-manifest.js"
       : `.next/server/app${target.suffix}_client-reference-manifest.js`;
   const manifest = await readManifest(manifestPath);
-  const entry = Object.entries(manifest.entryJSFiles).find(([name]) =>
-    name.endsWith(target.suffix),
-  );
+  const entry = manifest.entryJSFiles
+    ? Object.entries(manifest.entryJSFiles).find(([name]) => name.endsWith(target.suffix))?.[1]
+    : Object.entries(manifest.clientModules)
+        .find(([name]) => name.replaceAll("\\", "/").endsWith(`${target.suffix}.tsx`))?.[1]
+        .chunks.filter((chunk) => chunk.startsWith("static/") && chunk.endsWith(".js"));
   if (!entry) throw new Error(`Entry not found: ${target.suffix}`);
-  const size = await entrySize(entry[1]);
+  const size = await entrySize(entry);
   const status = size.gzipKb <= target.budgetKb ? "PASS" : "FAIL";
   if (status === "FAIL") failed = true;
   console.log(
