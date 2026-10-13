@@ -123,6 +123,8 @@ export default function ChatsMenuItem({
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
+          // Ignora teclas vindas de filhos (ex.: botão de ações), que têm comportamento próprio.
+          if (e.target !== e.currentTarget) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             if (typeof onClick === "function") {
@@ -159,55 +161,17 @@ export default function ChatsMenuItem({
                 </div>
               )}
               {(onTogglePin || onToggleUnread) && (
-                <>
-                  <IconButton
-                    size="small"
-                    aria-label="Ações da conversa"
-                    title="Ações da conversa"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setMenuAnchor(event.currentTarget);
-                    }}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
-                  <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
-                    {onTogglePin && (
-                      <MenuItem
-                        onClick={() => {
-                          closeMenu();
-                          onTogglePin();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <PushPinIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText>
-                          {isPinned ? "Desafixar conversa" : "Fixar conversa"}
-                        </ListItemText>
-                      </MenuItem>
-                    )}
-                    {onToggleUnread && (
-                      <MenuItem
-                        onClick={() => {
-                          closeMenu();
-                          onToggleUnread();
-                        }}
-                      >
-                        <ListItemIcon>
-                          {isUnread ? (
-                            <DoneIcon fontSize="small" />
-                          ) : (
-                            <MarkunreadIcon fontSize="small" />
-                          )}
-                        </ListItemIcon>
-                        <ListItemText>
-                          {isUnread ? "Marcar como lida" : "Marcar como não lida"}
-                        </ListItemText>
-                      </MenuItem>
-                    )}
-                  </Menu>
-                </>
+                <IconButton
+                  size="small"
+                  aria-label="Ações da conversa"
+                  title="Ações da conversa"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setMenuAnchor(event.currentTarget);
+                  }}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
               )}
             </div>
           </div>
@@ -226,6 +190,40 @@ export default function ChatsMenuItem({
           </div>
         </div>
       </div>
+      {/* Fora da div clicável: eventos do React atravessam o portal do Menu e,
+          dentro dela, o clique numa opção também abriria (e leria) a conversa. */}
+      {(onTogglePin || onToggleUnread) && (
+        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+          {onTogglePin && (
+            <MenuItem
+              onClick={() => {
+                closeMenu();
+                onTogglePin();
+              }}
+            >
+              <ListItemIcon>
+                <PushPinIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>{isPinned ? "Desafixar conversa" : "Fixar conversa"}</ListItemText>
+            </MenuItem>
+          )}
+          {onToggleUnread && (
+            <MenuItem
+              onClick={() => {
+                closeMenu();
+                onToggleUnread();
+              }}
+            >
+              <ListItemIcon>
+                {isUnread ? <DoneIcon fontSize="small" /> : <MarkunreadIcon fontSize="small" />}
+              </ListItemIcon>
+              <ListItemText>
+                {isUnread ? "Marcar como lida" : "Marcar como não lida"}
+              </ListItemText>
+            </MenuItem>
+          )}
+        </Menu>
+      )}
     </li>
   );
 }
