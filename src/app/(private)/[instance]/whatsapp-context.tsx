@@ -43,6 +43,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -50,6 +51,8 @@ import {
 import { toast } from "react-toastify";
 import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
+import { WhatsappSessionContext } from "./whatsapp-session-context";
+import { WhatsappChatListContext } from "./whatsapp-chat-list-context";
 import filesService from "../../../lib/services/files.service";
 import usersService from "../../../lib/services/users.service";
 import { dispatchConfiguredNotification } from "../../../lib/utils/notification-dispatch";
@@ -1201,8 +1204,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
           socket,
           setMessages,
           setChats,
-          setCurrentChat,
-          setUniqueCurrentChatMessages,
+          openChat,
           userInitiatedChatContactId,
           emitPolicyNotification,
         ),
@@ -1287,6 +1289,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     }
   }, [socket, chats, currentChat, emitPolicyNotification]);
 
+  const sessionValue = useMemo(() => ({ parameters, channels, loaded }), [parameters, channels, loaded]);
+  const chatListValue = useMemo(() => ({ chats, currentChat, chatFilters, changeChatFilters, openChat, parameters }),
+    [chats, currentChat, chatFilters, changeChatFilters, openChat, parameters]);
+
   return (
     <WhatsappContext.Provider
       value={{
@@ -1342,7 +1348,11 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         updateChatPreference,
       }}
     >
-      {children}
+      <WhatsappSessionContext.Provider value={sessionValue}>
+        <WhatsappChatListContext.Provider value={chatListValue}>
+          {children}
+        </WhatsappChatListContext.Provider>
+      </WhatsappSessionContext.Provider>
     </WhatsappContext.Provider>
   );
 }

@@ -9,6 +9,8 @@ import {
   mentionDisplayText,
   preserveMessageMentionMetadata,
 } from "../utils/message-mentions";
+import mergeMessageUpdate from "../merge-message-update";
+import mergeMessagesById, { compareMessageChronology } from "../merge-messages-by-id";
 import { isInternalMentionForUser } from "../utils/notification-preferences";
 
 interface InternalReceiveMessageCallbackProps {
@@ -62,14 +64,7 @@ export default function InternalReceiveMessageHandler(
       message = { ...message, status: "READ" };
     }
     if (isCurrentChat) {
-      setCurrentChatMessages((prev) => {
-        if (!prev.some((m) => m.id === message.id)) {
-          return [...prev, message];
-        }
-        return prev.map((item) =>
-          item.id === message.id ? preserveMessageMentionMetadata(item, message) : item,
-        );
-      });
+      setCurrentChatMessages((prev) => mergeMessagesById(prev, [message], mergeMessageUpdate));
     }
 
     if (!alreadyNotified && message.from !== `user:${loggedUser.CODIGO}`) {
@@ -102,14 +97,9 @@ export default function InternalReceiveMessageHandler(
     setMessages((prev) => {
       const id = message.internalChatId;
       const previous = prev[id] ?? [];
-      const exists = previous.some((item) => item.id === message.id);
       return {
         ...prev,
-        [id]: exists
-          ? previous.map((item) =>
-              item.id === message.id ? preserveMessageMentionMetadata(item, message) : item,
-            )
-          : [...previous, message],
+        [id]: mergeMessagesById(previous, [message], mergeMessageUpdate),
       };
     });
 
@@ -119,7 +109,10 @@ export default function InternalReceiveMessageHandler(
           return {
             ...chat,
             isUnread: chatRef.current?.id !== message.internalChatId,
-            lastMessage: preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
+            lastMessage: chat.lastMessage && compareMessageChronology(message, chat.lastMessage) < 0
+              ? chat.lastMessage : chat.lastMessage?.id === message.id
+                ? mergeMessageUpdate(chat.lastMessage, message)
+                : preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
           };
         }
 

@@ -1,11 +1,14 @@
 import AIPrototypeModal, { AIPrototypeMode } from "@/lib/components/ai-prototype-modal";
 import { AI_PRESENTATION_MODE } from "@/lib/ai-prototype/config";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
-import { Formatter } from "@in.pulse-crm/utils";
+import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import reportsService from "@/lib/services/reports.service";
+import { UserRole } from "@/lib/sdk-local";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CloseIcon from "@mui/icons-material/Close";
+import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import InsightsIcon from "@mui/icons-material/Insights";
@@ -64,12 +67,17 @@ export default function ChatHeader({
   customerId,
   onClose,
 }: ChatContactInfoProps) {
-	const { instance } = useAuthContext();
+	const { instance, user, token } = useAuthContext();
 	const router = useRouter();
   const { openModal, closeModal } = useContext(AppContext);
   const { currentChat, currentChatMessages, parameters } = useWhatsappContext();
   const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
   const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
+  const userLevel = String(user?.NIVEL ?? "");
+  const canExportChat =
+    (userLevel === UserRole.ADMIN || userLevel === "SUPERVISOR") &&
+    currentChat?.chatType === "wpp" &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.chatExport);
   const canOpenAIActions =
     AI_PRESENTATION_MODE &&
     currentChat?.chatType === "wpp" &&
@@ -92,7 +100,7 @@ export default function ChatHeader({
     (!!(currentChat as { agentId?: number | null }).agentId || hasAgentMessages) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
-  const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || canOpenSupervisorAssistant || hasAiAgent || canInteract;
+  const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || canOpenSupervisorAssistant || hasAiAgent || canInteract || canExportChat;
 
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
   const [mobileActionsAnchor, setMobileActionsAnchor] = useState<null | HTMLElement>(null);
@@ -128,6 +136,17 @@ export default function ChatHeader({
 
   const openEditContactModal = () => {
     openModal(<EditContactModal />);
+  };
+
+  const exportChat = async () => {
+    if (!currentChat?.id || !token) return;
+    try {
+      reportsService.setAuth(`Bearer ${token}`);
+      await reportsService.generateChatsReport({ chatId: currentChat.id, format: "pdf" });
+      toast.success("Exportação iniciada! Acompanhe em Relatórios > Conversas.");
+    } catch (error) {
+      toast.error("Falha ao exportar conversa!\n" + sanitizeErrorMessage(error));
+    }
   };
 
   const openCustomerDetailModal = () => {
@@ -244,6 +263,13 @@ export default function ChatHeader({
             </Tooltip>
           </>
         )}
+        {canExportChat && (
+          <Tooltip title={<h3 className="text-base dark:text-white">Exportar conversa</h3>}>
+            <IconButton onClick={exportChat}>
+              <DownloadIcon color="primary" />
+            </IconButton>
+          </Tooltip>
+        )}
         {canOpenCustomerDetail && (
           <Tooltip title={<h3 className="text-base dark:text-white">Detalhes do cliente</h3>}>
             <IconButton
@@ -324,6 +350,11 @@ export default function ChatHeader({
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
           transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
+          {canExportChat && (
+            <MenuItem onClick={() => { setMobileActionsAnchor(null); void exportChat(); }}>
+              <DownloadIcon className="mr-3" color="primary" /> Exportar conversa
+            </MenuItem>
+          )}
           {canOpenCustomerDetail && (
             <MenuItem onClick={() => { setMobileActionsAnchor(null); openCustomerDetailModal(); }}>
               <InfoOutlinedIcon className="mr-3" color="success" /> Detalhes do cliente

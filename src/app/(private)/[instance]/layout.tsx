@@ -18,9 +18,21 @@ import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
 import { AuthContext } from "@/app/auth-context";
 import { TelephonyProvider } from "@/lib/telephony/telephony-provider";
+import CacheWarmup from "./cache-warmup";
 
 interface AppLayoutProps {
   children: ReactNode;
+}
+
+function AppModal({ modal, setModal }: { modal: ReactNode; setModal: (value: ReactNode | null) => void }) {
+  if (!modal) return null;
+  return (
+    <Modal open onClose={(_, reason) => {
+      if (reason !== "backdropClick") setModal(null);
+    }} className="flex items-center justify-center">
+      <div>{modal as ReactElement}</div>
+    </Modal>
+  );
 }
 
 const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
@@ -43,6 +55,7 @@ const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
   { segment: "/reports/report-generator", flags: [FEATURE_FLAGS.reportsDashboards] },
   { segment: "/reports/mailing-analysis", flags: [FEATURE_FLAGS.reportsAdvanced] },
   { segment: "/reports/regua-carteira-sintetico-whatsapp", flags: [FEATURE_FLAGS.reportsAdvanced] },
+  { segment: "/reports/chats", flags: [FEATURE_FLAGS.chatExport] },
 ];
 
 function RouteFeatureGate({ children }: { children: ReactNode }) {
@@ -94,6 +107,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
+            <CacheWarmup />
             <ContactsProvider>
               <InternalChatProvider>
                 <InternalGroupsProvider>
@@ -108,16 +122,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                             <main className="min-h-0 overflow-y-auto">
                               <RouteFeatureGate>{children}</RouteFeatureGate>
                             </main>
-                            <Modal
-                              open={!!modal}
-                              onClose={(_, r) => {
-                                if (r === "backdropClick") return;
-                                setModal(null);
-                              }}
-                              className="flex items-center justify-center"
-                            >
-                              <div>{modal as ReactElement}</div>
-                            </Modal>
+                            <AppModal modal={modal} setModal={setModal} />
                           </div>
                           </TelephonyProvider>
                         </ChatProvider>

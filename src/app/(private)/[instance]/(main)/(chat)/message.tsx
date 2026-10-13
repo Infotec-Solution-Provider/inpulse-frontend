@@ -23,7 +23,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
-import { useWhatsappContext } from "../../whatsapp-context";
+import { useWhatsappSession } from "../../whatsapp-session-context";
 import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
@@ -112,7 +112,7 @@ export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   REVOKED: <DeleteIcon className="text-slate-300" />,
 };
 
-export default function Message({
+function Message({
   id,
   style,
   type,
@@ -147,7 +147,7 @@ export default function Message({
 }: MessageProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-  const { parameters, channels } = useWhatsappContext();
+  const { parameters, channels } = useWhatsappSession();
 
   const channelName = useMemo(() => {
     if (!channelId || channels.length <= 1) return null;
@@ -404,3 +404,48 @@ export default function Message({
     </li>
   );
 }
+
+function areMessagePropsEqual(previous: MessageProps, next: MessageProps) {
+  return (
+    previous.id === next.id &&
+    previous.style === next.style &&
+    previous.text === next.text &&
+    previous.type === next.type &&
+    previous.date.getTime() === next.date.getTime() &&
+    previous.status === next.status &&
+    previous.fileId === next.fileId &&
+    previous.fileName === next.fileName &&
+    previous.fileType === next.fileType &&
+    previous.fileSize === next.fileSize &&
+    previous.isForwarded === next.isForwarded &&
+    previous.isForwardMode === next.isForwardMode &&
+    previous.isReadOnly === next.isReadOnly &&
+    previous.showMediaByDefault === next.showMediaByDefault &&
+    previous.showQuotedMediaByDefault === next.showQuotedMediaByDefault &&
+    previous.isSelected === next.isSelected &&
+    previous.isEdited === next.isEdited &&
+    previous.reaction === next.reaction &&
+    previous.reactions === next.reactions &&
+    previous.mentionEntities === next.mentionEntities &&
+    previous.sendError === next.sendError &&
+    previous.sendStatus === next.sendStatus &&
+    previous.channelId === next.channelId &&
+    previous.agentId === next.agentId &&
+    previous.quotedMessage?.id === next.quotedMessage?.id &&
+    previous.quotedMessage?.text === next.quotedMessage?.text &&
+    previous.quotedMessage?.mentionEntities === next.quotedMessage?.mentionEntities &&
+    previous.quotedMessage?.author === next.quotedMessage?.author &&
+    previous.quotedMessage?.fileId === next.quotedMessage?.fileId &&
+    previous.quotedMessage?.fileType === next.quotedMessage?.fileType &&
+    previous.quotedMessage?.fileName === next.quotedMessage?.fileName &&
+    previous.quotedMessage?.style === next.quotedMessage?.style &&
+    previous.onQuote === next.onQuote &&
+    previous.onForward === next.onForward &&
+    previous.onEdit === next.onEdit &&
+    previous.onReaction === next.onReaction &&
+    previous.onSelect === next.onSelect &&
+    previous.onCopy === next.onCopy
+  );
+}
+
+export default React.memo(Message, areMessagePropsEqual);

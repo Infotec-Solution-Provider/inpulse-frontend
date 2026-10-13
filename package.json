@@ -15,6 +15,7 @@
     "test:monitor:e2e": "playwright test --config tests/monitor.config.ts",
     "test:channels:e2e": "playwright test --config tests/channels.config.ts",
     "test:parameters:e2e": "playwright test --config tests/parameters.config.ts",
+    "check:performance-budgets": "node scripts/check-performance-budgets.mjs",
     "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
     "test:e2e": "playwright test --project=chromium"
   },
@@ -63,6 +64,7 @@
     "@types/react-file-icon": "^1.0.4",
     "eslint": "^9.37.0",
     "eslint-config-next": "15.3.1",
+    "fake-indexeddb": "^6.2.5",
     "postcss": "^8",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",

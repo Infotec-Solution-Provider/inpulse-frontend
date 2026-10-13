@@ -723,7 +723,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         SocketEventType.InternalChatFinished,
         InternalChatFinishedHandler(
           socket,
-          internalChats,
           currentChatRef,
           setMessages,
           setInternalChats,

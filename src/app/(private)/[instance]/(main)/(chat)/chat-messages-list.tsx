@@ -40,6 +40,8 @@ export default function ChatMessagesList() {
   );
 
   const forwardingTargets = useMemo((): ForwardingTarget[] => {
+    if (!forwardModalOpen) return [];
+
     const wppTargets: ForwardingTarget[] = chats.map((chat) => ({
       id: `wpp-${chat.id}`,
       type: "wpp",
@@ -64,7 +66,7 @@ export default function ChatMessagesList() {
       }));
 
     return [...wppTargets, ...userTargets, ...groupTargets];
-  }, [chats, users, internalChats]);
+  }, [chats, forwardModalOpen, users, internalChats]);
 
   const toggleSelectMessage = useCallback(
     (id: string | number) => {
@@ -148,6 +150,7 @@ export default function ChatMessagesList() {
       <div className="h-0 flex-grow">
         {isWhatsappChat && (
           <RenderWhatsappChatMessages
+            key={currentChat.id}
             selectedMessageIds={selectedMessageIds}
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
@@ -157,6 +160,7 @@ export default function ChatMessagesList() {
         )}
         {isInternalChat && (
           <RenderInternalChatMessages
+            key={currentChat.id}
             selectedMessageIds={selectedMessageIds}
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}
@@ -166,6 +170,7 @@ export default function ChatMessagesList() {
         )}
         {isInternalGroup && (
           <RenderInternalGroupMessages
+            key={currentChat.id}
             selectedMessageIds={selectedMessageIds}
             isSelectionMode={isSelectionMode}
             toggleSelectMessage={toggleSelectMessage}

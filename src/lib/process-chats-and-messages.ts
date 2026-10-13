@@ -44,7 +44,7 @@ export default function processChatsAndMessages(
       ...chat,
       chatType: "wpp",
       isUnread:
-        Boolean(chat.isUnread) ||
+        chat.isUnread ??
         messages.some((m) => m.contactId === chat.contactId && m.status !== "READ" && !isFromUs(m)),
       lastMessage: chat.lastMessage || (chat.contactId ? lastMessages[chat.contactId] || null : null),
     };

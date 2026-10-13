@@ -10,6 +10,8 @@ import {
   mentionDisplayText,
   preserveMessageMentionMetadata,
 } from "../utils/message-mentions";
+import mergeMessageUpdate from "../merge-message-update";
+import mergeMessagesById, { compareMessageChronology } from "../merge-messages-by-id";
 
 interface ReceiveMessageCallbackProps {
   message: WppMessage;
@@ -81,14 +83,9 @@ export default function ReceiveMessageHandler(
     setMessages((prev) => {
       const contactId = message.contactId || 0;
       const previous = prev[contactId] ?? [];
-      const exists = previous.some((item) => item.id === message.id);
       return {
         ...prev,
-        [contactId]: exists
-          ? previous.map((item) =>
-              item.id === message.id ? preserveMessageMentionMetadata(item, message) : item,
-            )
-          : [...previous, message],
+        [contactId]: mergeMessagesById(previous, [message], mergeMessageUpdate),
       };
     });
 
@@ -105,7 +102,10 @@ export default function ReceiveMessageHandler(
             return {
               ...chat,
               isUnread: isUnread,
-              lastMessage: preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
+              lastMessage: chat.lastMessage && compareMessageChronology(message, chat.lastMessage) < 0
+                ? chat.lastMessage : chat.lastMessage?.id === message.id
+                  ? mergeMessageUpdate(chat.lastMessage, message)
+                  : preserveMessageMentionMetadata(chat.lastMessage ?? undefined, message),
             };
           }
 
@@ -117,17 +117,7 @@ export default function ReceiveMessageHandler(
     );
 
     if (x && x.chatType === "wpp" && x.contactId === message.contactId) {
-      setCurrentChatMessages((prev) => {
-        const newMessages = [...prev];
-        const i = newMessages.findIndex((m) => m.id === message.id);
-        if (i === -1) {
-          newMessages.push(message);
-        } else {
-          newMessages[i] = preserveMessageMentionMetadata(newMessages[i], message);
-        }
-
-        return newMessages;
-      });
+      setCurrentChatMessages((prev) => mergeMessagesById(prev, [message], mergeMessageUpdate));
 
       // TODO: Change the logic to only update the received message;
       if (message.to.startsWith("me") && message.status !== "READ" && message.contactId) {

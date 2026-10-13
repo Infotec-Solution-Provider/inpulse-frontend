@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useContext } from "react";
 import { AppContext } from "../../../app-context";
-import { CustomersContext } from "../customers-context";
+import { useCustomersContext } from "../customers-context";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import { toast } from "react-toastify";
 import ContactsModal from "./(modal)/contacts-modal";
@@ -23,7 +23,7 @@ import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
   const { openModal } = useContext(AppContext);
-  const { state, dispatch } = useContext(CustomersContext);
+  const { state, dispatch } = useCustomersContext();
 
   function openEditCustomerModal(customer: Customer) {
     if (isSystemDefaultCustomer(customer.CODIGO)) {

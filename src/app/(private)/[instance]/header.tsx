@@ -2,7 +2,7 @@
 import { AuthContext } from "@/app/auth-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
-import NotificationsDropdown from "@/lib/components/notifications-dropdown";
+import LazyNotificationsDropdown from "@/lib/components/lazy-notifications-dropdown";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
@@ -17,6 +17,7 @@ import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import MonitorIcon from "@mui/icons-material/Monitor";
+import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
@@ -93,8 +94,10 @@ const aiRoutes = (params: Record<string, string>) => {
 const reportsRoutes = (params: Record<string, string>, instance: string) => {
   const routes = [
     { title: "Relatórios", href: "/reports/dashboard" },
-    { title: "Conversas", href: "/reports/chats" },
   ];
+  if (isFeatureEnabled(params, FEATURE_FLAGS.chatExport)) {
+    routes.push({ title: "Conversas", href: "/reports/chats" });
+  }
 
   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsAdvanced)) {
     routes.push(
@@ -279,6 +282,14 @@ const MobileMenu = ({
                 <ListItemText primary="Relatórios" sx={{ pl: 2, pt: 1, fontWeight: "bold" }} />
               </ListItem>
               {renderMenuItems(reportsRoutes)}
+              <ListItem>
+                <Link href={`/${instance}/changelog`} className="w-full">
+                  <ListItemButton>
+                    <ListItemIcon><NewReleasesIcon /></ListItemIcon>
+                    <ListItemText primary="Novidades" />
+                  </ListItemButton>
+                </Link>
+              </ListItem>
             </>
           )}
           <Divider sx={{ my: 2 }} />
@@ -400,6 +411,11 @@ export default function Header() {
                     <BarChartIcon className="text-gray-900 dark:text-slate-200" />
                   </HeaderNavItem>
                 )}
+                {isUserAdmin && (
+                  <HeaderNavItem title="Novidades" href="/changelog">
+                    <NewReleasesIcon className="text-gray-900 dark:text-slate-200" />
+                  </HeaderNavItem>
+                )}
               </menu>
             </nav>
           </div>
@@ -407,7 +423,7 @@ export default function Header() {
           <div className="hidden items-center gap-2 md:flex">
             <ThemeToggleButton />
 
-            <NotificationsDropdown />
+            <LazyNotificationsDropdown />
 
             <IconButton
               color="inherit"

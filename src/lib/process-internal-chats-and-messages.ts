@@ -4,7 +4,7 @@ import { InternalChat, InternalChatMember, InternalMessage, User } from "@/lib/s
 export default function processInternalChatsAndMessages(
   userId: number,
   users: User[],
-  chats: (InternalChat & { participants: InternalChatMember[] })[],
+  chats: (InternalChat & { participants: InternalChatMember[]; lastMessage?: InternalMessage | null })[],
   messages: InternalMessage[],
 ) {
   // Criar um mapa de chats por `internalChatId` para acesso rápido
@@ -72,12 +72,12 @@ export default function processInternalChatsAndMessages(
     ...chat,
     chatType: "internal",
     isUnread:
-      Boolean(chat.isUnread) ||
+      chat.isUnread ??
       messages.some(
         (m) =>
           isFromChat(m, chat) && !isFromMe(m) && m.status !== "READ" && !readByMarkerIds.has(m.id),
       ),
-    lastMessage: lastMessages[chat.id] || null,
+    lastMessage: chat.lastMessage ?? (lastMessages[chat.id] || null),
     users: users.filter((user) => chat.participants.some((p) => p.userId === user.CODIGO)),
   })) as DetailedInternalChat[];
 

@@ -9,7 +9,6 @@ interface InternalChatFinishedHandlerProps {
 
 export default function InternalChatFinishedHandler(
   socket: SocketClient,
-  internalChats: DetailedInternalChat[],
   currentChat: RefObject<DetailedChat | DetailedInternalChat | null>,
   setInternalMessages: Dispatch<SetStateAction<Record<number, InternalMessage[]>>>,
   setInternalChats: Dispatch<SetStateAction<DetailedInternalChat[]>>,
@@ -19,14 +18,10 @@ export default function InternalChatFinishedHandler(
   return async ({ chatId }: InternalChatFinishedHandlerProps) => {
     socket.leaveRoom(`internal-chat:${chatId}`);
     setInternalChats((prev) => prev.filter((c) => c.id !== chatId));
-    const internalChat = internalChats.find((c) => c.id === chatId);
-
-    if (!internalChat) return;
-    setInternalMessages((prev) => {
-      if (prev[internalChat.id]) {
-        delete prev[internalChat.id];
-      }
-      return { ...prev };
+    setInternalMessages((previous) => {
+      const next = { ...previous };
+      delete next[chatId];
+      return next;
     });
 
     if (currentChat.current?.chatType === "internal" && currentChat.current.id === chatId) {

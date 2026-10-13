@@ -11,6 +11,9 @@ import getQuotedMsgProps from "@/app/(private)/[instance]/(main)/(chat)/(utils)/
 vi.mock("@/app/(private)/[instance]/whatsapp-context", () => ({
   useWhatsappContext: () => ({ parameters: {}, channels: [] }),
 }));
+vi.mock("@/app/(private)/[instance]/whatsapp-session-context", () => ({
+  useWhatsappSession: () => ({ parameters: {}, channels: [], loaded: true }),
+}));
 vi.mock("@/app/(private)/[instance]/(main)/(chat)/message-file", () => ({ default: () => null }));
 vi.mock("@/app/(private)/[instance]/(main)/(chat)/message-reactions", () => ({
   default: () => null,

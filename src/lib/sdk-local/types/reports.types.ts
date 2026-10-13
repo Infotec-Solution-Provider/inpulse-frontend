@@ -17,10 +17,11 @@ export interface ChatsReport {
 }
 
 export interface GenerateChatsReportOptions {
-    userId: string;
+    userId?: string;
     format: ChatsReportFormat;
-    startDate: string;
-    endDate: string;
+    startDate?: string;
+    endDate?: string;
+    chatId?: number;
 }
 
 export interface SQLReportColumn {
