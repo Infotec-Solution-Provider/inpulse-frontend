@@ -1,4 +1,5 @@
 import ApiClient from "./api-client";
+import type { CrmCatalogName, CrmCatalogRecords, CrmCatalogExpected, CrmCatalogListParams, CreateCrmCatalogRequest, UpdateCrmCatalogRequest, CrmUnitOption, CrmStateOption } from "./types/crm-catalogs.types";
 import { DataResponse, MessageResponse, PaginatedResponse, RequestFilters } from "./types";
 import {
 	CreateCustomerDTO,
@@ -17,6 +18,44 @@ import {
 } from "./types/customers.types";
 
 class CustomersClient extends ApiClient {
+	public async listCrmCatalog<K extends CrmCatalogName>(catalog: K, params?: CrmCatalogListParams): Promise<PaginatedResponse<CrmCatalogRecords[K]>> {
+		const query = new URLSearchParams();
+		for (const [key, value] of Object.entries(params ?? {})) {
+			if (value !== undefined) query.set(key, String(value));
+		}
+		const response = await this.ax.get<PaginatedResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}${query.size ? `?${query}` : ""}`);
+		return response.data;
+	}
+
+	public async getCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string): Promise<DataResponse<CrmCatalogRecords[K]>> {
+		const response = await this.ax.get<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`);
+		return response.data;
+	}
+
+	public async createCrmCatalog<K extends CrmCatalogName>(catalog: K, data: CreateCrmCatalogRequest<K>): Promise<DataResponse<CrmCatalogRecords[K]>> {
+		const response = await this.ax.post<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}`, data);
+		return response.data;
+	}
+
+	public async updateCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, data: UpdateCrmCatalogRequest<K>): Promise<DataResponse<CrmCatalogRecords[K]>> {
+		const response = await this.ax.patch<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, data);
+		return response.data;
+	}
+
+	public async deleteCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, expected: CrmCatalogExpected<K>): Promise<MessageResponse> {
+		const response = await this.ax.delete<MessageResponse>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, { data: { expected } });
+		return response.data;
+	}
+
+	public async getCrmCatalogUnits(): Promise<DataResponse<CrmUnitOption[]>> {
+		const response = await this.ax.get<DataResponse<CrmUnitOption[]>>("/api/crm-catalogs/options/units");
+		return response.data;
+	}
+
+	public async getCrmCatalogStates(): Promise<DataResponse<CrmStateOption[]>> {
+		const response = await this.ax.get<DataResponse<CrmStateOption[]>>("/api/crm-catalogs/options/states");
+		return response.data;
+	}
 	/**
 	 * Cria um novo cliente.
 	 * @param data - Os dados do cliente a serem criados.
