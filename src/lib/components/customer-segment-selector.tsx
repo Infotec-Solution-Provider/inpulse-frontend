@@ -1,0 +1,118 @@
+"use client";
+
+import { useAuthContext } from "@/app/auth-context";
+import customersService from "@/lib/services/customers.service";
+import { subscribeCustomerSegmentsChanged } from "@/lib/customer-segments-events";
+import { getCustomerSegmentsError } from "@/lib/customer-segments-error";
+import type { CustomerLookupOption, CustomerSegmentAssignment } from "@/lib/sdk-local";
+import { Alert, Autocomplete, Button, CircularProgress, TextField } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
+
+interface Props {
+  customerId: number;
+  segmentId: number | null;
+  segmentName: string | null;
+  canEdit: boolean;
+  onSaved: (assignment: CustomerSegmentAssignment) => void;
+  onReload: () => Promise<void>;
+}
+
+function errorDetails(error: unknown): { message: string; needsReload: boolean } {
+  const candidate = error as { message?: string };
+  const { status } = getCustomerSegmentsError(error);
+  return {
+    message: candidate?.message || "Não foi possível atualizar o segmento.",
+    needsReload: status === 409 || status === 503 || !status,
+  };
+}
+
+export default function CustomerSegmentSelector({ customerId, segmentId, segmentName, canEdit, onSaved, onReload }: Props) {
+  const { token, instance, user } = useAuthContext();
+  const [options, setOptions] = useState<CustomerLookupOption[]>([]);
+  const [selected, setSelected] = useState<CustomerLookupOption | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [needsReload, setNeedsReload] = useState(false);
+  const [catalogVersion, setCatalogVersion] = useState(0);
+  const epoch = useRef(0);
+  const editable = canEdit && user?.NIVEL === "ADMIN" && customerId > 0;
+
+  useEffect(() => {
+    epoch.current += 1;
+    setSelected(segmentId === null ? null : { CODIGO: segmentId, NOME: segmentName });
+    setError(null); setNeedsReload(false); setSaving(false); setReloading(false);
+    return () => { epoch.current += 1; };
+  }, [customerId, instance, token, segmentId, segmentName]);
+
+  useEffect(() => subscribeCustomerSegmentsChanged(instance, () => setCatalogVersion(value => value + 1)), [instance]);
+  useEffect(() => {
+    if (!editable || !token) { setOptions([]); setLoading(false); return; }
+    let active = true;
+    setOptions([]); setLoading(true);
+    customersService.setAuth(token);
+    customersService.getSegments().then(rows => {
+      if (active) {
+        setOptions(rows.filter(row => Number.isInteger(row.CODIGO) && row.CODIGO > 0));
+        setSelected(current => current ? rows.find(row => row.CODIGO === current.CODIGO) ?? current : null);
+      }
+    }).catch(() => {
+      if (active) setError("Não foi possível carregar os segmentos. Recarregue as opções.");
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [editable, token, instance, catalogVersion]);
+
+  const save = async () => {
+    if (!token || !editable || !selected || selected.CODIGO <= 0 || saving || needsReload) return;
+    const requestEpoch = epoch.current;
+    setSaving(true); setError(null);
+    customersService.setAuth(token);
+    try {
+      const response = await customersService.setCustomerSegment(customerId, { SEGMENTO: selected.CODIGO, expected: { SEGMENTO: segmentId } });
+      if (requestEpoch !== epoch.current) return;
+      if (response.data.CODIGO !== customerId || response.data.SEGMENTO !== selected.CODIGO || response.data.segment.CODIGO !== selected.CODIGO)
+        throw new Error("Não foi possível confirmar o segmento salvo. Recarregue o cliente.");
+      onSaved(response.data);
+    } catch (cause) {
+      if (requestEpoch !== epoch.current) return;
+      const details = errorDetails(cause); setError(details.message); setNeedsReload(details.needsReload);
+    } finally { if (requestEpoch === epoch.current) setSaving(false); }
+  };
+
+  const reload = async () => {
+    const requestEpoch = epoch.current;
+    setReloading(true);
+    try {
+      await onReload();
+      if (requestEpoch !== epoch.current) return;
+      setSelected(segmentId === null ? null : { CODIGO: segmentId, NOME: segmentName });
+      setNeedsReload(false); setError(null); setCatalogVersion(value => value + 1);
+    } catch {
+      if (requestEpoch === epoch.current) setError("Não foi possível recarregar o cliente. Tente novamente.");
+    } finally { if (requestEpoch === epoch.current) setReloading(false); }
+  };
+
+  if (!editable) return <TextField label="Segmento" value={segmentName ?? (segmentId === null ? "—" : `Código ${segmentId}`)} slotProps={{ input: { readOnly: true } }} />;
+  const list = selected && !options.some(option => option.CODIGO === selected.CODIGO) ? [selected, ...options] : options;
+  return (
+    <div className="grid gap-2">
+      <Autocomplete
+        options={list} value={selected} loading={loading} disableClearable={selected !== null}
+        disabled={saving || reloading || needsReload}
+        getOptionLabel={option => `${option.NOME ?? "Sem nome"} (${option.CODIGO})`}
+        isOptionEqualToValue={(option, value) => option.CODIGO === value.CODIGO}
+        getOptionDisabled={option => option.CODIGO <= 0 || !options.some(current => current.CODIGO === option.CODIGO)}
+        onChange={(_event, value) => setSelected(value)}
+        renderInput={params => <TextField {...params} label="Segmento" helperText={loading ? "Carregando segmentos…" : undefined} slotProps={{ input: { ...params.InputProps, endAdornment: <>{loading && <CircularProgress size={16} />}{params.InputProps.endAdornment}</> } }} />}
+      />
+      {error && <Alert severity={needsReload ? "warning" : "error"}>{error}</Alert>}
+      <div className="flex flex-wrap gap-2">
+        <Button size="small" variant="outlined" onClick={save} disabled={saving || loading || reloading || needsReload || !selected || selected.CODIGO <= 0 || selected.CODIGO === segmentId || !options.some(option => option.CODIGO === selected.CODIGO)}>{saving ? "Salvando…" : "Salvar segmento"}</Button>
+        {needsReload
+          ? <Button size="small" disabled={reloading} onClick={reload}>{reloading ? "Recarregando…" : "Recarregar cliente"}</Button>
+          : <Button size="small" disabled={loading || saving || reloading} onClick={() => { setError(null); setCatalogVersion(value => value + 1); }}>Atualizar opções</Button>}
+      </div>
+    </div>
+  );
+}

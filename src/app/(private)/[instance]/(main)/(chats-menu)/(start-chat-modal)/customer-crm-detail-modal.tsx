@@ -1,6 +1,9 @@
 "use client";
 
 import customersService from "@/lib/services/customers.service";
+import CustomerSegmentSelector from "@/lib/components/customer-segment-selector";
+import { hybridCache } from "@/lib/cache/hybrid-cache";
+import { createCacheScope } from "@/lib/cache/cache-scope";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { Customer } from "@/lib/sdk-local";
@@ -36,7 +39,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useAuthContext } from "../../../../../auth-context";
 import {
@@ -150,7 +153,9 @@ function getUniqueOptions(values: Array<string | null | undefined>) {
 }
 
 export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }: CustomerCrmDetailModalProps) {
-  const { token } = useAuthContext();
+  const { token, user, instance } = useAuthContext();
+  const segmentContext = useRef({ instance, customerId, token });
+  segmentContext.current = { instance, customerId, token };
   const [tab, setTab] = useState<TabValue>("main");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1213,7 +1218,37 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         <TextField label="Origem" value={detail.origin.description ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Mídia" value={detail.media.name ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Operador" value={detail.operator.name ?? "-"} InputProps={{ readOnly: true }} />
-        <TextField label="Segmento" value={detail.segment.name ?? "-"} InputProps={{ readOnly: true }} />
+        <CustomerSegmentSelector
+          key={`${instance}:${customerId}`}
+          customerId={customerId}
+          segmentId={detail.customer.SEGMENTO ?? null}
+          segmentName={detail.segment.name}
+          canEdit={canEditOrigin}
+          onReload={async () => {
+            if (!token) throw new Error("Sessão inválida.");
+            customersService.setAuth(token);
+            const response = await customersService.ax.get<{ data: CustomerFullDetail }>(`/api/customers/${customerId}/full`);
+            if (segmentContext.current.instance !== instance || segmentContext.current.customerId !== customerId || segmentContext.current.token !== token)
+              throw new Error("O contexto do cliente mudou.");
+            const current = response.data.data;
+            if (current.customer.CODIGO !== customerId) throw new Error("Resposta de outro cliente.");
+            setDetail(previous => previous && previous.customer.CODIGO === customerId ? {
+              ...previous,
+              customer: { ...previous.customer, SEGMENTO: current.customer.SEGMENTO },
+              segment: current.segment,
+            } : previous);
+          }}
+          onSaved={(assignment) => {
+            if (segmentContext.current.instance !== instance || segmentContext.current.customerId !== customerId || segmentContext.current.token !== token) return;
+            setDetail(current => current && current.customer.CODIGO === assignment.CODIGO ? {
+              ...current,
+              customer: { ...current.customer, SEGMENTO: assignment.SEGMENTO },
+              segment: { code: assignment.SEGMENTO, name: assignment.segment.NOME },
+            } : current);
+            if (user) void hybridCache.invalidateResource(createCacheScope(instance, user.CODIGO), "customer-page");
+            toast.success("Segmento do cliente atualizado.");
+          }}
+        />
         <TextField
           label="Funcionários"
           type="number"

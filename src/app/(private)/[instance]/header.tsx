@@ -51,6 +51,7 @@ const crudsRoutes = (
   }
 
   if (isAdmin) {
+    arr.push({ title: "Clientes · Segmentos", href: "/customer-segments" });
     arr.push({ title: "Parâmetros", href: "/parameters" });
     arr.push({ title: "Usuários", href: "/users" });
     if (isFeatureEnabled(params, FEATURE_FLAGS.sipConfig)) {
