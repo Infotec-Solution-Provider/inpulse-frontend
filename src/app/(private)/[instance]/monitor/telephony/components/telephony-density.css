@@ -1,0 +1,85 @@
+.ip-ui .ip-telephony-table {
+  table-layout: fixed;
+  min-width: 800px;
+}
+
+.ip-ui .ip-telephony-table :where(th, td) {
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+.ip-ui .ip-telephony-table th:first-child {
+  width: 24%;
+}
+
+.ip-ui .ip-telephony-table th:nth-child(2) {
+  width: 26%;
+}
+
+.ip-ui .ip-telephony-table th:nth-child(3) {
+  width: 15%;
+}
+
+.ip-ui .ip-telephony-table th:nth-child(4) {
+  width: 16%;
+}
+
+.ip-ui .ip-telephony-table th:last-child {
+  width: 116px;
+}
+
+.ip-ui :is(.ip-telephony-customer-name, .ip-telephony-customer-context) {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.ip-ui .ip-telephony-table :is(.ip-telephony-customer-name, .ip-telephony-customer-context) {
+  -webkit-line-clamp: 1;
+}
+
+.ip-ui .ip-telephony-actions {
+  color: var(--ip-muted);
+}
+
+.ip-ui .ip-telephony-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: start;
+}
+
+.ip-ui .ip-telephony-toolbar .ip-telephony-modes {
+  grid-column: 1 / -1;
+}
+
+.ip-ui .ip-telephony-filter-search {
+  flex: 1 1 180px;
+  max-width: 340px;
+  min-width: 0;
+}
+
+.ip-ui .ip-telephony-filter-button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 599px) {
+  .ip-ui .ip-telephony-toolbar {
+    gap: 8px;
+  }
+
+  .ip-ui .ip-telephony-toolbar h1 {
+    font-size: 20px;
+  }
+
+  .ip-ui .ip-telephony-filter-search {
+    flex-basis: 0;
+    max-width: none;
+  }
+
+  .ip-ui .ip-telephony-filter-button {
+    min-width: 44px;
+  }
+}

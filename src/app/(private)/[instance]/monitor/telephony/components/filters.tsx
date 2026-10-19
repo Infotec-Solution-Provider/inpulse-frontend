@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft, CircleHelp, Search, SlidersHorizontal } from "lucide-react";
-import { OperationalPanel } from "@/lib/ui-system";
+import { OperationalIconButton, OperationalPanel } from "@/lib/ui-system";
 import {
   Button,
   Checkbox,
@@ -132,52 +132,50 @@ export default function TelephonyFilters({
         className="ip-toolbar flex shrink-0 flex-wrap items-center gap-2"
       >
         <TextField
-          label="Pesquisar cliente ou telefone"
+          label="Pesquisar"
+          placeholder="Cliente ou telefone"
           size="small"
+          className="ip-telephony-filter-search"
           value={filters.searchText}
           onChange={(event) => update("searchText", event.target.value)}
           slotProps={{
-            htmlInput: { maxLength: 200 },
+            htmlInput: { maxLength: 200, "aria-label": "Pesquisar cliente ou telefone" },
             input: {
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton
+                  <OperationalIconButton
                     type="submit"
                     size="small"
                     edge="end"
-                    aria-label="Pesquisar"
+                    label="Pesquisar"
+                    tooltip="Pesquisar clientes"
                     disabled={isLoading && !hasUnappliedFilters}
                   >
                     <Search size={16} />
-                  </IconButton>
+                  </OperationalIconButton>
                 </InputAdornment>
               ),
             },
           }}
           sx={{
-            width: { xs: "100%", sm: 340 },
             "& .MuiOutlinedInput-root": { bgcolor: "var(--ip-surface)" },
           }}
         />
-        <Button
-          variant="outlined"
+        <OperationalIconButton
           size="small"
-          startIcon={<SlidersHorizontal size={16} />}
-          aria-label={
+          className="ip-telephony-filter-button"
+          label={
             appliedCount
               ? `Filtros, ${appliedCount} ${appliedCount === 1 ? "aplicado" : "aplicados"}`
               : "Filtros"
           }
+          tooltip={appliedCount ? `Filtros (${appliedCount} aplicados)` : "Filtros"}
           aria-haspopup="dialog"
           onClick={openDialog}
         >
-          Filtros
-          {appliedCount > 0 && (
-            <span className="ml-2 rounded bg-[var(--ip-accent-soft)] px-1.5 text-xs tabular-nums text-[var(--ip-accent)]">
-              {appliedCount}
-            </span>
-          )}
-        </Button>
+          <SlidersHorizontal size={18} />
+          {appliedCount > 0 && <span className="ip-icon-action-count">{appliedCount}</span>}
+        </OperationalIconButton>
         {children}
         <p
           role="status"

@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   Pagination,
   Radio,
   TextField,
@@ -21,6 +22,7 @@ import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 import { MonitorRequestGate } from "../../request-gate";
 import type { TelephonyLookupOption, TelephonyLookupResult } from "../types";
 import { dialogPaperSx } from "../../surface";
+import { OperationalIconButton } from "@/lib/ui-system";
 
 export interface LookupPageRequest {
   search: string;
@@ -176,18 +178,28 @@ export default function TelephonyLookupDialog({
             size="small"
             fullWidth
             label={`Pesquisar ${title.toLowerCase()}`}
-            slotProps={{ htmlInput: { maxLength: 200 } }}
+            slotProps={{
+              htmlInput: { maxLength: 200 },
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <OperationalIconButton
+                      type="submit"
+                      size="small"
+                      edge="end"
+                      label="Buscar"
+                      tooltip="Pesquisar opções"
+                      disabled={retrySeconds > 0}
+                    >
+                      <Search size={16} />
+                    </OperationalIconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
           />
-          <Button
-            type="submit"
-            variant="outlined"
-            startIcon={<Search size={16} />}
-            disabled={retrySeconds > 0}
-          >
-            Buscar
-          </Button>
         </form>
         {error && (
           <Alert

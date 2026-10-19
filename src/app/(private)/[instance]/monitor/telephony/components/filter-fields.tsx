@@ -79,7 +79,15 @@ export function TelephonyLookupField({
         onClick={onOpen}
         disabled={disabled}
         aria-label={`Selecionar ${label.toLowerCase()}`}
-        sx={{ minHeight: 36, justifyContent: "space-between", textTransform: "none" }}
+        sx={{
+          minHeight: 36,
+          justifyContent: "space-between",
+          textTransform: "none",
+          color: selection.length ? "var(--ip-text)" : "var(--ip-muted)",
+          borderColor: "var(--ip-border)",
+          bgcolor: "var(--ip-surface)",
+          "&:hover": { borderColor: "var(--ip-muted)", bgcolor: "var(--ip-surface-muted)" },
+        }}
       >
         <span className="truncate" title={selection.map((option) => option.label).join(", ")}>
           {value}

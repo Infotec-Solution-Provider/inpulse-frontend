@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
-import { CircleHelp, LayoutGrid, List, Pause, Play, RefreshCw } from "lucide-react";
+import { ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
+import { CircleHelp, LayoutGrid, List } from "lucide-react";
+import { MonitorRefreshActions } from "@/lib/ui-system";
 import type { TelephonyMonitorMode, TelephonyMonitorView } from "../types";
 import type useTelephonyMonitor from "../use-telephony-monitor";
 import { telephonyModes } from "./presentation";
@@ -39,8 +40,8 @@ export default function TelephonyToolbar({
       })
     : null;
   return (
-    <header className="flex shrink-0 flex-col gap-3">
-      <div className="ip-page-header flex min-w-0 flex-wrap items-start justify-between gap-3">
+    <header className="ip-telephony-toolbar shrink-0">
+      <div className="ip-page-header min-w-0">
         <div className="min-w-0">
           <h1>Monitoria de telefonia</h1>
           <p
@@ -66,37 +67,15 @@ export default function TelephonyToolbar({
             )}
           </p>
         </div>
-        <div className="flex max-w-full flex-wrap items-center gap-2">
-          <Button
-            size="small"
-            variant="text"
-            startIcon={state.autoRefresh ? <Pause size={15} /> : <Play size={15} />}
-            aria-label={
-              state.autoRefresh
-                ? "Pausar atualização automática da telefonia"
-                : "Retomar atualização automática da telefonia"
-            }
-            onClick={() => state.setAutoRefresh(!state.autoRefresh)}
-          >
-            {state.autoRefresh ? "Pausar" : "Retomar"}
-          </Button>
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={
-              <RefreshCw
-                size={15}
-                className={busy ? "animate-spin motion-reduce:animate-none" : ""}
-              />
-            }
-            disabled={busy || cooldown > 0}
-            onClick={state.refetch}
-          >
-            {cooldown > 0 ? `Aguarde ${cooldown}s` : "Atualizar"}
-          </Button>
-        </div>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+      <MonitorRefreshActions
+        autoRefresh={state.autoRefresh}
+        busy={busy}
+        retrySeconds={cooldown}
+        onToggle={() => state.setAutoRefresh(!state.autoRefresh)}
+        onRefresh={state.refetch}
+      />
+      <div className="ip-telephony-modes flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex min-w-0 max-w-full items-center gap-1.5 overflow-x-auto pb-0.5">
           <ToggleButtonGroup
             exclusive
@@ -156,6 +135,7 @@ export default function TelephonyToolbar({
         </div>
         <ToggleButtonGroup
           className="ml-auto"
+          sx={{ display: { xs: "none", lg: "inline-flex" } }}
           value={view}
           exclusive
           size="small"
@@ -164,16 +144,16 @@ export default function TelephonyToolbar({
             if (value) onViewChange(value);
           }}
         >
-          <ToggleButton value="compact" aria-label="Exibir lista compacta">
-            <Tooltip title="Lista compacta">
+          <Tooltip title="Lista compacta" describeChild>
+            <ToggleButton value="compact" aria-label="Exibir lista compacta">
               <List size={16} />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="cards" aria-label="Exibir cartões">
-            <Tooltip title="Cartões">
+            </ToggleButton>
+          </Tooltip>
+          <Tooltip title="Cartões" describeChild>
+            <ToggleButton value="cards" aria-label="Exibir cartões">
               <LayoutGrid size={16} />
-            </Tooltip>
-          </ToggleButton>
+            </ToggleButton>
+          </Tooltip>
         </ToggleButtonGroup>
       </div>
     </header>

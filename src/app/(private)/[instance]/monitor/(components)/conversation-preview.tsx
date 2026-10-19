@@ -17,11 +17,12 @@ import GroupMessage from "../../(main)/(chat)/group-message";
 import { getMonitorParticipants } from "../(functions)/get-card-props";
 import { loadMonitorHistory, monitorMessageDate } from "../history";
 import { MonitorRequestGate } from "../request-gate";
+import type { MonitorOperational } from "../types";
 
 export default function MonitorConversationPreview({
   chat,
 }: {
-  chat: DetailedChat | DetailedInternalChat;
+  chat: (DetailedChat | DetailedInternalChat) & { operational?: MonitorOperational };
 }) {
   const { closeModal } = useContext(AppContext);
   const { instance, user, token } = useContext(AuthContext);
@@ -122,6 +123,47 @@ export default function MonitorConversationPreview({
       : chat.groupName ||
         participants.map((participant) => participant.NOME).join(" e ") ||
         "Conversa interna";
+  const lastMessageDate = chat.operational?.lastMessageAt
+    ? new Date(chat.operational.lastMessageAt)
+    : null;
+  const lastMessageAt =
+    lastMessageDate && Number.isFinite(lastMessageDate.getTime())
+      ? lastMessageDate.toLocaleString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
+  const contextItems = [
+    {
+      label: "Cliente",
+      value: chat.chatType === "wpp" ? chat.customer?.RAZAO : null,
+    },
+    {
+      label: "CPF/CNPJ",
+      value: chat.chatType === "wpp" ? chat.customer?.CPF_CNPJ : null,
+    },
+    {
+      label: "Grupo",
+      value:
+        chat.chatType === "internal" && chat.isGroup
+          ? `${participants.length} ${participants.length === 1 ? "participante" : "participantes"}`
+          : null,
+    },
+    { label: "Canal", value: chat.operational?.channel },
+    {
+      label: "Última mensagem",
+      value: lastMessageAt,
+      dateTime: chat.operational?.lastMessageAt,
+    },
+    {
+      label: "Descrição do grupo",
+      value: chat.chatType === "internal" && chat.isGroup ? chat.groupDescription : null,
+      wide: true,
+    },
+  ].filter((item) => item.value);
   const enableReply = () => {
     if (chat.chatType === "wpp") openChat(chat, messages as WppMessage[], false);
     else openInternalChat(chat, false, messages as InternalMessage[]);
@@ -193,6 +235,23 @@ export default function MonitorConversationPreview({
         >
           {error}
         </Alert>
+      )}
+      {!replying && contextItems.length > 0 && (
+        <section className="ip-conversation-context" aria-label="Contexto da conversa">
+          <dl>
+            {contextItems.map((item) => (
+              <div
+                key={item.label}
+                className={item.wide ? "ip-conversation-context-wide" : undefined}
+              >
+                <dt>{item.label}</dt>
+                <dd>
+                  {item.dateTime ? <time dateTime={item.dateTime}>{item.value}</time> : item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       )}
       {replying ? (
         <>

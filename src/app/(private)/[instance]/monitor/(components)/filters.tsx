@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { FilterChipBar, OperationalPanel } from "@/lib/ui-system";
+import { FilterChipBar, OperationalIconButton, OperationalPanel } from "@/lib/ui-system";
 import useInternalChatContext from "../../internal-context";
 import useMonitorContext from "../context";
 import { createInitialFilters } from "../filters-state";
@@ -156,34 +156,43 @@ export default function MonitorFilters() {
           applyFilters();
         }}
         aria-label="Filtros da monitoria"
-        className="ip-toolbar flex shrink-0 flex-wrap items-center gap-2"
+        className="ip-toolbar ip-conversation-query"
       >
         <TextField
           size="small"
+          className="ip-conversation-search"
           label="Pesquisar"
           placeholder="Nome, telefone ou mensagem"
           value={filters.searchText}
           onChange={(event) => update("searchText", event.target.value)}
           slotProps={{
             input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={17} />
+              endAdornment: (
+                <InputAdornment position="end">
+                  <OperationalIconButton
+                    type="submit"
+                    label="Buscar"
+                    tooltip={hasUnappliedFilters ? "Aplicar busca e ordenação" : "Buscar conversas"}
+                    sx={{
+                      color: hasUnappliedFilters ? "var(--ip-accent)" : undefined,
+                      background: hasUnappliedFilters ? "var(--ip-accent-soft)" : undefined,
+                    }}
+                  >
+                    <Search size={18} />
+                  </OperationalIconButton>
                 </InputAdornment>
               ),
             },
           }}
-          sx={{
-            flex: { xs: "1 1 100%", sm: "1 1 240px" },
-            minWidth: 0,
-          }}
+          sx={{ minWidth: 0 }}
         />
         <TextField
           select
           size="small"
+          className="ip-conversation-sort"
           label="Ordenar por"
           value={filters.sortBy}
-          sx={{ minWidth: 0, width: { xs: "calc(100% - 120px)", sm: 190 } }}
+          sx={{ minWidth: 0 }}
           onChange={(event) =>
             update("sortBy", event.target.value as MonitorFiltersState["sortBy"])
           }
@@ -195,55 +204,40 @@ export default function MonitorFilters() {
           <MenuItem value="name">Nome</MenuItem>
           <MenuItem value="scheduledAt">Agendado para</MenuItem>
         </TextField>
-        <Button
-          type="submit"
-          variant={hasUnappliedFilters ? "contained" : "outlined"}
-          startIcon={<Search size={16} />}
-          sx={{ flexShrink: 0 }}
-        >
-          Buscar
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<SlidersHorizontal size={16} />}
-          aria-label={
+        <OperationalIconButton
+          className="ip-conversation-filter-trigger"
+          label={
             appliedCount
               ? `Filtros, ${appliedCount} ${appliedCount === 1 ? "aplicado" : "aplicados"}`
               : "Filtros"
           }
+          tooltip={appliedCount ? `Filtros (${appliedCount} aplicados)` : "Filtros"}
           aria-haspopup="dialog"
           onClick={openDialog}
         >
-          Filtros
-          {appliedCount > 0 && (
-            <span
-              className="ml-2 rounded px-1.5 text-xs"
-              style={{ background: "var(--ip-accent-soft)" }}
-            >
-              {appliedCount}
-            </span>
-          )}
-        </Button>
+          <SlidersHorizontal size={18} />
+          {appliedCount > 0 && <span className="ip-icon-action-count">{appliedCount}</span>}
+        </OperationalIconButton>
         <ToggleButtonGroup
           value={viewMode}
           exclusive
           size="small"
+          className="ip-conversation-view-switch"
           aria-label="Modo de visualização"
           onChange={(_event, value: "cards" | "compact" | null) => {
             if (value) setViewMode(value);
           }}
-          sx={{ ml: { sm: "auto" } }}
         >
-          <ToggleButton value="compact" aria-label="Exibir lista compacta">
-            <Tooltip title="Lista compacta">
+          <Tooltip title="Lista compacta" describeChild>
+            <ToggleButton value="compact" aria-label="Exibir lista compacta">
               <List size={18} />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="cards" aria-label="Exibir cartões">
-            <Tooltip title="Cartões">
+            </ToggleButton>
+          </Tooltip>
+          <Tooltip title="Cartões" describeChild>
+            <ToggleButton value="cards" aria-label="Exibir cartões">
               <LayoutGrid size={18} />
-            </Tooltip>
-          </ToggleButton>
+            </ToggleButton>
+          </Tooltip>
         </ToggleButtonGroup>
         <p
           role="status"

@@ -16,6 +16,7 @@ import MonitorPagination from "./(components)/monitor-pagination";
 import MonitorConversationPreview from "./(components)/conversation-preview";
 import getMonitorCardProps from "./(functions)/get-card-props";
 import useMonitorContext from "./context";
+import "./conversation-density.css";
 
 export default function ConversationMonitor() {
   const {
@@ -33,7 +34,7 @@ export default function ConversationMonitor() {
   const { openModal } = useContext(AppContext);
 
   return (
-    <div className="ip-page mx-auto flex min-h-full w-full max-w-[1800px] flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-hidden">
+    <div className="ip-page ip-conversations-page mx-auto flex min-h-full w-full max-w-[1800px] flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-hidden">
       <MonitorToolbar />
       <MonitorSummary />
       <MonitorSummaryAlert />
@@ -59,19 +60,15 @@ export default function ConversationMonitor() {
             </Alert>
           )}
           <div
-            className="ip-results scrollbar-whatsapp min-h-0 min-w-0 flex-1"
+            className={`ip-results ip-conversation-results ${viewMode === "compact" ? "ip-conversation-results--compact" : ""} scrollbar-whatsapp min-h-0 min-w-0 flex-1`}
             style={{ overflowY: "auto" }}
           >
             {viewMode === "compact" && chats.length > 0 && (
-              <div
-                aria-hidden="true"
-                className="ip-muted sticky top-0 z-10 mb-2 hidden grid-cols-[minmax(160px,1.2fr)_minmax(110px,.8fr)_minmax(200px,1.4fr)_auto] gap-3 border-b px-3 py-2 text-xs font-medium lg:grid"
-                style={{ background: "var(--ip-bg)", borderColor: "var(--ip-border)" }}
-              >
+              <div aria-hidden="true" className="ip-muted ip-conversation-columns">
                 <span>Conversa</span>
                 <span>Responsável</span>
                 <span>Situação e atividade</span>
-                <span className="w-[142px] text-right">Ações</span>
+                <span className="text-right">Ações</span>
               </div>
             )}
             {isLoading && chats.length === 0 ? (
@@ -89,7 +86,7 @@ export default function ConversationMonitor() {
                 aria-label={
                   viewMode === "compact" ? "Lista compacta de conversas" : "Lista de conversas"
                 }
-                className="min-w-0 space-y-2"
+                className={`ip-conversation-list ${viewMode === "compact" ? "ip-conversation-list--compact" : ""}`}
               >
                 {chats.map((chat) => {
                   const key = `${"chatType" in chat ? chat.chatType : "schedule"}-${chat.id}`;

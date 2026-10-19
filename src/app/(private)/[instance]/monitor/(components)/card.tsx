@@ -1,16 +1,9 @@
 "use client";
 
 import { Clock3, CheckCircle2, Users, ArrowRightLeft, Eye, MoreHorizontal } from "lucide-react";
-import {
-  Avatar,
-  Button,
-  Chip,
-  IconButton,
-  ListItemIcon,
-  Menu,
-  MenuItem,
-  Tooltip,
-} from "@mui/material";
+import { Avatar, ListItemIcon, Menu, MenuItem } from "@mui/material";
+import { OperationalIconButton } from "@/lib/ui-system";
+import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { useEffect, useId, useRef, useState } from "react";
 import type { MonitorOperational } from "../types";
 
@@ -150,27 +143,47 @@ export default function MonitorCard({
   const deliveryPending =
     deliveryStatus &&
     ["PENDING", "QUEUED", "SENDING", "PROCESSING", "UNKNOWN"].includes(deliveryStatus);
+  const companyName =
+    customerName &&
+    customerName.trim().toLocaleLowerCase("pt-BR") !== title.trim().toLocaleLowerCase("pt-BR")
+      ? customerName
+      : null;
+  const documentValue =
+    customerDocument && customerDocument !== "Documento não informado"
+      ? formatCpfCnpj(customerDocument.trim())
+      : null;
+  const scheduleLabel =
+    isScheduled || type === "schedule"
+      ? `Agendado para: ${scheduledFor || "Data não informada"}`
+      : null;
+  const operationalDescription =
+    status === "waiting_agent"
+      ? waitTime
+        ? `Cliente aguarda há ${waitTime}`
+        : "Cliente aguarda resposta"
+      : status === "waiting_customer"
+        ? waitTime
+          ? `Aguardando cliente há ${waitTime}`
+          : "Aguardando cliente"
+        : status === "scheduled" || type === "schedule"
+          ? scheduleLabel || "Agendado"
+          : status
+            ? statusLabels[status]
+            : typeLabels[type];
 
   return (
     <li
-      className={`ip-result-card w-full min-w-0 list-none rounded-xl border ${compact ? "p-3" : "p-4"}`}
-      style={{
-        borderColor: "var(--ip-border)",
-        background: "var(--ip-surface)",
-        color: "var(--ip-text)",
-      }}
+      className={`ip-result-card ip-conversation-card ${compact ? "ip-conversation-card--compact" : "ip-conversation-card--expanded"}`}
     >
       <article aria-label={`${title}, ${status ? statusLabels[status] : typeLabels[type]}`}>
-        <div
-          className={`grid min-w-0 gap-3 ${compact ? "lg:grid-cols-[minmax(160px,1.2fr)_minmax(110px,.8fr)_minmax(200px,1.4fr)_auto] lg:items-center" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}
-        >
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="ip-conversation-grid">
+          <div className="ip-conversation-identity">
             <Avatar
               alt=""
               src={imageUrl || undefined}
               sx={{
-                width: 36,
-                height: 36,
+                width: 32,
+                height: 32,
                 flexShrink: 0,
                 bgcolor: "var(--ip-accent-soft)",
                 color: "var(--ip-accent)",
@@ -180,18 +193,35 @@ export default function MonitorCard({
               {type === "internal-group" ? <Users size={17} /> : title.charAt(0).toUpperCase()}
             </Avatar>
             <div className="min-w-0 flex-1">
-              <h3 className="break-words text-sm font-semibold" title={title}>
-                {title}
-              </h3>
-              <p
-                className="ip-muted mt-0.5 truncate text-xs"
-                title={contactNumber || typeLabels[type]}
-              >
-                {contactNumber || typeLabels[type]}
-              </p>
+              <div className="ip-conversation-title">
+                <h3 title={title}>{title}</h3>
+                {unread > 0 && (
+                  <span className="ip-conversation-unread" title={unreadLabel}>
+                    <span className="sr-only">{unreadLabel}</span>
+                  </span>
+                )}
+              </div>
+              {companyName && (
+                <p className="ip-conversation-company" title={companyName}>
+                  <span className="sr-only">Cliente: </span>
+                  {companyName}
+                </p>
+              )}
+              <div className="ip-conversation-contact">
+                {contactNumber && <span title={`Telefone: ${contactNumber}`}>{contactNumber}</span>}
+                {documentValue && (
+                  <span title={`CPF/CNPJ: ${documentValue}`}>
+                    <span className="sr-only">CPF/CNPJ: </span>
+                    {documentValue}
+                  </span>
+                )}
+                {!contactNumber && !documentValue && !companyName && (
+                  <span>{typeLabels[type]}</span>
+                )}
+              </div>
             </div>
           </div>
-          <div className={`min-w-0 ${compact ? "" : "sm:col-start-1"}`}>
+          <div className="ip-conversation-owner">
             <p className="truncate text-sm font-medium" title={userName || undefined}>
               {userName || "Sem atendente"}
             </p>
@@ -199,101 +229,79 @@ export default function MonitorCard({
               {sectorName || "Setor não informado"}
             </p>
           </div>
-          <div className={`min-w-0 space-y-1.5 ${compact ? "" : "sm:col-span-2"}`}>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Chip
-                size="small"
-                label={status ? statusLabels[status] : typeLabels[type]}
-                color={
-                  status === "waiting_agent"
-                    ? "warning"
-                    : status === "finished"
-                      ? "default"
-                      : "primary"
-                }
-                variant="outlined"
-              />
-              {operational?.slaBreached && <Chip size="small" color="error" label="Fora do SLA" />}
-              {operational?.channel && (
-                <span className="ip-muted text-xs">{operational.channel}</span>
-              )}
-              {deliveryLabel && (
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  color={deliveryFailed ? "error" : deliveryPending ? "warning" : "default"}
-                  label={deliveryLabel}
-                />
-              )}
-            </div>
+          <div className="ip-conversation-activity">
             <p
-              className="ip-muted truncate text-xs"
-              title={operational?.lastMessagePreview || undefined}
+              className="ip-muted ip-conversation-message"
+              title={
+                [
+                  operational?.lastMessagePreview,
+                  lastMessageAt ? `Última mensagem: ${lastMessageAt}` : null,
+                  operational?.channel,
+                ]
+                  .filter(Boolean)
+                  .join("\n") || undefined
+              }
             >
               {operational?.lastMessagePreview ||
                 (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
             </p>
-            {(waitTime || lastMessageAt || unread > 0) && (
-              <p className="ip-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                {waitTime && (
-                  <span
-                    className={`inline-flex items-center gap-1 font-medium ${operational?.slaBreached ? "text-[var(--ip-danger)]" : "text-[var(--ip-warning)]"}`}
-                  >
-                    <Clock3 size={13} aria-hidden="true" />
-                    Aguardando há {waitTime}
-                  </span>
-                )}
-                {(lastMessageAt || unread > 0) && (
-                  <span
-                    className="inline-flex items-center gap-1.5"
-                    title={unread > 0 ? unreadLabel : undefined}
-                  >
-                    {lastMessageAt && (
-                      <time
-                        dateTime={operational?.lastMessageAt || undefined}
-                        className={unread > 0 ? "font-semibold text-[var(--ip-danger)]" : ""}
-                      >
-                        Última mensagem: {lastMessageAt}
-                      </time>
-                    )}
-                    {unread > 0 && (
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--ip-danger)]">
-                        <span className="sr-only">{unreadLabel}</span>
-                      </span>
-                    )}
-                  </span>
+            <p className="ip-conversation-operation">
+              <span className="ip-conversation-status">
+                {waitTime && <Clock3 size={12} aria-hidden="true" />}
+                {operationalDescription}
+              </span>
+              {operational?.slaBreached && (
+                <span className="ip-conversation-alert">Fora do SLA</span>
+              )}
+              {deliveryLabel && (
+                <span
+                  className={
+                    deliveryFailed
+                      ? "ip-conversation-alert"
+                      : deliveryPending
+                        ? "ip-conversation-delivery-pending"
+                        : "ip-muted"
+                  }
+                >
+                  {deliveryLabel}
+                </span>
+              )}
+            </p>
+            {(lastMessageAt || operational?.channel) && (
+              <p
+                className={`ip-muted ip-conversation-metadata ${compact ? "ip-conversation-metadata--compact" : ""}`}
+              >
+                {operational?.channel && <span>{operational.channel}</span>}
+                {lastMessageAt && (
+                  <time dateTime={operational?.lastMessageAt || undefined}>
+                    Última mensagem: {lastMessageAt}
+                  </time>
                 )}
               </p>
             )}
           </div>
-          <div
-            className={`flex min-w-0 items-center justify-end gap-1 ${compact ? "lg:col-start-4 lg:row-start-1" : "sm:col-start-2 sm:row-span-2 sm:row-start-1"}`}
-          >
+          <div className="ip-conversation-actions">
             {handleView && (
-              <Button
-                variant="outlined"
-                size="small"
-                aria-label={`Visualizar conversa de ${title}`}
+              <OperationalIconButton
+                label={`Visualizar conversa de ${title}`}
+                tooltip="Visualizar conversa"
                 onClick={handleView}
-                startIcon={<Eye size={15} />}
               >
-                Visualizar
-              </Button>
+                <Eye size={18} />
+              </OperationalIconButton>
             )}
             {(handleTransfer || handleFinish) && (
               <>
-                <Tooltip title="Mais ações">
-                  <IconButton
-                    aria-label={`Mais ações de ${title}`}
-                    aria-haspopup="menu"
-                    aria-expanded={Boolean(menuAnchor)}
-                    aria-controls={menuAnchor ? menuId : undefined}
-                    onClick={(event) => openMenu(event.currentTarget)}
-                    size="small"
-                  >
-                    <MoreHorizontal size={19} />
-                  </IconButton>
-                </Tooltip>
+                <OperationalIconButton
+                  label={`Mais ações de ${title}`}
+                  tooltip="Mais ações"
+                  aria-haspopup="menu"
+                  aria-expanded={Boolean(menuAnchor)}
+                  aria-controls={menuAnchor ? menuId : undefined}
+                  onClick={(event) => openMenu(event.currentTarget)}
+                >
+                  <MoreHorizontal size={19} />
+                </OperationalIconButton>
                 <Menu
                   id={menuId}
                   anchorEl={menuAnchor}
@@ -335,11 +343,9 @@ export default function MonitorCard({
         </div>
         {!compact && (
           <div
-            className="ip-muted mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3 text-xs"
+            className="ip-muted ip-conversation-details mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3 text-xs"
             style={{ borderColor: "var(--ip-border)" }}
           >
-            {customerName && <span>Cliente: {customerName}</span>}
-            {customerDocument && <span>Documento: {customerDocument}</span>}
             {type === "internal-group" && (
               <span>
                 {participants?.length || 0} participantes
@@ -350,15 +356,13 @@ export default function MonitorCard({
             {endDate && <span>Fim: {endDate}</span>}
           </div>
         )}
-        {(isScheduled || type === "schedule") && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--ip-warning)]">
-            <span className="inline-flex items-center gap-1">
-              <Clock3 size={14} aria-hidden="true" />
-              Agendado para: {scheduledFor || "Data não informada"}
-            </span>
-            {!compact && scheduledAt && <span>Criado em: {scheduledAt}</span>}
-          </div>
-        )}
+        {scheduleLabel &&
+          (operationalDescription !== scheduleLabel || (!compact && scheduledAt)) && (
+            <div className="ip-muted mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              {operationalDescription !== scheduleLabel && <span>{scheduleLabel}</span>}
+              {!compact && scheduledAt && <span>Criado em: {scheduledAt}</span>}
+            </div>
+          )}
       </article>
     </li>
   );

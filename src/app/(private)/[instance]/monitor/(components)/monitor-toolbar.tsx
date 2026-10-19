@@ -1,7 +1,7 @@
 "use client";
 
-import { Pause, Play, RefreshCw } from "lucide-react";
-import { Button } from "@mui/material";
+import { Pause } from "lucide-react";
+import { MonitorRefreshActions } from "@/lib/ui-system";
 import { useEffect, useState } from "react";
 import useMonitorContext from "../context";
 
@@ -39,25 +39,44 @@ export default function MonitorToolbar() {
   const updating = isLoading || isRefreshing;
 
   return (
-    <header className="ip-page-header flex shrink-0 flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
+    <header className="ip-page-header ip-conversation-header">
+      <div className="ip-conversation-heading min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--ip-text)" }}>
           Monitoria de conversas
         </h1>
-        <p className="ip-muted mt-1 text-sm">
+      </div>
+      <MonitorRefreshActions
+        autoRefresh={autoRefresh}
+        busy={updating}
+        retrySeconds={retrySeconds}
+        onToggle={() => setAutoRefresh(!autoRefresh)}
+        onRefresh={refetch}
+      />
+      <div className="ip-muted ip-conversation-refresh-status">
+        <p>
           {isLoading
             ? "Carregando conversas…"
             : `${chats.length.toLocaleString("pt-BR")} de ${totalCount.toLocaleString("pt-BR")} conversas`}
-          <span className="mx-2" aria-hidden="true">
-            ·
-          </span>
+        </p>
+        <p title={lastUpdatedAt ? new Date(lastUpdatedAt).toLocaleString("pt-BR") : undefined}>
           {updating
             ? "Atualizando…"
             : lastUpdatedAt
               ? sinceUpdated(now - lastUpdatedAt)
               : "Aguardando a primeira atualização"}
+          {lastUpdatedAt && !updating && (
+            <time
+              className="ip-conversation-update-time"
+              dateTime={new Date(lastUpdatedAt).toISOString()}
+            >
+              {new Date(lastUpdatedAt).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </time>
+          )}
         </p>
-        <p className="ip-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs" role="status">
+        <p className="flex items-center gap-1.5" role="status">
           {error ? (
             <>
               <span
@@ -86,33 +105,6 @@ export default function MonitorToolbar() {
             </>
           )}
         </p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="text"
-          size="small"
-          startIcon={autoRefresh ? <Pause size={16} /> : <Play size={16} />}
-          aria-label={
-            autoRefresh ? "Pausar atualização automática" : "Retomar atualização automática"
-          }
-          onClick={() => setAutoRefresh(!autoRefresh)}
-        >
-          {autoRefresh ? "Pausar" : "Retomar"}
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={
-            <RefreshCw
-              size={16}
-              className={updating ? "animate-spin motion-reduce:animate-none" : ""}
-            />
-          }
-          disabled={updating || retrySeconds > 0}
-          onClick={refetch}
-        >
-          {retrySeconds > 0 ? `Aguarde ${retrySeconds}s` : "Atualizar"}
-        </Button>
       </div>
     </header>
   );

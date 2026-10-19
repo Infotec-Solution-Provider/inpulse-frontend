@@ -12,7 +12,7 @@ import {
   IconButton,
   TextField,
 } from "@mui/material";
-import { ArrowLeft, CalendarClock, LockKeyhole, UserRound, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, LockKeyhole, X } from "lucide-react";
 import telephonyMonitorService from "@/lib/services/telephony-monitor.service";
 import { dialogPaperSx } from "../../surface";
 import { scheduleChanges, scheduleFailureStatus, scheduleOutcomeUnknown } from "../schedule-edit";
@@ -293,15 +293,14 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                 <Button onClick={() => void readDetail()}>Tentar carregar novamente</Button>
               )}
               {detail && (
-                <div className="flex flex-col gap-5">
-                  <div className="rounded-xl border border-[var(--ip-border)] bg-[var(--ip-surface-muted)] p-3 text-sm">
+                <div className="flex flex-col gap-4">
+                  <div className="border-b border-[var(--ip-border)] pb-3 text-sm">
                     <p className="font-semibold text-[var(--ip-text)]">
                       {detail.customer.name || `Cliente #${detail.customer.id}`}
                     </p>
-                    <p className="ip-muted mt-1">
+                    <p className="ip-muted mt-1 text-xs">
                       Cliente #{detail.customer.id} · Agendamento #{detail.id}
-                    </p>
-                    <p className="ip-muted mt-1">
+                      <span aria-hidden="true"> · </span>
                       {detail.campaign?.name ||
                         (detail.campaign ? `Campanha #${detail.campaign.id}` : "Sem campanha")}
                     </p>
@@ -311,11 +310,7 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                       {detail.blockedReason || "Este agendamento não permite edição neste momento."}
                     </Alert>
                   )}
-                  <div className="space-y-3">
-                    <p className="flex items-center gap-2 text-sm font-semibold">
-                      <CalendarClock size={16} className="text-[var(--ip-accent)]" />
-                      Data e horário
-                    </p>
+                  <div>
                     <TextField
                       label="Data e hora do agendamento"
                       type="datetime-local"
@@ -335,47 +330,55 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                       helperText={
                         detail.scheduledAt === null
                           ? "Data atual não informada. Preencha somente se desejar alterá-la. Horário do CRM."
-                          : "Horário do CRM, mantido sem conversão de fuso."
+                          : "Horário local do CRM."
                       }
                     />
                   </div>
                   <div>
-                    <p className="flex items-center gap-2 text-sm font-semibold text-[var(--ip-text)]">
-                      <UserRound size={16} className="text-[var(--ip-accent)]" />
-                      Operador do agendamento
-                    </p>
-                    <p className="ip-muted mt-1 break-words text-sm">
-                      {operator?.label || "Sem operador informado"}
-                    </p>
+                    <p className="ip-muted mb-1 text-xs font-medium">Operador do agendamento</p>
                     <Button
                       id="schedule-edit-operator"
                       size="small"
                       variant="outlined"
-                      className="mt-2"
+                      fullWidth
+                      endIcon={<ChevronDown size={16} />}
+                      aria-label="Alterar operador"
+                      aria-describedby="schedule-edit-operator-value schedule-edit-operator-help"
                       disabled={disabled}
                       onClick={() => setOperatorOpen(true)}
+                      sx={{
+                        justifyContent: "space-between",
+                        color: "var(--ip-text)",
+                        borderColor: "var(--ip-border)",
+                        bgcolor: "var(--ip-surface)",
+                      }}
                     >
-                      Alterar operador
+                      <span id="schedule-edit-operator-value" className="truncate">
+                        {operator?.label || "Sem operador informado"}
+                      </span>
                     </Button>
-                    <p className="ip-muted mt-2 text-xs">
-                      Responsável por esta agenda. O operador cadastral do cliente é mantido.
+                    <p id="schedule-edit-operator-help" className="ip-muted mt-1 text-xs">
+                      O operador cadastral do cliente é mantido.
                     </p>
                   </div>
-                  <div className="rounded-lg border border-[var(--ip-border)] p-3 text-xs text-[var(--ip-muted)]">
-                    <p className="mb-2 flex items-center gap-1.5 font-medium">
-                      <LockKeyhole size={14} />
-                      Campos indisponíveis
-                    </p>
-                    <p>
-                      Prioridade: edição indisponível
-                      {detail.capabilities.priority ? " nesta interface" : " para este agendamento"}
-                      .
-                    </p>
-                    <p className="mt-1">
-                      Validade da campanha: edição indisponível
-                      {detail.capabilities.validity ? " nesta interface" : " para este agendamento"}
-                      .
-                    </p>
+                  <div className="flex items-start gap-2 text-xs leading-relaxed text-[var(--ip-muted)]">
+                    <LockKeyhole size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                    <div>
+                      <p>
+                        Prioridade: edição indisponível
+                        {detail.capabilities.priority
+                          ? " nesta interface"
+                          : " para este agendamento"}
+                        .
+                      </p>
+                      <p>
+                        Validade da campanha: edição indisponível
+                        {detail.capabilities.validity
+                          ? " nesta interface"
+                          : " para este agendamento"}
+                        .
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
