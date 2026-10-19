@@ -15,8 +15,8 @@ let auth = {
 };
 let snapshot = JSON.stringify(auth);
 const listeners = new Set<() => void>();
-export function switchAuth(instance: string, token: string) {
-  auth = { ...auth, instance, token };
+export function switchAuth(instance: string, token: string, actorId = auth.user.CODIGO) {
+  auth = { ...auth, instance, token, user: { ...auth.user, CODIGO: actorId } };
   snapshot = JSON.stringify(auth);
   for (const listener of listeners) listener();
 }
@@ -134,6 +134,7 @@ interface State {
   shift: number | null;
   saved: number;
   uploads: number;
+  closed: number;
 }
 declare global {
   interface Window {
@@ -165,8 +166,20 @@ window.userTest = {
   shift: 0,
   saved: 0,
   uploads: 0,
+  closed: 0,
 };
 const state = window.userTest;
+export function useUsersContext() {
+  return {
+    sectors: [{ id: 2, name: "Atendimento" }],
+    closeModal: () => {
+      state.closed += 1;
+    },
+    loadUsers: () => {
+      state.saved += 1;
+    },
+  };
+}
 const copy = <T>(data: T): T => structuredClone(data);
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 function fail() {

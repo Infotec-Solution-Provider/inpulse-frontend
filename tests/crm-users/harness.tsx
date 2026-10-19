@@ -7,6 +7,8 @@ import CrmUserRegistrationDialog from "../../src/lib/components/crm-user-registr
 import { switchAuth, useAuthContext } from "./doubles";
 import type { CrmUserCatalogName } from "../../src/lib/sdk-local/types/crm-users.types";
 import { useState } from "react";
+import UserModal from "../../src/app/(private)/[instance]/(cruds)/users/(modal)/user-modal";
+import type { User } from "../../src/lib/sdk-local/types/user.types";
 const params = new URLSearchParams(location.search);
 function Harness() {
   const { instance, user } = useAuthContext();
@@ -16,8 +18,11 @@ function Harness() {
       <div style={{ position: "fixed", zIndex: 9999, top: 0, right: 0 }}>
         <button onClick={() => switchAuth("tenant-b", "token-b")}>Trocar tenant</button>
         <button onClick={() => switchAuth("tenant-a", "refreshed-token")}>Renovar sessão</button>
+        <button onClick={() => switchAuth("tenant-a", "token-a", 8)}>Trocar usuário</button>
       </div>
-      {params.has("registration") ? (
+      {params.has("legacy-modal") ? (
+        <UserModal user={{ CODIGO: 42 } as User} />
+      ) : params.has("registration") ? (
         open ? (
           <CrmUserRegistrationDialog
             key={`${instance}:${user.CODIGO}`}
