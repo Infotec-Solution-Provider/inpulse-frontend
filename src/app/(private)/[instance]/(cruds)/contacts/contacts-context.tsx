@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
 } from "react";
 
@@ -21,6 +22,8 @@ import { useWhatsappContext } from "../../whatsapp-context";
 import ContactModal from "./(table)/(modal)/contact-modal";
 import DeleteContactModal from "./(table)/(modal)/delete-contact-modal";
 import ContactRegistrationConflictModal from "./(table)/(modal)/contact-registration-conflict-modal";
+import LinkCustomerModal from "./(table)/(modal)/link-customer-modal";
+import { buildContactsQuery, contactPageAfterLoad } from "./contacts-query";
 import contactsReducer, {
   ChangeContactsStateAction,
   ContactWithSectors,
@@ -56,6 +59,7 @@ interface IContactsContext {
     customerId?: number,
   ) => Promise<WppContact | null>;
   openContactModal: (contact?: WppContact) => void;
+  openLinkCustomerModal: (contact: WppContact) => void;
   handleDeleteContact: (contact: WppContact) => void;
   phoneNameMap: Map<string, string>;
   customerMap: Map<number, string>;
@@ -86,6 +90,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   const { users } = useInternalChatContext();
   const { openModal, closeModal } = useAppContext();
   const { wppApi } = useWhatsappContext();
+  const loadSequence = useRef(0);
 
   const phoneNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -260,84 +265,22 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     [deleteContact, openModal],
   );
 
-  const getSearchValue = (value: string | undefined, key?: string) => {
-    if (!value) return "";
-    switch (key) {
-      case "nome":
-        return value.toLocaleLowerCase().trim().replace(/\s+/g, " ");
-      case "telefone":
-        return value.replace(/\D/g, "");
-      case "cpf-cnpj":
-        return value.replace(/\D/g, "");
-      case "razao-social":
-        return value.toLocaleLowerCase().replaceAll(" ", "");
-      case "codigo-erp":
-        return value;
-      default:
-        return "";
-    }
-  };
-
   const loadContacts = useCallback(async () => {
+    const sequence = ++loadSequence.current;
     try {
       dispatch({ type: "change-loading", isLoading: true });
-
-      const params: any = {};
-
-      if (state.filters.page) params.page = Number(state.filters.page);
-      if (state.filters.perPage) params.perPage = Number(state.filters.perPage);
-
-      if (state.filters.sectorIds && state.filters.sectorIds.length > 0) {
-        params.sectorIds = state.filters.sectorIds.join(",");
+      const params = buildContactsQuery(state.filters);
+      // The shared SDK omits sectorIds; preserve every active filter in this list.
+      const searchParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)]));
+      const { data: response } = await wppApi.current.ax.get(`/api/whatsapp/contacts/customer?${searchParams}`);
+      if (sequence !== loadSequence.current) return;
+      const totalRows = Number(response?.pagination?.total ?? response?.data?.length ?? 0);
+      const page = Number(state.filters.page || 1);
+      const availablePage = contactPageAfterLoad(page, Number(state.filters.perPage || 10), totalRows);
+      if (availablePage !== page) {
+        dispatch({ type: "change-page", page: availablePage - 1 });
+        return;
       }
-
-      const sanitizedTerm = getSearchValue(state.filters.searchTerm, state.filters.searchField);
-
-      if (sanitizedTerm) {
-        switch (state.filters.searchField) {
-          case "nome":
-            params.name = sanitizedTerm;
-            break;
-          case "telefone":
-            params.phone = sanitizedTerm;
-            break;
-          case "codigo":
-            params.customerId = parseInt(sanitizedTerm) || undefined;
-            break;
-          case "codigo-erp":
-            params.customerErp = sanitizedTerm;
-            break;
-          case "cpf-cnpj":
-            params.customerCnpj = sanitizedTerm;
-            break;
-          case "razao-social":
-            params.customerName = sanitizedTerm;
-            break;
-          default:
-            break;
-        }
-      } else {
-        const phoneFilter = (state.filters.phone || "").replace(/\D/g, "");
-        if (state.filters.id) params.id = Number(state.filters.id);
-        if (state.filters.name) params.name = state.filters.name;
-        if (phoneFilter) params.phone = phoneFilter;
-        if (state.filters.customerName) params.customerName = state.filters.customerName;
-        if (state.filters.customerId) params.customerId = Number(state.filters.customerId);
-      }
-
-      let response: any;
-
-      if (params.id !== undefined) {
-        const entries = Object.entries(params).filter(([, v]) => v !== undefined);
-        const searchParams = new URLSearchParams(entries.map(([k, v]) => [k, String(v)]));
-        const url = `/api/whatsapp/contacts/customer${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
-        const res = await wppApi.current.ax.get(url);
-        response = res.data;
-      } else {
-        response = await wppApi.current.getContactsWithCustomer(params as any);
-      }
-
-      const totalRows = response?.pagination?.total ?? (response?.data?.length || 0);
 
       dispatch({
         type: "load-contacts",
@@ -345,12 +288,17 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         totalRows,
       });
     } catch (err) {
+      if (sequence !== loadSequence.current) return;
       Logger.error("Error loading contacts", err as Error);
-      toast.error("Falha ao carregar clientes!");
+      toast.error("Falha ao carregar contatos!");
     } finally {
-      dispatch({ type: "change-loading", isLoading: false });
+      if (sequence === loadSequence.current) dispatch({ type: "change-loading", isLoading: false });
     }
   }, [state.filters, wppApi]);
+
+  const openLinkCustomerModal = useCallback((contact: WppContact) => {
+    openModal(<LinkCustomerModal contact={contact} onLinked={loadContacts} />);
+  }, [openModal, loadContacts]);
 
   useEffect(() => {
     if (!token || !wppApi.current) return;
@@ -361,6 +309,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     if (token) {
       loadContacts();
     }
+    return () => { loadSequence.current++; };
   }, [token, state.filters.page, state.filters.perPage, loadContacts]);
 
   return (
@@ -373,6 +322,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         createContact,
         deleteContact,
         openContactModal,
+        openLinkCustomerModal,
         handleDeleteContact,
         phoneNameMap,
         customerMap,
