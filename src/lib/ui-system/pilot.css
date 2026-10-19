@@ -59,6 +59,53 @@
 .ip-ui .ip-muted {
   color: var(--ip-muted);
 }
+.ip-ui .ip-icon-action-host,
+.ip-ui .ip-refresh-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.ip-ui .ip-refresh-actions {
+  gap: 2px;
+}
+.ip-ui .ip-refresh-cooldown {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  margin-right: 6px;
+}
+.ip-ui .ip-icon-action.MuiIconButton-root {
+  color: var(--ip-muted);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+}
+.ip-ui .ip-icon-action.MuiIconButton-root:hover {
+  color: var(--ip-text);
+  background: var(--ip-surface-muted);
+}
+.ip-ui .ip-icon-action.Mui-disabled {
+  opacity: 0.45;
+}
+.ip-ui .ip-icon-action-count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  padding-inline: 3px;
+  border-radius: 5px;
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+  font-size: 10px;
+  font-weight: 600;
+}
 .ip-ui .ip-page {
   display: flex;
   flex-direction: column;
@@ -379,6 +426,12 @@
   }
 }
 @media (pointer: coarse) {
+  .ip-ui .ip-icon-action.MuiIconButton-root {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
   .ip-ui .ip-filter-chips .MuiChip-deleteIcon.ip-chip-delete-target {
     width: 44px;
     height: 44px;

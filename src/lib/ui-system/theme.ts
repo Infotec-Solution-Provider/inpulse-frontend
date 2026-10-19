@@ -45,6 +45,21 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
             fontSize: 13,
             "@media (pointer: coarse)": { minHeight: 44 },
           },
+          outlined: ({ ownerState }) =>
+            ownerState.color === "primary"
+              ? {
+                  color: colors.text,
+                  borderColor: colors.border,
+                  "&:hover": { borderColor: colors.muted, backgroundColor: colors.surfaceMuted },
+                }
+              : {},
+          text: ({ ownerState }) =>
+            ownerState.color === "primary"
+              ? {
+                  color: colors.muted,
+                  "&:hover": { color: colors.text, backgroundColor: colors.surfaceMuted },
+                }
+              : {},
         },
       },
       MuiIconButton: {
