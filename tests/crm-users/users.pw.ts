@@ -1,5 +1,40 @@
 import { test, expect } from "@playwright/test";
 const url = "/tests/crm-users/index.html";
+for (const [button, kind] of [
+  ["Trocar tenant", "tenant"],
+  ["Trocar usuário", "actor"],
+])
+  test(`legacy user dialog closes on ${kind} change without reusing the old user ID`, async ({
+    page,
+  }) => {
+    await page.goto(`${url}?legacy-modal`);
+    await expect(page.getByRole("dialog", { name: "Editar usuário #42" })).toBeVisible();
+    await expect(page.getByLabel("Nome", { exact: true })).toHaveValue("Maria");
+    const before = await page.evaluate(
+      () => window.userTest.reads.filter((read) => read === "registration").length,
+    );
+    await page.getByRole("button", { name: button, exact: true, includeHidden: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.userTest.closed)).toBeGreaterThan(0);
+    expect(
+      await page.evaluate(
+        () => window.userTest.reads.filter((read) => read === "registration").length,
+      ),
+    ).toBe(before);
+    expect(await page.evaluate(() => window.userTest.writes)).toEqual([]);
+  });
+
+test("legacy user dialog keeps an unsaved draft on token renewal in the same tenant", async ({
+  page,
+}) => {
+  await page.goto(`${url}?legacy-modal`);
+  await page.getByLabel("Nome", { exact: true }).fill("Rascunho preservado");
+  await page
+    .getByRole("button", { name: "Renovar sessão", exact: true, includeHidden: true })
+    .click();
+  await expect(page.getByLabel("Nome", { exact: true })).toHaveValue("Rascunho preservado");
+  expect(await page.evaluate(() => window.userTest.closed)).toBe(0);
+});
 for (const catalog of ["user-groups", "shifts", "pause-reasons", "sales-types"])
   test(`${catalog}: complete catalog workflow preserves snapshots`, async ({ page }) => {
     await page.goto(`${url}?catalog=${catalog}`, { waitUntil: "domcontentloaded" });
@@ -219,5 +254,8 @@ test("dark mobile registration keeps actions visible", async ({ page }) => {
   await page.goto(`${url}?registration&dark`);
   await expect(page.getByRole("button", { name: "Salvar usuário", exact: true })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: test.info().outputPath("crm-users-registration-dark-mobile.png"), animations: "disabled" });
+  await page.screenshot({
+    path: test.info().outputPath("crm-users-registration-dark-mobile.png"),
+    animations: "disabled",
+  });
 });

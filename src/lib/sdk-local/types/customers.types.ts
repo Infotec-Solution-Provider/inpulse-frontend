@@ -210,6 +210,7 @@ export interface CustomerTelephonySchedule extends CustomerScheduleDetail {
 }
 
 export interface FinishTelephonyScheduleDTO {
+	operationId: string;
 	resultId: number;
 	scheduleDate?: string;
 	startedAt?: string;

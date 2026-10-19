@@ -7,16 +7,13 @@ import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Button, Chip } from "@mui/material";
-import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useTelephony } from "@/lib/telephony/telephony-provider";
 import { callPhaseLabels } from "@/lib/telephony/types";
 import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
 import TelephoneFinishModal from "./telephone-finish-modal";
-import {
-  mapTelephonyScheduleToQueueItem,
-  TelephoneQueueItem,
-} from "./telephone-dialer.types";
+import { mapTelephonyScheduleToQueueItem, TelephoneQueueItem } from "./telephone-dialer.types";
 
 const formatPhone = (phone: string) => {
   try {
@@ -39,7 +36,9 @@ const formatSchedule = (scheduledAt: string) => {
 };
 
 export default function TelephoneDialerCard() {
-  const { token } = useAuthContext();
+  const { token, instance, user } = useAuthContext();
+  const authScope = useRef({ instance, userId: user?.CODIGO });
+  authScope.current = { instance, userId: user?.CODIGO };
   const { openModal } = useAppContext();
   const phone = useTelephony();
   const [queue, setQueue] = useState<TelephoneQueueItem[]>([]);
@@ -159,7 +158,12 @@ export default function TelephoneDialerCard() {
     }
   };
 
-  const handleFinishAppointment = async (resultId: number, scheduleDate?: string) => {
+  const handleFinishAppointment = async (
+    resultId: number,
+    scheduleDate: string | undefined,
+    operationId: string,
+    finishedAt: string,
+  ) => {
     if (!nextAppointment) return;
     if (phone.busy) throw new Error("Desligue a chamada antes de finalizar o atendimento.");
 
@@ -169,14 +173,22 @@ export default function TelephoneDialerCard() {
 
     try {
       await phone.waitForSync();
-      customersService.setAuth(token);
-      await customersService.finishTelephonySchedule(nextAppointment.id, {
-        resultId,
-        scheduleDate,
-        startedAt: startedAt || undefined,
-        finishedAt: (matchesCall && phone.state.endedAt) || new Date().toISOString(),
-        dialedPhone: selectedPhone || nextAppointment.phone,
-      });
+      if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
+        throw new Error("A empresa ou o usuário mudou. Releia a fila antes de finalizar.");
+      await customersService.finishTelephonySchedule(
+        nextAppointment.id,
+        {
+          operationId,
+          resultId,
+          scheduleDate,
+          startedAt: startedAt || undefined,
+          finishedAt: (matchesCall && phone.state.endedAt) || finishedAt,
+          dialedPhone: selectedPhone || nextAppointment.phone,
+        },
+        { instance, token },
+      );
+      if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
+        return;
       setIsDrawerOpen(false);
       await reloadQueue();
       toast.success("Atendimento telefonico finalizado com sucesso.");
@@ -190,7 +202,31 @@ export default function TelephoneDialerCard() {
     if (!nextAppointment) return;
 
     openModal(
-      <TelephoneFinishModal appointment={nextAppointment} onConfirm={handleFinishAppointment} />,
+      <TelephoneFinishModal
+        appointment={nextAppointment}
+        onConfirm={handleFinishAppointment}
+        onCheckConfirmation={async (operationId) => {
+          if (
+            !token ||
+            authScope.current.instance !== instance ||
+            authScope.current.userId !== user?.CODIGO
+          )
+            throw new Error("Reabra a fila na sessão atual.");
+          const response = await customersService.getTelephonyFinishStatus(
+            nextAppointment.id,
+            operationId,
+            { instance, token },
+          );
+          if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
+            throw new Error("A sessão mudou. Releia a fila.");
+          if (response.data.status === "applied") {
+            setIsDrawerOpen(false);
+            await reloadQueue();
+            toast.success("Finalização confirmada. A fila foi atualizada.");
+          }
+          return response.data.status;
+        }}
+      />,
     );
   };
 
