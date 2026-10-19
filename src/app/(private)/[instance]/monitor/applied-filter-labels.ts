@@ -5,7 +5,6 @@ const quickLabels: Record<string, string> = {
   waiting_agent: "Aguardando atendente",
   waiting_customer: "Aguardando cliente",
   unread: "Não lidas",
-  overdue: "Fora do SLA",
   scheduled: "Agendamentos",
 };
 const categoryLabels = {

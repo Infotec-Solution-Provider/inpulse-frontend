@@ -99,15 +99,9 @@ export function restoreMonitorPreferences(raw: string | null): MonitorPreference
   )
     filters.sortBy = saved.sortBy as MonitorFiltersState["sortBy"];
   if (
-    [
-      "all",
-      "in_progress",
-      "waiting_agent",
-      "waiting_customer",
-      "unread",
-      "overdue",
-      "scheduled",
-    ].includes(String(saved.operationalStatus))
+    ["all", "in_progress", "waiting_agent", "waiting_customer", "unread", "scheduled"].includes(
+      String(saved.operationalStatus),
+    )
   )
     filters.operationalStatus = saved.operationalStatus as MonitorFiltersState["operationalStatus"];
   if (saved.sortOrder === "asc" || saved.sortOrder === "desc") filters.sortOrder = saved.sortOrder;

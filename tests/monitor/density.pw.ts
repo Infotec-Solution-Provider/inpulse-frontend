@@ -199,6 +199,24 @@ test("desktop apresenta ao menos seis registros completos e ações discretas co
   );
   await expectNoPageOverflow(page);
 
+  await expect(
+    page.getByRole("region", { name: "Indicadores da monitoria" }).getByRole("button"),
+  ).toHaveCount(5);
+  await expect(page.getByText(/SLA/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Exibir cartões", exact: true }).click();
+  const activity = firstConversation.locator(".ip-conversation-activity-meta");
+  await expect(activity.locator(".ip-conversation-status")).toBeVisible();
+  await expect(activity.locator(".ip-conversation-channel")).toBeVisible();
+  await expect(activity.locator("time")).toBeVisible();
+  await expect(activity.getByText(/^Início:/)).toBeVisible();
+  const activityBox = await activity.boundingBox();
+  expect(
+    activityBox!.height,
+    "cartões desktop agrupam espera, canal e horários em uma faixa",
+  ).toBeLessThanOrEqual(20);
+  await expect(firstConversation.locator(".ip-conversation-details")).toHaveCount(0);
+  await expectNoPageOverflow(page);
+
   await page.getByRole("tab", { name: "Telefonia", exact: true }).click();
   const rows = page.getByRole("table").locator("tbody tr");
   await expect(rows).toHaveCount(12);

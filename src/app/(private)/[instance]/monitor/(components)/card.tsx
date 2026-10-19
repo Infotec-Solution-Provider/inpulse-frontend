@@ -250,49 +250,52 @@ export default function MonitorCard({
               {operational?.lastMessagePreview ||
                 (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
             </p>
-            <p className="ip-conversation-operation">
-              <span className="ip-conversation-status">
-                {waitTime && <UiIcon name="clock" scale="metadata" />}
-                {operationalDescription}
-              </span>
-              {operational?.slaBreached && (
-                <span className="ip-conversation-alert">Fora do SLA</span>
-              )}
-              {deliveryLabel && (
-                <span
-                  className={
-                    deliveryFailed
-                      ? "ip-conversation-alert"
-                      : deliveryPending
-                        ? "ip-conversation-delivery-pending"
-                        : "ip-muted"
-                  }
-                >
-                  {deliveryLabel}
+            <div className="ip-conversation-activity-meta">
+              <p className="ip-conversation-operation">
+                <span className="ip-conversation-status">
+                  {waitTime && <UiIcon name="clock" scale="metadata" />}
+                  {operationalDescription}
                 </span>
-              )}
-            </p>
-            {(type === "external-chat" || type === "finished-chat") && (
-              <p
-                className="ip-muted ip-conversation-channel"
-                title={lastMessageChannelLabel(operational) || undefined}
-              >
-                Canal:{" "}
-                {lastMessageChannelLabel(operational) ||
-                  (lastMessageAt ? "Não identificado" : "Sem mensagem")}
+                {deliveryLabel && (
+                  <span
+                    className={
+                      deliveryFailed
+                        ? "ip-conversation-alert"
+                        : deliveryPending
+                          ? "ip-conversation-delivery-pending"
+                          : "ip-muted"
+                    }
+                  >
+                    {deliveryLabel}
+                  </span>
+                )}
               </p>
-            )}
-            {lastMessageAt && (
-              <p
-                className={`ip-muted ip-conversation-metadata ${compact ? "ip-conversation-metadata--compact" : ""}`}
-              >
-                {lastMessageAt && (
+              {(type === "external-chat" || type === "finished-chat") && (
+                <p
+                  className="ip-muted ip-conversation-channel"
+                  title={lastMessageChannelLabel(operational) || undefined}
+                >
+                  Canal:{" "}
+                  {lastMessageChannelLabel(operational) ||
+                    (lastMessageAt ? "Não identificado" : "Sem mensagem")}
+                </p>
+              )}
+              {lastMessageAt && (
+                <p
+                  className={`ip-muted ip-conversation-metadata ${compact ? "ip-conversation-metadata--compact" : ""}`}
+                >
                   <time dateTime={operational?.lastMessageAt || undefined}>
                     Última mensagem: {lastMessageAt}
                   </time>
-                )}
-              </p>
-            )}
+                </p>
+              )}
+              {!compact && (startDate || endDate) && (
+                <p className="ip-muted ip-conversation-lifecycle">
+                  {startDate && <span>Início: {startDate}</span>}
+                  {endDate && <span>Fim: {endDate}</span>}
+                </p>
+              )}
+            </div>
           </div>
           <div className="ip-conversation-actions">
             {handleView && (
@@ -355,19 +358,15 @@ export default function MonitorCard({
             )}
           </div>
         </div>
-        {!compact && (
+        {!compact && type === "internal-group" && (
           <div
             className="ip-muted ip-conversation-details mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3"
             style={{ borderColor: "var(--ip-border)" }}
           >
-            {type === "internal-group" && (
-              <span>
-                {participants?.length || 0} participantes
-                {groupDescription ? ` · ${groupDescription}` : ""}
-              </span>
-            )}
-            {startDate && <span>Início: {startDate}</span>}
-            {endDate && <span>Fim: {endDate}</span>}
+            <span>
+              {participants?.length || 0} participantes
+              {groupDescription ? ` · ${groupDescription}` : ""}
+            </span>
           </div>
         )}
         {scheduleLabel &&

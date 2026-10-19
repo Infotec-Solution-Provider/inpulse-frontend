@@ -7,7 +7,6 @@ export type MonitorOperationalStatus =
   | "waiting_agent"
   | "waiting_customer"
   | "unread"
-  | "overdue"
   | "scheduled";
 
 export interface MonitorOperational {

@@ -163,11 +163,7 @@ function conversationRows(filters: Partial<MonitorFiltersState>) {
       const status = filters.operationalStatus;
       if (status && status !== "all" && status !== "in_progress") {
         if (
-          status === "unread"
-            ? !item.operational.unreadCount
-            : status === "overdue"
-              ? !item.operational.slaBreached
-              : item.operational.status !== status
+          status === "unread" ? !item.operational.unreadCount : item.operational.status !== status
         )
           return false;
       }

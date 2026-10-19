@@ -210,6 +210,24 @@
   gap: 4px;
   min-width: 0;
 }
+.ip-ui .ip-conversation-activity-meta {
+  display: contents;
+}
+.ip-ui .ip-conversation-card--expanded .ip-conversation-activity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  min-width: 0;
+}
+.ip-ui .ip-conversation-lifecycle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
 .ip-ui .ip-conversation-operation {
   display: flex;
   flex-wrap: wrap;
@@ -373,6 +391,13 @@
   }
 }
 @media (max-width: 1023px) {
+  .ip-ui .ip-conversation-activity-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    min-width: 0;
+  }
   .ip-ui .ip-conversation-results.ip-results {
     border: 0;
     background: transparent;
@@ -416,7 +441,8 @@
     grid-column: 2;
     grid-row: 2;
   }
-  .ip-ui .ip-conversation-details {
+  .ip-ui .ip-conversation-details,
+  .ip-ui .ip-conversation-lifecycle {
     display: none;
   }
 }

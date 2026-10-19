@@ -28,7 +28,6 @@ const indicators = [
     label: "Não lidas",
     hint: "Conversas com mensagens não lidas",
   },
-  { key: "overdue", status: "overdue", label: "Fora do SLA", hint: "Tempo de resposta excedido" },
   { key: "scheduled", status: "scheduled", label: "Agendamentos", hint: "Até 24h e vencidos" },
 ] as const;
 
@@ -44,28 +43,18 @@ export default function MonitorSummary() {
     <section aria-label="Indicadores da monitoria" className="ip-conversation-summary">
       {indicators.map((indicator) => {
         const selected = appliedFilters.operationalStatus === indicator.status;
-        const slaUnavailable = indicator.status === "overdue" && summary?.slaMinutes == null;
-        const disabled = !summary || slaUnavailable;
         return (
           <button
             key={indicator.key}
             type="button"
-            disabled={disabled}
+            disabled={!summary}
             aria-pressed={selected}
-            title={
-              slaUnavailable
-                ? "O prazo de SLA não está configurado para esta instância."
-                : indicator.status === "overdue" && summary?.slaMinutes
-                  ? `${indicator.hint} · Limite: ${summary.slaMinutes} min`
-                  : indicator.hint
-            }
+            title={indicator.hint}
             onClick={() => setOperationalStatus(selected ? "all" : indicator.status)}
             className="ip-conversation-indicator"
           >
             <span>{indicator.label}</span>
-            <strong>
-              {summary && !slaUnavailable ? summary[indicator.key].toLocaleString("pt-BR") : "—"}
-            </strong>
+            <strong>{summary ? summary[indicator.key].toLocaleString("pt-BR") : "—"}</strong>
           </button>
         );
       })}

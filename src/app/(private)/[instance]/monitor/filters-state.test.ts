@@ -81,4 +81,18 @@ describe("monitor preferences", () => {
     expect(restoreMonitorPreferences(null).viewMode).toBe("compact");
     expect(restoreMonitorPreferences(JSON.stringify({ viewMode: "cards" })).viewMode).toBe("cards");
   });
+
+  it("clears the retired SLA filter without discarding other saved preferences", () => {
+    expect(
+      restoreMonitorPreferences(
+        JSON.stringify({
+          filters: { operationalStatus: "overdue", user: 17, lastMessageChannelId: 21 },
+          viewMode: "cards",
+        }),
+      ),
+    ).toMatchObject({
+      filters: { operationalStatus: "all", user: 17, lastMessageChannelId: 21 },
+      viewMode: "cards",
+    });
+  });
 });
