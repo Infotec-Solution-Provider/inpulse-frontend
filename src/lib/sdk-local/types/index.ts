@@ -12,3 +12,4 @@ export * from "./user.types";
 export * from "./whatsapp.types";
 export * from "./internal.types";
 export * from "./ready-messages.types"
+export * from "./customer-search.types";

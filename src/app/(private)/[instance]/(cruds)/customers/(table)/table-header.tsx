@@ -35,6 +35,7 @@ const BUSINESS_FILTER_KEYS = [
   "registeredFrom",
   "registeredTo",
   "loyaltyOperatorIds",
+  "groupIds", "originIds", "mediaIds", "unitIds", "brandIds", "positionIds", "states", "phone", "email",
 ] as const;
 
 const textFieldStyle: SxProps<Theme> = {
@@ -73,6 +74,15 @@ export default function ClientTableHeader() {
       registeredFrom: state.filters.registeredFrom ?? "",
       registeredTo: state.filters.registeredTo ?? "",
       loyaltyOperatorIds: parseIds(state.filters.loyaltyOperatorIds),
+      groupIds: parseIds(state.filters.groupIds),
+      originIds: parseIds(state.filters.originIds),
+      mediaIds: parseIds(state.filters.mediaIds),
+      unitIds: parseIds(state.filters.unitIds),
+      brandIds: parseIds(state.filters.brandIds),
+      positionIds: parseIds(state.filters.positionIds),
+      states: state.filters.states?.split(",").filter(Boolean) ?? [],
+      phone: state.filters.phone ?? "",
+      email: state.filters.email ?? "",
     };
   }, [state.filters]);
 

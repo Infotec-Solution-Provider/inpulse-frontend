@@ -11,4 +11,5 @@ export { default as UsersClient } from "./users.client";
 export { default as WhatsappClient } from "./whatsapp.client";
 export { default as WalletsClient } from "./wallets.client";
 export { default as InternalChatClient } from "./internal.client";
-export { default as ReadyMessageClient} from "./ready-message.client"
+export { default as ReadyMessageClient} from "./ready-message.client";
+export { default as CustomerSearchClient } from "./customer-search.client";

@@ -5,6 +5,7 @@ import type {
 } from "@/lib/types/customer-business-filters";
 import type { CustomerLookupOption } from "@/lib/sdk-local";
 import { Autocomplete, MenuItem, TextField } from "@mui/material";
+import CustomerSearchLookup from "./customer-search-lookup";
 
 interface CustomerBusinessFiltersProps {
   filters: CustomerBusinessFilters;
@@ -118,6 +119,14 @@ export default function CustomerBusinessFiltersPanel({
       <div className="sm:col-span-2">
         {renderLookup("Usuários fidelizados", options.operators, "loyaltyOperatorIds")}
       </div>
+      {([
+        ["Grupos de clientes", "groups", "groupIds"], ["Origens", "origins", "originIds"],
+        ["Mídias CRM", "medias", "mediaIds"], ["Marcas", "brands", "brandIds"],
+        ["Unidades", "units", "unitIds"], ["Cargos dos contatos", "positions", "positionIds"],
+      ] as const).map(([label, kind, key]) => <CustomerSearchLookup key={key} label={label} kind={kind} value={filters[key]} onChange={ids => update(key, ids.map(Number))} />)}
+      <CustomerSearchLookup label="Estados" kind="states" value={filters.states} onChange={ids => update("states", ids)} />
+      <TextField size="small" label="Telefone contém" value={filters.phone} onChange={event => update("phone", event.target.value)} helperText="Pelo menos três dígitos" />
+      <TextField size="small" label="E-mail contém" value={filters.email} onChange={event => update("email", event.target.value)} />
     </div>
   );
 }
