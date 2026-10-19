@@ -156,7 +156,7 @@ function NavigationEntry({
       </Tooltip>
       {item.routes && (
         <>
-          <Collapse in={expanded && open} unmountOnExit>
+          <Collapse in={expanded && open} timeout={160} unmountOnExit>
             <List component="div" disablePadding sx={{ mb: 1 }}>
               {item.routes.map((route) => (
                 <ListItemButton

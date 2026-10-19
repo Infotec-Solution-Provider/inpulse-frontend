@@ -248,9 +248,7 @@ export default function MonitorFilters() {
         <p
           role="status"
           className={
-            hasUnappliedFilters && !open
-              ? "basis-full text-xs text-amber-700 dark:text-amber-300"
-              : "sr-only"
+            hasUnappliedFilters && !open ? "basis-full text-xs text-[var(--ip-warning)]" : "sr-only"
           }
         >
           {hasUnappliedFilters

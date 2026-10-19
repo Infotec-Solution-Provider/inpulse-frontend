@@ -60,7 +60,10 @@ export default function MonitorToolbar() {
         <p className="ip-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs" role="status">
           {error ? (
             <>
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-600" aria-hidden="true" />
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-[var(--ip-warning)]"
+                aria-hidden="true"
+              />
               Dados podem estar desatualizados
             </>
           ) : !autoRefresh ? (
@@ -75,7 +78,10 @@ export default function MonitorToolbar() {
             </>
           ) : (
             <>
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden="true" />
+              <span
+                className="h-1.5 w-1.5 rounded-full bg-[var(--ip-success)]"
+                aria-hidden="true"
+              />
               Atualização automática ativa
             </>
           )}

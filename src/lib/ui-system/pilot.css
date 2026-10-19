@@ -198,6 +198,19 @@
   border: 1px solid var(--ip-border);
   max-width: 250px;
 }
+.ip-ui .ip-filter-chips .MuiChip-deleteIcon.ip-chip-delete-target {
+  color: var(--ip-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+.ip-ui .ip-filter-chips .MuiChip-deleteIcon.ip-chip-delete-target:hover {
+  color: var(--ip-text);
+}
 .ip-ui .ip-channel-tabs {
   padding: 0 16px;
   background: var(--ip-bg);
@@ -366,6 +379,10 @@
   }
 }
 @media (pointer: coarse) {
+  .ip-ui .ip-filter-chips .MuiChip-deleteIcon.ip-chip-delete-target {
+    width: 44px;
+    height: 44px;
+  }
   .ip-ui :where(button, [role="button"]) {
     min-height: 44px;
   }

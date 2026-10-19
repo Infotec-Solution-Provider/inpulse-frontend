@@ -135,7 +135,11 @@ export function FilterChipBar({
           aria-label={`Filtro aplicado ${item.label}. Pressione Delete para remover.`}
           onDelete={item.onDelete}
           size="small"
-          deleteIcon={<X size={14} aria-hidden="true" />}
+          deleteIcon={
+            <span className="ip-chip-delete-target" aria-hidden="true">
+              <X size={14} />
+            </span>
+          }
         />
       ))}
       {more > 0 && (

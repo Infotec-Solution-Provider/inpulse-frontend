@@ -48,7 +48,7 @@ export default function TelephonyToolbar({
             role="status"
           >
             <span
-              className={`h-1.5 w-1.5 shrink-0 rounded-full ${paused ? "bg-amber-500" : "bg-emerald-500"}`}
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${paused ? "bg-[var(--ip-warning)]" : "bg-[var(--ip-success)]"}`}
               aria-hidden="true"
             />
             <span>

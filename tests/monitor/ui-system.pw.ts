@@ -327,3 +327,45 @@ test("consulta de conversa anuncia diálogo e recebe foco antes da primeira nave
   await expect(opener).toBeFocused();
   expect(errors).toEqual([]);
 });
+
+test.describe("remoção de filtros por toque", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test("toque na borda do alvo de remoção de 44px preserva rascunho e teclado", async ({
+    page,
+  }) => {
+    const { queries, errors } = await setupTelephony(page);
+    await page.getByRole("button", { name: /^Filtros/ }).click();
+    await page.getByRole("checkbox", { name: "Nunca trabalhados", exact: true }).check();
+    await page.getByRole("combobox", { name: /^Atividade no mês/ }).click();
+    await page.getByRole("option", { name: "Menos de 2 contatos no mês", exact: true }).click();
+    await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+    await expect.poll(() => queries.at(-1)?.filters.neverWorked).toBe(true);
+    const search = page.getByLabel("Pesquisar cliente ou telefone", { exact: true });
+    await search.fill("rascunho não aplicado");
+    const chips = page.getByLabel("Filtros aplicados", { exact: true });
+    const chip = chips.getByRole("button", { name: /^Filtro aplicado Nunca trabalhados/ });
+    // The decorative span is the actual MUI delete handler; it is not a nested button.
+    const target = chip.locator("span[aria-hidden='true']");
+    await expect(target).toBeVisible();
+    const bounds = await target.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.width).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
+    await page.touchscreen.tap(bounds!.x + 2, bounds!.y + 2);
+    await expect(chip).toHaveCount(0);
+    await expect.poll(() => queries.at(-1)?.filters.neverWorked).toBe(false);
+    expect(queries.at(-1)?.filters).toMatchObject({
+      monthlyActivity: "contacts_lt2",
+      searchText: "",
+    });
+    await expect(search).toHaveValue("rascunho não aplicado");
+    const remaining = chips.getByRole("button", { name: /^Filtro aplicado/ });
+    await expect(remaining).toHaveCount(1);
+    await remaining.press("Delete");
+    await expect.poll(() => queries.at(-1)?.filters.monthlyActivity).toBe("all");
+    await expect(chips).toHaveCount(0);
+    await expect(search).toHaveValue("rascunho não aplicado");
+    expect(errors).toEqual([]);
+  });
+});

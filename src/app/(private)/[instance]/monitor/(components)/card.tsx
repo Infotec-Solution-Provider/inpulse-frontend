@@ -237,7 +237,7 @@ export default function MonitorCard({
               <p className="ip-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 {waitTime && (
                   <span
-                    className={`inline-flex items-center gap-1 font-medium ${operational?.slaBreached ? "text-red-600 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
+                    className={`inline-flex items-center gap-1 font-medium ${operational?.slaBreached ? "text-[var(--ip-danger)]" : "text-[var(--ip-warning)]"}`}
                   >
                     <Clock3 size={13} aria-hidden="true" />
                     Aguardando há {waitTime}
@@ -251,13 +251,13 @@ export default function MonitorCard({
                     {lastMessageAt && (
                       <time
                         dateTime={operational?.lastMessageAt || undefined}
-                        className={unread > 0 ? "font-semibold text-red-600 dark:text-red-300" : ""}
+                        className={unread > 0 ? "font-semibold text-[var(--ip-danger)]" : ""}
                       >
                         Última mensagem: {lastMessageAt}
                       </time>
                     )}
                     {unread > 0 && (
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-red-600">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--ip-danger)]">
                         <span className="sr-only">{unreadLabel}</span>
                       </span>
                     )}
@@ -351,7 +351,7 @@ export default function MonitorCard({
           </div>
         )}
         {(isScheduled || type === "schedule") && (
-          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 dark:text-amber-300">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--ip-warning)]">
             <span className="inline-flex items-center gap-1">
               <Clock3 size={14} aria-hidden="true" />
               Agendado para: {scheduledFor || "Data não informada"}
