@@ -57,7 +57,12 @@ describe("pinned CRM marketing SDK", () => {
       operatorId: 7,
       scheduledAt: "2026-10-19 09:00:00",
       expectedCount: 3,
-      expected: { SQL_CAMPANHA: "managed", GERADO_LISTA: "NAO" as const },
+      expected: {
+        SQL_CAMPANHA: "managed",
+        GERADO_LISTA: "NAO" as const,
+        alreadyLinkedCount: 2,
+        eligibleCount: 3,
+      },
     };
     expect(await client.generate(5, payload)).toEqual({ insertedCount: 3 });
     const config = adapter.mock.calls[0]![0] as any;

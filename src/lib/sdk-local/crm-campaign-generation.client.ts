@@ -2,6 +2,8 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 export interface CrmGenerationExpected {
   SQL_CAMPANHA: string | null;
   GERADO_LISTA: "SIM" | "NAO" | null;
+  alreadyLinkedCount: number;
+  eligibleCount: number;
 }
 export interface CrmGenerationInput {
   operatorId: number;
@@ -9,6 +11,7 @@ export interface CrmGenerationInput {
 }
 export interface CrmGenerationPreview extends CrmGenerationInput {
   eligibleCount: number;
+  batchCount: number;
   alreadyLinkedCount: number;
   limit: number;
   expected: CrmGenerationExpected;
@@ -43,11 +46,9 @@ export default class CrmCampaignGenerationClient {
     input: CrmGenerationInput & { expectedCount: number; expected: CrmGenerationExpected },
   ) {
     return (
-      await this.ax.post<{ data: { insertedCount: number } }>(
-        `/api/crm/campaigns/${encodeURIComponent(id)}/generate`,
-        input,
-        this.pinned(),
-      )
+      await this.ax.post<{
+        data: { insertedCount: number; GERADO_LISTA: "SIM" | "NAO"; hasMore: boolean };
+      }>(`/api/crm/campaigns/${encodeURIComponent(id)}/generate`, input, this.pinned())
     ).data.data;
   }
 }

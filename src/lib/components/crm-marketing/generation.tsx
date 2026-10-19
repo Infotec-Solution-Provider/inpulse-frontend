@@ -112,17 +112,18 @@ export default function GenerationPanel({
       api.generate(campaignId, {
         operatorId: preview.operatorId,
         scheduledAt: preview.scheduledAt,
-        expectedCount: preview.eligibleCount,
+        expectedCount: preview.batchCount,
         expected: preview.expected,
       }),
     );
     if (result) {
       setPreview(null);
-      setKnownGenerated(true);
+      setKnownGenerated(result.value.GERADO_LISTA === "SIM");
       mutation.setSuccess(
-        `${result.value.insertedCount.toLocaleString("pt-BR")} agendamentos gerados.`,
+        `${result.value.insertedCount.toLocaleString("pt-BR")} agendamentos gerados.${result.value.hasMore ? " Confira o próximo lote antes de gerar." : ""}`,
       );
       onReload();
+      if (result.value.hasMore) await inspect();
     }
   }
   async function reconcile() {
@@ -195,12 +196,10 @@ export default function GenerationPanel({
           />
         </Box>
         {preview && (
-          <Alert severity={preview.eligibleCount > preview.limit ? "warning" : "info"}>
+          <Alert severity="info">
             {preview.eligibleCount.toLocaleString("pt-BR")} novos agendamentos elegíveis.{" "}
             {preview.alreadyLinkedCount.toLocaleString("pt-BR")} clientes já vinculados.
-            {preview.eligibleCount > preview.limit
-              ? ` Reduza os critérios para até ${preview.limit.toLocaleString("pt-BR")} clientes por geração.`
-              : ""}
+            {` Próximo lote: ${preview.batchCount.toLocaleString("pt-BR")} agendamentos, até ${preview.limit.toLocaleString("pt-BR")} por vez.`}
           </Alert>
         )}
         <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
@@ -222,15 +221,15 @@ export default function GenerationPanel({
               blocked ||
               reading ||
               !preview ||
-              preview.eligibleCount < 1 ||
-              preview.eligibleCount > preview.limit
+              preview.batchCount < 1 ||
+              preview.batchCount > preview.limit
             }
             onClick={() => void generate()}
           >
             {mutation.busy
               ? "Gerando…"
               : preview
-                ? `Gerar ${preview.eligibleCount.toLocaleString("pt-BR")} agendamentos`
+                ? `Gerar próximos ${preview.batchCount.toLocaleString("pt-BR")} de ${preview.eligibleCount.toLocaleString("pt-BR")}`
                 : "Gerar agendamentos"}
           </Button>
         </Stack>

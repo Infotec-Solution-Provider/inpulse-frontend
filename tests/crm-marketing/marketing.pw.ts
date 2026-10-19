@@ -20,7 +20,10 @@ test("creates a campaign with explicit identity, preserved nullable defaults and
     payload: { CODIGO: 12, NOME: "Campanha nova", DATA_INI: null, PRIORIDADE: 0 },
   });
   expect(calls.at(-1).payload.SQL_CAMPANHA).toBeUndefined();
-  await page.screenshot({ path: "test-results-crm-marketing/crm-marketing-desktop.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results-crm-marketing/crm-marketing-desktop.png",
+    fullPage: true,
+  });
 });
 test("conflict keeps the draft and requires explicit authoritative reload", async ({ page }) => {
   await page.goto(base);
@@ -143,7 +146,10 @@ test("configuration requires a preview before persisting structured criteria", a
   await page.getByRole("button", { name: "Prévia do público", exact: true }).click();
   await expect(page.getByText("3 clientes na prévia", { exact: true })).toBeVisible();
   await page.getByText("Configurar campanha 10", { exact: true }).scrollIntoViewIfNeeded();
-  await page.screenshot({ path: "test-results-crm-marketing/crm-marketing-configuration.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results-crm-marketing/crm-marketing-configuration.png",
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Salvar critérios", exact: true }).click();
   await expect(
     page.getByText("Critérios salvos. A lista está marcada para geração."),
@@ -172,7 +178,7 @@ test("generation previews a responsible user and sends only the guarded eligible
   await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:00");
   await page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }).click();
   await expect(page.getByText(/3 novos agendamentos elegíveis/)).toBeVisible();
-  await page.getByRole("button", { name: "Gerar 3 agendamentos", exact: true }).click();
+  await page.getByRole("button", { name: "Gerar próximos 3 de 3", exact: true }).click();
   await expect(page.getByText("3 agendamentos gerados.", { exact: true })).toBeVisible();
   expect(
     (await page.evaluate(() => (window as any).crmHarness.calls())).find(
@@ -201,6 +207,45 @@ test("ordering moves controlled criteria and preserves the full original snapsho
     expected: { CODIGO: 5, ORDENACAO_APENAS_CIDADE: "N" },
   });
 });
+test("generation handles larger audiences as explicit batches and never replays an unknown batch", async ({
+  page,
+}) => {
+  await page.goto(`${base}?panel=configuration`);
+  await page.evaluate(() => (window as any).crmHarness.setGenerationRemaining(4001));
+  await page.getByLabel("Usuário dos agendamentos", { exact: true }).fill("Ana");
+  await page.getByRole("option", { name: "Ana (7)", exact: true }).click();
+  await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:00");
+  await page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }).click();
+  await page.getByRole("button", { name: "Gerar próximos 2.000 de 4.001", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Gerar próximos 2.000 de 2.001", exact: true }),
+  ).toBeEnabled();
+  const first = (await page.evaluate(() => (window as any).crmHarness.calls())).filter(
+    (call: any) => call.name === "generate",
+  );
+  expect(first).toHaveLength(1);
+  expect(first[0].payload).toMatchObject({
+    expectedCount: 2000,
+    expected: { alreadyLinkedCount: 2, eligibleCount: 4001 },
+  });
+  await page.getByRole("button", { name: "Gerar próximos 2.000 de 2.001", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Gerar próximos 1 de 1", exact: true }),
+  ).toBeEnabled();
+  await page.evaluate(() => (window as any).crmHarness.fault("unknown"));
+  await page.getByRole("button", { name: "Gerar próximos 1 de 1", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Conferir geração", exact: true })).toBeVisible();
+  expect(
+    (await page.evaluate(() => (window as any).crmHarness.calls())).filter(
+      (call: any) => call.name === "generate",
+    ),
+  ).toHaveLength(3);
+  await page.getByRole("button", { name: "Conferir geração", exact: true }).click();
+  await expect(page.getByText(/Lista marcada como gerada/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }),
+  ).toBeDisabled();
+});
 test("mobile and dark editors keep controls inside the viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${base}?panel=results&dark=1`);
@@ -212,13 +257,20 @@ test("mobile and dark editors keep controls inside the viewport", async ({ page 
   const bounds = await page.getByRole("dialog").boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
-  await page.screenshot({ path: "test-results-crm-marketing/crm-marketing-mobile-dark.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results-crm-marketing/crm-marketing-mobile-dark.png",
+    fullPage: true,
+  });
 });
-test("landscape keeps the result form footer reachable without covering the editor", async ({ page }) => {
+test("landscape keeps the result form footer reachable without covering the editor", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto(`${base}?panel=results`);
   await page.getByRole("button", { name: "Editar Contato", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "Salvar", exact: true })).toBeInViewport();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: "Salvar", exact: true }),
+  ).toBeInViewport();
   await page.getByRole("dialog").getByLabel("Nome", { exact: true }).fill("Contato paisagem");
   await page.getByRole("dialog").getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.getByText("Cadastro salvo.")).toBeVisible();

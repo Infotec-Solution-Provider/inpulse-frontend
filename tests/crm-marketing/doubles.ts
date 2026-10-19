@@ -325,19 +325,30 @@ export class GenerationClient {
     });
     return {
       ...payload,
-      eligibleCount: 3,
-      alreadyLinkedCount: 2,
+      eligibleCount: data[this.instance].generationRemaining ?? 3,
+      batchCount: Math.min(data[this.instance].generationRemaining ?? 3, 2000),
+      alreadyLinkedCount: data[this.instance].generationLinked ?? 2,
       limit: 2000,
       expected: {
         SQL_CAMPANHA: data[this.instance].configuration.SQL_CAMPANHA,
         GERADO_LISTA: data[this.instance].configuration.GERADO_LISTA,
+        alreadyLinkedCount: data[this.instance].generationLinked ?? 2,
+        eligibleCount: data[this.instance].generationRemaining ?? 3,
       },
     };
   }
   async generate(id: number, payload: any) {
     return mutate("generate", this.instance, this.token, { id, ...payload }, () => {
-      data[this.instance].configuration.GERADO_LISTA = "SIM";
-      return { insertedCount: 3 };
+      const remaining = (data[this.instance].generationRemaining ?? 3) - payload.expectedCount;
+      data[this.instance].generationRemaining = remaining;
+      data[this.instance].generationLinked =
+        (data[this.instance].generationLinked ?? 2) + payload.expectedCount;
+      data[this.instance].configuration.GERADO_LISTA = remaining > 0 ? "NAO" : "SIM";
+      return {
+        insertedCount: payload.expectedCount,
+        GERADO_LISTA: data[this.instance].configuration.GERADO_LISTA,
+        hasMore: remaining > 0,
+      };
     });
   }
 }
@@ -347,6 +358,9 @@ export class GenerationClient {
     fault = mode;
   },
   calls: () => copy(calls),
+  setGenerationRemaining: (value: number) => {
+    data["tenant-a"].generationRemaining = value;
+  },
   release: () => {
     release?.();
     release = null;
