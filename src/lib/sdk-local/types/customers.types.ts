@@ -82,6 +82,54 @@ export interface CustomerLookupOption {
 	NOME: string | null;
 }
 
+export interface Segment {
+	CODIGO: number;
+	NOME: string | null;
+	ordem: number | null;
+	COD_UNIDADE: number | null;
+}
+
+export interface SegmentListParams {
+	page?: number;
+	perPage?: number;
+	CODIGO?: number;
+	NOME?: string;
+	COD_UNIDADE?: number;
+	unidadeStatus?: "all" | "with" | "without";
+	sortBy?: "CODIGO" | "NOME" | "ordem" | "COD_UNIDADE";
+	sortDirection?: "asc" | "desc";
+}
+
+export interface CreateSegmentRequest {
+	NOME: string;
+	ordem?: number | null;
+}
+
+export interface UpdateSegmentRequest {
+	changes: {
+		NOME?: string;
+		ordem?: number | null;
+	};
+	expected: {
+		NOME: string | null;
+		ordem: number | null;
+		COD_UNIDADE: number | null;
+	};
+}
+
+export interface SetCustomerSegmentRequest {
+	SEGMENTO: number;
+	expected: {
+		SEGMENTO: number | null;
+	};
+}
+
+export interface CustomerSegmentAssignment {
+	CODIGO: number;
+	SEGMENTO: number;
+	segment: CustomerLookupOption;
+}
+
 export interface CustomerContactDetail {
 	CODIGO: string;
 	NOME: string;
