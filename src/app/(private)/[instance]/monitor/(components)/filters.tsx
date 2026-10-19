@@ -17,6 +17,9 @@ import useMonitorContext from "../context";
 import { createInitialFilters } from "../filters-state";
 import { appliedFilterLabels } from "../applied-filter-labels";
 import type { MonitorFiltersState } from "../types";
+import MonitorChannelPicker from "./channel-picker";
+import { lastMessageChannelLabel } from "../channel-label";
+import { MonitorRequestGate } from "../request-gate";
 
 function FilterCheckbox({
   id,
@@ -94,6 +97,7 @@ function FilterDateRange({
 function dialogFilterCount(filters: MonitorFiltersState): number {
   return [
     filters.user !== "all",
+    filters.lastMessageChannelId !== "all",
     filters.scheduledFor !== "all",
     filters.showBots,
     !filters.showOngoing || !filters.showFinished,
@@ -121,9 +125,24 @@ export default function MonitorFilters() {
     setFilterPanelOpen,
     viewMode,
     setViewMode,
+    chats,
   } = useMonitorContext();
   const { users = [] } = useInternalChatContext();
   const [open, setOpen] = useState(false);
+  const [channelPicker, setChannelPicker] = useState(false);
+  const [channelLabels, setChannelLabels] = useState<Record<number, string>>({});
+  const channelTrigger = useRef<HTMLButtonElement>(null);
+  const channelRequestGate = useRef(new MonitorRequestGate());
+  const channelLabel = (id: number) =>
+    channelLabels[id] ||
+    lastMessageChannelLabel(
+      chats.find((chat) => chat.operational?.lastMessageChannel?.id === id)?.operational,
+    ) ||
+    `Canal #${id}`;
+  const returnToFilters = () => {
+    setChannelPicker(false);
+    requestAnimationFrame(() => channelTrigger.current?.focus());
+  };
   // Draft when the dialog opened; cancelling restores it, discarding only dialog edits.
   const snapshot = useRef(filters);
   const update = <K extends keyof MonitorFiltersState>(key: K, value: MonitorFiltersState[K]) =>
@@ -132,6 +151,7 @@ export default function MonitorFilters() {
   const chips = appliedFilterLabels(
     appliedFilters,
     (id) => users.find((user) => user.CODIGO === id)?.NOME || `Operador ${id}`,
+    channelLabel,
   ).map((item) => ({ ...item, onDelete: () => removeAppliedFilter(item.key) }));
   useEffect(() => {
     setFilterPanelOpen(open);
@@ -140,10 +160,12 @@ export default function MonitorFilters() {
   const openDialog = () => {
     snapshot.current = filters;
     setOpen(true);
+    setChannelPicker(false);
   };
   const cancel = () => {
     setFilters(snapshot.current);
     setOpen(false);
+    setChannelPicker(false);
   };
 
   return (
@@ -259,241 +281,293 @@ export default function MonitorFilters() {
       <OperationalPanel
         open={open}
         onClose={cancel}
-        title="Filtros da monitoria"
+        title={channelPicker ? "Canal da última mensagem" : "Filtros da monitoria"}
         closeLabel="Fechar filtros"
-        description="Refine a consulta e aplique as alterações quando terminar."
+        description={
+          channelPicker
+            ? "Escolha o canal específico usado na última mensagem. Canais inativos também podem ter histórico."
+            : "Refine a consulta e aplique as alterações quando terminar."
+        }
         width={480}
         footer={
-          <div className="flex w-full flex-wrap items-center justify-end gap-2">
-            <Button
-              type="button"
-              onClick={() =>
-                setFilters((current) => ({
-                  ...createInitialFilters(),
-                  searchText: current.searchText,
-                  operationalStatus: current.operationalStatus,
-                }))
-              }
-              sx={{ mr: "auto" }}
-            >
-              Limpar
-            </Button>
-            <Button type="button" onClick={cancel}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              form="conversation-monitor-filters"
-              variant="contained"
-              startIcon={<UiIcon name="search" scale="row" />}
-            >
-              Aplicar filtros
-            </Button>
-          </div>
+          channelPicker ? (
+            <div className="flex w-full flex-wrap items-center justify-end gap-2">
+              <Button onClick={returnToFilters}>Voltar aos filtros</Button>
+              <Button type="submit" form="monitor-channel-picker" variant="contained">
+                Usar canal
+              </Button>
+            </div>
+          ) : (
+            <div className="flex w-full flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                onClick={() =>
+                  setFilters((current) => ({
+                    ...createInitialFilters(),
+                    searchText: current.searchText,
+                    operationalStatus: current.operationalStatus,
+                  }))
+                }
+                sx={{ mr: "auto" }}
+              >
+                Limpar
+              </Button>
+              <Button type="button" onClick={cancel}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                form="conversation-monitor-filters"
+                variant="contained"
+                startIcon={<UiIcon name="search" scale="row" />}
+              >
+                Aplicar filtros
+              </Button>
+            </div>
+          )
         }
       >
-        <form
-          id="conversation-monitor-filters"
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyFilters();
-            setOpen(false);
-          }}
-          className="space-y-6"
-        >
-          <section aria-labelledby="monitor-filters-search">
-            <h3 id="monitor-filters-search" className={sectionTitle}>
-              Busca, responsável e ordenação
-            </h3>
-            <div className="grid gap-3 pt-1">
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Buscar em"
-                value={filters.searchColumn}
-                onChange={(event) =>
-                  update("searchColumn", event.target.value as MonitorFiltersState["searchColumn"])
-                }
-              >
-                <MenuItem value="all">Todos os campos</MenuItem>
-                <MenuItem value="name">Nome</MenuItem>
-                <MenuItem value="phone">Telefone</MenuItem>
-                <MenuItem value="customer">Cliente</MenuItem>
-                <MenuItem value="message">Mensagem</MenuItem>
-              </TextField>
-              <TextField
-                select
-                size="small"
-                label="Atendente / participante"
-                fullWidth
-                value={filters.user}
-                onChange={(event) =>
-                  update("user", event.target.value === "all" ? "all" : Number(event.target.value))
-                }
-              >
-                <MenuItem value="all">Todos</MenuItem>
-                {users.map((user) => (
-                  <MenuItem key={user.CODIGO} value={user.CODIGO}>
-                    {user.NOME}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Ordenar por"
-                value={filters.sortBy}
-                onChange={(event) =>
-                  update("sortBy", event.target.value as MonitorFiltersState["sortBy"])
-                }
-              >
-                <MenuItem value="urgency">Urgência operacional</MenuItem>
-                <MenuItem value="startedAt">Data de início</MenuItem>
-                <MenuItem value="finishedAt">Data de finalização</MenuItem>
-                <MenuItem value="lastMessage">Última mensagem</MenuItem>
-                <MenuItem value="name">Nome</MenuItem>
-                <MenuItem value="scheduledAt">Agendado para</MenuItem>
-              </TextField>
-              <TextField
-                select
-                fullWidth
-                size="small"
-                label="Ordem"
-                value={filters.sortOrder}
-                onChange={(event) =>
-                  update("sortOrder", event.target.value as MonitorFiltersState["sortOrder"])
-                }
-              >
-                <MenuItem value="desc">
-                  {filters.sortBy === "urgency" ? "Mais urgentes primeiro" : "Decrescente"}
-                </MenuItem>
-                <MenuItem value="asc">
-                  {filters.sortBy === "urgency" ? "Menos urgentes primeiro" : "Crescente"}
-                </MenuItem>
-              </TextField>
-            </div>
-          </section>
-
-          <div className="grid gap-6">
-            <section aria-labelledby="monitor-filters-categories">
-              <h3 id="monitor-filters-categories" className={sectionTitle}>
-                Categorias
+        {channelPicker ? (
+          <MonitorChannelPicker
+            requestGate={channelRequestGate.current}
+            value={filters.lastMessageChannelId}
+            label={
+              filters.lastMessageChannelId === "all"
+                ? "Todos os canais"
+                : channelLabel(filters.lastMessageChannelId)
+            }
+            onConfirm={(id, label) => {
+              if (id !== "all") setChannelLabels((current) => ({ ...current, [id]: label }));
+              update("lastMessageChannelId", id);
+              returnToFilters();
+            }}
+          />
+        ) : (
+          <form
+            id="conversation-monitor-filters"
+            onSubmit={(event) => {
+              event.preventDefault();
+              applyFilters();
+              setOpen(false);
+            }}
+            className="space-y-6"
+          >
+            <section aria-labelledby="monitor-filters-search">
+              <h3 id="monitor-filters-search" className={sectionTitle}>
+                Busca, responsável e ordenação
               </h3>
-              {(
-                [
-                  ["showCustomerChats", "Conversas com clientes"],
-                  ["showInternalChats", "Conversas internas"],
-                  ["showInternalGroups", "Grupos internos"],
-                  ["showSchedules", "Agendamentos"],
-                ] as const
-              ).map(([key, label]) => (
-                <FilterCheckbox
-                  key={key}
-                  id={`monitor-${key}`}
-                  checked={filters.categories[key]}
-                  onChange={(checked) =>
-                    setFilters((current) => ({
-                      ...current,
-                      categories: { ...current.categories, [key]: checked },
-                    }))
+              <div className="grid gap-3 pt-1">
+                <Button
+                  ref={channelTrigger}
+                  variant="outlined"
+                  onClick={() => setChannelPicker(true)}
+                  sx={{
+                    justifyContent: "space-between",
+                    textAlign: "left",
+                    overflowWrap: "anywhere",
+                  }}
+                  endIcon={<UiIcon name="search" scale="row" />}
+                >
+                  Canal da última mensagem:{" "}
+                  {filters.lastMessageChannelId === "all"
+                    ? "Todos os canais"
+                    : channelLabel(filters.lastMessageChannelId)}
+                </Button>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Buscar em"
+                  value={filters.searchColumn}
+                  onChange={(event) =>
+                    update(
+                      "searchColumn",
+                      event.target.value as MonitorFiltersState["searchColumn"],
+                    )
                   }
                 >
-                  {label}
-                </FilterCheckbox>
-              ))}
-            </section>
-            <section aria-labelledby="monitor-filters-situation">
-              <h3 id="monitor-filters-situation" className={sectionTitle}>
-                Situação
-              </h3>
-              {(
-                [
-                  ["showBots", "Incluir bots"],
-                  ["showOngoing", "Em andamento"],
-                  ["showFinished", "Finalizados"],
-                  ["showUnreadOnly", "Apenas não lidas"],
-                  ["showPendingResponseOnly", "Apenas sem resposta"],
-                ] as const
-              ).map(([key, label]) => (
-                <FilterCheckbox
-                  key={key}
-                  id={`monitor-${key}`}
-                  checked={filters[key]}
-                  onChange={(checked) => update(key, checked)}
+                  <MenuItem value="all">Todos os campos</MenuItem>
+                  <MenuItem value="name">Nome</MenuItem>
+                  <MenuItem value="phone">Telefone</MenuItem>
+                  <MenuItem value="customer">Cliente</MenuItem>
+                  <MenuItem value="message">Mensagem</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Atendente / participante"
+                  fullWidth
+                  value={filters.user}
+                  onChange={(event) =>
+                    update(
+                      "user",
+                      event.target.value === "all" ? "all" : Number(event.target.value),
+                    )
+                  }
                 >
-                  {label}
-                </FilterCheckbox>
-              ))}
-            </section>
-          </div>
-
-          <section aria-labelledby="monitor-filters-period">
-            <h3 id="monitor-filters-period" className={sectionTitle}>
-              Período da conversa
-            </h3>
-            <div className="grid gap-4">
-              <FilterDateRange
-                label="Data de início"
-                value={filters.startedAt}
-                onChange={(value) => update("startedAt", value)}
-              />
-              <FilterDateRange
-                label="Data de finalização"
-                value={filters.finishedAt}
-                onChange={(value) => update("finishedAt", value)}
-              />
-            </div>
-          </section>
-
-          <section aria-labelledby="monitor-filters-schedules">
-            <h3 id="monitor-filters-schedules" className={sectionTitle}>
-              Agendamentos
-            </h3>
-            <div className="grid items-end gap-4">
-              <FilterDateRange
-                label="Agendado no dia"
-                value={filters.scheduledAt}
-                onChange={(value) => update("scheduledAt", value)}
-              />
-              <FilterDateRange
-                label="Agendado para o dia"
-                value={filters.scheduledTo}
-                onChange={(value) => update("scheduledTo", value)}
-              />
-              <TextField
-                select
-                size="small"
-                label="Agendado para"
-                fullWidth
-                value={filters.scheduledFor}
-                onChange={(event) =>
-                  update(
-                    "scheduledFor",
-                    event.target.value === "all" ? "all" : Number(event.target.value),
-                  )
-                }
-              >
-                <MenuItem value="all">Qualquer atendente</MenuItem>
-                {users.map((user) => (
-                  <MenuItem key={user.CODIGO} value={user.CODIGO}>
-                    {user.NOME}
+                  <MenuItem value="all">Todos</MenuItem>
+                  {users.map((user) => (
+                    <MenuItem key={user.CODIGO} value={user.CODIGO}>
+                      {user.NOME}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Ordenar por"
+                  value={filters.sortBy}
+                  onChange={(event) =>
+                    update("sortBy", event.target.value as MonitorFiltersState["sortBy"])
+                  }
+                >
+                  <MenuItem value="urgency">Urgência operacional</MenuItem>
+                  <MenuItem value="startedAt">Data de início</MenuItem>
+                  <MenuItem value="finishedAt">Data de finalização</MenuItem>
+                  <MenuItem value="lastMessage">Última mensagem</MenuItem>
+                  <MenuItem value="name">Nome</MenuItem>
+                  <MenuItem value="scheduledAt">Agendado para</MenuItem>
+                </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label="Ordem"
+                  value={filters.sortOrder}
+                  onChange={(event) =>
+                    update("sortOrder", event.target.value as MonitorFiltersState["sortOrder"])
+                  }
+                >
+                  <MenuItem value="desc">
+                    {filters.sortBy === "urgency" ? "Mais urgentes primeiro" : "Decrescente"}
                   </MenuItem>
+                  <MenuItem value="asc">
+                    {filters.sortBy === "urgency" ? "Menos urgentes primeiro" : "Crescente"}
+                  </MenuItem>
+                </TextField>
+              </div>
+            </section>
+
+            <div className="grid gap-6">
+              <section aria-labelledby="monitor-filters-categories">
+                <h3 id="monitor-filters-categories" className={sectionTitle}>
+                  Categorias
+                </h3>
+                {(
+                  [
+                    ["showCustomerChats", "Conversas com clientes"],
+                    ["showInternalChats", "Conversas internas"],
+                    ["showInternalGroups", "Grupos internos"],
+                    ["showSchedules", "Agendamentos"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <FilterCheckbox
+                    key={key}
+                    id={`monitor-${key}`}
+                    checked={filters.categories[key]}
+                    onChange={(checked) =>
+                      setFilters((current) => ({
+                        ...current,
+                        categories: { ...current.categories, [key]: checked },
+                      }))
+                    }
+                  >
+                    {label}
+                  </FilterCheckbox>
                 ))}
-              </TextField>
+              </section>
+              <section aria-labelledby="monitor-filters-situation">
+                <h3 id="monitor-filters-situation" className={sectionTitle}>
+                  Situação
+                </h3>
+                {(
+                  [
+                    ["showBots", "Incluir bots"],
+                    ["showOngoing", "Em andamento"],
+                    ["showFinished", "Finalizados"],
+                    ["showUnreadOnly", "Apenas não lidas"],
+                    ["showPendingResponseOnly", "Apenas sem resposta"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <FilterCheckbox
+                    key={key}
+                    id={`monitor-${key}`}
+                    checked={filters[key]}
+                    onChange={(checked) => update(key, checked)}
+                  >
+                    {label}
+                  </FilterCheckbox>
+                ))}
+              </section>
             </div>
-            <div className="mt-2">
-              <FilterCheckbox
-                id="monitor-showOnlyScheduled"
-                checked={filters.showOnlyScheduled}
-                onChange={(checked) => update("showOnlyScheduled", checked)}
-              >
-                Apenas agendados
-              </FilterCheckbox>
-            </div>
-          </section>
-        </form>
+
+            <section aria-labelledby="monitor-filters-period">
+              <h3 id="monitor-filters-period" className={sectionTitle}>
+                Período da conversa
+              </h3>
+              <div className="grid gap-4">
+                <FilterDateRange
+                  label="Data de início"
+                  value={filters.startedAt}
+                  onChange={(value) => update("startedAt", value)}
+                />
+                <FilterDateRange
+                  label="Data de finalização"
+                  value={filters.finishedAt}
+                  onChange={(value) => update("finishedAt", value)}
+                />
+              </div>
+            </section>
+
+            <section aria-labelledby="monitor-filters-schedules">
+              <h3 id="monitor-filters-schedules" className={sectionTitle}>
+                Agendamentos
+              </h3>
+              <div className="grid items-end gap-4">
+                <FilterDateRange
+                  label="Agendado no dia"
+                  value={filters.scheduledAt}
+                  onChange={(value) => update("scheduledAt", value)}
+                />
+                <FilterDateRange
+                  label="Agendado para o dia"
+                  value={filters.scheduledTo}
+                  onChange={(value) => update("scheduledTo", value)}
+                />
+                <TextField
+                  select
+                  size="small"
+                  label="Agendado para"
+                  fullWidth
+                  value={filters.scheduledFor}
+                  onChange={(event) =>
+                    update(
+                      "scheduledFor",
+                      event.target.value === "all" ? "all" : Number(event.target.value),
+                    )
+                  }
+                >
+                  <MenuItem value="all">Qualquer atendente</MenuItem>
+                  {users.map((user) => (
+                    <MenuItem key={user.CODIGO} value={user.CODIGO}>
+                      {user.NOME}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </div>
+              <div className="mt-2">
+                <FilterCheckbox
+                  id="monitor-showOnlyScheduled"
+                  checked={filters.showOnlyScheduled}
+                  onChange={(checked) => update("showOnlyScheduled", checked)}
+                >
+                  Apenas agendados
+                </FilterCheckbox>
+              </div>
+            </section>
+          </form>
+        )}
       </OperationalPanel>
     </>
   );

@@ -6,6 +6,7 @@ import { OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { useEffect, useId, useRef, useState } from "react";
 import type { MonitorOperational } from "../types";
+import { lastMessageChannelLabel } from "../channel-label";
 
 export interface MonitorCardProps {
   type: "external-chat" | "internal-chat" | "internal-group" | "schedule" | "finished-chat";
@@ -271,11 +272,20 @@ export default function MonitorCard({
                 </span>
               )}
             </p>
-            {(lastMessageAt || operational?.channel) && (
+            {(type === "external-chat" || type === "finished-chat") && (
+              <p
+                className="ip-muted ip-conversation-channel"
+                title={lastMessageChannelLabel(operational) || undefined}
+              >
+                Canal:{" "}
+                {lastMessageChannelLabel(operational) ||
+                  (lastMessageAt ? "Não identificado" : "Sem mensagem")}
+              </p>
+            )}
+            {lastMessageAt && (
               <p
                 className={`ip-muted ip-conversation-metadata ${compact ? "ip-conversation-metadata--compact" : ""}`}
               >
-                {operational?.channel && <span>{operational.channel}</span>}
                 {lastMessageAt && (
                   <time dateTime={operational?.lastMessageAt || undefined}>
                     Última mensagem: {lastMessageAt}

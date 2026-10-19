@@ -64,6 +64,11 @@ const operators = [
   { id: "4", label: "Camila", description: "Relacionamento · demonstração" },
 ];
 const campaigns = ["Relacionamento", "Reposição de estoque", "Novos clientes", "Pós-venda"];
+const channels = [
+  { id: 11, name: "Comercial", phone: "+55 (11) 0000-0000", isActive: true },
+  { id: 12, name: "Relacionamento", phone: "+55 (51) 0000-0000", isActive: true },
+  { id: 13, name: "Pós-venda", phone: null, isActive: false },
+];
 const conversations = customers.map(([name, company], index) => {
   const waitingAgent = index % 3 !== 1;
   const waitMinutes = [42, 8, 67, 3, 21, 12, 5, 34][index % 8];
@@ -88,6 +93,7 @@ const conversations = customers.map(([name, company], index) => {
       waitingSince: iso(waitMinutes),
       unreadCount: waitingAgent ? (index % 3) + 1 : 0,
       channel: index % 3 ? "WhatsApp · WABA" : "WhatsApp · sessão conectada",
+      lastMessageChannel: channels[index % channels.length],
       deliveryStatus: index === 1 ? "UNKNOWN" : index === 5 ? "FAILED" : null,
       slaBreached: waitingAgent && waitMinutes > 30,
     },
@@ -139,6 +145,12 @@ function rangeMatch(value: string | null, range?: { from?: string | null; to?: s
 function conversationRows(filters: Partial<MonitorFiltersState>) {
   return conversations
     .filter((item) => {
+      if (
+        filters.lastMessageChannelId &&
+        filters.lastMessageChannelId !== "all" &&
+        item.operational.lastMessageChannel.id !== filters.lastMessageChannelId
+      )
+        return false;
       if (filters.categories?.showCustomerChats === false || filters.showOngoing === false)
         return false;
       if (filters.user && filters.user !== "all" && item.userId !== filters.user) return false;
@@ -324,6 +336,15 @@ type RequestBody = Record<string, unknown>;
 function respond(method: string, url: URL, body: RequestBody): { status: number; data: unknown } {
   const path = url.pathname;
   const ok = (data: unknown) => ({ status: 200, data: { data } });
+  if (method === "GET" && path === "/api/whatsapp/monitor/channels")
+    return ok(
+      page(
+        channels.filter((item) =>
+          hasText([item.name, item.phone], url.searchParams.get("search") || ""),
+        ),
+        { page: Number(url.searchParams.get("page")), pageSize: 20 },
+      ),
+    );
   if (method === "POST" && path === "/api/whatsapp/monitor/search")
     return ok(page(conversationRows((body.filters ?? {}) as Partial<MonitorFiltersState>), body));
   if (method === "POST" && path === "/api/whatsapp/monitor/summary") {

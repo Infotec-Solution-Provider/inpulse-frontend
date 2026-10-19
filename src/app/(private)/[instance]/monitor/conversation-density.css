@@ -261,6 +261,15 @@
   font-size: 13px;
   line-height: 18px;
 }
+.ip-ui .ip-conversation-channel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
 .ip-ui .ip-conversation-details {
   font-size: 13px;
   line-height: 18px;
@@ -357,6 +366,7 @@
   .ip-ui .ip-conversation-card--compact .ip-conversation-activity {
     grid-column: 3;
     grid-row: 1;
+    gap: 2px;
   }
   .ip-ui .ip-conversation-card--compact .ip-conversation-actions {
     grid-column: 4;

@@ -23,6 +23,7 @@ describe("monitor preferences", () => {
       ...createInitialFilters(),
       searchText: "sensitive customer",
       user: 17,
+      lastMessageChannelId: 21,
       showBots: true,
     };
     const encoded = serializeMonitorPreferences({
@@ -33,7 +34,7 @@ describe("monitor preferences", () => {
     });
     expect(encoded).not.toContain("sensitive customer");
     expect(restoreMonitorPreferences(encoded)).toMatchObject({
-      filters: { searchText: "", user: 17, showBots: true },
+      filters: { searchText: "", user: 17, lastMessageChannelId: 21, showBots: true },
       pageSize: 50,
       autoRefresh: false,
       viewMode: "compact",
@@ -50,6 +51,7 @@ describe("monitor preferences", () => {
         filters: {
           categories: { showCustomerChats: "false", showSchedules: false },
           user: -1,
+          lastMessageChannelId: "21",
           sortBy: "unknown",
           startedAt: { from: "not-a-date" },
           operationalStatus: "unknown",

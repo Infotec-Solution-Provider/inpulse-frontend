@@ -18,6 +18,7 @@ import { getMonitorParticipants } from "../(functions)/get-card-props";
 import { loadMonitorHistory, monitorMessageDate } from "../history";
 import { MonitorRequestGate } from "../request-gate";
 import type { MonitorOperational } from "../types";
+import { lastMessageChannelLabel } from "../channel-label";
 
 export default function MonitorConversationPreview({
   chat,
@@ -152,7 +153,8 @@ export default function MonitorConversationPreview({
           ? `${participants.length} ${participants.length === 1 ? "participante" : "participantes"}`
           : null,
     },
-    { label: "Canal", value: chat.operational?.channel },
+    { label: "Canal da última mensagem", value: lastMessageChannelLabel(chat.operational) },
+    { label: "Tipo de conexão", value: chat.operational?.channel },
     {
       label: "Última mensagem",
       value: lastMessageAt,
