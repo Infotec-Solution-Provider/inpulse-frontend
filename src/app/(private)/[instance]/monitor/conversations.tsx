@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Button, Skeleton } from "@mui/material";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
+import { MonitorEmptyState } from "@/lib/ui-system";
 import { useContext } from "react";
 import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
 import TransferChatModal from "../(main)/(chat)/(actions)/transfer-chat-modal";
@@ -11,21 +11,31 @@ import { useWhatsappContext } from "../whatsapp-context";
 import MonitorCard from "./(components)/card";
 import MonitorFilters from "./(components)/filters";
 import MonitorToolbar from "./(components)/monitor-toolbar";
-import { MonitorSummaryAlert } from "./(components)/summary";
+import MonitorSummary, { MonitorSummaryAlert } from "./(components)/summary";
 import MonitorPagination from "./(components)/monitor-pagination";
 import MonitorConversationPreview from "./(components)/conversation-preview";
 import getMonitorCardProps from "./(functions)/get-card-props";
 import useMonitorContext from "./context";
 
 export default function ConversationMonitor() {
-  const { chats, isLoading, isRefreshing, error, refetch, viewMode } = useMonitorContext();
+  const {
+    chats,
+    isLoading,
+    isRefreshing,
+    error,
+    refetch,
+    viewMode,
+    resetFilters,
+    setActionMenuOpen,
+  } = useMonitorContext();
   const { sectors, setCurrentChat } = useWhatsappContext();
   const { users } = useInternalChatContext();
   const { openModal } = useContext(AppContext);
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[1800px] flex-col gap-2 p-3 md:px-5 lg:h-full lg:min-h-0 lg:overflow-hidden">
+    <div className="ip-page mx-auto flex min-h-full w-full max-w-[1800px] flex-col gap-4 lg:h-full lg:min-h-0 lg:overflow-hidden">
       <MonitorToolbar />
+      <MonitorSummary />
       <MonitorSummaryAlert />
       <MonitorFilters />
       <div className="flex min-h-0 flex-1 flex-col">
@@ -48,7 +58,22 @@ export default function ConversationMonitor() {
               {chats.length > 0 && " Os dados exibidos são da última consulta bem-sucedida."}
             </Alert>
           )}
-          <div className="scrollbar-whatsapp min-h-0 flex-1 lg:overflow-y-auto">
+          <div
+            className="ip-results scrollbar-whatsapp min-h-0 min-w-0 flex-1"
+            style={{ overflowY: "auto" }}
+          >
+            {viewMode === "compact" && chats.length > 0 && (
+              <div
+                aria-hidden="true"
+                className="ip-muted sticky top-0 z-10 mb-2 hidden grid-cols-[minmax(160px,1.2fr)_minmax(110px,.8fr)_minmax(200px,1.4fr)_auto] gap-3 border-b px-3 py-2 text-xs font-medium lg:grid"
+                style={{ background: "var(--ip-bg)", borderColor: "var(--ip-border)" }}
+              >
+                <span>Conversa</span>
+                <span>Responsável</span>
+                <span>Situação e atividade</span>
+                <span className="w-[142px] text-right">Ações</span>
+              </div>
+            )}
             {isLoading && chats.length === 0 ? (
               <div role="status" aria-label="Carregando conversas" className="space-y-2">
                 {[0, 1, 2, 3, 4].map((key) => (
@@ -75,6 +100,7 @@ export default function ConversationMonitor() {
                       key={key}
                       {...getMonitorCardProps(chat, users, sectors)}
                       compact={viewMode === "compact"}
+                      onMenuOpenChange={setActionMenuOpen}
                       handleView={
                         "chatType" in chat
                           ? () => openModal(<MonitorConversationPreview chat={chat} />)
@@ -102,21 +128,13 @@ export default function ConversationMonitor() {
               </ul>
             )}
             {!isLoading && !error && chats.length === 0 && (
-              <div
-                role="status"
-                className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 p-6 text-center dark:border-slate-700"
-              >
-                <SearchOffIcon className="text-slate-400" sx={{ fontSize: 48 }} />
-                <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                  Nenhuma conversa encontrada
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Ajuste os filtros aplicados ou atualize a lista para buscar novas conversas.
-                </p>
-                <Button onClick={refetch} disabled={isRefreshing}>
-                  Atualizar lista
-                </Button>
-              </div>
+              <MonitorEmptyState
+                title="Nenhuma conversa encontrada"
+                description="Ajuste os filtros aplicados ou atualize a lista para buscar novas conversas."
+                onReset={resetFilters}
+                onRefresh={refetch}
+                busy={isRefreshing}
+              />
             )}
           </div>
           <div className="shrink-0">

@@ -1,4 +1,4 @@
-import SearchIcon from "@mui/icons-material/Search";
+import { Search } from "lucide-react";
 import { Button, TextField } from "@mui/material";
 import type { TelephonyDateRange, TelephonyLookupOption } from "../types";
 
@@ -13,9 +13,7 @@ export function TelephonyDateField({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-        {label}
-      </legend>
+      <legend className="ip-muted mb-1 text-xs font-medium">{label}</legend>
       <div className="grid min-w-0 grid-cols-2 gap-2">
         <TextField
           fullWidth
@@ -53,6 +51,7 @@ export function TelephonyLookupField({
   onOpen,
   disabled,
   helperText,
+  fieldId,
 }: {
   label: string;
   selection: TelephonyLookupOption[];
@@ -60,6 +59,7 @@ export function TelephonyLookupField({
   onOpen: () => void;
   disabled?: boolean;
   helperText?: string;
+  fieldId?: string;
 }) {
   const value = selection.length
     ? multiple
@@ -68,25 +68,24 @@ export function TelephonyLookupField({
     : "Selecionar";
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">{label}</p>
+      <p className="ip-muted mb-1 text-xs font-medium">{label}</p>
       <Button
+        id={fieldId}
         type="button"
         variant="outlined"
         fullWidth
         size="small"
-        endIcon={<SearchIcon />}
+        endIcon={<Search size={15} />}
         onClick={onOpen}
         disabled={disabled}
         aria-label={`Selecionar ${label.toLowerCase()}`}
-        sx={{ minHeight: 40, justifyContent: "space-between", textTransform: "none" }}
+        sx={{ minHeight: 36, justifyContent: "space-between", textTransform: "none" }}
       >
         <span className="truncate" title={selection.map((option) => option.label).join(", ")}>
           {value}
         </span>
       </Button>
-      {helperText && (
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
-      )}
+      {helperText && <p className="ip-muted mt-1 text-xs">{helperText}</p>}
     </div>
   );
 }

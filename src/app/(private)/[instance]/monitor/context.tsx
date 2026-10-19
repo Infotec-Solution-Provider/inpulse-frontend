@@ -32,6 +32,9 @@ interface MonitorContextProps extends ReturnType<typeof useMonitorData> {
   resetFilters: () => void;
   applyFilters: (nextFilters?: MonitorFiltersState) => void;
   setOperationalStatus: (status: MonitorOperationalStatus) => void;
+  removeAppliedFilter: (key: keyof MonitorFiltersState) => void;
+  setFilterPanelOpen: Dispatch<SetStateAction<boolean>>;
+  setActionMenuOpen: Dispatch<SetStateAction<boolean>>;
   page: number;
   pageSize: number;
   setPage: Dispatch<SetStateAction<number>>;
@@ -82,13 +85,15 @@ function ScopedMonitorProvider({
   const [pageSize, changePageSize] = useState(saved.pageSize);
   const [autoRefresh, setAutoRefresh] = useState(saved.autoRefresh);
   const [viewMode, setViewMode] = useState(saved.viewMode);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
   const data = useMonitorData({
     token: storageKey ? token : null,
     filters: appliedFilters,
     page,
     pageSize,
     autoRefresh,
-    modalOpen: Boolean(modal),
+    modalOpen: Boolean(modal) || filterPanelOpen || actionMenuOpen,
     socket,
     onPageOverflow: changePage,
   });
@@ -131,6 +136,14 @@ function ScopedMonitorProvider({
     changePage(1);
   }, []);
 
+  const removeAppliedFilter = useCallback((key: keyof MonitorFiltersState) => {
+    const defaults = createInitialFilters();
+    // Removing a chip changes only that applied condition; keep other unsaved edits.
+    setFilters((previous) => ({ ...previous, [key]: defaults[key] }));
+    setAppliedFilters((previous) => ({ ...previous, [key]: defaults[key] }));
+    changePage(1);
+  }, []);
+
   const setPage = useCallback<Dispatch<SetStateAction<number>>>((value) => {
     changePage((previous) => {
       const next = typeof value === "function" ? value(previous) : value;
@@ -156,13 +169,16 @@ function ScopedMonitorProvider({
         resetFilters,
         applyFilters,
         setOperationalStatus,
+        removeAppliedFilter,
+        setFilterPanelOpen,
+        setActionMenuOpen,
         page,
         pageSize,
         setPage,
         setPageSize,
         autoRefresh,
         setAutoRefresh,
-        autoRefreshPaused: autoRefresh && Boolean(modal),
+        autoRefreshPaused: autoRefresh && (Boolean(modal) || filterPanelOpen || actionMenuOpen),
         viewMode,
         setViewMode,
       }}

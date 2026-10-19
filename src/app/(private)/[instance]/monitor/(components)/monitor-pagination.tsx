@@ -1,7 +1,6 @@
 "use client";
 
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton, MenuItem, TextField, Tooltip } from "@mui/material";
 import useMonitorContext from "../context";
 
@@ -12,7 +11,8 @@ export default function MonitorPagination() {
   return (
     <nav
       aria-label="Paginação da monitoria"
-      className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-800"
+      className="ip-results-footer mt-2 flex flex-wrap items-center justify-between gap-3 border-t py-3"
+      style={{ borderColor: "var(--ip-border)" }}
     >
       <TextField
         select
@@ -37,11 +37,11 @@ export default function MonitorPagination() {
               disabled={page <= 1 || isLoading}
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
-              <ChevronLeftIcon />
+              <ChevronLeft size={18} />
             </IconButton>
           </span>
         </Tooltip>
-        <p className="text-sm tabular-nums text-slate-600 dark:text-slate-300">
+        <p className="ip-muted text-sm tabular-nums">
           Página <span className="font-semibold">{page}</span> de {totalPages}
         </p>
         <Tooltip title="Próxima página">
@@ -52,7 +52,7 @@ export default function MonitorPagination() {
               disabled={page >= totalPages || isLoading}
               onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
             >
-              <ChevronRightIcon />
+              <ChevronRight size={18} />
             </IconButton>
           </span>
         </Tooltip>

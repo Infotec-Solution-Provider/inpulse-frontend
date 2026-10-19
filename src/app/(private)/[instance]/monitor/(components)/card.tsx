@@ -1,11 +1,17 @@
 "use client";
 
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
-import GroupIcon from "@mui/icons-material/Group";
-import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import { Avatar, Chip, IconButton, Tooltip } from "@mui/material";
+import { Clock3, CheckCircle2, Users, ArrowRightLeft, Eye, MoreHorizontal } from "lucide-react";
+import {
+  Avatar,
+  Button,
+  Chip,
+  IconButton,
+  ListItemIcon,
+  Menu,
+  MenuItem,
+  Tooltip,
+} from "@mui/material";
+import { useEffect, useId, useRef, useState } from "react";
 import type { MonitorOperational } from "../types";
 
 export interface MonitorCardProps {
@@ -31,16 +37,16 @@ export interface MonitorCardProps {
   handleTransfer?: (() => void) | null;
   handleView?: (() => void) | null;
   handleFinish?: (() => void) | null;
+  onMenuOpenChange?: (open: boolean) => void;
 }
 
-const typeConfig = {
-  "external-chat": { color: "#4f46e5", label: "Atendimento" },
-  "finished-chat": { color: "#64748b", label: "Finalizado" },
-  "internal-chat": { color: "#9333ea", label: "Conversa interna" },
-  "internal-group": { color: "#0d9488", label: "Grupo interno" },
-  schedule: { color: "#d97706", label: "Agendamento" },
+const typeLabels = {
+  "external-chat": "Atendimento",
+  "finished-chat": "Finalizado",
+  "internal-chat": "Conversa interna",
+  "internal-group": "Grupo interno",
+  schedule: "Agendamento",
 };
-
 const statusLabels = {
   in_progress: "Em atendimento",
   waiting_agent: "Aguardando atendente",
@@ -48,7 +54,6 @@ const statusLabels = {
   finished: "Finalizado",
   scheduled: "Agendado",
 };
-
 const deliveryLabels: Record<string, string> = {
   PENDING: "Envio pendente",
   QUEUED: "Na fila de envio",
@@ -59,7 +64,6 @@ const deliveryLabels: Record<string, string> = {
   ERROR: "Falha no envio",
   SENT: "Enviada",
   DELIVERED: "Entregue",
-  // READ has no tag: a read message is the normal end state and only adds noise.
   RECEIVED: "Entregue",
   DOWNLOADED: "Mídia baixada",
   REVOKED: "Mensagem removida",
@@ -76,7 +80,6 @@ function elapsedTime(value: string) {
   const days = Math.floor(hours / 24);
   return `${days} ${days === 1 ? "dia" : "dias"}${hours % 24 ? ` ${hours % 24} h` : ""}`;
 }
-
 function messageDate(value: string) {
   const date = new Date(value);
   return Number.isFinite(date.getTime())
@@ -111,8 +114,28 @@ export default function MonitorCard({
   handleTransfer,
   handleView,
   handleFinish,
+  onMenuOpenChange,
 }: MonitorCardProps) {
-  const config = typeConfig[type];
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const menuOpen = useRef(false);
+  useEffect(
+    () => () => {
+      // Release only the interlock owned by this card when its row is removed.
+      if (menuOpen.current) onMenuOpenChange?.(false);
+    },
+    [onMenuOpenChange],
+  );
+  const openMenu = (anchor: HTMLElement) => {
+    menuOpen.current = true;
+    onMenuOpenChange?.(true);
+    setMenuAnchor(anchor);
+  };
+  const closeMenu = () => {
+    menuOpen.current = false;
+    setMenuAnchor(null);
+    onMenuOpenChange?.(false);
+  };
+  const menuId = useId();
   const title = groupName || chatTitle || "Conversa sem título";
   const status = operational?.status;
   const waiting = status === "waiting_agent" || status === "waiting_customer";
@@ -130,55 +153,57 @@ export default function MonitorCard({
 
   return (
     <li
-      className={`w-full list-none rounded-xl border border-l-4 border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 ${compact ? "px-3 py-2" : "p-3"}`}
-      style={{ borderLeftColor: operational?.slaBreached ? "#dc2626" : config.color }}
+      className={`ip-result-card w-full min-w-0 list-none rounded-xl border ${compact ? "p-3" : "p-4"}`}
+      style={{
+        borderColor: "var(--ip-border)",
+        background: "var(--ip-surface)",
+        color: "var(--ip-text)",
+      }}
     >
-      <article aria-label={`${title}, ${status ? statusLabels[status] : config.label}`}>
-        {/* Actions sit on the title line (CSS order keeps the DOM order); the compact list
-            puts all three blocks on one line on wide screens. */}
+      <article aria-label={`${title}, ${status ? statusLabels[status] : typeLabels[type]}`}>
         <div
-          className={`flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 ${compact ? "xl:flex-nowrap xl:items-center" : ""}`}
+          className={`grid min-w-0 gap-3 ${compact ? "lg:grid-cols-[minmax(160px,1.2fr)_minmax(110px,.8fr)_minmax(200px,1.4fr)_auto] lg:items-center" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}
         >
-          <div
-            className={`order-1 flex min-w-0 flex-1 gap-3 ${compact ? "xl:w-64 xl:flex-none" : ""}`}
-          >
+          <div className="flex min-w-0 items-center gap-3">
             <Avatar
               alt=""
               src={imageUrl || undefined}
-              sx={{ width: compact ? 36 : 44, height: compact ? 36 : 44, flexShrink: 0 }}
+              sx={{
+                width: 36,
+                height: 36,
+                flexShrink: 0,
+                bgcolor: "var(--ip-accent-soft)",
+                color: "var(--ip-accent)",
+                fontSize: 14,
+              }}
             >
-              {type === "internal-group" ? (
-                <GroupIcon fontSize="small" />
-              ) : (
-                title.charAt(0).toUpperCase()
-              )}
+              {type === "internal-group" ? <Users size={17} /> : title.charAt(0).toUpperCase()}
             </Avatar>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h3 className="min-w-0 break-words text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {title}
-                </h3>
-                {!compact && (
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{config.label}</span>
-                )}
-              </div>
+              <h3 className="break-words text-sm font-semibold" title={title}>
+                {title}
+              </h3>
               <p
-                className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400"
-                title={[userName, sectorName].filter(Boolean).join(" · ")}
+                className="ip-muted mt-0.5 truncate text-xs"
+                title={contactNumber || typeLabels[type]}
               >
-                {userName || "Sem atendente"}
-                {sectorName && ` · ${sectorName}`}
+                {contactNumber || typeLabels[type]}
               </p>
             </div>
           </div>
-
-          <div
-            className={`order-3 min-w-0 basis-full space-y-1 ${compact ? "xl:order-2 xl:flex-1 xl:basis-0" : ""}`}
-          >
+          <div className={`min-w-0 ${compact ? "" : "sm:col-start-1"}`}>
+            <p className="truncate text-sm font-medium" title={userName || undefined}>
+              {userName || "Sem atendente"}
+            </p>
+            <p className="ip-muted mt-0.5 truncate text-xs">
+              {sectorName || "Setor não informado"}
+            </p>
+          </div>
+          <div className={`min-w-0 space-y-1.5 ${compact ? "" : "sm:col-span-2"}`}>
             <div className="flex flex-wrap items-center gap-1.5">
               <Chip
                 size="small"
-                label={status ? statusLabels[status] : config.label}
+                label={status ? statusLabels[status] : typeLabels[type]}
                 color={
                   status === "waiting_agent"
                     ? "warning"
@@ -190,9 +215,7 @@ export default function MonitorCard({
               />
               {operational?.slaBreached && <Chip size="small" color="error" label="Fora do SLA" />}
               {operational?.channel && (
-                <span className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-200">
-                  {operational.channel}
-                </span>
+                <span className="ip-muted text-xs">{operational.channel}</span>
               )}
               {deliveryLabel && (
                 <Chip
@@ -204,41 +227,37 @@ export default function MonitorCard({
               )}
             </div>
             <p
-              className="truncate text-sm text-slate-600 dark:text-slate-300"
+              className="ip-muted truncate text-xs"
               title={operational?.lastMessagePreview || undefined}
             >
               {operational?.lastMessagePreview ||
                 (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
             </p>
             {(waitTime || lastMessageAt || unread > 0) && (
-              <p className="flex flex-wrap items-center gap-x-3 text-xs">
+              <p className="ip-muted flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 {waitTime && (
                   <span
                     className={`inline-flex items-center gap-1 font-medium ${operational?.slaBreached ? "text-red-600 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
                   >
-                    <AccessTimeIcon sx={{ fontSize: 14 }} /> Aguardando há {waitTime}
+                    <Clock3 size={13} aria-hidden="true" />
+                    Aguardando há {waitTime}
                   </span>
                 )}
-                {/* Same unread marker as the attendance chat list: the last message time
-                    turns red with a plain red dot; the count is in the tooltip. */}
                 {(lastMessageAt || unread > 0) && (
                   <span
-                    className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400"
+                    className="inline-flex items-center gap-1.5"
                     title={unread > 0 ? unreadLabel : undefined}
                   >
                     {lastMessageAt && (
-                      <span>
-                        Última mensagem:{" "}
-                        <time
-                          dateTime={operational?.lastMessageAt || undefined}
-                          className={unread > 0 ? "font-semibold text-red-600" : ""}
-                        >
-                          {lastMessageAt}
-                        </time>
-                      </span>
+                      <time
+                        dateTime={operational?.lastMessageAt || undefined}
+                        className={unread > 0 ? "font-semibold text-red-600 dark:text-red-300" : ""}
+                      >
+                        Última mensagem: {lastMessageAt}
+                      </time>
                     )}
                     {unread > 0 && (
-                      <span className="h-3 w-3 shrink-0 rounded-full bg-red-600">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-red-600">
                         <span className="sr-only">{unreadLabel}</span>
                       </span>
                     )}
@@ -247,52 +266,78 @@ export default function MonitorCard({
               </p>
             )}
           </div>
-
           <div
-            className={`order-2 flex shrink-0 items-center gap-1 ${compact ? "xl:order-3 xl:ml-auto" : ""}`}
+            className={`flex min-w-0 items-center justify-end gap-1 ${compact ? "lg:col-start-4 lg:row-start-1" : "sm:col-start-2 sm:row-span-2 sm:row-start-1"}`}
           >
             {handleView && (
-              <Tooltip title="Visualizar conversa" arrow>
-                <IconButton
-                  aria-label={`Visualizar conversa de ${title}`}
-                  onClick={handleView}
-                  size="small"
-                  color="primary"
-                >
-                  <VisibilityIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              <Button
+                variant="outlined"
+                size="small"
+                aria-label={`Visualizar conversa de ${title}`}
+                onClick={handleView}
+                startIcon={<Eye size={15} />}
+              >
+                Visualizar
+              </Button>
             )}
-            {handleTransfer && (
-              <Tooltip title="Transferir atendimento" arrow>
-                <IconButton
-                  aria-label={`Transferir atendimento de ${title}`}
-                  onClick={handleTransfer}
-                  size="small"
-                  color="primary"
+            {(handleTransfer || handleFinish) && (
+              <>
+                <Tooltip title="Mais ações">
+                  <IconButton
+                    aria-label={`Mais ações de ${title}`}
+                    aria-haspopup="menu"
+                    aria-expanded={Boolean(menuAnchor)}
+                    aria-controls={menuAnchor ? menuId : undefined}
+                    onClick={(event) => openMenu(event.currentTarget)}
+                    size="small"
+                  >
+                    <MoreHorizontal size={19} />
+                  </IconButton>
+                </Tooltip>
+                <Menu
+                  id={menuId}
+                  anchorEl={menuAnchor}
+                  open={Boolean(menuAnchor)}
+                  onClose={closeMenu}
                 >
-                  <SyncAltIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-            {handleFinish && (
-              <Tooltip title="Finalizar atendimento" arrow>
-                <IconButton
-                  aria-label={`Finalizar atendimento de ${title}`}
-                  onClick={handleFinish}
-                  size="small"
-                  color="success"
-                >
-                  <AssignmentTurnedInIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+                  {handleTransfer && (
+                    <MenuItem
+                      aria-label={`Transferir atendimento de ${title}`}
+                      onClick={() => {
+                        closeMenu();
+                        handleTransfer();
+                      }}
+                    >
+                      <ListItemIcon>
+                        <ArrowRightLeft size={16} />
+                      </ListItemIcon>
+                      Transferir atendimento
+                    </MenuItem>
+                  )}
+                  {handleFinish && (
+                    <MenuItem
+                      aria-label={`Finalizar atendimento de ${title}`}
+                      onClick={() => {
+                        closeMenu();
+                        handleFinish();
+                      }}
+                    >
+                      <ListItemIcon>
+                        <CheckCircle2 size={16} />
+                      </ListItemIcon>
+                      Finalizar atendimento
+                    </MenuItem>
+                  )}
+                </Menu>
+              </>
             )}
           </div>
         </div>
-
         {!compact && (
-          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            {contactNumber && <span>Telefone: {contactNumber}</span>}
+          <div
+            className="ip-muted mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3 text-xs"
+            style={{ borderColor: "var(--ip-border)" }}
+          >
             {customerName && <span>Cliente: {customerName}</span>}
             {customerDocument && <span>Documento: {customerDocument}</span>}
             {type === "internal-group" && (
@@ -308,8 +353,8 @@ export default function MonitorCard({
         {(isScheduled || type === "schedule") && (
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-amber-700 dark:text-amber-300">
             <span className="inline-flex items-center gap-1">
-              <AccessTimeIcon sx={{ fontSize: 14 }} /> Agendado para:{" "}
-              {scheduledFor || "Data não informada"}
+              <Clock3 size={14} aria-hidden="true" />
+              Agendado para: {scheduledFor || "Data não informada"}
             </span>
             {!compact && scheduledAt && <span>Criado em: {scheduledAt}</span>}
           </div>

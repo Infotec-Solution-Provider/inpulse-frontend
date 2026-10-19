@@ -1,8 +1,7 @@
 "use client";
 
-import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import { Button, Chip, Tooltip } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
+import { CalendarClock, Eye, Pencil, Phone, UserRound } from "lucide-react";
 import type { TelephonyMonitorItem, TelephonyMonitorMode, TelephonyMonitorView } from "../types";
 import { displayDate, displayDuration, displayMonth, telephonyModes } from "./presentation";
 
@@ -17,14 +16,15 @@ interface TelephonyResultsProps {
 
 function Activity({ item }: { item: TelephonyMonitorItem }) {
   return (
-    <div className="space-y-1 text-xs">
-      <p>
-        {item.metrics.monthCalls} {item.metrics.monthCalls === 1 ? "ligação" : "ligações"} ·{" "}
-        {item.metrics.monthContacts} {item.metrics.monthContacts === 1 ? "contato" : "contatos"}
+    <div className="space-y-1.5 text-xs">
+      <p className="tabular-nums">
+        <strong className="font-medium">{item.metrics.monthCalls}</strong>{" "}
+        {item.metrics.monthCalls === 1 ? "ligação" : "ligações"}
+        <span className="ip-muted"> · </span>
+        <strong className="font-medium">{item.metrics.monthContacts}</strong>{" "}
+        {item.metrics.monthContacts === 1 ? "contato" : "contatos"}
       </p>
-      {item.metrics.neverWorked && (
-        <Chip size="small" variant="outlined" label="Nunca trabalhado" />
-      )}
+      {item.metrics.neverWorked && <span className="ip-badge">Nunca trabalhado</span>}
     </div>
   );
 }
@@ -32,44 +32,50 @@ function Activity({ item }: { item: TelephonyMonitorItem }) {
 function EventInfo({ item, mode }: { item: TelephonyMonitorItem; mode: TelephonyMonitorMode }) {
   if (mode === "schedules")
     return (
-      <div className="space-y-0.5">
-        <p className="font-medium">{displayDate(item.schedule?.at ?? null)}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {item.schedule?.campaignName || "Sem campanha"}
-          {item.schedule?.operatorName ? ` · ${item.schedule.operatorName}` : ""}
+      <div className="space-y-1">
+        <p className="flex items-start gap-1.5 font-semibold tabular-nums">
+          <CalendarClock size={15} className="mt-0.5 shrink-0 text-[var(--ip-accent)]" />
+          {displayDate(item.schedule?.at ?? null)}
+        </p>
+        <p className="ip-muted text-xs">{item.schedule?.campaignName || "Sem campanha"}</p>
+        <p className="text-xs">
+          <span className="ip-muted">Operador da agenda: </span>
+          {item.schedule?.operatorName || "Sem operador"}
         </p>
       </div>
     );
   if (mode === "calls")
     return (
-      <div className="space-y-0.5">
-        <p className="font-medium">
+      <div className="space-y-1">
+        <p className="flex items-start gap-1.5 font-semibold tabular-nums">
+          <Phone size={15} className="mt-0.5 shrink-0 text-[var(--ip-accent)]" />
           {displayDate(item.call?.startedAt ?? item.call?.finishedAt ?? null)}
         </p>
         {!item.call?.startedAt && item.call?.finishedAt && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Data de finalização; início não informado.
-          </p>
+          <p className="ip-muted text-xs">Data de finalização; início não informado.</p>
         )}
         <p className="text-xs">
           {item.call?.result || "Resultado não informado"}
-          <span className="text-slate-500 dark:text-slate-400">
-            {" · "}
-            {displayDuration(item.call?.durationSeconds ?? null)}
-            {item.call?.operatorName ? ` · ${item.call.operatorName}` : ""}
-          </span>
+          <span className="ip-muted"> · {displayDuration(item.call?.durationSeconds ?? null)}</span>
         </p>
+        {item.call?.operatorName && (
+          <p className="text-xs">
+            <span className="ip-muted">Operador da ligação: </span>
+            {item.call.operatorName}
+          </p>
+        )}
         {item.call?.phone && item.call.phone !== item.customer.phone && (
-          <p className="text-xs">Telefone utilizado: {item.call.phone}</p>
+          <p className="ip-muted text-xs">Telefone utilizado: {item.call.phone}</p>
         )}
       </div>
     );
   return (
-    <div className="space-y-0.5">
-      <p>Último contato: {displayDate(item.metrics.lastContactAt, false)}</p>
-      <p className="text-xs text-slate-500 dark:text-slate-400">
-        Última compra: {displayDate(item.metrics.lastPurchaseAt, false)}
+    <div className="space-y-1 text-xs">
+      <p>
+        Último contato:{" "}
+        <span className="tabular-nums">{displayDate(item.metrics.lastContactAt, false)}</span>
       </p>
+      <p className="ip-muted">Última compra: {displayDate(item.metrics.lastPurchaseAt, false)}</p>
     </div>
   );
 }
@@ -77,26 +83,18 @@ function EventInfo({ item, mode }: { item: TelephonyMonitorItem; mode: Telephony
 function CustomerInfo({ item }: { item: TelephonyMonitorItem }) {
   const { customer } = item;
   return (
-    <div className="space-y-0.5">
-      <p className="break-words">
-        <span className="font-semibold text-slate-900 dark:text-slate-100">
-          {customer.name || `Cliente #${customer.id}`}
-        </span>
-        {customer.tradeName && customer.tradeName !== customer.name && (
-          <span className="ml-1.5 text-xs text-slate-500 dark:text-slate-400">
-            {customer.tradeName}
-          </span>
-        )}
-      </p>
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+    <div className="min-w-0 space-y-1">
+      <p className="break-words font-semibold">{customer.name || `Cliente #${customer.id}`}</p>
+      {customer.tradeName && customer.tradeName !== customer.name && (
+        <p className="ip-muted break-words text-xs">{customer.tradeName}</p>
+      )}
+      <p className="ip-muted break-words text-xs">
         #{customer.id}
         {customer.document ? ` · ${customer.document}` : ""}
-        {customer.phone && (
-          <span className="text-slate-700 dark:text-slate-200"> · {customer.phone}</span>
-        )}
       </p>
+      {customer.phone && <p className="text-xs tabular-nums">{customer.phone}</p>}
       {(customer.city || customer.state) && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="ip-muted break-words text-xs">
           {[customer.neighborhood, customer.city, customer.state].filter(Boolean).join(" · ")}
         </p>
       )}
@@ -114,50 +112,43 @@ export default function TelephonyResults({
 }: TelephonyResultsProps) {
   const eventLabel =
     mode === "schedules" ? "Agendamento" : mode === "calls" ? "Ligação" : "Atividade recente";
-  const preview = (item: TelephonyMonitorItem) => (
-    <div className="flex flex-wrap gap-1">
+  const actions = (item: TelephonyMonitorItem) => (
+    <div className="ip-actions flex flex-col items-start gap-1">
+      {mode === "schedules" && item.schedule && (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<Pencil size={14} />}
+          onClick={() => onEditSchedule(item.schedule!.id)}
+          aria-label={`Editar agendamento ${item.schedule.id} de ${item.customer.name || item.customer.id}`}
+          sx={{ whiteSpace: "nowrap" }}
+        >
+          Editar agendamento
+        </Button>
+      )}
       <Button
         size="small"
-        startIcon={<VisibilityOutlinedIcon />}
+        startIcon={<Eye size={15} />}
         onClick={() => onPreview(item.customer.id)}
         aria-label={`Ver cliente ${item.customer.name || item.customer.id}`}
         sx={{ whiteSpace: "nowrap" }}
       >
         Ver cliente
       </Button>
-      {mode === "schedules" && item.schedule && (
-        <Button
-          size="small"
-          startIcon={<EditOutlinedIcon />}
-          onClick={() => onEditSchedule(item.schedule!.id)}
-          aria-label={`Editar agendamento ${item.schedule.id} de ${item.customer.name || item.customer.id}`}
-        >
-          Editar agendamento
-        </Button>
-      )}
     </div>
   );
-
-  // Compact: a table on desktop (cards below lg, where a table would not fit).
-  // Cards: the card layout at every width, as a grid on desktop.
   return (
     <>
       {view === "compact" && (
-        <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:block">
-          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-200">
+        <div className="ip-results hidden lg:block" style={{ overflowX: "auto" }}>
+          <table className="ip-table w-full text-left text-sm">
             <caption className="sr-only">{telephonyModes[mode].description}</caption>
-            <thead className="border-b border-slate-200 bg-slate-50 text-xs dark:border-slate-700 dark:bg-slate-900">
+            <thead>
               <tr>
-                <th scope="col" className="px-3 py-2">
-                  Cliente
-                </th>
-                <th scope="col" className="px-3 py-2">
-                  {eventLabel}
-                </th>
-                <th scope="col" className="px-3 py-2">
-                  Operador do cliente
-                </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col">Cliente</th>
+                <th scope="col">{eventLabel}</th>
+                <th scope="col">Operador do cliente</th>
+                <th scope="col">
                   <Tooltip
                     describeChild
                     title="Contatos telefônicos efetivos e registros de ligações no mês de referência."
@@ -165,36 +156,32 @@ export default function TelephonyResults({
                     <span tabIndex={0}>Atividade em {displayMonth(referenceMonth)}</span>
                   </Tooltip>
                 </th>
-                <th scope="col" className="px-3 py-2">
-                  Previsão de recompra
-                </th>
-                <th scope="col" className="px-3 py-2">
-                  Detalhes
+                <th scope="col">Previsão de recompra</th>
+                <th scope="col">
+                  <span className="sr-only">Ações</span>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+            <tbody>
               {items.map((item) => (
-                <tr
-                  key={item.id}
-                  className="align-top hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                >
-                  <td className="min-w-44 px-3 py-2">
+                <tr key={item.id} className="align-top">
+                  <td className="min-w-44">
                     <CustomerInfo item={item} />
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="min-w-44">
                     <EventInfo item={item} mode={mode} />
                   </td>
-                  <td className="px-3 py-2 text-xs">
+                  <td className="text-xs">
                     {item.customer.operatorName || "Sem operador"}
+                    <span className="ip-muted mt-1 block text-[11px]">Cadastro do cliente</span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td>
                     <Activity item={item} />
                   </td>
-                  <td className="px-3 py-2 text-xs">
+                  <td className="text-xs tabular-nums">
                     {displayDate(item.metrics.nextRepurchaseAt, false)}
                   </td>
-                  <td className="px-2 py-1">{preview(item)}</td>
+                  <td>{actions(item)}</td>
                 </tr>
               ))}
             </tbody>
@@ -204,38 +191,41 @@ export default function TelephonyResults({
       <ul
         aria-label={telephonyModes[mode].label}
         className={
-          view === "cards" ? "grid gap-2 lg:grid-cols-2 2xl:grid-cols-3" : "space-y-2 lg:hidden"
+          view === "cards"
+            ? "grid min-w-0 gap-3 xl:grid-cols-2 2xl:grid-cols-3"
+            : "min-w-0 space-y-3 lg:hidden"
         }
       >
         {items.map((item) => (
-          <li
-            key={item.id}
-            className="flex flex-col rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          >
+          <li key={item.id} className="ip-result-card flex min-w-0 flex-col p-4 text-sm">
             <CustomerInfo item={item} />
-            <div className="mt-2 border-t border-slate-100 pt-2 dark:border-slate-700">
-              <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">{eventLabel}</p>
+            <div className="my-3 border-y border-[var(--ip-border)] py-3">
+              <p className="ip-muted mb-1.5 text-xs">{eventLabel}</p>
               <EventInfo item={item} mode={mode} />
             </div>
-            <dl className="mt-2 grid grid-cols-2 gap-3 text-xs">
+            <dl className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <dt className="text-slate-500 dark:text-slate-400">Operador do cliente</dt>
-                <dd className="mt-1">{item.customer.operatorName || "Sem operador"}</dd>
+                <dt className="ip-muted flex items-center gap-1">
+                  <UserRound size={12} />
+                  Operador do cliente
+                </dt>
+                <dd className="mt-1 break-words">{item.customer.operatorName || "Sem operador"}</dd>
               </div>
               <div>
-                <dt className="text-slate-500 dark:text-slate-400">Previsão de recompra</dt>
-                <dd className="mt-1">{displayDate(item.metrics.nextRepurchaseAt, false)}</dd>
+                <dt className="ip-muted">Previsão de recompra</dt>
+                <dd className="mt-1 tabular-nums">
+                  {displayDate(item.metrics.nextRepurchaseAt, false)}
+                </dd>
               </div>
             </dl>
-            {/* mt-auto aligns the activity row to the bottom of equal-height grid cards. */}
-            <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
+            <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-4">
               <div>
-                <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="ip-muted mb-1.5 text-xs">
                   Atividade em {displayMonth(referenceMonth)}
                 </p>
                 <Activity item={item} />
               </div>
-              {preview(item)}
+              {actions(item)}
             </div>
           </li>
         ))}

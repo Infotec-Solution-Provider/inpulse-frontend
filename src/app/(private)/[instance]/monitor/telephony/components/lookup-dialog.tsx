@@ -1,7 +1,6 @@
 "use client";
 
-import CloseIcon from "@mui/icons-material/Close";
-import SearchIcon from "@mui/icons-material/Search";
+import { Search, X } from "lucide-react";
 import {
   Alert,
   Button,
@@ -40,6 +39,8 @@ interface LookupDialogProps {
   loadPage: (request: LookupPageRequest) => Promise<TelephonyLookupResult>;
   onConfirm: (options: TelephonyLookupOption[]) => void;
   onClose: () => void;
+  /** Reuses the current panel or editor; no second modal or focus trap. */
+  embedded?: boolean;
 }
 
 export default function TelephonyLookupDialog({
@@ -52,6 +53,7 @@ export default function TelephonyLookupDialog({
   loadPage,
   onConfirm,
   onClose,
+  embedded = false,
 }: LookupDialogProps) {
   const [selection, setSelection] = useState(
     () => new Map(initialSelection.map((option) => [option.id, option])),
@@ -137,32 +139,29 @@ export default function TelephonyLookupDialog({
       return next;
     });
 
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      fullWidth
-      maxWidth="sm"
-      aria-labelledby="telephony-lookup-title"
-      slotProps={{ paper: { sx: dialogPaperSx } }}
-    >
-      <DialogTitle
-        id="telephony-lookup-heading"
-        className="flex items-center justify-between gap-2"
-      >
-        <span id="telephony-lookup-title">{title}</span>
-        <IconButton
-          aria-label={`Fechar seleção de ${title.toLowerCase()}`}
-          onClick={onClose}
-          size="small"
+  const content = (
+    <>
+      {!embedded && (
+        <DialogTitle
+          id="telephony-lookup-heading"
+          className="flex items-center justify-between gap-2"
         >
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent dividers>
-        {description && (
-          <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">{description}</p>
-        )}
+          <span id="telephony-lookup-title">{title}</span>
+          <IconButton
+            aria-label={`Fechar seleção de ${title.toLowerCase()}`}
+            onClick={onClose}
+            size="small"
+          >
+            <X size={18} />
+          </IconButton>
+        </DialogTitle>
+      )}
+      <DialogContent
+        dividers={!embedded}
+        sx={{ px: embedded ? 0 : 3, pt: embedded ? 0 : undefined }}
+        className="min-h-0 flex-1"
+      >
+        {description && <p className="ip-muted mb-3 text-sm">{description}</p>}
         <form
           className="mb-3 flex gap-2"
           onSubmit={(event) => {
@@ -184,7 +183,7 @@ export default function TelephonyLookupDialog({
           <Button
             type="submit"
             variant="outlined"
-            startIcon={<SearchIcon />}
+            startIcon={<Search size={16} />}
             disabled={retrySeconds > 0}
           >
             Buscar
@@ -220,10 +219,7 @@ export default function TelephonyLookupDialog({
               {retrySeconds > 0 ? `Aguarde ${retrySeconds}s para carregar` : "Carregando opções…"}
             </div>
           ) : !error && items.length === 0 ? (
-            <p
-              role="status"
-              className="py-8 text-center text-sm text-slate-500 dark:text-slate-400"
-            >
+            <p role="status" className="ip-muted py-8 text-center text-sm">
               Nenhuma opção encontrada para esta pesquisa.
             </p>
           ) : (
@@ -235,7 +231,7 @@ export default function TelephonyLookupDialog({
               {items.map((option) => (
                 <label
                   key={option.id}
-                  className="flex cursor-pointer items-start gap-2 rounded-lg border-b border-slate-100 px-1 py-1.5 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"
+                  className="flex cursor-pointer items-start gap-2 rounded-lg border-b border-[var(--ip-border)] px-1 py-1.5 hover:bg-[var(--ip-surface-muted)]"
                 >
                   {multiple ? (
                     <Checkbox
@@ -255,11 +251,11 @@ export default function TelephonyLookupDialog({
                     />
                   )}
                   <span className="min-w-0 py-1.5">
-                    <span className="block break-words text-sm text-slate-800 dark:text-slate-100">
+                    <span className="block break-words text-sm text-[var(--ip-text)]">
                       {option.label}
                     </span>
                     {option.description && (
-                      <span className="mt-0.5 block break-words text-xs text-slate-500 dark:text-slate-400">
+                      <span className="ip-muted mt-0.5 block break-words text-xs">
                         {option.description}
                       </span>
                     )}
@@ -271,18 +267,17 @@ export default function TelephonyLookupDialog({
         </div>
         {!loading && !error && totalCount > 0 && (
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-slate-500 dark:text-slate-400">
-              {totalCount.toLocaleString("pt-BR")} opções
-            </span>
+            <span className="ip-muted text-xs">{totalCount.toLocaleString("pt-BR")} opções</span>
             <Pagination
               count={Math.max(1, Math.ceil(totalCount / pageSize))}
               page={page}
               onChange={(_event, next) => setPage(next)}
               size="small"
+              siblingCount={0}
             />
           </div>
         )}
-        <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
+        <div className="mt-4 border-t border-[var(--ip-border)] pt-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-sm font-medium">
               {selection.size}
@@ -308,10 +303,12 @@ export default function TelephonyLookupDialog({
               />
             ))}
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{selectionHint}</p>
+          <p className="ip-muted mt-2 text-xs">{selectionHint}</p>
         </div>
       </DialogContent>
-      <DialogActions>
+      <DialogActions
+        sx={{ flexShrink: 0, px: embedded ? 0 : 3, pt: 2, pb: embedded ? 0 : 2, gap: 1 }}
+      >
         <Button onClick={onClose}>Cancelar</Button>
         <Button
           variant="contained"
@@ -321,6 +318,20 @@ export default function TelephonyLookupDialog({
           Confirmar seleção
         </Button>
       </DialogActions>
+    </>
+  );
+  if (embedded)
+    return <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{content}</div>;
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      aria-labelledby="telephony-lookup-title"
+      slotProps={{ paper: { sx: dialogPaperSx } }}
+    >
+      {content}
     </Dialog>
   );
 }

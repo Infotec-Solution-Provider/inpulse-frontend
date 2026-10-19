@@ -51,6 +51,7 @@ interface CustomerCrmDetailModalProps {
   customerId: number;
   onClose: () => void;
   canEdit: boolean;
+  presentation?: "modal" | "panel";
 }
 
 function getWhatsappChatTypeLabel(chatType?: string | null) {
@@ -149,7 +150,7 @@ function getUniqueOptions(values: Array<string | null | undefined>) {
   ).sort((left, right) => left.localeCompare(right, "pt-BR"));
 }
 
-export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }: CustomerCrmDetailModalProps) {
+export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, presentation = "modal" }: CustomerCrmDetailModalProps) {
   const { token } = useAuthContext();
   const [tab, setTab] = useState<TabValue>("main");
   const [loading, setLoading] = useState(true);
@@ -2003,8 +2004,8 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
   };
 
   return (
-    <aside className="mx-2 my-4 flex h-[90vh] w-[95vw] max-w-6xl flex-col rounded-xl bg-white p-4 shadow-xl dark:bg-slate-900">
-      <header className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
+    <aside className={presentation === "panel" ? "ip-customer-detail flex min-h-0 min-w-0 flex-1 flex-col text-[var(--ip-text)]" : "mx-2 my-4 flex h-[90vh] w-[95vw] max-w-6xl flex-col rounded-xl bg-white p-4 shadow-xl dark:bg-slate-900"}>
+      {presentation === "modal" && <header className="mb-3 flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-700">
         <div>
           <Typography variant="h6" fontWeight={700} sx={{ color: "rgb(15 23 42)" }} className="dark:!text-slate-100">
             Detalhes do cliente
@@ -2016,7 +2017,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         <IconButton onClick={onClose}>
           <CloseIcon />
         </IconButton>
-      </header>
+      </header>}
 
       {loading ? (
         <div className="flex flex-1 items-center justify-center">
@@ -2042,7 +2043,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
             <Tab value="agenda" label="Agenda" icon={<CalendarMonthIcon fontSize="small" />} iconPosition="start" />
           </Tabs>
 
-          <div className="scrollbar-whatsapp min-h-0 flex-1 overflow-y-auto">
+          <div className={presentation === "panel" ? "scrollbar-whatsapp min-h-0 min-w-0 flex-1 overflow-y-auto" : "scrollbar-whatsapp min-h-0 flex-1 overflow-y-auto"}>
             <div className="px-1 py-3">{renderCurrentTab()}</div>
           </div>
         </>

@@ -1,0 +1,65 @@
+.ip-ui .ip-customer-detail {
+  container-type: inline-size;
+}
+.ip-ui .ip-customer-detail :is(.text-slate-500, .text-slate-600, .text-slate-400) {
+  color: var(--ip-muted) !important;
+}
+.ip-ui
+  .ip-customer-detail
+  :is(
+    .text-slate-700,
+    .text-slate-800,
+    .text-slate-900,
+    .dark\:\!text-slate-100,
+    .dark\:\!text-slate-200
+  ) {
+  color: var(--ip-text);
+}
+.ip-ui
+  .ip-customer-detail
+  :is(.bg-white, .bg-slate-50, .bg-slate-100, .bg-slate-800, .dark\:bg-slate-800) {
+  background-color: var(--ip-surface-muted);
+}
+.ip-ui
+  .ip-customer-detail
+  :is(
+    .border-slate-100,
+    .border-slate-200,
+    .border-slate-700,
+    .divide-slate-100,
+    .divide-slate-800
+  ) {
+  border-color: var(--ip-border);
+}
+.ip-ui .ip-customer-detail .MuiTab-root {
+  min-height: 44px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.ip-ui .ip-customer-detail .MuiTabs-root {
+  flex-shrink: 0;
+  min-height: 44px;
+}
+.ip-ui .ip-customer-detail .MuiTab-icon {
+  width: 16px;
+  height: 16px;
+}
+.ip-ui .ip-customer-detail .MuiTextField-root {
+  min-width: 0;
+}
+@container (max-width: 900px) {
+  .ip-ui .ip-customer-detail :is(.md\:grid-cols-4, .xl\:grid-cols-6) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 600px) {
+  .ip-ui .ip-customer-detail :is(.md\:grid-cols-2, .md\:grid-cols-4, .xl\:grid-cols-6) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ip-ui .ip-customer-detail :is(.md\:col-span-2, .md\:col-span-3) {
+    grid-column: auto;
+  }
+  .ip-ui .ip-customer-detail .MuiPagination-ul {
+    flex-wrap: wrap;
+  }
+}

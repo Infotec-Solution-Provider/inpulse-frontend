@@ -2,8 +2,7 @@
 
 import { useAuthContext } from "@/app/auth-context";
 import telephonyMonitorService from "@/lib/services/telephony-monitor.service";
-import SearchOffIcon from "@mui/icons-material/SearchOff";
-import { Alert, Button, Modal, Skeleton } from "@mui/material";
+import { Alert, Button, Skeleton } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import CustomerCrmDetailModal from "../../../(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import useTelephonyMonitor from "../use-telephony-monitor";
@@ -28,6 +27,8 @@ import TelephonyToolbar from "./toolbar";
 import { telephonyModes } from "./presentation";
 import TelephonyAppliedFilters from "./applied-filters";
 import ScheduleEditDialog from "./schedule-edit-dialog";
+import { MonitorEmptyState, OperationalPanel } from "@/lib/ui-system";
+import "./customer-detail-panel.css";
 
 function ScopedTelephonyMonitor() {
   const { instance, user } = useAuthContext();
@@ -95,6 +96,14 @@ function ScopedTelephonyMonitor() {
     },
     [activeLookup, statesKey, citiesKey],
   );
+  const closeLookup = () => {
+    const kind = activeLookup;
+    setActiveLookup(null);
+    if (kind)
+      window.requestAnimationFrame(() =>
+        document.getElementById(`telephony-lookup-${kind}`)?.focus(),
+      );
+  };
   const confirmLookup = (options: TelephonyLookupOption[]) => {
     if (!activeLookup) return;
     setKnownOptions((current) => ({
@@ -106,7 +115,7 @@ function ScopedTelephonyMonitor() {
       ),
     }));
     state.setFilters((current) => applyLookupSelection(current, activeLookup, options));
-    setActiveLookup(null);
+    closeLookup();
   };
   const cooldown = state.retryAfterUntil
     ? Math.max(0, Math.ceil((state.retryAfterUntil - now) / 1_000))
@@ -115,7 +124,7 @@ function ScopedTelephonyMonitor() {
 
   return (
     <section
-      className="flex min-h-0 w-full flex-col gap-2 p-3 md:px-5 lg:h-full lg:overflow-y-auto"
+      className="ip-page flex min-h-0 w-full min-w-0 flex-col gap-4 lg:h-full lg:overflow-hidden"
       aria-label="Monitoria de telefonia"
     >
       <TelephonyToolbar
@@ -141,8 +150,39 @@ function ScopedTelephonyMonitor() {
         getSelection={getSelection}
         open={filtersOpen}
         onOpenChange={setFiltersOpen}
+        onLookupBack={closeLookup}
+        lookupTitle={activeLookup ? lookupFields[activeLookup].label : undefined}
+        lookupContent={
+          activeLookup ? (
+            <TelephonyLookupDialog
+              embedded
+              key={activeLookup}
+              title={lookupFields[activeLookup].label}
+              multiple={lookupFields[activeLookup].multiple}
+              description={
+                activeLookup === "customers"
+                  ? "Pesquise por código, nome, CPF/CNPJ ou telefone."
+                  : activeLookup === "cities"
+                    ? "As cidades pertencem aos estados selecionados."
+                    : activeLookup === "neighborhoods"
+                      ? "Os bairros pertencem às cidades selecionadas. Cidade e estado identificam cada bairro."
+                      : activeLookup === "operators"
+                        ? "Filtra pelo operador vinculado ao cliente."
+                        : undefined
+              }
+              initialSelection={getSelection(activeLookup)}
+              loadPage={loadLookupPage}
+              onConfirm={confirmLookup}
+              onClose={closeLookup}
+            />
+          ) : undefined
+        }
       >
-        <TelephonyAppliedFilters state={state} knownOptions={knownOptions} />
+        <TelephonyAppliedFilters
+          state={state}
+          knownOptions={knownOptions}
+          onShowAll={() => setFiltersOpen(true)}
+        />
       </TelephonyFilters>
       {state.error && (
         <Alert
@@ -164,7 +204,7 @@ function ScopedTelephonyMonitor() {
         </Alert>
       )}
       <div
-        className="min-h-0 flex-1 lg:min-h-32 lg:overflow-y-auto"
+        className="min-h-0 min-w-0 flex-1 lg:min-h-32 lg:overflow-y-auto"
         aria-label="Resultados da telefonia"
         aria-busy={busy}
       >
@@ -187,21 +227,12 @@ function ScopedTelephonyMonitor() {
             }}
           />
         ) : !state.error ? (
-          <div
-            role="status"
-            className="flex min-h-48 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 p-5 text-center dark:border-slate-700"
-          >
-            <SearchOffIcon className="text-slate-400" sx={{ fontSize: 40 }} />
-            <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200">
-              Nenhum resultado em {telephonyModes[mode].label.toLowerCase()}
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Ajuste os filtros aplicados ou atualize a lista.
-            </p>
-            <Button onClick={state.refetch} disabled={busy || cooldown > 0}>
-              Atualizar lista
-            </Button>
-          </div>
+          <MonitorEmptyState
+            title={`Nenhum resultado em ${telephonyModes[mode].label.toLowerCase()}`}
+            description="Ajuste os filtros aplicados ou atualize a lista."
+            onRefresh={state.refetch}
+            busy={busy || cooldown > 0}
+          />
         ) : null}
       </div>
       <TelephonyPagination state={state} />
@@ -217,47 +248,21 @@ function ScopedTelephonyMonitor() {
           }}
         />
       )}
-      {activeLookup && (
-        <TelephonyLookupDialog
-          key={activeLookup}
-          title={lookupFields[activeLookup].label}
-          multiple={lookupFields[activeLookup].multiple}
-          description={
-            activeLookup === "customers"
-              ? "Pesquise por código, nome, CPF/CNPJ ou telefone."
-              : activeLookup === "cities"
-                ? "As cidades pertencem aos estados selecionados."
-                : activeLookup === "neighborhoods"
-                  ? "Os bairros pertencem às cidades selecionadas. Cidade e estado identificam cada bairro."
-                  : activeLookup === "operators"
-                    ? "Filtra pelo operador vinculado ao cliente."
-                    : undefined
-          }
-          initialSelection={getSelection(activeLookup)}
-          loadPage={loadLookupPage}
-          onConfirm={confirmLookup}
-          onClose={() => setActiveLookup(null)}
-        />
-      )}
       {previewCustomerId !== null && (
-        // Same wrapper as the app-wide openModal: the detail card sizes and paints itself,
-        // so a Dialog paper around it only adds a gray strip. Kept local so it closes
-        // together with this tenant-scoped view.
-        <Modal
+        <OperationalPanel
           open
-          onClose={(_event, reason) => {
-            if (reason !== "backdropClick") setPreviewCustomerId(null);
-          }}
-          className="flex items-center justify-center"
+          title="Detalhes do cliente"
+          description={`Cliente #${previewCustomerId} · Somente leitura`}
+          width={720}
+          onClose={() => setPreviewCustomerId(null)}
         >
-          <div role="dialog" aria-modal="true" aria-label="Detalhes do cliente" tabIndex={-1}>
-            <CustomerCrmDetailModal
-              customerId={previewCustomerId}
-              canEdit={false}
-              onClose={() => setPreviewCustomerId(null)}
-            />
-          </div>
-        </Modal>
+          <CustomerCrmDetailModal
+            customerId={previewCustomerId}
+            canEdit={false}
+            presentation="panel"
+            onClose={() => setPreviewCustomerId(null)}
+          />
+        </OperationalPanel>
       )}
     </section>
   );

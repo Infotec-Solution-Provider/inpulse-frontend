@@ -1,17 +1,10 @@
 "use client";
 
-import CloseIcon from "@mui/icons-material/Close";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import SearchIcon from "@mui/icons-material/Search";
+import { ArrowLeft, CircleHelp, Search, SlidersHorizontal } from "lucide-react";
+import { OperationalPanel } from "@/lib/ui-system";
 import {
-  Badge,
   Button,
   Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   InputAdornment,
@@ -19,13 +12,12 @@ import {
   TextField,
   Tooltip,
 } from "@mui/material";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { createTelephonyFilters } from "../filter-state";
 import type useTelephonyMonitor from "../use-telephony-monitor";
 import type { TelephonyLookupKind, TelephonyLookupOption, TelephonyMonitorFilters } from "../types";
 import { TelephonyDateField, TelephonyLookupField } from "./filter-fields";
 import { lookupFields, selectedLookupIds } from "./lookup-fields";
-import { dialogPaperSx, surface, surfaceBorder } from "../../surface";
 
 interface TelephonyFiltersProps {
   state: ReturnType<typeof useTelephonyMonitor>;
@@ -35,6 +27,9 @@ interface TelephonyFiltersProps {
   onOpenChange: (open: boolean) => void;
   /** Applied-filter chips, shown beside the search. */
   children?: ReactNode;
+  lookupContent?: ReactNode;
+  lookupTitle?: string;
+  onLookupBack?: () => void;
 }
 
 const customerKinds = [
@@ -75,11 +70,19 @@ export default function TelephonyFilters({
   open,
   onOpenChange,
   children,
+  lookupContent,
+  lookupTitle,
+  onLookupBack,
 }: TelephonyFiltersProps) {
   const { filters, appliedFilters, setFilters, applyFilters, hasUnappliedFilters, isLoading } =
     state;
   // Draft when the dialog opened; cancelling restores it, discarding only dialog edits.
   const snapshot = useRef(filters);
+  const currentFilters = useRef(filters);
+  currentFilters.current = filters;
+  useEffect(() => {
+    if (open) snapshot.current = currentFilters.current;
+  }, [open]);
   const update = <K extends keyof TelephonyMonitorFilters>(
     key: K,
     value: TelephonyMonitorFilters[K],
@@ -100,6 +103,7 @@ export default function TelephonyFilters({
     return (
       <TelephonyLookupField
         key={kind}
+        fieldId={`telephony-lookup-${kind}`}
         {...lookupFields[kind]}
         selection={getSelection(kind)}
         onOpen={() => onLookup(kind)}
@@ -114,9 +118,8 @@ export default function TelephonyFilters({
       />
     );
   };
-  const sectionTitle =
-    "mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
-  const grid = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
+  const sectionTitle = "mb-4 text-sm font-semibold";
+  const grid = "grid min-w-0 gap-4";
 
   return (
     <>
@@ -126,7 +129,7 @@ export default function TelephonyFilters({
           applyFilters();
         }}
         aria-label="Filtros da telefonia"
-        className="flex shrink-0 flex-wrap items-center gap-2"
+        className="ip-toolbar flex shrink-0 flex-wrap items-center gap-2"
       >
         <TextField
           label="Pesquisar cliente ou telefone"
@@ -145,7 +148,7 @@ export default function TelephonyFilters({
                     aria-label="Pesquisar"
                     disabled={isLoading && !hasUnappliedFilters}
                   >
-                    <SearchIcon fontSize="small" />
+                    <Search size={16} />
                   </IconButton>
                 </InputAdornment>
               ),
@@ -153,38 +156,33 @@ export default function TelephonyFilters({
           }}
           sx={{
             width: { xs: "100%", sm: 340 },
-            "& .MuiOutlinedInput-root": { bgcolor: surface },
+            "& .MuiOutlinedInput-root": { bgcolor: "var(--ip-surface)" },
           }}
         />
-        <Tooltip title="Filtros">
-          <IconButton
-            aria-label={
-              appliedCount
-                ? `Filtros, ${appliedCount} ${appliedCount === 1 ? "aplicado" : "aplicados"}`
-                : "Filtros"
-            }
-            aria-haspopup="dialog"
-            onClick={openDialog}
-            sx={{
-              border: 1,
-              borderColor: appliedCount ? "primary.main" : surfaceBorder,
-              borderRadius: 2,
-              bgcolor: surface,
-              "&:hover": { bgcolor: surface },
-            }}
-          >
-            <Badge badgeContent={appliedCount} color="primary">
-              <FilterListIcon color={appliedCount ? "primary" : "action"} />
-            </Badge>
-          </IconButton>
-        </Tooltip>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<SlidersHorizontal size={16} />}
+          aria-label={
+            appliedCount
+              ? `Filtros, ${appliedCount} ${appliedCount === 1 ? "aplicado" : "aplicados"}`
+              : "Filtros"
+          }
+          aria-haspopup="dialog"
+          onClick={openDialog}
+        >
+          Filtros
+          {appliedCount > 0 && (
+            <span className="ml-2 rounded bg-[var(--ip-accent-soft)] px-1.5 text-xs tabular-nums text-[var(--ip-accent)]">
+              {appliedCount}
+            </span>
+          )}
+        </Button>
         {children}
         <p
           role="status"
           className={
-            hasUnappliedFilters && !open
-              ? "basis-full text-xs text-amber-700 dark:text-amber-300"
-              : "sr-only"
+            hasUnappliedFilters && !open ? "basis-full text-xs text-[var(--ip-warning)]" : "sr-only"
           }
         >
           {hasUnappliedFilters
@@ -192,38 +190,59 @@ export default function TelephonyFilters({
             : "Os filtros selecionados estão aplicados."}
         </p>
       </form>
-      <Dialog
+      <OperationalPanel
         open={open}
-        // A stray click outside must not discard the edits; Esc and the buttons close it.
-        onClose={(_event, reason) => {
-          if (reason !== "backdropClick") cancel();
-        }}
-        fullWidth
-        maxWidth="lg"
-        aria-labelledby="telephony-filters-title"
-        slotProps={{ paper: { sx: dialogPaperSx } }}
+        width={480}
+        title={lookupContent ? lookupTitle || "Selecionar filtro" : "Filtros da telefonia"}
+        description={
+          lookupContent
+            ? "Confirme a seleção para voltar ao rascunho dos filtros."
+            : "Combine critérios para encontrar clientes e atividades."
+        }
+        onClose={lookupContent ? onLookupBack || cancel : cancel}
+        headerAction={
+          lookupContent ? (
+            <IconButton aria-label="Voltar aos filtros" onClick={onLookupBack}>
+              <ArrowLeft size={18} />
+            </IconButton>
+          ) : undefined
+        }
+        footer={
+          !lookupContent ? (
+            <>
+              <Button
+                type="button"
+                onClick={() =>
+                  setFilters((current) => ({
+                    ...createTelephonyFilters(current.mode),
+                    searchText: current.searchText,
+                  }))
+                }
+                sx={{ mr: "auto" }}
+              >
+                Limpar
+              </Button>
+              <Button type="button" onClick={cancel}>
+                Cancelar
+              </Button>
+              <Button type="submit" form="telephony-filter-form" variant="contained">
+                Aplicar filtros
+              </Button>
+            </>
+          ) : undefined
+        }
       >
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            applyFilters();
-            onOpenChange(false);
-          }}
-          // Shrink to the dialog height so only the content scrolls and the actions stay visible.
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
-        >
-          <DialogTitle id="telephony-filters-title" sx={{ pr: 7 }}>
-            Filtros da telefonia
-          </DialogTitle>
-          <IconButton
-            aria-label="Fechar filtros"
-            onClick={cancel}
-            sx={{ position: "absolute", right: 12, top: 12 }}
+        {lookupContent || (
+          <form
+            id="telephony-filter-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              applyFilters();
+              onOpenChange(false);
+            }}
+            className="flex min-w-0 flex-col gap-6"
           >
-            <CloseIcon />
-          </IconButton>
-          <DialogContent dividers className="space-y-6">
-            <section aria-labelledby="telephony-filters-telephony">
+            <section className="ip-panel-section" aria-labelledby="telephony-filters-telephony">
               <h3 id="telephony-filters-telephony" className={sectionTitle}>
                 Telefonia
               </h3>
@@ -248,7 +267,7 @@ export default function TelephonyFilters({
                   onChange={(value) => update("repurchaseAt", value)}
                 />
                 {renderLookup("operators")}
-                <div className="flex items-end gap-1 self-end">
+                <div className="flex min-w-0 items-end gap-1">
                   <TextField
                     select
                     fullWidth
@@ -266,13 +285,17 @@ export default function TelephonyFilters({
                     <MenuItem value="contacts_lt2">Menos de 2 contatos no mês</MenuItem>
                     <MenuItem value="calls_lt2">Menos de 2 ligações no mês</MenuItem>
                   </TextField>
-                  <Tooltip title="Contatos contam contatos telefônicos efetivos; ligações contam registros telefônicos. Ambos consideram o mês de referência.">
-                    <InfoOutlinedIcon
+                  <Tooltip
+                    describeChild
+                    title="Contatos contam contatos telefônicos efetivos; ligações contam registros telefônicos. Ambos consideram o mês de referência."
+                  >
+                    <IconButton
                       aria-label="Atividade no mês: contatos e ligações telefônicos no mês de referência"
-                      tabIndex={0}
-                      className="mb-2.5 text-slate-500"
-                      fontSize="small"
-                    />
+                      size="small"
+                      className="ip-muted"
+                    >
+                      <CircleHelp size={16} aria-hidden="true" />
+                    </IconButton>
                   </Tooltip>
                 </div>
                 <TextField
@@ -281,14 +304,14 @@ export default function TelephonyFilters({
                   label="Mês de referência"
                   value={filters.referenceMonth}
                   required
-                  className="self-end"
+                  className="w-full"
                   slotProps={{
                     inputLabel: { shrink: true },
                     htmlInput: { min: "1970-01", max: "2200-12" },
                   }}
                   onChange={(event) => update("referenceMonth", event.target.value)}
                 />
-                <div className="flex items-center gap-1 self-end">
+                <div className="flex items-center gap-1">
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -299,23 +322,29 @@ export default function TelephonyFilters({
                     }
                     label="Nunca trabalhados"
                   />
-                  <Tooltip title="Clientes sem nenhuma tentativa por telefone ou WhatsApp no histórico integrado ao CRM, independentemente do período selecionado.">
-                    <InfoOutlinedIcon
+                  <Tooltip
+                    describeChild
+                    title="Clientes sem nenhuma tentativa por telefone ou WhatsApp no histórico integrado ao CRM, independentemente do período selecionado."
+                  >
+                    <IconButton
                       aria-label="Nunca trabalhados: sem tentativa por telefone ou WhatsApp no histórico integrado ao CRM"
-                      tabIndex={0}
-                      className="text-slate-500"
-                      fontSize="small"
-                    />
+                      size="small"
+                      className="ip-muted"
+                    >
+                      <CircleHelp size={16} aria-hidden="true" />
+                    </IconButton>
                   </Tooltip>
                 </div>
               </div>
             </section>
-            <section aria-labelledby="telephony-filters-customer">
+            <section className="ip-panel-section" aria-labelledby="telephony-filters-customer">
               <h3 id="telephony-filters-customer" className={sectionTitle}>
                 Cliente
               </h3>
               <div className={grid}>
-                {customerKinds.map(renderLookup)}
+                {customerKinds
+                  .filter((kind) => !["states", "cities", "neighborhoods"].includes(kind))
+                  .map(renderLookup)}
                 <TelephonyDateField
                   label="Última compra"
                   value={filters.lastPurchaseAt}
@@ -328,29 +357,19 @@ export default function TelephonyFilters({
                 />
               </div>
             </section>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, py: 1.5 }}>
-            <Button
-              type="button"
-              onClick={() =>
-                setFilters((current) => ({
-                  ...createTelephonyFilters(current.mode),
-                  searchText: current.searchText,
-                }))
-              }
-              sx={{ mr: "auto" }}
-            >
-              Limpar filtros
-            </Button>
-            <Button type="button" onClick={cancel}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="contained" startIcon={<SearchIcon />}>
-              Aplicar filtros
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
+            <section className="ip-panel-section" aria-labelledby="telephony-filters-location">
+              <h3 id="telephony-filters-location" className={sectionTitle}>
+                Localização
+              </h3>
+              <div className={grid}>
+                {renderLookup("states")}
+                {renderLookup("cities")}
+                {renderLookup("neighborhoods")}
+              </div>
+            </section>
+          </form>
+        )}
+      </OperationalPanel>
     </>
   );
 }

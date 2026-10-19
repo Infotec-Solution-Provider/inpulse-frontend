@@ -49,7 +49,7 @@ export function restoreMonitorPreferences(raw: string | null): MonitorPreference
     filters: createInitialFilters(),
     pageSize: 20,
     autoRefresh: true,
-    viewMode: "cards",
+    viewMode: "compact",
   };
   if (!raw) return defaults;
   let parsed: Record<string, unknown>;
@@ -114,7 +114,7 @@ export function restoreMonitorPreferences(raw: string | null): MonitorPreference
     filters,
     pageSize: typeof parsed.pageSize === "number" ? normalizePageSize(parsed.pageSize) : 20,
     autoRefresh: typeof parsed.autoRefresh === "boolean" ? parsed.autoRefresh : true,
-    viewMode: parsed.viewMode === "compact" ? "compact" : "cards",
+    viewMode: parsed.viewMode === "cards" ? "cards" : "compact",
   };
 }
 

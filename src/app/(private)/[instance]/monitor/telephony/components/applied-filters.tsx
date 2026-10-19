@@ -1,4 +1,4 @@
-import { Chip, Tooltip } from "@mui/material";
+import { FilterChipBar } from "@/lib/ui-system";
 import type useTelephonyMonitor from "../use-telephony-monitor";
 import type { TelephonyLookupKind, TelephonyLookupOption, TelephonyMonitorFilters } from "../types";
 import {
@@ -12,6 +12,7 @@ import { displayMonth } from "./presentation";
 interface AppliedFiltersProps {
   state: ReturnType<typeof useTelephonyMonitor>;
   knownOptions: Partial<Record<TelephonyLookupKind, TelephonyLookupOption[]>>;
+  onShowAll: () => void;
 }
 
 interface AppliedFilterChip {
@@ -27,7 +28,11 @@ function dateLabel(value: string | null): string {
   return `${day}/${month}/${year}`;
 }
 
-export default function TelephonyAppliedFilters({ state, knownOptions }: AppliedFiltersProps) {
+export default function TelephonyAppliedFilters({
+  state,
+  knownOptions,
+  onShowAll,
+}: AppliedFiltersProps) {
   const applied = state.appliedFilters;
   const chips: AppliedFilterChip[] = [];
   const remove = (clear: AppliedFilterChip["clear"]) => {
@@ -92,25 +97,16 @@ export default function TelephonyAppliedFilters({ state, knownOptions }: Applied
       clear: (filters) => ({ ...filters, monthlyActivity: "all" }),
     });
   }
-  if (!chips.length) return null;
   return (
-    <div
-      aria-label="Filtros aplicados da telefonia"
-      className="flex max-h-16 min-w-0 flex-1 flex-wrap items-center gap-1.5 overflow-y-auto"
-    >
-      {chips.map((chip) => (
-        <Tooltip key={chip.key} describeChild title={chip.description}>
-          <Chip
-            size="small"
-            variant="outlined"
-            color="primary"
-            label={chip.label}
-            aria-label={`Filtro aplicado ${chip.label}. Pressione Delete para remover.`}
-            onDelete={() => remove(chip.clear)}
-            sx={{ maxWidth: "100%" }}
-          />
-        </Tooltip>
-      ))}
-    </div>
+    <FilterChipBar
+      items={chips.map((chip) => ({
+        key: chip.key,
+        label: chip.label,
+        description: chip.description,
+        onDelete: () => remove(chip.clear),
+      }))}
+      onShowAll={onShowAll}
+      maxVisible={3}
+    />
   );
 }

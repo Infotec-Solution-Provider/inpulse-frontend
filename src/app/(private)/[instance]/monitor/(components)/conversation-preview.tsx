@@ -1,7 +1,8 @@
 "use client";
 
-import { Alert, Button, CircularProgress, IconButton } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Alert, Button, CircularProgress } from "@mui/material";
+import { RefreshCw, MessageSquareReply } from "lucide-react";
+import { OperationalPanel } from "@/lib/ui-system";
 import { useContext, useEffect, useRef, useState } from "react";
 import type { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import { AuthContext } from "@/app/auth-context";
@@ -128,44 +129,55 @@ export default function MonitorConversationPreview({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="monitor-preview-title"
-      className="flex h-[85dvh] w-[calc(100vw-2rem)] max-w-[1200px] flex-col overflow-hidden rounded-xl bg-white shadow-xl dark:bg-slate-900"
-    >
-      <header className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700">
-        <div className="min-w-0">
-          <h2
-            id="monitor-preview-title"
-            className="truncate text-lg font-semibold text-slate-900 dark:text-white"
+    <OperationalPanel
+      open
+      embedded
+      width={720}
+      title={title}
+      description={
+        replying
+          ? "Intervenção na conversa"
+          : "Visualização de supervisão · sem marcar mensagens como lidas"
+      }
+      onClose={closeModal}
+      closeLabel="Fechar conversa"
+      headerAction={
+        !replying && (
+          <Button
+            size="small"
+            startIcon={<RefreshCw size={14} />}
+            disabled={loading || retrySeconds > 0}
+            onClick={() => {
+              setRequestedCursor(null);
+              setAttempt((value) => value + 1);
+            }}
           >
-            {title}
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {replying
-              ? "Intervenção na conversa"
-              : "Visualização de supervisão · sem marcar mensagens como lidas"}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {!replying && (
+            Atualizar histórico
+          </Button>
+        )
+      }
+      footer={
+        replying ? (
+          <div className="w-full">
+            <ChatSendMessageArea />
+          </div>
+        ) : !chat.isFinished && !isReadOnlyMode ? (
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <p className="ip-muted max-w-80 text-xs">
+              A leitura do histórico não interfere no atendimento. Para intervir, ative a resposta.
+            </p>
             <Button
-              size="small"
-              disabled={loading || retrySeconds > 0}
-              onClick={() => {
-                setRequestedCursor(null);
-                setAttempt((value) => value + 1);
-              }}
+              variant="contained"
+              startIcon={<MessageSquareReply size={16} />}
+              disabled={loading || !!error}
+              onClick={enableReply}
             >
-              Atualizar histórico
+              Responder nesta conversa
             </Button>
-          )}
-          <IconButton onClick={closeModal} aria-label="Fechar conversa">
-            <CloseIcon />
-          </IconButton>
-        </div>
-      </header>
+          </div>
+        ) : undefined
+      }
+    >
       {error && (
         <Alert
           severity="error"
@@ -187,15 +199,13 @@ export default function MonitorConversationPreview({
           <div className="min-h-0 flex-1">
             <ChatMessagesList />
           </div>
-          <div className="border-t border-slate-200 p-2 dark:border-slate-700">
-            <ChatSendMessageArea />
-          </div>
         </>
       ) : (
         <>
           <div
             ref={container}
-            className="scrollbar-whatsapp min-h-0 flex-1 overflow-y-auto bg-slate-100 p-3 dark:bg-slate-950"
+            className="scrollbar-whatsapp min-h-0 flex-1 overflow-y-auto rounded-lg p-3"
+            style={{ background: "var(--ip-surface-muted)" }}
           >
             {nextCursor && (
               <div className="mb-3 text-center">
@@ -284,15 +294,8 @@ export default function MonitorConversationPreview({
               })}
             </ul>
           </div>
-          {!chat.isFinished && !isReadOnlyMode && (
-            <footer className="flex justify-end border-t border-slate-200 p-3 dark:border-slate-700">
-              <Button variant="contained" disabled={loading || !!error} onClick={enableReply}>
-                Responder nesta conversa
-              </Button>
-            </footer>
-          )}
         </>
       )}
-    </div>
+    </OperationalPanel>
   );
 }

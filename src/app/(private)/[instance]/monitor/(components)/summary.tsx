@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, Button } from "@mui/material";
+import { Clock3, MessageSquare, CalendarClock, Mail, Timer, UserRound } from "lucide-react";
 import useMonitorContext from "../context";
 
 const indicators = [
@@ -31,18 +32,24 @@ const indicators = [
   { key: "overdue", status: "overdue", label: "Fora do SLA", hint: "Tempo de resposta excedido" },
   { key: "scheduled", status: "scheduled", label: "Agendamentos", hint: "Até 24h e vencidos" },
 ] as const;
+const icons = [MessageSquare, UserRound, Clock3, Mail, Timer, CalendarClock];
 
 export function quickFilterLabel(status: string): string | null {
   return indicators.find((indicator) => indicator.status === status)?.label ?? null;
 }
 
-/** Quick filters as one row of pills; the description of each one is in its tooltip. */
+/** The API indicators also act as explicit operational quick filters. */
 export default function MonitorSummary() {
   const { summary, appliedFilters, setOperationalStatus } = useMonitorContext();
 
   return (
-    <section aria-label="Indicadores da monitoria" className="flex flex-wrap gap-1.5">
-      {indicators.map((indicator) => {
+    <section
+      aria-label="Indicadores da monitoria"
+      className="ip-summary shrink-0 grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6"
+      style={{ display: "grid" }}
+    >
+      {indicators.map((indicator, index) => {
+        const Icon = icons[index];
         const selected = appliedFilters.operationalStatus === indicator.status;
         const slaUnavailable = indicator.status === "overdue" && summary?.slaMinutes == null;
         const disabled = !summary || slaUnavailable;
@@ -60,11 +67,23 @@ export default function MonitorSummary() {
                   : indicator.hint
             }
             onClick={() => setOperationalStatus(selected ? "all" : indicator.status)}
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default ${selected ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40" : "border-slate-200 bg-white enabled:hover:border-indigo-400 dark:border-slate-700 dark:bg-slate-800 dark:enabled:hover:border-indigo-400"}`}
+            className="ip-stat min-w-0 rounded-xl border p-3 text-left transition-colors disabled:cursor-default disabled:opacity-60"
+            style={{
+              flexDirection: "column",
+              alignItems: "flex-start",
+              gap: 4,
+              borderColor: selected ? "var(--ip-accent)" : "var(--ip-border)",
+              background: selected ? "var(--ip-accent-soft)" : "var(--ip-surface)",
+              color: "var(--ip-text)",
+            }}
           >
-            <span className="text-slate-600 dark:text-slate-300">{indicator.label}</span>
+            <span className="ip-muted flex items-center gap-2 text-xs">
+              <Icon size={14} aria-hidden="true" />
+              {indicator.label}
+            </span>
             <span
-              className={`text-sm font-semibold tabular-nums ${selected ? "text-indigo-700 dark:text-indigo-300" : "text-slate-900 dark:text-slate-100"}`}
+              className="mt-1 block text-xl font-semibold tabular-nums"
+              style={{ color: selected ? "var(--ip-accent)" : undefined }}
             >
               {summary && !slaUnavailable ? summary[indicator.key].toLocaleString("pt-BR") : "—"}
             </span>

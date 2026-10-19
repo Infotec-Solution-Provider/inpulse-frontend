@@ -1,14 +1,9 @@
 "use client";
 
-import PauseIcon from "@mui/icons-material/Pause";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import ViewAgendaOutlinedIcon from "@mui/icons-material/ViewAgendaOutlined";
-import ViewListOutlinedIcon from "@mui/icons-material/ViewListOutlined";
-import { Button, ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
+import { Pause, Play, RefreshCw } from "lucide-react";
+import { Button } from "@mui/material";
 import { useEffect, useState } from "react";
 import useMonitorContext from "../context";
-import MonitorSummary from "./summary";
 
 function sinceUpdated(milliseconds: number) {
   const seconds = Math.max(0, Math.floor(milliseconds / 1_000));
@@ -29,10 +24,9 @@ export default function MonitorToolbar() {
     autoRefresh,
     autoRefreshPaused,
     setAutoRefresh,
-    viewMode,
-    setViewMode,
     refetch,
     retryAfterUntil,
+    error,
   } = useMonitorContext();
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -44,62 +38,54 @@ export default function MonitorToolbar() {
     : 0;
   const updating = isLoading || isRefreshing;
 
-  // One wrapping row: title, quick-filter indicators and actions share the width so the
-  // conversation list keeps the height.
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+    <header className="ip-page-header flex shrink-0 flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-base font-semibold leading-tight text-slate-900 dark:text-slate-100">
+        <h1 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--ip-text)" }}>
           Monitoria de conversas
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          <span className="text-slate-600 dark:text-slate-300">
-            {isLoading
-              ? "Carregando conversas…"
-              : `${chats.length.toLocaleString("pt-BR")} de ${totalCount.toLocaleString("pt-BR")} conversas`}
+        <p className="ip-muted mt-1 text-sm">
+          {isLoading
+            ? "Carregando conversas…"
+            : `${chats.length.toLocaleString("pt-BR")} de ${totalCount.toLocaleString("pt-BR")} conversas`}
+          <span className="mx-2" aria-hidden="true">
+            ·
           </span>
-          {" · "}
           {updating
             ? "Atualizando…"
             : lastUpdatedAt
               ? sinceUpdated(now - lastUpdatedAt)
               : "Aguardando a primeira atualização"}
-          {!autoRefresh && (
-            <span className="ml-1 text-amber-700 dark:text-amber-300">· Atualização pausada</span>
-          )}
-          {autoRefreshPaused && (
-            <span className="ml-1 text-amber-700 dark:text-amber-300">
-              · Atualização pausada durante a consulta da conversa
-            </span>
+        </p>
+        <p className="ip-muted mt-1 flex flex-wrap items-center gap-1.5 text-xs" role="status">
+          {error ? (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-600" aria-hidden="true" />
+              Dados podem estar desatualizados
+            </>
+          ) : !autoRefresh ? (
+            <>
+              <Pause size={12} aria-hidden="true" />
+              Atualização automática pausada
+            </>
+          ) : autoRefreshPaused ? (
+            <>
+              <Pause size={12} aria-hidden="true" />
+              Atualização pausada durante a interação
+            </>
+          ) : (
+            <>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden="true" />
+              Atualização automática ativa
+            </>
           )}
         </p>
       </div>
-      <MonitorSummary />
-      <div className="ml-auto flex flex-wrap items-center gap-2">
-        <ToggleButtonGroup
-          value={viewMode}
-          exclusive
-          size="small"
-          aria-label="Modo de visualização"
-          onChange={(_event, value: "cards" | "compact" | null) => {
-            if (value) setViewMode(value);
-          }}
-        >
-          <ToggleButton value="cards" aria-label="Exibir cartões">
-            <Tooltip title="Cartões">
-              <ViewAgendaOutlinedIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-          <ToggleButton value="compact" aria-label="Exibir lista compacta">
-            <Tooltip title="Lista compacta">
-              <ViewListOutlinedIcon fontSize="small" />
-            </Tooltip>
-          </ToggleButton>
-        </ToggleButtonGroup>
+      <div className="flex flex-wrap items-center gap-2">
         <Button
-          variant="outlined"
+          variant="text"
           size="small"
-          startIcon={autoRefresh ? <PauseIcon /> : <PlayArrowIcon />}
+          startIcon={autoRefresh ? <Pause size={16} /> : <Play size={16} />}
           aria-label={
             autoRefresh ? "Pausar atualização automática" : "Retomar atualização automática"
           }
@@ -111,7 +97,10 @@ export default function MonitorToolbar() {
           variant="outlined"
           size="small"
           startIcon={
-            <RefreshIcon className={updating ? "animate-spin motion-reduce:animate-none" : ""} />
+            <RefreshCw
+              size={16}
+              className={updating ? "animate-spin motion-reduce:animate-none" : ""}
+            />
           }
           disabled={updating || retrySeconds > 0}
           onClick={refetch}

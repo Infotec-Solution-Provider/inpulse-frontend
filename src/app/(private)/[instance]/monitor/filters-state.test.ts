@@ -62,7 +62,7 @@ describe("monitor preferences", () => {
     expect(state).toMatchObject({
       pageSize: 100,
       autoRefresh: true,
-      viewMode: "cards",
+      viewMode: "compact",
       filters: {
         categories: { showCustomerChats: true, showSchedules: false },
         user: "all",
@@ -73,5 +73,10 @@ describe("monitor preferences", () => {
     });
     state.filters.categories.showCustomerChats = false;
     expect(restoreMonitorPreferences("invalid").filters.categories.showCustomerChats).toBe(true);
+  });
+
+  it("starts with the compact operational list and preserves an explicit card preference", () => {
+    expect(restoreMonitorPreferences(null).viewMode).toBe("compact");
+    expect(restoreMonitorPreferences(JSON.stringify({ viewMode: "cards" })).viewMode).toBe("cards");
   });
 });

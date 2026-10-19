@@ -1,6 +1,7 @@
 "use client";
 
 import { Tab, Tabs } from "@mui/material";
+import { MessagesSquare, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuthContext } from "@/app/auth-context";
 import { MonitorProvider } from "./context";
@@ -50,19 +51,23 @@ function ScopedMonitorPage({ scope }: { scope: string }) {
         aria-label="Canal da monitoria"
         value={tab}
         onChange={(_event, value: "conversations" | "telephony") => setTab(value)}
-        className="mx-3 shrink-0 border-b border-slate-200 dark:border-slate-700 md:mx-5"
+        className="ip-channel-tabs"
       >
         <Tab
           id="monitor-tab-conversations"
           aria-controls="monitor-panel-conversations"
           value="conversations"
           label="Conversas"
+          icon={<MessagesSquare size={16} aria-hidden="true" />}
+          iconPosition="start"
         />
         <Tab
           id="monitor-tab-telephony"
           aria-controls="monitor-panel-telephony"
           value="telephony"
           label="Telefonia"
+          icon={<Phone size={16} aria-hidden="true" />}
+          iconPosition="start"
         />
       </Tabs>
       <div
