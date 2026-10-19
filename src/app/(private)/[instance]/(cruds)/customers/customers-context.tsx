@@ -68,6 +68,10 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     () => (user ? createCacheScope(instance, user.CODIGO) : null),
     [instance, user?.CODIGO],
   );
+  useEffect(() => {
+    // Retire pages persisted by older versions; search controls and rows stay in memory.
+    if (cacheScope) void hybridCache.invalidateResource(cacheScope, "customer-page");
+  }, [cacheScope]);
   const currentContext = `${scope}:${token ?? ""}`;
   const contextRef = useRef(currentContext);
   contextRef.current = currentContext;
@@ -134,27 +138,8 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
       if (!token) {
         return dispatch({ type: "change-loading", isLoading: false });
       }
-      const cacheKey = JSON.stringify(state.filters);
-      if (cacheScope) {
-        const cached = await hybridCache.get<{ data: Customer[]; page: { totalRows?: number } }>(
-          cacheScope,
-          "customer-page",
-          cacheKey,
-        );
-        if (!active()) return;
-        if (cached) {
-          dispatch({
-            type: "multiple",
-            actions: [
-              { type: "change-total-rows", totalRows: cached.page.totalRows || 0 },
-              { type: "load-customers", customers: cached.data },
-            ],
-          });
-        }
-      }
       const res = await api.current.getCustomers(state.filters as unknown as CustomerListFilters);
       if (!active()) return;
-      if (cacheScope) void hybridCache.set(cacheScope, "customer-page", res, cacheKey);
       dispatch({
         type: "multiple",
         actions: [

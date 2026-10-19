@@ -14,7 +14,6 @@ const ALLOWED_RESOURCES = new Set<HybridCacheResource>([
   "ready-messages",
   "internal-groups",
   "contact-page",
-  "customer-page",
 ]);
 const SENSITIVE_KEYS = new Set([
   "token",
@@ -182,7 +181,7 @@ export class HybridCache {
         const cursor = request.result;
         if (!cursor) return;
         const entry = cursor.value as HybridCacheEntry<unknown>;
-        if (entry.expiresAt <= now) cursor.delete();
+        if (entry.expiresAt <= now || !ALLOWED_RESOURCES.has(entry.resource)) cursor.delete();
         cursor.continue();
       };
       await this.waitForTransaction(transaction);

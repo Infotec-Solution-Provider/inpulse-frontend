@@ -96,4 +96,45 @@ describe("HybridCache", () => {
     expect(await cache.get("tenant:quota", "contacts")).toBeNull();
     put.mockRestore();
   });
+
+  it("refuses customer rows and search keys, and prunes pages persisted by older versions", async () => {
+    const cache = new HybridCache();
+    const scope = "tenant:customer-retirement",
+      queryKey = "search:fictional-name";
+    await cache.set(
+      scope,
+      "customer-page",
+      { data: [{ CODIGO: 42, RAZAO: "Fictional customer" }] },
+      queryKey,
+    );
+    expect(await cache.get(scope, "customer-page", queryKey)).toBeNull();
+    // Seed the former format directly, because the public API now refuses it.
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("inpulse-hybrid-cache", 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const id = scope + ":customer-page:" + queryKey;
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("entries", "readwrite");
+      tx.objectStore("entries").put({
+        id,
+        scope,
+        resource: "customer-page",
+        queryKey,
+        expiresAt: Date.now() + 300000,
+        value: { data: [{ CODIGO: 42 }] },
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    await cache.pruneExpired();
+    const remaining = await new Promise((resolve, reject) => {
+      const request = db.transaction("entries", "readonly").objectStore("entries").get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    expect(remaining).toBeUndefined();
+    db.close();
+  });
 });
