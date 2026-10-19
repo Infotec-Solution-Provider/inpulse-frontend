@@ -97,7 +97,7 @@ describe("HybridCache", () => {
     put.mockRestore();
   });
 
-  it("refuses customer rows and search keys, and prunes pages persisted by older versions", async () => {
+  it("refuses customer rows and search keys, and invalidates pages persisted by older versions", async () => {
     const cache = new HybridCache();
     const scope = "tenant:customer-retirement",
       queryKey = "search:fictional-name";
@@ -128,7 +128,7 @@ describe("HybridCache", () => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
-    await cache.pruneExpired();
+    await cache.invalidateResource(scope, "customer-page");
     const remaining = await new Promise((resolve, reject) => {
       const request = db.transaction("entries", "readonly").objectStore("entries").get(id);
       request.onsuccess = () => resolve(request.result);

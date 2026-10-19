@@ -113,7 +113,7 @@ export class HybridCache {
   }
 
   public async invalidateResource(scope: string, resource: HybridCacheResource) {
-    if (!ALLOWED_RESOURCES.has(resource)) return;
+    // Cleanup must also reach resources retired from the persistence allowlist.
     try {
       const database = await this.openDatabase();
       const transaction = database.transaction(STORE_NAME, "readwrite");
