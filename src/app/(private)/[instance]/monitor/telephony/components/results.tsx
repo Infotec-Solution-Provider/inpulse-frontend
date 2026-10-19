@@ -1,6 +1,7 @@
 "use client";
 
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { Button, Chip, Tooltip } from "@mui/material";
 import type { TelephonyMonitorItem, TelephonyMonitorMode, TelephonyMonitorView } from "../types";
 import { displayDate, displayDuration, displayMonth, telephonyModes } from "./presentation";
@@ -11,6 +12,7 @@ interface TelephonyResultsProps {
   view: TelephonyMonitorView;
   referenceMonth: string;
   onPreview: (customerId: number) => void;
+  onEditSchedule: (scheduleId: number) => void;
 }
 
 function Activity({ item }: { item: TelephonyMonitorItem }) {
@@ -108,19 +110,32 @@ export default function TelephonyResults({
   view,
   referenceMonth,
   onPreview,
+  onEditSchedule,
 }: TelephonyResultsProps) {
   const eventLabel =
     mode === "schedules" ? "Agendamento" : mode === "calls" ? "Ligação" : "Atividade recente";
   const preview = (item: TelephonyMonitorItem) => (
-    <Button
-      size="small"
-      startIcon={<VisibilityOutlinedIcon />}
-      onClick={() => onPreview(item.customer.id)}
-      aria-label={`Ver cliente ${item.customer.name || item.customer.id}`}
-      sx={{ whiteSpace: "nowrap" }}
-    >
-      Ver cliente
-    </Button>
+    <div className="flex flex-wrap gap-1">
+      <Button
+        size="small"
+        startIcon={<VisibilityOutlinedIcon />}
+        onClick={() => onPreview(item.customer.id)}
+        aria-label={`Ver cliente ${item.customer.name || item.customer.id}`}
+        sx={{ whiteSpace: "nowrap" }}
+      >
+        Ver cliente
+      </Button>
+      {mode === "schedules" && item.schedule && (
+        <Button
+          size="small"
+          startIcon={<EditOutlinedIcon />}
+          onClick={() => onEditSchedule(item.schedule!.id)}
+          aria-label={`Editar agendamento ${item.schedule.id} de ${item.customer.name || item.customer.id}`}
+        >
+          Editar agendamento
+        </Button>
+      )}
+    </div>
   );
 
   // Compact: a table on desktop (cards below lg, where a table would not fit).

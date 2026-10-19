@@ -116,3 +116,33 @@ export interface TelephonyMonitorPreferences {
   pageSize: number;
   autoRefresh: boolean;
 }
+
+/** CRM DATETIME is a civil value; it must not be converted to a browser timezone. */
+export interface TelephonyScheduleDetail {
+  id: number;
+  customer: { id: number; name: string };
+  campaign: { id: number; name: string | null } | null;
+  scheduledAt: string | null;
+  operatorId: number | null;
+  operatorName: string | null;
+  version: string;
+  editable: boolean;
+  blockedReason: string | null;
+  capabilities: { priority: boolean; validity: boolean };
+}
+
+export interface TelephonySchedulePatch {
+  operationId: string;
+  version: string;
+  changes: { scheduledAt?: string; operatorId?: number };
+}
+
+export interface TelephonyScheduleSaveResult {
+  data: TelephonyScheduleDetail;
+  operationId: string;
+  status: "applied" | "replayed";
+}
+
+export type TelephonyScheduleReceipt =
+  | { status: "applied"; detail?: TelephonyScheduleDetail }
+  | { status: "not_confirmed" };

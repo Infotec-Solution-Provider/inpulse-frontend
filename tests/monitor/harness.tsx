@@ -11,6 +11,7 @@ function Harness() {
   const [instance, setInstance] = useState("tenant-a");
   const [token, setToken] = useState("test-token");
   const [role, setRole] = useState("ADMIN");
+  const [userId, setUserId] = useState(1);
   const [modal, setModal] = useState<ReactNode>(null);
   const [dark, setDark] = useState(false);
   authSession.setAccessToken(token);
@@ -21,6 +22,10 @@ function Harness() {
         setToken(`test-${name}`);
       },
       refreshToken: () => setToken("refreshed-token"),
+      switchUser: (id: number) => {
+        setUserId(id);
+        setToken(`test-user-${id}`);
+      },
       setRole,
       emit: socket.emit,
       listeners: socket.listenerCount,
@@ -37,7 +42,11 @@ function Harness() {
   return (
     <ThemeProvider theme={createTheme({ palette: { mode: dark ? "dark" : "light" } })}>
       <AuthContext.Provider
-        value={{ instance, token, user: { CODIGO: 1, NOME: "Supervisor", NIVEL: role } as never }}
+        value={{
+          instance,
+          token,
+          user: { CODIGO: userId, NOME: "Supervisor", NIVEL: role } as never,
+        }}
       >
         <AppContext.Provider
           value={{ modal, openModal: setModal, closeModal: () => setModal(null) }}

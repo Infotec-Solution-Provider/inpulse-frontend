@@ -1,0 +1,325 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+} from "@mui/material";
+import telephonyMonitorService from "@/lib/services/telephony-monitor.service";
+import { dialogPaperSx } from "../../surface";
+import { scheduleChanges, scheduleFailureStatus, scheduleOutcomeUnknown } from "../schedule-edit";
+import type {
+  TelephonyLookupOption,
+  TelephonyScheduleDetail,
+  TelephonySchedulePatch,
+} from "../types";
+import TelephonyLookupDialog, { type LookupPageRequest } from "./lookup-dialog";
+
+interface Props {
+  scheduleId: number;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+const failureMessage = (failure: unknown, fallback: string) =>
+  failure instanceof Error ? failure.message : fallback;
+
+export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Props) {
+  const [detail, setDetail] = useState<TelephonyScheduleDetail | null>(null);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [operator, setOperator] = useState<TelephonyLookupOption | null>(null);
+  const [operatorOpen, setOperatorOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [unknown, setUnknown] = useState<TelephonySchedulePatch | null>(null);
+  const [verification, setVerification] = useState<string | null>(null);
+  const mounted = useRef(false);
+  const busy = useRef(false);
+  const request = useRef<AbortController | null>(null);
+
+  const readDetail = useCallback(async () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
+    setError(null);
+    try {
+      const current = await telephonyMonitorService.schedule(scheduleId, controller.signal);
+      if (!mounted.current || controller.signal.aborted) return;
+      setDetail(current);
+      setScheduledAt(current.scheduledAt ?? "");
+      setOperator(
+        current.operatorId === null
+          ? null
+          : {
+              id: String(current.operatorId),
+              label: current.operatorName || `Operador #${current.operatorId}`,
+            },
+      );
+      setConflict(false);
+    } catch (failure) {
+      if (mounted.current && !controller.signal.aborted)
+        setError(failureMessage(failure, "Não foi possível carregar o agendamento."));
+    } finally {
+      if (mounted.current && !controller.signal.aborted) setLoading(false);
+    }
+  }, [scheduleId]);
+
+  useEffect(() => {
+    mounted.current = true;
+    void readDetail();
+    return () => {
+      mounted.current = false;
+      request.current?.abort();
+    };
+  }, [readDetail]);
+
+  const loadOperators = useCallback(
+    ({ signal, ...params }: LookupPageRequest) =>
+      telephonyMonitorService.scheduleOperators(scheduleId, params, signal),
+    [scheduleId],
+  );
+
+  const save = async () => {
+    if (!detail?.editable || loading || busy.current || unknown || conflict) return;
+    let changes: TelephonySchedulePatch["changes"];
+    try {
+      changes = scheduleChanges(
+        detail,
+        scheduledAt,
+        operator === null ? null : Number(operator.id),
+      );
+      if (Object.keys(changes).length === 0) {
+        setError("Altere a data e hora ou o operador antes de salvar.");
+        return;
+      }
+    } catch (failure) {
+      setError(failureMessage(failure, "Confira os campos do agendamento."));
+      return;
+    }
+    const patch: TelephonySchedulePatch = {
+      operationId: crypto.randomUUID(),
+      version: detail.version,
+      changes,
+    };
+    const controller = new AbortController();
+    request.current = controller;
+    busy.current = true;
+    setSaving(true);
+    setError(null);
+    try {
+      await telephonyMonitorService.updateSchedule(scheduleId, patch, controller.signal);
+      if (mounted.current && !controller.signal.aborted) onSaved();
+    } catch (failure) {
+      if (!mounted.current || controller.signal.aborted) return;
+      if (scheduleOutcomeUnknown(failure)) {
+        setUnknown(patch);
+        setVerification(
+          "A resposta da gravação não foi confirmada. Seus campos estão preservados. Verifique a gravação antes de continuar.",
+        );
+      } else {
+        setConflict(scheduleFailureStatus(failure) === 409);
+        setError(failureMessage(failure, "Não foi possível salvar o agendamento."));
+      }
+    } finally {
+      busy.current = false;
+      if (mounted.current && !controller.signal.aborted) setSaving(false);
+    }
+  };
+
+  const verify = async () => {
+    if (!unknown || busy.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    busy.current = true;
+    setVerifying(true);
+    try {
+      const receipt = await telephonyMonitorService.scheduleReceipt(
+        scheduleId,
+        unknown.operationId,
+        controller.signal,
+      );
+      if (!mounted.current || controller.signal.aborted) return;
+      if (receipt.status === "applied") onSaved();
+      else
+        setVerification(
+          "A gravação ainda não pôde ser confirmada. Isso não confirma que ela foi desfeita. Aguarde e verifique novamente; os campos continuam bloqueados para evitar uma nova gravação.",
+        );
+    } catch {
+      if (mounted.current && !controller.signal.aborted)
+        setVerification(
+          "Não foi possível consultar a confirmação. A gravação continua sem confirmação. Aguarde e verifique novamente.",
+        );
+    } finally {
+      busy.current = false;
+      if (mounted.current && !controller.signal.aborted) setVerifying(false);
+    }
+  };
+
+  const disabled = loading || saving || Boolean(unknown) || !detail?.editable;
+  const close = () => {
+    if (!busy.current) onClose();
+  };
+
+  return (
+    <>
+      <Dialog
+        open
+        fullWidth
+        maxWidth="sm"
+        onClose={close}
+        aria-labelledby="schedule-edit-title"
+        slotProps={{
+          paper: {
+            sx: {
+              ...dialogPaperSx,
+              borderRadius: 1,
+              m: { xs: 1.5, sm: 4 },
+              width: { xs: "calc(100% - 24px)", sm: "calc(100% - 64px)" },
+              maxHeight: "calc(100dvh - 24px)",
+            },
+          },
+        }}
+      >
+        <DialogTitle id="schedule-edit-title">Editar agendamento</DialogTitle>
+        <DialogContent dividers>
+          {loading && (
+            <div role="status" className="flex items-center gap-2 py-4 text-sm">
+              <CircularProgress size={22} /> Carregando agendamento…
+            </div>
+          )}
+          {error && (
+            <Alert severity="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
+          {unknown && (
+            <Alert severity="warning" className="mb-4">
+              {verification}
+            </Alert>
+          )}
+          {conflict && (
+            <Alert severity="warning" className="mb-4">
+              O agendamento mudou ou deixou de permitir a edição. Recarregar substitui seu rascunho
+              pelos dados atuais.
+              <Button color="inherit" onClick={() => void readDetail()} disabled={loading}>
+                Recarregar agendamento
+              </Button>
+            </Alert>
+          )}
+          {!detail && !loading && (
+            <Button onClick={() => void readDetail()}>Tentar carregar novamente</Button>
+          )}
+          {detail && (
+            <div className="flex flex-col gap-5">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-800/40">
+                <p className="font-semibold text-slate-900 dark:text-slate-100">
+                  {detail.customer.name || `Cliente #${detail.customer.id}`}
+                </p>
+                <p className="mt-1 text-slate-600 dark:text-slate-400">
+                  Cliente #{detail.customer.id} · Agendamento #{detail.id}
+                </p>
+                <p className="mt-1 text-slate-600 dark:text-slate-400">
+                  {detail.campaign?.name ||
+                    (detail.campaign ? `Campanha #${detail.campaign.id}` : "Sem campanha")}
+                </p>
+              </div>
+              {!detail.editable && (
+                <Alert severity="warning">
+                  {detail.blockedReason || "Este agendamento não permite edição neste momento."}
+                </Alert>
+              )}
+              <TextField
+                label="Data e hora do agendamento"
+                type="datetime-local"
+                size="small"
+                fullWidth
+                value={scheduledAt}
+                onChange={(event) => setScheduledAt(event.target.value)}
+                disabled={disabled}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  htmlInput: { step: 1, min: "1000-01-01T00:00:00", max: "9999-12-31T23:59:59" },
+                }}
+                helperText={
+                  detail.scheduledAt === null
+                    ? "Data atual não informada. Preencha somente se desejar alterá-la. Horário do CRM."
+                    : "Horário do CRM, mantido sem conversão de fuso."
+                }
+              />
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  Operador do agendamento
+                </p>
+                <p className="mt-1 break-words text-sm text-slate-600 dark:text-slate-400">
+                  {operator?.label || "Sem operador informado"}
+                </p>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  className="mt-2"
+                  disabled={disabled}
+                  onClick={() => setOperatorOpen(true)}
+                >
+                  Alterar operador
+                </Button>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Responsável por esta agenda. O operador cadastral do cliente é mantido.
+                </p>
+              </div>
+              <div className="rounded-md border border-slate-200 p-3 text-sm text-slate-600 dark:border-slate-700 dark:text-slate-400">
+                <p>
+                  Prioridade: edição indisponível
+                  {detail.capabilities.priority ? " nesta interface" : " para este agendamento"}.
+                </p>
+                <p className="mt-1">
+                  Validade da campanha: edição indisponível
+                  {detail.capabilities.validity ? " nesta interface" : " para este agendamento"}.
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: "wrap", gap: 1, px: 2, py: 1.5 }}>
+          <Button onClick={close} disabled={saving || verifying}>
+            {unknown ? "Fechar" : "Cancelar"}
+          </Button>
+          {unknown ? (
+            <Button variant="outlined" disabled={verifying} onClick={() => void verify()}>
+              {verifying ? "Verificando…" : "Verificar gravação"}
+            </Button>
+          ) : (
+            <Button variant="contained" disabled={disabled || conflict} onClick={() => void save()}>
+              {saving ? "Salvando…" : "Salvar agendamento"}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+      {operatorOpen && (
+        <TelephonyLookupDialog
+          title="Operador do agendamento"
+          multiple={false}
+          allowEmpty={false}
+          initialSelection={operator ? [operator] : []}
+          description="Selecione um operador ativo disponível no seu escopo."
+          selectionHint="A seleção é mantida ao pesquisar ou trocar de página. Confirme para alterar o operador no formulário."
+          loadPage={loadOperators}
+          onClose={() => setOperatorOpen(false)}
+          onConfirm={(options) => {
+            if (options[0]) setOperator(options[0]);
+            setOperatorOpen(false);
+          }}
+        />
+      )}
+    </>
+  );
+}

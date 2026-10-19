@@ -6,6 +6,7 @@ import type { DetailedChat } from "../../src/app/(private)/[instance]/whatsapp-c
 declare global {
   interface Window {
     monitorHarness: {
+      switchUser: (id: number) => void;
       switchTenant: (instance: string) => void;
       refreshToken: () => void;
       setRole: (role: string) => void;
