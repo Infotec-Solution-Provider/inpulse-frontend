@@ -18,6 +18,7 @@ const categoryLabels = {
 export function appliedFilterLabels(
   filters: MonitorFiltersState,
   userName: (id: number) => string,
+  channelName: (id: number) => string = (id) => `#${id}`,
 ) {
   const items: { key: keyof MonitorFiltersState; label: string }[] = [];
   const add = (key: keyof MonitorFiltersState, label: string) => items.push({ key, label });
@@ -25,6 +26,8 @@ export function appliedFilterLabels(
   if (filters.operationalStatus !== "all")
     add("operationalStatus", `Filtro rápido: ${quickLabels[filters.operationalStatus]}`);
   if (filters.user !== "all") add("user", `Atendente: ${userName(filters.user)}`);
+  if (filters.lastMessageChannelId !== "all")
+    add("lastMessageChannelId", `Canal: ${channelName(filters.lastMessageChannelId)}`);
   if (filters.scheduledFor !== "all")
     add("scheduledFor", `Agendado para: ${userName(filters.scheduledFor)}`);
   if (filters.scheduledBy !== "all")

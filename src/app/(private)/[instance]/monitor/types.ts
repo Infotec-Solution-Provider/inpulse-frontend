@@ -17,6 +17,7 @@ export interface MonitorOperational {
   waitingSince: string | null;
   unreadCount: number | null;
   channel: string | null;
+  lastMessageChannel?: { id: number; name: string; phone: string | null } | null;
   deliveryStatus: string | null;
   slaBreached: boolean | null;
 }
@@ -47,6 +48,7 @@ export interface MonitorFiltersState {
     showSchedules: boolean;
   };
   user: number | "all";
+  lastMessageChannelId: number | "all";
   showBots: boolean;
   showOngoing: boolean;
   showFinished: boolean;

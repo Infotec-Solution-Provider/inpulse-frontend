@@ -12,7 +12,8 @@ import {
   IconButton,
   TextField,
 } from "@mui/material";
-import { ArrowLeft, ChevronDown, LockKeyhole, X } from "lucide-react";
+import { LockKeyhole } from "lucide-react";
+import { UiIcon } from "@/lib/ui-system";
 import telephonyMonitorService from "@/lib/services/telephony-monitor.service";
 import { dialogPaperSx } from "../../surface";
 import { scheduleChanges, scheduleFailureStatus, scheduleOutcomeUnknown } from "../schedule-edit";
@@ -214,7 +215,7 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                 aria-label="Voltar ao agendamento"
                 sx={{ ml: -0.5, mb: 1 }}
               >
-                <ArrowLeft size={18} />
+                <UiIcon name="back" scale="toolbar" />
               </IconButton>
             )}
             <h2 id="schedule-edit-title" className="block text-lg font-semibold">
@@ -236,7 +237,7 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
             onClick={close}
             disabled={saving || verifying}
           >
-            <X size={20} />
+            <UiIcon name="close" scale="toolbar" />
           </IconButton>
         </DialogTitle>
         <DialogContent
@@ -298,7 +299,7 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                     <p className="font-semibold text-[var(--ip-text)]">
                       {detail.customer.name || `Cliente #${detail.customer.id}`}
                     </p>
-                    <p className="ip-muted mt-1 text-xs">
+                    <p className="ip-telephony-metadata ip-muted mt-1">
                       Cliente #{detail.customer.id} · Agendamento #{detail.id}
                       <span aria-hidden="true"> · </span>
                       {detail.campaign?.name ||
@@ -335,13 +336,15 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                     />
                   </div>
                   <div>
-                    <p className="ip-muted mb-1 text-xs font-medium">Operador do agendamento</p>
+                    <p className="ip-telephony-metadata ip-muted mb-1 font-medium">
+                      Operador do agendamento
+                    </p>
                     <Button
                       id="schedule-edit-operator"
                       size="small"
                       variant="outlined"
                       fullWidth
-                      endIcon={<ChevronDown size={16} />}
+                      endIcon={<UiIcon name="chevronDown" scale="metadata" />}
                       aria-label="Alterar operador"
                       aria-describedby="schedule-edit-operator-value schedule-edit-operator-help"
                       disabled={disabled}
@@ -357,12 +360,15 @@ export default function ScheduleEditDialog({ scheduleId, onClose, onSaved }: Pro
                         {operator?.label || "Sem operador informado"}
                       </span>
                     </Button>
-                    <p id="schedule-edit-operator-help" className="ip-muted mt-1 text-xs">
+                    <p
+                      id="schedule-edit-operator-help"
+                      className="ip-telephony-metadata ip-muted mt-1"
+                    >
                       O operador cadastral do cliente é mantido.
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 text-xs leading-relaxed text-[var(--ip-muted)]">
-                    <LockKeyhole size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <div className="ip-telephony-metadata flex items-start gap-2 text-[var(--ip-muted)]">
+                    <UiIcon icon={LockKeyhole} scale="metadata" className="mt-0.5 shrink-0" />
                     <div>
                       <p>
                         Prioridade: edição indisponível

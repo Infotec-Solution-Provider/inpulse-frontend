@@ -8,6 +8,78 @@
   vertical-align: middle;
 }
 
+.ip-ui .ip-telephony-metadata {
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.ip-ui .ip-telephony-customer-name {
+  line-height: 20px;
+  letter-spacing: -0.01em;
+}
+
+.ip-ui .ip-telephony-event > p:first-child {
+  line-height: 20px;
+}
+
+.ip-ui .ip-telephony-table td {
+  border-bottom-color: var(--ip-border-subtle);
+}
+
+.ip-ui .ip-telephony-table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.ip-ui .ip-telephony-table tbody tr:focus-within {
+  background: var(--ip-surface-muted);
+}
+
+.ip-ui .ip-telephony-table .ip-telephony-event-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ip-ui .ip-telephony-card {
+  border-color: var(--ip-border-subtle);
+  border-radius: 12px;
+}
+
+.ip-ui .ip-telephony-card:focus-within {
+  border-color: var(--ip-border);
+  background: var(--ip-surface-muted);
+}
+
+.ip-ui .ip-telephony-lookup-option {
+  position: relative;
+  margin-bottom: 2px;
+  background: var(--ip-surface);
+  transition: background-color 120ms ease;
+}
+
+.ip-ui .ip-telephony-lookup-option:hover,
+.ip-ui .ip-telephony-lookup-option:focus-within {
+  background: var(--ip-surface-muted);
+}
+
+.ip-ui .ip-telephony-lookup-option:active {
+  background: var(--ip-pressed);
+}
+
+.ip-ui .ip-telephony-lookup-option[data-selected="true"] {
+  background: var(--ip-accent-soft);
+}
+
+.ip-ui .ip-telephony-lookup-option[data-selected="true"]::before {
+  position: absolute;
+  inset-block: 10px;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--ip-accent);
+  content: "";
+}
+
 .ip-ui .ip-telephony-table th:first-child {
   width: 24%;
 }

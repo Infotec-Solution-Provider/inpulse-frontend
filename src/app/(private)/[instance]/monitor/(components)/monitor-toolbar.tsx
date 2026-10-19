@@ -1,7 +1,6 @@
 "use client";
 
-import { Pause } from "lucide-react";
-import { MonitorRefreshActions } from "@/lib/ui-system";
+import { MonitorRefreshActions, UiIcon } from "@/lib/ui-system";
 import { useEffect, useState } from "react";
 import useMonitorContext from "../context";
 
@@ -87,12 +86,12 @@ export default function MonitorToolbar() {
             </>
           ) : !autoRefresh ? (
             <>
-              <Pause size={12} aria-hidden="true" />
+              <UiIcon name="pause" scale="metadata" />
               Atualização automática pausada
             </>
           ) : autoRefreshPaused ? (
             <>
-              <Pause size={12} aria-hidden="true" />
+              <UiIcon name="pause" scale="metadata" />
               Atualização pausada durante a interação
             </>
           ) : (

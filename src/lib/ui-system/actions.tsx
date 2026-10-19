@@ -1,8 +1,8 @@
 "use client";
 
 import { IconButton, Tooltip, type IconButtonProps } from "@mui/material";
-import { Pause, Play, RefreshCw } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
+import { UiIcon } from "./icons";
 
 export interface OperationalIconButtonProps extends Omit<IconButtonProps, "aria-label"> {
   label: string;
@@ -55,7 +55,7 @@ export function MonitorRefreshActions({
         </span>
       )}
       <OperationalIconButton label={toggleLabel} onClick={onToggle}>
-        {autoRefresh ? <Pause size={18} /> : <Play size={18} />}
+        <UiIcon name={autoRefresh ? "pause" : "play"} scale="toolbar" />
       </OperationalIconButton>
       <OperationalIconButton
         label={retrySeconds > 0 ? `Aguarde ${retrySeconds}s` : "Atualizar"}
@@ -69,7 +69,11 @@ export function MonitorRefreshActions({
         disabled={busy || retrySeconds > 0}
         onClick={onRefresh}
       >
-        <RefreshCw size={18} className={busy ? "animate-spin motion-reduce:animate-none" : ""} />
+        <UiIcon
+          name="refresh"
+          scale="toolbar"
+          className={busy ? "animate-spin motion-reduce:animate-none" : ""}
+        />
       </OperationalIconButton>
     </div>
   );

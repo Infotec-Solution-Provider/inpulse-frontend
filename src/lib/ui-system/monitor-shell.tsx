@@ -58,6 +58,7 @@ import {
   type NavigationIcon,
 } from "./navigation";
 import type { ThemePreference } from "./theme-preference";
+import { UiIcon } from "./icons";
 
 const navigationIcons: Record<NavigationIcon, typeof Headset> = {
   headset: Headset,
@@ -98,15 +99,20 @@ function NavigationEntry({
     mb: 0.5,
     borderRadius: "8px",
     color: active ? "var(--ip-accent)" : "var(--ip-muted)",
-    "&.Mui-selected": { bgcolor: "var(--ip-accent-soft)", color: "var(--ip-accent)" },
+    "&.Mui-selected": {
+      bgcolor: "var(--ip-accent-soft)",
+      color: "var(--ip-accent)",
+      boxShadow: "inset 3px 0 0 var(--ip-accent)",
+    },
     "&.Mui-selected:hover": { bgcolor: "var(--ip-accent-soft)" },
     "&:hover": { bgcolor: "var(--ip-surface-muted)", color: "var(--ip-text)" },
+    "&:active": { bgcolor: "var(--ip-pressed)" },
     "&.Mui-focusVisible": { outline: "2px solid var(--ip-accent)", outlineOffset: -2 },
   };
   const contents = (
     <>
       <ListItemIcon sx={{ minWidth: expanded ? 30 : 20, color: "inherit" }}>
-        <Icon size={18} strokeWidth={1.7} aria-hidden />
+        <UiIcon icon={Icon} scale="navigation" />
       </ListItemIcon>
       {expanded && (
         <ListItemText
@@ -116,9 +122,9 @@ function NavigationEntry({
         />
       )}
       {expanded && item.routes && (
-        <ChevronDown
-          size={14}
-          aria-hidden
+        <UiIcon
+          icon={ChevronDown}
+          scale="metadata"
           style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform 120ms" }}
         />
       )}
@@ -346,7 +352,7 @@ function Sidebar({
               onClick={onToggle}
               size="small"
             >
-              {expanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+              <UiIcon icon={expanded ? PanelLeftClose : PanelLeftOpen} scale="toolbar" />
             </IconButton>
           </Tooltip>
         </Box>
@@ -478,7 +484,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
                 aria-expanded={mobileOpen}
                 onClick={() => setMobileOpen(true)}
               >
-                <MenuIcon size={20} />
+                <UiIcon icon={MenuIcon} scale="toolbar" />
               </IconButton>
             )}
             <Box sx={{ display: { xs: "block", sm: "none" }, minWidth: 0, maxWidth: 80 }}>
@@ -508,9 +514,9 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               >
                 Área de trabalho
               </Typography>
-              <ChevronRight
-                size={12}
-                aria-hidden
+              <UiIcon
+                icon={ChevronRight}
+                scale="metadata"
                 style={{ color: "var(--ip-muted)", flexShrink: 0 }}
               />
               <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Monitoria</Typography>
@@ -519,7 +525,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               component="span"
               sx={{
                 display: { xs: "none", sm: "block" },
-                border: "1px solid var(--ip-border)",
+                bgcolor: "var(--ip-surface-muted)",
                 borderRadius: "6px",
                 px: 1,
                 py: 0.375,
@@ -545,7 +551,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
                 aria-expanded={Boolean(themeAnchor)}
                 onClick={(event) => setThemeAnchor(event.currentTarget)}
               >
-                <ThemeIcon size={18} strokeWidth={1.7} />
+                <UiIcon icon={ThemeIcon} scale="toolbar" />
               </IconButton>
             </Tooltip>
             <LazyNotificationsDropdown />
@@ -579,7 +585,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               >
                 {user?.NOME}
               </Typography>
-              <ChevronDown size={12} aria-hidden />
+              <UiIcon icon={ChevronDown} scale="metadata" />
             </Button>
           </Box>
         </Box>
@@ -622,9 +628,11 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             }}
             sx={{ minWidth: 180, gap: 1.5 }}
           >
-            <choice.icon size={16} aria-hidden />
+            <UiIcon icon={choice.icon} scale="metadata" />
             <ListItemText primary={choice.label} />
-            {choice.value === preference && <Check size={16} aria-label="Selecionado" />}
+            {choice.value === preference && (
+              <UiIcon icon={Check} scale="metadata" aria-label="Selecionado" />
+            )}
           </MenuItem>
         ))}
       </Menu>
@@ -650,7 +658,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
           }}
           sx={{ gap: 1.5, fontSize: 13 }}
         >
-          <Settings size={16} aria-hidden />
+          <UiIcon icon={Settings} scale="metadata" />
           Preferências de notificações
         </MenuItem>
         <MenuItem
@@ -660,7 +668,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
           }}
           sx={{ gap: 1.5, fontSize: 13 }}
         >
-          <LogOut size={16} aria-hidden />
+          <UiIcon icon={LogOut} scale="metadata" />
           Sair
         </MenuItem>
       </Menu>

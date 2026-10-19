@@ -11,6 +11,7 @@ export function createInitialFilters(): MonitorFiltersState {
       showSchedules: true,
     },
     user: "all",
+    lastMessageChannelId: "all",
     showBots: false,
     showOngoing: true,
     showFinished: true,
@@ -76,7 +77,7 @@ export function restoreMonitorPreferences(raw: string | null): MonitorPreference
   ) as (keyof MonitorFiltersState["categories"])[]) {
     if (typeof categories[key] === "boolean") filters.categories[key] = categories[key];
   }
-  for (const key of ["user", "scheduledBy", "scheduledFor"] as const) {
+  for (const key of ["user", "scheduledBy", "scheduledFor", "lastMessageChannelId"] as const) {
     const value = saved[key];
     if (value === "all" || (typeof value === "number" && Number.isSafeInteger(value) && value > 0))
       filters[key] = value;

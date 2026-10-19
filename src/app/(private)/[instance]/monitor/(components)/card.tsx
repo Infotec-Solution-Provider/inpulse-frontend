@@ -1,11 +1,12 @@
 "use client";
 
-import { Clock3, CheckCircle2, Users, ArrowRightLeft, Eye, MoreHorizontal } from "lucide-react";
+import { Users } from "lucide-react";
 import { Avatar, ListItemIcon, Menu, MenuItem } from "@mui/material";
-import { OperationalIconButton } from "@/lib/ui-system";
+import { OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { useEffect, useId, useRef, useState } from "react";
 import type { MonitorOperational } from "../types";
+import { lastMessageChannelLabel } from "../channel-label";
 
 export interface MonitorCardProps {
   type: "external-chat" | "internal-chat" | "internal-group" | "schedule" | "finished-chat";
@@ -185,12 +186,16 @@ export default function MonitorCard({
                 width: 32,
                 height: 32,
                 flexShrink: 0,
-                bgcolor: "var(--ip-accent-soft)",
-                color: "var(--ip-accent)",
+                bgcolor: "var(--ip-surface-muted)",
+                color: "var(--ip-muted)",
                 fontSize: 14,
               }}
             >
-              {type === "internal-group" ? <Users size={17} /> : title.charAt(0).toUpperCase()}
+              {type === "internal-group" ? (
+                <UiIcon icon={Users} scale="row" />
+              ) : (
+                title.charAt(0).toUpperCase()
+              )}
             </Avatar>
             <div className="min-w-0 flex-1">
               <div className="ip-conversation-title">
@@ -225,7 +230,7 @@ export default function MonitorCard({
             <p className="truncate text-sm font-medium" title={userName || undefined}>
               {userName || "Sem atendente"}
             </p>
-            <p className="ip-muted mt-0.5 truncate text-xs">
+            <p className="ip-muted ip-conversation-sector mt-0.5 truncate">
               {sectorName || "Setor não informado"}
             </p>
           </div>
@@ -247,7 +252,7 @@ export default function MonitorCard({
             </p>
             <p className="ip-conversation-operation">
               <span className="ip-conversation-status">
-                {waitTime && <Clock3 size={12} aria-hidden="true" />}
+                {waitTime && <UiIcon name="clock" scale="metadata" />}
                 {operationalDescription}
               </span>
               {operational?.slaBreached && (
@@ -267,11 +272,20 @@ export default function MonitorCard({
                 </span>
               )}
             </p>
-            {(lastMessageAt || operational?.channel) && (
+            {(type === "external-chat" || type === "finished-chat") && (
+              <p
+                className="ip-muted ip-conversation-channel"
+                title={lastMessageChannelLabel(operational) || undefined}
+              >
+                Canal:{" "}
+                {lastMessageChannelLabel(operational) ||
+                  (lastMessageAt ? "Não identificado" : "Sem mensagem")}
+              </p>
+            )}
+            {lastMessageAt && (
               <p
                 className={`ip-muted ip-conversation-metadata ${compact ? "ip-conversation-metadata--compact" : ""}`}
               >
-                {operational?.channel && <span>{operational.channel}</span>}
                 {lastMessageAt && (
                   <time dateTime={operational?.lastMessageAt || undefined}>
                     Última mensagem: {lastMessageAt}
@@ -287,7 +301,7 @@ export default function MonitorCard({
                 tooltip="Visualizar conversa"
                 onClick={handleView}
               >
-                <Eye size={18} />
+                <UiIcon name="view" scale="row" />
               </OperationalIconButton>
             )}
             {(handleTransfer || handleFinish) && (
@@ -300,7 +314,7 @@ export default function MonitorCard({
                   aria-controls={menuAnchor ? menuId : undefined}
                   onClick={(event) => openMenu(event.currentTarget)}
                 >
-                  <MoreHorizontal size={19} />
+                  <UiIcon name="more" scale="row" />
                 </OperationalIconButton>
                 <Menu
                   id={menuId}
@@ -317,7 +331,7 @@ export default function MonitorCard({
                       }}
                     >
                       <ListItemIcon>
-                        <ArrowRightLeft size={16} />
+                        <UiIcon name="transfer" scale="row" />
                       </ListItemIcon>
                       Transferir atendimento
                     </MenuItem>
@@ -331,7 +345,7 @@ export default function MonitorCard({
                       }}
                     >
                       <ListItemIcon>
-                        <CheckCircle2 size={16} />
+                        <UiIcon name="finish" scale="row" />
                       </ListItemIcon>
                       Finalizar atendimento
                     </MenuItem>
@@ -343,7 +357,7 @@ export default function MonitorCard({
         </div>
         {!compact && (
           <div
-            className="ip-muted ip-conversation-details mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3 text-xs"
+            className="ip-muted ip-conversation-details mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t pt-3"
             style={{ borderColor: "var(--ip-border)" }}
           >
             {type === "internal-group" && (
@@ -358,7 +372,7 @@ export default function MonitorCard({
         )}
         {scheduleLabel &&
           (operationalDescription !== scheduleLabel || (!compact && scheduledAt)) && (
-            <div className="ip-muted mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            <div className="ip-muted mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
               {operationalDescription !== scheduleLabel && <span>{scheduleLabel}</span>}
               {!compact && scheduledAt && <span>Criado em: {scheduledAt}</span>}
             </div>

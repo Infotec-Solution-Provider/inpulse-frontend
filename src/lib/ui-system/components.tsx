@@ -1,9 +1,9 @@
 "use client";
 
 import { Button, Chip, Drawer, IconButton } from "@mui/material";
-import { SearchX, SlidersHorizontal, X } from "lucide-react";
 import { useId, type ReactNode } from "react";
 import { usePilotPortal } from "./provider";
+import { UiIcon } from "./icons";
 
 export interface OperationalPanelProps {
   open: boolean;
@@ -51,7 +51,7 @@ export function OperationalPanel({
           onClick={onClose}
           aria-label={closeLabel || `Fechar ${title.toLowerCase()}`}
         >
-          <X size={20} />
+          <UiIcon name="close" scale="toolbar" />
         </IconButton>
       </header>
       <div className="ip-panel-body">{children}</div>
@@ -126,7 +126,7 @@ export function FilterChipBar({
     more = items.length - visible.length;
   return (
     <div className="ip-filter-chips" aria-label="Filtros aplicados">
-      <SlidersHorizontal size={14} aria-hidden="true" className="ip-muted shrink-0" />
+      <UiIcon name="filter" scale="metadata" className="ip-muted shrink-0" />
       {visible.map((item) => (
         <Chip
           key={item.key}
@@ -137,7 +137,7 @@ export function FilterChipBar({
           size="small"
           deleteIcon={
             <span className="ip-chip-delete-target" aria-hidden="true">
-              <X size={14} />
+              <UiIcon name="close" scale="metadata" />
             </span>
           }
         />
@@ -172,7 +172,7 @@ export function MonitorEmptyState({
   return (
     <div role="status" className="ip-empty-state">
       <span className="ip-empty-icon">
-        <SearchX size={26} strokeWidth={1.5} aria-hidden="true" />
+        <UiIcon name="empty" scale="empty" />
       </span>
       <h2>{title}</h2>
       <p>{description}</p>

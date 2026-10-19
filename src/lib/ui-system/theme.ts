@@ -1,5 +1,5 @@
 import { createTheme } from "@mui/material/styles";
-import { uiFontFamily, uiMetrics, uiPalette, type UiMode } from "./tokens";
+import { uiFontFamily, uiMetrics, uiPalette, uiShadows, type UiMode } from "./tokens";
 
 export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | null) {
   const colors = uiPalette[mode];
@@ -43,6 +43,7 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
             borderRadius: 8,
             paddingInline: 12,
             fontSize: 13,
+            transition: "background-color 120ms ease, color 120ms ease, border-color 120ms ease",
             "@media (pointer: coarse)": { minHeight: 44 },
           },
           outlined: ({ ownerState }) =>
@@ -67,6 +68,8 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
           root: {
             borderRadius: 8,
             padding: 8,
+            transition: "background-color 120ms ease, color 120ms ease",
+            "&:active": { backgroundColor: colors.pressed },
             "@media (pointer: coarse)": { minHeight: 44, minWidth: 44 },
           },
         },
@@ -77,9 +80,10 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
         styleOverrides: {
           paper: {
             borderRadius: 12,
+            backgroundColor: colors.surfaceRaised,
             backgroundImage: "none",
             border: `1px solid ${colors.border}`,
-            boxShadow: "0 20px 80px rgb(0 0 0 / 20%)",
+            boxShadow: uiShadows[mode].overlay,
             "@media (max-width: 599px)": {
               margin: 12,
               width: "calc(100% - 24px)",
@@ -105,7 +109,14 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
       MuiModal: { defaultProps: { container } },
       MuiPopover: {
         defaultProps: { container },
-        styleOverrides: { paper: { border: `1px solid ${colors.border}`, borderRadius: 8 } },
+        styleOverrides: {
+          paper: {
+            border: "1px solid " + colors.border,
+            borderRadius: 8,
+            backgroundColor: colors.surfaceRaised,
+            boxShadow: uiShadows[mode].menu,
+          },
+        },
       },
       MuiPopper: { defaultProps: { container } },
       MuiMenuItem: {
@@ -114,6 +125,11 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
             minHeight: 36,
             fontSize: 14,
             gap: 8,
+            "&:active": { backgroundColor: colors.pressed },
+            "&.Mui-selected": {
+              backgroundColor: colors.accentSoft,
+              boxShadow: "inset 3px 0 0 " + colors.accent,
+            },
             "@media (pointer: coarse)": { minHeight: 44 },
           },
         },
@@ -158,7 +174,12 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
             fontWeight: 500,
             color: colors.muted,
             borderColor: colors.border,
-            "&.Mui-selected": { backgroundColor: colors.accentSoft, color: colors.accent },
+            "&.Mui-selected": {
+              backgroundColor: colors.accentSoft,
+              color: colors.accent,
+              boxShadow: "inset 0 -2px 0 " + colors.accent,
+            },
+            "&:active": { backgroundColor: colors.pressed },
             "&.Mui-selected:hover": { backgroundColor: colors.accentSoft },
             "@media (pointer: coarse)": { minHeight: 44 },
           },

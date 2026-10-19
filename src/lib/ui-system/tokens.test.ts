@@ -18,7 +18,13 @@ describe.each(["light", "dark"] as const)("%s operational palette", (mode) => {
   const colors = uiPalette[mode];
   it("keeps primary and secondary text readable on all operational surfaces", () => {
     for (const foreground of [colors.text, colors.muted]) {
-      for (const background of [colors.bg, colors.surface, colors.surfaceMuted]) {
+      for (const background of [
+        colors.bg,
+        colors.surface,
+        colors.surfaceMuted,
+        colors.surfaceRaised,
+        colors.pressed,
+      ]) {
         expect(contrast(foreground, background)).toBeGreaterThanOrEqual(4.5);
       }
     }

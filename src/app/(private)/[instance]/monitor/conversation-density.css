@@ -14,7 +14,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 16px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .ip-ui .ip-conversation-refresh-status p {
   margin: 0;
@@ -28,10 +28,12 @@
   flex-shrink: 0;
   min-width: 0;
   overflow-x: auto;
-  padding: 3px 0;
+  gap: 2px;
+  padding: 4px 0;
   border-block: 1px solid var(--ip-border);
 }
 .ip-ui .ip-conversation-indicator {
+  position: relative;
   display: flex;
   flex: 1 0 auto;
   align-items: center;
@@ -40,10 +42,13 @@
   min-height: 36px;
   padding: 6px 12px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--ip-muted);
-  font-size: 12px;
+  font-size: 13px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -59,6 +64,20 @@
 .ip-ui .ip-conversation-indicator[aria-pressed="true"] {
   background: var(--ip-accent-soft);
   color: var(--ip-accent);
+  font-weight: 500;
+}
+.ip-ui .ip-conversation-indicator[aria-pressed="true"]::after {
+  position: absolute;
+  right: 12px;
+  bottom: 1px;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: "";
+}
+.ip-ui .ip-conversation-indicator:active:not(:disabled) {
+  background: var(--ip-pressed);
 }
 .ip-ui .ip-conversation-indicator[aria-pressed="true"] strong {
   color: var(--ip-accent);
@@ -101,6 +120,9 @@
   padding: 12px;
   list-style: none;
 }
+.ip-ui .ip-conversation-card:focus-within {
+  background: var(--ip-surface-muted);
+}
 .ip-ui .ip-conversation-card + .ip-conversation-card {
   margin-top: 8px;
 }
@@ -135,9 +157,9 @@
   overflow: hidden;
   margin: 2px 0 0;
   color: var(--ip-muted);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -148,8 +170,8 @@
   min-width: 0;
   margin-top: 2px;
   color: var(--ip-muted);
-  font-size: 11px;
-  line-height: 16px;
+  font-size: 13px;
+  line-height: 18px;
   font-variant-numeric: tabular-nums;
 }
 .ip-ui .ip-conversation-contact > span {
@@ -177,6 +199,10 @@
   margin: 0;
   max-width: 100%;
 }
+.ip-ui .ip-conversation-sector {
+  font-size: 13px;
+  line-height: 18px;
+}
 .ip-ui .ip-conversation-activity {
   display: flex;
   grid-column: 1 / -1;
@@ -191,7 +217,8 @@
   gap: 2px 8px;
   min-height: 18px;
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 18px;
 }
 .ip-ui .ip-conversation-status {
   display: inline-flex;
@@ -200,6 +227,10 @@
   color: var(--ip-text);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+.ip-ui .ip-conversation-status svg {
+  flex-shrink: 0;
+  color: var(--ip-muted);
 }
 .ip-ui .ip-conversation-operation > span + span::before {
   content: "·";
@@ -219,14 +250,29 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 18px;
 }
 .ip-ui .ip-conversation-metadata {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
   margin: 0;
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 18px;
+}
+.ip-ui .ip-conversation-channel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+}
+.ip-ui .ip-conversation-details {
+  font-size: 13px;
+  line-height: 18px;
 }
 .ip-ui .ip-conversation-metadata--compact {
   position: absolute;
@@ -251,7 +297,7 @@
   max-height: min(28dvh, 180px);
   overflow-y: auto;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--ip-border);
+  border-bottom: 1px solid var(--ip-border-subtle);
 }
 .ip-ui .ip-conversation-context dl {
   display: grid;
@@ -261,13 +307,13 @@
 }
 .ip-ui .ip-conversation-context dt {
   color: var(--ip-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 .ip-ui .ip-conversation-context dd {
   overflow-wrap: anywhere;
   margin: 2px 0 0;
   color: var(--ip-text);
-  font-size: 12px;
+  font-size: 13px;
 }
 .ip-ui .ip-conversation-context-wide {
   grid-column: 1 / -1;
@@ -275,7 +321,7 @@
 @media (min-width: 1024px) {
   .ip-ui .ip-conversation-card--compact .ip-conversation-grid,
   .ip-ui .ip-conversation-columns {
-    grid-template-columns: minmax(180px, 1.05fr) minmax(110px, 0.65fr) minmax(250px, 1.5fr) 72px;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(110px, 0.5fr) minmax(250px, 1.5fr) 72px;
     column-gap: 16px;
     align-items: center;
   }
@@ -284,18 +330,18 @@
     top: 0;
     z-index: 10;
     display: grid;
-    padding: 7px 16px;
-    border-bottom: 1px solid var(--ip-border);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--ip-border-subtle);
     background: var(--ip-surface-muted);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
   }
   .ip-ui .ip-conversation-list--compact .ip-conversation-card {
     min-height: 72px;
     margin: 0;
-    padding: 10px 16px;
+    padding: 8px 16px;
     border: 0;
-    border-bottom: 1px solid var(--ip-border);
+    border-bottom: 1px solid var(--ip-border-subtle);
     border-radius: 0;
   }
   .ip-ui .ip-conversation-list--compact .ip-conversation-card:last-child {
@@ -305,6 +351,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .ip-ui .ip-conversation-card--compact .ip-conversation-contact {
+    margin-top: 0;
   }
   .ip-ui .ip-conversation-card--compact .ip-conversation-owner {
     display: block;
@@ -317,6 +366,7 @@
   .ip-ui .ip-conversation-card--compact .ip-conversation-activity {
     grid-column: 3;
     grid-row: 1;
+    gap: 2px;
   }
   .ip-ui .ip-conversation-card--compact .ip-conversation-actions {
     grid-column: 4;
@@ -346,7 +396,7 @@
   }
   .ip-ui .ip-conversation-refresh-status {
     gap: 3px 10px;
-    font-size: 11px;
+    font-size: 13px;
   }
   .ip-ui .ip-conversation-refresh-status p[role="status"] {
     flex-basis: 100%;
@@ -370,13 +420,18 @@
     display: none;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .ip-ui .ip-conversation-indicator {
+    transition: none;
+  }
+}
 @media (pointer: coarse) and (min-width: 768px) {
   .ip-ui .ip-conversation-query.ip-toolbar {
     grid-template-columns: minmax(180px, 1fr) 190px 44px auto;
   }
   .ip-ui .ip-conversation-card--compact .ip-conversation-grid,
   .ip-ui .ip-conversation-columns {
-    grid-template-columns: minmax(180px, 1.05fr) minmax(110px, 0.65fr) minmax(250px, 1.5fr) 88px;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(110px, 0.5fr) minmax(250px, 1.5fr) 88px;
   }
 }
 @media (pointer: coarse) and (min-width: 768px) and (max-width: 1023px) {

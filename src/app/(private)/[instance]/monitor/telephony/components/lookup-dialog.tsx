@@ -1,6 +1,5 @@
 "use client";
 
-import { Search, X } from "lucide-react";
 import {
   Alert,
   Button,
@@ -22,7 +21,7 @@ import { readRequestLimitMessage } from "@/lib/utils/read-request-limit";
 import { MonitorRequestGate } from "../../request-gate";
 import type { TelephonyLookupOption, TelephonyLookupResult } from "../types";
 import { dialogPaperSx } from "../../surface";
-import { OperationalIconButton } from "@/lib/ui-system";
+import { OperationalIconButton, UiIcon } from "@/lib/ui-system";
 
 export interface LookupPageRequest {
   search: string;
@@ -154,7 +153,7 @@ export default function TelephonyLookupDialog({
             onClick={onClose}
             size="small"
           >
-            <X size={18} />
+            <UiIcon name="close" scale="toolbar" />
           </IconButton>
         </DialogTitle>
       )}
@@ -191,7 +190,7 @@ export default function TelephonyLookupDialog({
                       tooltip="Pesquisar opções"
                       disabled={retrySeconds > 0}
                     >
-                      <Search size={16} />
+                      <UiIcon name="search" scale="toolbar" />
                     </OperationalIconButton>
                   </InputAdornment>
                 ),
@@ -243,7 +242,8 @@ export default function TelephonyLookupDialog({
               {items.map((option) => (
                 <label
                   key={option.id}
-                  className="flex cursor-pointer items-start gap-2 rounded-lg border-b border-[var(--ip-border)] px-1 py-1.5 hover:bg-[var(--ip-surface-muted)]"
+                  className="ip-telephony-lookup-option flex cursor-pointer items-start gap-2 rounded-lg px-1 py-1.5"
+                  data-selected={selection.has(option.id) ? "true" : undefined}
                 >
                   {multiple ? (
                     <Checkbox
@@ -267,7 +267,7 @@ export default function TelephonyLookupDialog({
                       {option.label}
                     </span>
                     {option.description && (
-                      <span className="ip-muted mt-0.5 block break-words text-xs">
+                      <span className="ip-telephony-metadata ip-muted mt-0.5 block break-words">
                         {option.description}
                       </span>
                     )}
