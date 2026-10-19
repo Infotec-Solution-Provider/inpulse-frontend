@@ -166,6 +166,7 @@ export default function OperatorPerformanceDetailModal({
 
   const firstResponses = details?.firstResponses ?? [];
   const pendingReturns = details?.pendingReturns ?? [];
+  const firstResponseTotalSeconds = firstResponses.reduce((sum, item) => sum + item.firstResponseSeconds, 0);
 
   const modalSubtitle = useMemo(() => {
     if (!filters.startDate && !filters.endDate) {
@@ -205,8 +206,16 @@ export default function OperatorPerformanceDetailModal({
           ) : null}
 
           <Alert severity="info">
-            Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, já ficam fora deste detalhamento.
+            A 1ª devolutiva mede tempo corrido da primeira mensagem do cliente à primeira resposta da operação.
+            Respostas em outro dia ficam fora da regra atual, assim como cortesias enviadas até 1 hora após um encerramento anterior.
+            Bots não contam; templates podem contar como resposta.
           </Alert>
+
+          {!loading && !error && details && activeTab === "firstResponses" && firstResponses.length > 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Média destas conversas: {firstResponseTotalSeconds.toLocaleString("pt-BR")} segundos ÷ {firstResponses.length.toLocaleString("pt-BR")} conversas = {formatDuration(firstResponseTotalSeconds / firstResponses.length)}.
+            </Typography>
+          ) : null}
 
           <Tabs
             value={activeTab}
