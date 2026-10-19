@@ -1,10 +1,68 @@
 import type {
   CreateSegmentRequest,
+  Customer,
   Segment,
   SegmentListParams,
   SetCustomerSegmentRequest,
   UpdateSegmentRequest,
 } from "../../src/lib/sdk-local";
+import type { CustomerFullDetail } from "../../src/app/(private)/[instance]/(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal.types";
+
+function customerDetail(code: number): CustomerFullDetail {
+  const segmentCode = code === 40 ? 1 : 3;
+  return {
+    customer: {
+      CODIGO: code,
+      RAZAO: `Cliente ${code}`,
+      FANTASIA: `Fantasia ${code}`,
+      SEGMENTO: segmentCode,
+      COD_CAMPANHA: null,
+      PESSOA: "JUR",
+      ATIVO: "SIM",
+      COD_ERP: `ERP${code}`,
+      CPF_CNPJ: "",
+      IE_RG: "",
+      END_RUA: "Rua local",
+      CIDADE: "",
+      BAIRRO: "",
+      ESTADO: "",
+      CEP: "",
+      COMPLEMENTO: "",
+      OBS_ADMIN: "",
+      OBS_OPERADOR: "",
+      EMAIL: "",
+      EMAIL2: "",
+      CONTATO_MAIL: "",
+      WEBSITE: "",
+      NR_FUNCIONARIOS: 0,
+      OBS_CLIENTES: "",
+      AREA1: "",
+      FONE1: "",
+      DESC_FONE1: "",
+      AREA2: "",
+      FONE2: "",
+      DESC_FONE2: "",
+      AREA3: "",
+      FONE3: "",
+      DESC_FONE3: "",
+      AREAFAX: "",
+      FAX: "",
+      DESCFAX: "",
+    } as unknown as Customer,
+    campaign: { code: null, name: null, firstName: null },
+    campaigns: [],
+    group: { code: null, description: null },
+    origin: { code: null, description: null },
+    media: { code: null, name: null },
+    segment: { code: segmentCode, name: segmentCode === 1 ? "Atacado" : "Varejo" },
+    operator: { code: null, name: null },
+    contacts: [],
+    callHistory: [],
+    purchases: [],
+    schedules: [],
+    metadata: { purchaseItems: { mapped: false, tableName: null }, customNameFieldMapped: false },
+  };
+}
 
 // Deterministic fixtures used only by the isolated browser harness. No remote API is contacted.
 const params = new URLSearchParams(location.search);
@@ -26,6 +84,12 @@ interface SegmentTestState {
   failReload: boolean;
   savedCallbacks: number;
   customer: { CODIGO: number; SEGMENTO: number | null; NOME: string | null };
+  authToken: string;
+  details: Record<number, CustomerFullDetail>;
+  detailReads: { id: number; token: string }[];
+  detailReadsCompleted: { id: number; token: string }[];
+  detailDelays: Record<number, number>;
+  detailFailure: boolean;
 }
 declare global {
   interface Window {
@@ -61,6 +125,12 @@ window.segmentTest = {
   reloads: 0,
   failReload: false,
   savedCallbacks: 0,
+  authToken: "local-test-only",
+  details: { 40: customerDetail(40), 41: customerDetail(41) },
+  detailReads: [],
+  detailReadsCompleted: [],
+  detailDelays: params.has("late-40") ? { 40: 1000 } : {},
+  detailFailure: false,
   customer: {
     CODIGO: 40,
     SEGMENTO: params.has("dangling") ? 99 : 1,
@@ -77,7 +147,7 @@ const fail = (code: string, status: number) => {
 };
 export const useAuthContext = () => ({
   instance: "local-fixture",
-  token: "local-test-only",
+  token: state.authToken,
   user: { CODIGO: 5, NIVEL: params.has("operator") ? "OPERADOR" : "ADMIN" },
 });
 export const hybridCache = {
@@ -86,7 +156,24 @@ export const hybridCache = {
   },
 };
 export const customersService = {
-  setAuth() {},
+  currentToken: "",
+  setAuth(token: string) {
+    this.currentToken = token;
+  },
+  ax: {
+    async get(path: string) {
+      const id = Number(path.match(/\/customers\/(\d+)\/full$/)?.[1]);
+      if (!Number.isInteger(id)) throw new Error(`Unexpected local fixture path: ${path}`);
+      const read = { id, token: customersService.currentToken };
+      state.detailReads.push(copy(read));
+      const snapshot = copy(state.details[id]);
+      const delay = state.detailDelays[id] ?? 0;
+      if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+      state.detailReadsCompleted.push(copy(read));
+      if (state.detailFailure) throw new Error("Fixture detail unavailable");
+      return { data: { message: "OK", data: snapshot } };
+    },
+  },
   async getSegments() {
     state.lookupReads += 1;
     return copy(state.rows.map(({ CODIGO, NOME }) => ({ CODIGO, NOME })));

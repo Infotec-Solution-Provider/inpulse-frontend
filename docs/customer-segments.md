@@ -10,7 +10,7 @@ Criar com ordem em branco omite a coluna, permitindo o default do banco. Editar 
 
 Novos nomes aceitam os caracteres preserváveis pelo transporte Latin1 atual. Unicode acima de U+00FF (incluindo € e travessão), emoji e controles U+0080–U+009F são recusados antes de salvar, conforme falha de round-trip identificada em teste MySQL real.
 
-A ficha de cliente oferece seleção de segmento existente a administradores autorizados a editar o cliente. O comando envia o vínculo original como precondição, preserva opções legadas ausentes e exige releitura após conflito ou resultado desconhecido. Limpar vínculo, excluir segmento e editar unidade continuam na T23.
+A ficha de cliente oferece seleção de segmento existente a administradores autorizados a editar o cliente. O comando envia o vínculo original como precondição, preserva opções legadas ausentes e exige releitura após conflito ou resultado desconhecido. Esse bloqueio persiste ao trocar de aba; somente uma leitura validada do cliente o libera. Respostas de outro cliente/tenant ou contexto anterior são descartadas. Limpar vínculo, excluir segmento e editar unidade continuam na T23.
 
 Após uma gravação confirmada, a lista é recarregada, o cache de clientes do usuário/tenant é invalidado e `customer-segments-events` avisa os consumidores do lookup no tenant atual. O lookup `/api/customers/segments` continua com seu contrato anterior.
 

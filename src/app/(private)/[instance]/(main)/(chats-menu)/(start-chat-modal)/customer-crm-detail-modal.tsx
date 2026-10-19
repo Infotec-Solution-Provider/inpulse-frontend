@@ -160,6 +160,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState<CustomerFullDetail | null>(null);
+  const [segmentReloadRequired, setSegmentReloadRequired] = useState(false);
 
   const [mainDraft, setMainDraft] = useState<Partial<Customer>>({});
   const [addressDraft, setAddressDraft] = useState<Partial<Customer>>({});
@@ -198,6 +199,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
 
   const loadDetail = async () => {
     if (!token) return;
+    const currentContext = () => segmentContext.current.instance === instance && segmentContext.current.customerId === customerId && segmentContext.current.token === token;
 
     setLoading(true);
     try {
@@ -206,8 +208,11 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         `/api/customers/${customerId}/full`
       );
       const payload = response.data.data;
+      if (!currentContext()) return;
+      if (payload.customer.CODIGO !== customerId) throw new Error("Resposta de outro cliente.");
 
       setDetail(payload);
+      setSegmentReloadRequired(false);
       setMainDraft({
         RAZAO: payload.customer.RAZAO,
         FANTASIA: payload.customer.FANTASIA,
@@ -253,16 +258,18 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
         OBS_CLIENTES: payload.customer.OBS_CLIENTES,
       });
     } catch (error) {
+      if (!currentContext()) return;
+      setDetail(null);
       toast.error("Não foi possível carregar os detalhes do cliente.");
       console.error(error);
     } finally {
-      setLoading(false);
+      if (currentContext()) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadDetail();
-  }, [customerId, token]);
+  }, [customerId, token, instance]);
 
   useEffect(() => {
     const stateCode = String(addressDraft.ESTADO ?? "").trim().toUpperCase();
@@ -1223,7 +1230,9 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
           customerId={customerId}
           segmentId={detail.customer.SEGMENTO ?? null}
           segmentName={detail.segment.name}
-          canEdit={canEditOrigin}
+          canEdit={canEditOrigin && detail.customer.CODIGO === customerId}
+          reloadRequired={segmentReloadRequired}
+          onRequireReload={() => setSegmentReloadRequired(true)}
           onReload={async () => {
             if (!token) throw new Error("Sessão inválida.");
             customersService.setAuth(token);
@@ -1237,6 +1246,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
               customer: { ...previous.customer, SEGMENTO: current.customer.SEGMENTO },
               segment: current.segment,
             } : previous);
+            setSegmentReloadRequired(false);
           }}
           onSaved={(assignment) => {
             if (segmentContext.current.instance !== instance || segmentContext.current.customerId !== customerId || segmentContext.current.token !== token) return;

@@ -13,6 +13,8 @@ interface Props {
   segmentId: number | null;
   segmentName: string | null;
   canEdit: boolean;
+  reloadRequired?: boolean;
+  onRequireReload?: () => void;
   onSaved: (assignment: CustomerSegmentAssignment) => void;
   onReload: () => Promise<void>;
 }
@@ -26,7 +28,7 @@ function errorDetails(error: unknown): { message: string; needsReload: boolean }
   };
 }
 
-export default function CustomerSegmentSelector({ customerId, segmentId, segmentName, canEdit, onSaved, onReload }: Props) {
+export default function CustomerSegmentSelector({ customerId, segmentId, segmentName, canEdit, reloadRequired = false, onRequireReload, onSaved, onReload }: Props) {
   const { token, instance, user } = useAuthContext();
   const [options, setOptions] = useState<CustomerLookupOption[]>([]);
   const [selected, setSelected] = useState<CustomerLookupOption | null>(null);
@@ -34,10 +36,11 @@ export default function CustomerSegmentSelector({ customerId, segmentId, segment
   const [saving, setSaving] = useState(false);
   const [reloading, setReloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [needsReload, setNeedsReload] = useState(false);
+  const [localReloadRequired, setNeedsReload] = useState(false);
   const [catalogVersion, setCatalogVersion] = useState(0);
   const epoch = useRef(0);
   const editable = canEdit && user?.NIVEL === "ADMIN" && customerId > 0;
+  const needsReload = reloadRequired || localReloadRequired;
 
   useEffect(() => {
     epoch.current += 1;
@@ -77,6 +80,7 @@ export default function CustomerSegmentSelector({ customerId, segmentId, segment
     } catch (cause) {
       if (requestEpoch !== epoch.current) return;
       const details = errorDetails(cause); setError(details.message); setNeedsReload(details.needsReload);
+      if (details.needsReload) onRequireReload?.();
     } finally { if (requestEpoch === epoch.current) setSaving(false); }
   };
 
@@ -106,7 +110,7 @@ export default function CustomerSegmentSelector({ customerId, segmentId, segment
         onChange={(_event, value) => setSelected(value)}
         renderInput={params => <TextField {...params} label="Segmento" helperText={loading ? "Carregando segmentos…" : undefined} slotProps={{ input: { ...params.InputProps, endAdornment: <>{loading && <CircularProgress size={16} />}{params.InputProps.endAdornment}</> } }} />}
       />
-      {error && <Alert severity={needsReload ? "warning" : "error"}>{error}</Alert>}
+      {(error || needsReload) && <Alert severity={needsReload ? "warning" : "error"}>{error || "Recarregue os dados do cliente para confirmar o segmento antes de salvar."}</Alert>}
       <div className="flex flex-wrap gap-2">
         <Button size="small" variant="outlined" onClick={save} disabled={saving || loading || reloading || needsReload || !selected || selected.CODIGO <= 0 || selected.CODIGO === segmentId || !options.some(option => option.CODIGO === selected.CODIGO)}>{saving ? "Salvando…" : "Salvar segmento"}</Button>
         {needsReload
