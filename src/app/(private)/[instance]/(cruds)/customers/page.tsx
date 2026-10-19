@@ -1,25 +1,38 @@
 "use client";
+import { CrmPage, UiIcon } from "@/lib/ui-system";
+import { useCustomersContext } from "./customers-context";
 import { useAuthContext } from "@/app/auth-context";
-import { UserRole } from "@/lib/sdk-local";
+import { AppContext } from "../../app-context";
+import { useContext } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@mui/material";
-import Link from "next/link";
+import CreateCustomerModal from "./(table)/(modal)/create-customer-modal";
 import CustomersTable from "./(table)/table";
-
 export default function CustomersManagementPage() {
-  const { user, instance } = useAuthContext();
+  const { state } = useCustomersContext(),
+    { user, instance } = useAuthContext(),
+    { openModal } = useContext(AppContext),
+    router = useRouter();
+  const create = () =>
+    user?.NIVEL === "ADMIN"
+      ? router.push(`/${instance}/crm-customers/new`)
+      : openModal(<CreateCustomerModal />);
   return (
-    <div className="relative box-border flex h-screen w-screen flex-col px-10 pt-5">
-      {user?.NIVEL === UserRole.ADMIN && (
-        <div className="mb-3 flex justify-end">
-          <Button component={Link} href={`/${instance}/crm-customers/new`} size="small">
-            Novo cadastro completo
-          </Button>
-          <Button component={Link} href={`/${instance}/crm-catalogs`} size="small">
-            Cadastros auxiliares
-          </Button>
-        </div>
-      )}
+    <CrmPage
+      title="Clientes"
+      description="Consulte e mantenha os clientes e seus dados comerciais."
+      count={state.isLoading ? undefined : state.totalRows}
+      actions={
+        <Button
+          onClick={create}
+          variant="contained"
+          startIcon={<UiIcon name="add" scale="toolbar" />}
+        >
+          Novo cliente
+        </Button>
+      }
+    >
       <CustomersTable />
-    </div>
+    </CrmPage>
   );
 }

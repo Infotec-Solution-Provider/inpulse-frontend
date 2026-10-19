@@ -1,0 +1,113 @@
+import { test, expect, type Page } from "@playwright/test";
+import { resolve } from "node:path";
+declare global {
+  interface Window {
+    crmUiTest: {
+      navigate: (path: string) => void;
+      switchTenant: (tenant: string) => void;
+      switchActor: (actor: number) => void;
+      setRole: (role: string) => void;
+    };
+  }
+}
+async function open(page: Page) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/tests/crm-ui/index.html");
+  await expect(page.getByRole("heading", { name: "Clientes", exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toContainText("Cliente demonstrativo 01");
+}
+test("customer filter drafts apply explicitly and cancellation leaves the query unchanged", async ({
+  page,
+}) => {
+  const queries: URL[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/customers") queries.push(url);
+  });
+  await open(page);
+  const before = queries.length;
+  await page.getByRole("button", { name: "Filtros de clientes", exact: true }).click();
+  await page.getByRole("dialog").getByLabel("Cidade", { exact: true }).fill("Canoas");
+  expect(queries.length).toBe(before);
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(queries.length).toBe(before);
+  await page.getByRole("button", { name: "Filtros de clientes", exact: true }).click();
+  await expect(page.getByRole("dialog").getByLabel("Cidade", { exact: true })).toHaveValue("");
+  await page.getByRole("dialog").getByLabel("Cidade", { exact: true }).fill("Canoas");
+  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  await expect.poll(() => queries.at(-1)?.searchParams.get("CIDADE")).toBe("Canoas");
+  await expect(page.getByRole("table")).not.toContainText("Cliente demonstrativo 02");
+  expect(await page.evaluate(() => location.search)).toBe("");
+});
+test("customer query and pagination survive visiting related catalogs", async ({ page }) => {
+  await open(page);
+  await page.getByRole("button", { name: "Go to next page" }).click();
+  await expect(page.getByRole("table")).toContainText("Cliente demonstrativo 11");
+  await page.getByRole("button", { name: "Clientes", exact: true }).click();
+  await page
+    .locator("#navigation-customers")
+    .getByRole("link", { name: "Segmentos", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name: "Segmentos", exact: true })).toBeVisible();
+  await page
+    .locator("#navigation-customers")
+    .getByRole("link", { name: "Cadastro", exact: true })
+    .click();
+  await expect(page.getByRole("table")).toContainText("Cliente demonstrativo 11");
+  await expect(page.getByRole("button", { name: "Novo cliente", exact: true })).toHaveCount(1);
+});
+test("customer old responses and filters do not cross a tenant switch", async ({ page }) => {
+  await open(page);
+  let release: (() => void) | undefined;
+  await page.route("**/api/customers?**", async (route) => {
+    if (!new URL(route.request().url()).searchParams.get("RAZAO")) return route.continue();
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await route
+      .fulfill({
+        json: { data: [{ CODIGO: 999, RAZAO: "Resposta antiga" }], page: { totalRows: 1 } },
+      })
+      .catch(() => {});
+  });
+  await page.getByLabel("Buscar cliente por nome", { exact: true }).fill("lenta");
+  await page.getByRole("button", { name: "Buscar clientes", exact: true }).click();
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await page.evaluate(() => window.crmUiTest.switchTenant("tenant-b"));
+  await expect(page.getByRole("table")).toContainText("Cliente demonstrativo 01");
+  release!();
+  await expect(page.getByRole("table")).not.toContainText("Resposta antiga");
+  await expect(page.getByLabel("Buscar cliente por nome", { exact: true })).toHaveValue("");
+});
+test("real customer rows reflow in six dimensions with no page overflow", async ({ page }) => {
+  await open(page);
+  const folder = resolve(
+    "C:/Workspace/infotec/planejamento/cross-service/INF-20261019-004-crm-ui-navigation/artifacts",
+  );
+  for (const [width, height] of [
+    [1440, 900],
+    [1280, 720],
+    [1024, 768],
+    [390, 844],
+    [320, 844],
+    [844, 390],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => document.fonts.ready);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
+    await expect(page.getByRole("button", { name: "Novo cliente", exact: true })).toBeVisible();
+    await page.screenshot({ path: `${folder}/customers-light-${width}x${height}.png` });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Preferência de tema", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Escuro", exact: true }).click();
+  await expect(page.locator('[data-ui-theme="dark"]')).not.toHaveCount(0);
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  const selected = page
+    .getByRole("navigation", { name: "Navegação principal" })
+    .locator('[aria-current="page"]');
+  await expect(selected).toHaveCSS("background-color", "rgb(48, 32, 68)");
+  await page.screenshot({ path: `${folder}/customers-dark-1440x900.png` });
+});

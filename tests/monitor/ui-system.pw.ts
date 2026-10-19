@@ -19,8 +19,12 @@ async function seedTheme(page: Page, legacy: "light" | "dark" | null = null) {
 }
 
 async function expectTheme(page: Page, mode: "light" | "dark") {
-  await expect(page.locator("[data-ui-theme]")).toHaveAttribute("data-ui-theme", mode);
-  await expect(page.getByRole("main")).toHaveCSS("color-scheme", mode);
+  for (const scope of await page.locator("[data-ui-theme]").all())
+    await expect(scope).toHaveAttribute("data-ui-theme", mode);
+  await expect(page.getByRole("main").locator("[data-ui-theme]").first()).toHaveCSS(
+    "color-scheme",
+    mode,
+  );
 }
 
 async function chooseTheme(page: Page, name: "Claro" | "Escuro" | "Sistema") {
@@ -185,15 +189,16 @@ test("menus de tema, notificações e usuário funcionam por teclado e restauram
   await expect(user).toBeFocused();
 });
 
-test("sair do piloto restaura layout legado e mantém a escolha de tema", async ({ page }) => {
+test("navegação global mantém o conteúdo legado isolado e a escolha de tema", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await setupTelephony(page);
   await chooseTheme(page, "Escuro");
   await expectTheme(page, "dark");
   await navigation(page).getByRole("link", { name: "Área de Atendimento", exact: true }).click();
-  await expect(page.getByRole("main", { name: "Conteúdo legado", exact: true })).toBeVisible();
-  await expect(page.locator(".ip-ui")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Alternar tema", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Conteúdo legado", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").locator(".ip-ui")).toHaveCount(0);
+  await expect(themeButton(page)).toBeVisible();
+  await expect(navigation(page)).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("themePreference"))).toBe("dark");
   await page.evaluate(() => window.monitorHarness.navigate("/tenant-a/monitor"));
   await expect(themeButton(page)).toBeVisible();

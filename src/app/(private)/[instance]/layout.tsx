@@ -1,6 +1,5 @@
 "use client";
 import AppProvider from "@/app/(private)/[instance]/app-context";
-import Header from "@/app/(private)/[instance]/header";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
@@ -19,9 +18,9 @@ import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-co
 import { AuthContext } from "@/app/auth-context";
 import { TelephonyProvider } from "@/lib/telephony/telephony-provider";
 import CacheWarmup from "./cache-warmup";
-import { PilotDesignProvider } from "@/lib/ui-system";
+import { CrmQueryProvider, PilotDesignProvider } from "@/lib/ui-system";
 import MonitorShell from "@/lib/ui-system/monitor-shell";
-import { isMonitorPath } from "@/lib/ui-system/navigation";
+import { isModernCrmPath } from "@/lib/ui-system/navigation";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -119,24 +118,25 @@ function AppFrame({
   setModal,
 }: AppLayoutProps & { modal: ReactNode; setModal: (value: ReactNode | null) => void }) {
   const pathname = usePathname();
-  if (isMonitorPath(pathname)) {
-    return (
-      <PilotDesignProvider style={{ height: "100%", minWidth: 0 }}>
-        <MonitorShell>
-          <RouteFeatureGate>{children}</RouteFeatureGate>
-        </MonitorShell>
-        <AppModal modal={modal} setModal={setModal} />
-      </PilotDesignProvider>
-    );
-  }
-  return (
-    <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
-      <Header />
-      <main className="min-h-0 overflow-y-auto">
-        <RouteFeatureGate>{children}</RouteFeatureGate>
-      </main>
+  const { instance, user } = useContext(AuthContext);
+  const content = (
+    <>
+      <RouteFeatureGate>{children}</RouteFeatureGate>
       <AppModal modal={modal} setModal={setModal} />
-    </div>
+    </>
+  );
+  return (
+    <CrmQueryProvider scope={`${instance}:${user?.CODIGO ?? "anonymous"}`}>
+      <MonitorShell>
+        {isModernCrmPath(pathname) ? (
+          <PilotDesignProvider style={{ height: "100%", minWidth: 0 }}>
+            {content}
+          </PilotDesignProvider>
+        ) : (
+          content
+        )}
+      </MonitorShell>
+    </CrmQueryProvider>
   );
 }
 

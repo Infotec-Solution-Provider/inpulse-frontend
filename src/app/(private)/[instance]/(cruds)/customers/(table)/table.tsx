@@ -1,4 +1,9 @@
 "use client";
+import { useAuthContext } from "@/app/auth-context";
+import { useRouter } from "next/navigation";
+import { UiIcon } from "@/lib/ui-system";
+import { TableHead } from "@mui/material";
+import { CUSTOMERS_TABLE_COLUMNS } from "./table-config";
 import { Customer } from "@/lib/sdk-local";
 import {
   Button,
@@ -22,6 +27,8 @@ import ClientTableHeader from "./table-header";
 import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
+  const { user, instance } = useAuthContext();
+  const router = useRouter();
   const { openModal } = useContext(AppContext);
   const { state, dispatch } = useCustomersContext();
 
@@ -31,11 +38,13 @@ export default function CustomersTable() {
       return;
     }
 
-    openModal(<EditCustomerModal customer={customer} />);
+    if (user?.NIVEL === "ADMIN") router.push(`/${instance}/crm-customers/${customer.CODIGO}`);
+    else openModal(<EditCustomerModal customer={customer} />);
   }
 
   function openCreateCustomerModal() {
-    openModal(<CreateCustomerModal />);
+    if (user?.NIVEL === "ADMIN") router.push(`/${instance}/crm-customers/new`);
+    else openModal(<CreateCustomerModal />);
   }
 
   function openContactModal(customer: Customer) {
@@ -51,91 +60,83 @@ export default function CustomersTable() {
   };
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <TableContainer
-        className="scrollbar-whatsapp w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
-        sx={{
-          height: "calc(100vh - 280px)", // Altura fixa para manter paginação no mesmo lugar
-          minHeight: "400px",
-          maxHeight: "70vh",
-          width: "100%",
-        }}
-      >
-        <Table
-          className="scrollbar-whatsapp"
-          stickyHeader
-          sx={{ width: "100%", minWidth: "100%", tableLayout: "auto" }}
-        >
-          <ClientTableHeader />
-          <TableBody
-            sx={{
-              minHeight: state.isLoading || state.customers.length === 0 ? "300px" : "auto",
-            }}
+    <div className="flex min-w-0 w-full flex-col gap-4">
+      <ClientTableHeader key={`${instance}:${user?.CODIGO}`} />
+      <div className="ip-crud-table">
+        <TableContainer className="w-full overflow-auto">
+          <Table
+            className="scrollbar-whatsapp"
+            stickyHeader
+            sx={{ width: "100%", minWidth: "100%", tableLayout: "auto" }}
           >
-            {state.isLoading && (
-              <TableRow sx={{ height: "300px" }}>
-                <TableCell
-                  colSpan={8}
-                  className="border-0"
-                  sx={{
-                    textAlign: "center",
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <CircularProgress size={40} />
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Carregando clientes...
-                    </span>
-                  </div>
-                </TableCell>
+            <TableHead>
+              <TableRow>
+                {["Cliente", "Situação", "Cidade", "Código ERP", "Ações"].map((label) => (
+                  <TableCell key={label} align={label === "Ações" ? "right" : "left"}>
+                    {label}
+                  </TableCell>
+                ))}
               </TableRow>
-            )}
-            {!state.isLoading && state.customers.length === 0 && (
-              <TableRow className="h-[30rem]">
-                <TableCell
-                  colSpan={8}
-                  align="center"
-                  sx={{
-                    borderBottom: "none",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-2 py-8">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Nenhum cliente encontrado
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-            {!state.isLoading &&
-              state.customers.map((client) => (
-                <CustomersTableItem
-                  key={`${client.CODIGO}`}
-                  customer={client}
-                  openEditModalHandler={openEditCustomerModal}
-                  openContactModalHandler={openContactModal}
-                />
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
-        <Button
-          onClick={openCreateCustomerModal}
-          variant="contained"
-          color="primary"
-          size="medium"
-          className="w-full sm:w-auto"
-        >
-          + Cadastrar Cliente
-        </Button>
+            </TableHead>
+            <TableBody
+              sx={{
+                minHeight: state.isLoading || state.customers.length === 0 ? "300px" : "auto",
+              }}
+            >
+              {state.isLoading && (
+                <TableRow sx={{ height: "300px" }}>
+                  <TableCell
+                    colSpan={8}
+                    className="border-0"
+                    sx={{
+                      textAlign: "center",
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-3 py-8">
+                      <CircularProgress size={40} />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        Carregando clientes...
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!state.isLoading && state.customers.length === 0 && (
+                <TableRow className="h-[30rem]">
+                  <TableCell
+                    colSpan={8}
+                    align="center"
+                    sx={{
+                      borderBottom: "none",
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-2 py-8">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Nenhum cliente encontrado
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!state.isLoading &&
+                state.customers.map((client) => (
+                  <CustomersTableItem
+                    key={`${client.CODIGO}`}
+                    customer={client}
+                    openEditModalHandler={openEditCustomerModal}
+                    openContactModalHandler={openContactModal}
+                  />
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
         <TablePagination
           component="div"
           count={Number(state.totalRows || 0)}
           page={Number(state.filters.page || 1) - 1}
           rowsPerPage={Number(state.filters.perPage || 10)}
-          labelRowsPerPage="Entradas por página"
+          labelRowsPerPage="Por página"
           labelDisplayedRows={(info) => {
             const { from, to, count } = info;
             return `${from}-${to} de ${count}`;

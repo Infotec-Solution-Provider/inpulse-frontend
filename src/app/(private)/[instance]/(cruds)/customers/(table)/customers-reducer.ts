@@ -6,6 +6,7 @@ export type CustomerListFilterKey = keyof Customer | keyof CustomerBusinessQuery
 
 // State Type
 export interface CustomersContextState {
+  scope?: string;
   customers: Customer[];
   totalRows: number;
   filters: CustomerListFilters;
@@ -37,16 +38,28 @@ export type ChangeCustomersStateAction =
   | PaginationActions
   | FilterActions
   | CustomerActions
-  | ChanngeLoadingAction;
+  | ChanngeLoadingAction
+  | { type: "apply-filters"; filters: CustomerListFilters }
+  | { type: "reset-context"; scope: string };
 
 // Reducer Function
 export default function customersReducer(
   prev: CustomersContextState,
   action: ChangeCustomersStateAction | MultipleActions,
 ): CustomersContextState {
-  const next = { ...prev };
+  const next = { ...prev, filters: { ...prev.filters } };
 
   switch (action.type) {
+    case "reset-context":
+      return {
+        scope: action.scope,
+        customers: [],
+        totalRows: 0,
+        filters: { page: "1", perPage: "10" },
+        isLoading: false,
+      };
+    case "apply-filters":
+      return { ...next, filters: { ...action.filters, page: "1" } };
     case "change-loading":
       return { ...next, isLoading: action.isLoading };
     case "change-page":

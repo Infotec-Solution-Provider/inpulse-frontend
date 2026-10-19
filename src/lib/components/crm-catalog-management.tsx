@@ -1,4 +1,13 @@
 "use client";
+import {
+  CrmPage,
+  CrmToolbar,
+  OperationalPanel,
+  FilterChipBar,
+  OperationalIconButton,
+  UiIcon,
+  useCrmQueryState,
+} from "@/lib/ui-system";
 
 import { useAuthContext } from "@/app/auth-context";
 import {
@@ -75,11 +84,30 @@ function errorDetails(error: unknown): { message?: string; outcome?: string } {
 
 export interface CatalogManagementApi {
   setAuth(token: string): void;
-  list(params: { page: number; perPage: number; sortBy: string; sortDirection: "asc" | "desc"; search?: string; id?: string }, context: CrmRequestContext): Promise<{ data: CatalogRecord[]; page: { totalRows?: number } }>;
+  list(
+    params: {
+      page: number;
+      perPage: number;
+      sortBy: string;
+      sortDirection: "asc" | "desc";
+      search?: string;
+      id?: string;
+    },
+    context: CrmRequestContext,
+  ): Promise<{ data: CatalogRecord[]; page: { totalRows?: number } }>;
   get(id: string | number, context: CrmRequestContext): Promise<{ data: CatalogRecord }>;
   create(data: CatalogRecord, context: CrmRequestContext): Promise<unknown>;
-  update(id: string | number, changes: CatalogRecord, expected: CatalogRecord, context: CrmRequestContext): Promise<unknown>;
-  remove(id: string | number, expected: CatalogRecord, context: CrmRequestContext): Promise<unknown>;
+  update(
+    id: string | number,
+    changes: CatalogRecord,
+    expected: CatalogRecord,
+    context: CrmRequestContext,
+  ): Promise<unknown>;
+  remove(
+    id: string | number,
+    expected: CatalogRecord,
+    context: CrmRequestContext,
+  ): Promise<unknown>;
   getUnits?(context: CrmRequestContext): Promise<{ data: CrmUnitOption[] }>;
   getStates?(context: CrmRequestContext): Promise<{ data: CrmStateOption[] }>;
   conflictOn409?: boolean;
@@ -115,13 +143,20 @@ export function GenericCatalogManagement({
   ];
   const [rows, setRows] = useState<CatalogRecord[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [perPage, setPerPage] = useState(20);
-  const [sortBy, setSortBy] = useState(definition.fields[0].key);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [search, setSearch] = useState("");
-  const [idFilter, setIdFilter] = useState("");
-  const [filters, setFilters] = useState<{ search?: string; id?: string }>({});
+  const [page, setPage] = useCrmQueryState(`${catalog}:page`, 0);
+  const [perPage, setPerPage] = useCrmQueryState(`${catalog}:perPage`, 20);
+  const [sortBy, setSortBy] = useCrmQueryState(`${catalog}:sortBy`, definition.fields[0].key);
+  const [sortDirection, setSortDirection] = useCrmQueryState<"asc" | "desc">(
+    `${catalog}:sortDirection`,
+    "asc",
+  );
+  const [filters, setFilters] = useCrmQueryState<{ search?: string; id?: string }>(
+    `${catalog}:filters`,
+    {},
+  );
+  const [search, setSearch] = useState(filters.search ?? "");
+  const [idFilter, setIdFilter] = useState(filters.id ?? "");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState("");
   const [reload, setReload] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -234,7 +269,9 @@ export function GenericCatalogManagement({
     };
   }, [api, catalog, token, reload]);
 
-  const validation = editor ? validateCatalogDefinition(definition, editor.draft, editor.original) : null;
+  const validation = editor
+    ? validateCatalogDefinition(definition, editor.draft, editor.original)
+    : null;
   const dirty =
     editor &&
     (editor.original ? validation?.hasChanges : Object.values(editor.draft).some(Boolean));
@@ -262,7 +299,13 @@ export function GenericCatalogManagement({
     const uncertain = details.outcome === "UNKNOWN" || status === undefined || status >= 500;
     setUnknown(uncertain);
     if (uncertain) setReconcileRequired(true);
-    setConflict(code?.endsWith("_CHANGED") || code?.endsWith("_CONFLICT") || status === 401 || status === 404 || Boolean(api.conflictOn409 && status === 409));
+    setConflict(
+      code?.endsWith("_CHANGED") ||
+        code?.endsWith("_CONFLICT") ||
+        status === 401 ||
+        status === 404 ||
+        Boolean(api.conflictOn409 && status === 409),
+    );
     setMutationError(
       uncertain
         ? "Não foi possível confirmar a gravação. Ela pode ter sido concluída. Confira os dados antes de tentar novamente."
@@ -280,7 +323,10 @@ export function GenericCatalogManagement({
     setReloadingEditor(true);
     api.setAuth(auth);
     try {
-      const response = await api.get(editor.original[definition.identity] as string | number, { token: auth, instance });
+      const response = await api.get(editor.original[definition.identity] as string | number, {
+        token: auth,
+        instance,
+      });
       if (!alive.current || currentToken.current !== auth) return;
       openEditor(response.data as unknown as CatalogRecord);
       setReconcileRequired(false);
@@ -296,7 +342,7 @@ export function GenericCatalogManagement({
     }
   };
   const save = async (event: FormEvent) => {
-    event.preventDefault();
+    event?.preventDefault();
     if (!editor || !validation?.valid || !validation.hasChanges || saving || unknown || conflict)
       return;
     const auth = token;
@@ -306,7 +352,12 @@ export function GenericCatalogManagement({
     api.setAuth(auth);
     try {
       if (editor.original) {
-        await api.update(editor.original[definition.identity] as number | string, validation.changes, catalogDefinitionExpected(definition, editor.original), { token: auth, instance });
+        await api.update(
+          editor.original[definition.identity] as number | string,
+          validation.changes,
+          catalogDefinitionExpected(definition, editor.original),
+          { token: auth, instance },
+        );
       } else {
         await api.create(validation.changes, { token: auth, instance });
       }
@@ -329,7 +380,11 @@ export function GenericCatalogManagement({
     setMutationError("");
     api.setAuth(auth);
     try {
-      await api.remove(deleteTarget[definition.identity] as number | string, catalogDefinitionExpected(definition, deleteTarget), { token: auth, instance });
+      await api.remove(
+        deleteTarget[definition.identity] as number | string,
+        catalogDefinitionExpected(definition, deleteTarget),
+        { token: auth, instance },
+      );
       if (!alive.current || currentToken.current !== auth) return;
       setDeleteTarget(null);
       setSuccess("Registro excluído com sucesso.");
@@ -341,8 +396,8 @@ export function GenericCatalogManagement({
       if (alive.current) setSaving(false);
     }
   };
-  const applyFilters = (event: FormEvent) => {
-    event.preventDefault();
+  const applyFilters = (event?: FormEvent) => {
+    event?.preventDefault();
     const value = idFilter.trim();
     if (
       value &&
@@ -358,6 +413,7 @@ export function GenericCatalogManagement({
     }
     setFilterError("");
     setPage(0);
+    setFiltersOpen(false);
     setFilters({
       ...(search.trim() ? { search: search.trim() } : {}),
       ...(value ? { id: value } : {}),
@@ -366,8 +422,9 @@ export function GenericCatalogManagement({
   const display = (record: CatalogRecord, key: string) => {
     const value = record[key];
     if (value === null || value === undefined) return "—";
-    const field = definition.fields.find(field => field.key === key);
-    if (field?.kind === "enum") return field.options?.find(option => option.value === value)?.label ?? String(value);
+    const field = definition.fields.find((field) => field.key === key);
+    if (field?.kind === "enum")
+      return field.options?.find((option) => option.value === value)?.label ?? String(value);
     if (key === "UNIDADE" || key === "COD_UNIDADE") {
       const unit = units.find((unit) => unit.CODIGO === value);
       return unit ? `${unit.DESCRICAO ?? "Sem descrição"} (#${value})` : `#${value}`;
@@ -376,33 +433,34 @@ export function GenericCatalogManagement({
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, height: "100%", overflow: "auto" }}>
+    <CrmPage
+      title={definition.title}
+      description={definition.description}
+      count={loading ? undefined : total}
+      breadcrumbs={[
+        {
+          label: ["cities", "states", "medias"].includes(catalog)
+            ? "Cadastros gerais"
+            : parentTitle,
+          href: ["cities", "states", "medias"].includes(catalog)
+            ? undefined
+            : `/${instance}${parentHref}`,
+        },
+        { label: definition.title },
+      ]}
+      actions={
+        <Button
+          variant="contained"
+          startIcon={<UiIcon name="add" scale="toolbar" />}
+          disabled={reconcileRequired}
+          onClick={() => openEditor()}
+        >
+          {["origins", "brands", "medias", "cities"].includes(catalog) ? "Nova" : "Novo"}{" "}
+          {definition.singular}
+        </Button>
+      }
+    >
       <Stack spacing={2}>
-        <Breadcrumbs>
-          <Link component={NextLink} href={`/${instance}${parentHref}`}>
-            {parentTitle}
-          </Link>
-          <Link component={NextLink} href={`/${instance}${sectionHref}`}>
-            {sectionTitle}
-          </Link>
-          <Typography color="text.primary">{definition.title}</Typography>
-        </Breadcrumbs>
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
-          <Box>
-            <Typography variant="h5" component="h1">
-              {definition.title}
-            </Typography>
-            <Typography color="text.secondary">{definition.description}</Typography>
-          </Box>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            disabled={reconcileRequired}
-            onClick={() => openEditor()}
-          >
-            Cadastrar {definition.singular}
-          </Button>
-        </Stack>
         {success && (
           <Alert severity="success" onClose={() => setSuccess("")}>
             {success}
@@ -424,43 +482,103 @@ export function GenericCatalogManagement({
             alteração.
           </Alert>
         )}
-        <Stack
-          component="form"
-          onSubmit={applyFilters}
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1}
-          alignItems={{ sm: "flex-start" }}
+        <Box component="form" onSubmit={applyFilters}>
+          <CrmToolbar>
+            <TextField
+              label="Buscar por nome ou descrição"
+              size="small"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              sx={{ flex: "1 1 220px", maxWidth: 480 }}
+            />
+            <OperationalIconButton label="Buscar" tooltip="Buscar" type="submit">
+              <UiIcon name="search" scale="toolbar" />
+            </OperationalIconButton>
+            <OperationalIconButton
+              label="Filtros"
+              tooltip="Filtros"
+              onClick={() => {
+                setIdFilter(filters.id ?? "");
+                setFiltersOpen(true);
+              }}
+            >
+              <UiIcon name="filter" scale="toolbar" />
+            </OperationalIconButton>
+            <OperationalIconButton
+              label="Atualizar lista"
+              tooltip="Atualizar lista"
+              disabled={loading}
+              onClick={() => setReload((value) => value + 1)}
+            >
+              <UiIcon name="refresh" scale="toolbar" />
+            </OperationalIconButton>
+          </CrmToolbar>
+        </Box>
+        <FilterChipBar
+          items={Object.entries(filters)
+            .filter(([, value]) => Boolean(value))
+            .map(([key, value]) => ({
+              key,
+              label: `${key === "search" ? "Busca" : "Código"}: ${value}`,
+              onDelete: () => {
+                setFilters((old) => {
+                  const next = { ...old };
+                  delete next[key as keyof typeof next];
+                  return next;
+                });
+                if (key === "search") setSearch("");
+                else setIdFilter("");
+                setPage(0);
+              },
+            }))}
+          onShowAll={() => setFiltersOpen(true)}
+          onClearAll={() => {
+            setFilters({});
+            setSearch("");
+            setIdFilter("");
+            setPage(0);
+          }}
+        />
+        <OperationalPanel
+          open={filtersOpen}
+          title={`Filtros de ${definition.title.toLocaleLowerCase("pt-BR")}`}
+          onClose={() => {
+            setIdFilter(filters.id ?? "");
+            setFiltersOpen(false);
+          }}
+          footer={
+            <>
+              <Button
+                onClick={() => {
+                  setIdFilter(filters.id ?? "");
+                  setFiltersOpen(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button variant="contained" onClick={() => applyFilters()}>
+                Aplicar filtros
+              </Button>
+            </>
+          }
         >
           <TextField
-            label="Buscar por nome ou descrição"
-            size="small"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            sx={{ flex: 1 }}
-          />
-          <TextField
+            fullWidth
             label={definition.identity === "UF" ? "Sigla exata" : "Código exato"}
-            size="small"
             value={idFilter}
             onChange={(event) => setIdFilter(event.target.value)}
             error={Boolean(filterError)}
             helperText={filterError}
-            sx={{ width: { sm: 170 } }}
           />
-          <Button type="submit" variant="outlined" startIcon={<Search />}>
-            Buscar
-          </Button>
-          <Button
-            startIcon={<Refresh />}
-            disabled={loading}
-            onClick={() => setReload((value) => value + 1)}
-          >
-            Recarregar
-          </Button>
-        </Stack>
+        </OperationalPanel>
         {unitsError && <Alert severity="warning">{unitsError}</Alert>}
         {statesError && <Alert severity="warning">{statesError}</Alert>}
-        {rows.some(row => Number(row.ID_COUNT ?? 1) > 1) && <Alert severity="warning">Há códigos compartilhados por mais de um cadastro legado. A edição e a exclusão desses códigos ficam bloqueadas até a identificação ser resolvida no CRM.</Alert>}
+        {rows.some((row) => Number(row.ID_COUNT ?? 1) > 1) && (
+          <Alert severity="warning">
+            Há códigos compartilhados por mais de um cadastro legado. A edição e a exclusão desses
+            códigos ficam bloqueadas até a identificação ser resolvida no CRM.
+          </Alert>
+        )}
         {extraContent}
         {loadError && (
           <Alert
@@ -482,7 +600,7 @@ export function GenericCatalogManagement({
           }}
         >
           {loading && <LinearProgress aria-label="Carregando registros" />}
-          <TableContainer>
+          <TableContainer className="ip-crud-table">
             <Table size="small" aria-label={definition.title}>
               <TableHead>
                 <TableRow>
@@ -512,11 +630,12 @@ export function GenericCatalogManagement({
               </TableHead>
               <TableBody>
                 {!loadError &&
-                rows.map((row, rowIndex) => (
-                  <TableRow key={`${String(row[definition.identity])}:${rowIndex}`} hover>
+                  rows.map((row, rowIndex) => (
+                    <TableRow key={`${String(row[definition.identity])}:${rowIndex}`} hover>
                       {columns.map((column) => (
                         <TableCell
                           key={column.key}
+                          data-label={column.label}
                           sx={{
                             minWidth: column.key === definition.fields[0].key ? 180 : undefined,
                           }}
@@ -524,7 +643,7 @@ export function GenericCatalogManagement({
                           {display(row, column.key)}
                         </TableCell>
                       ))}
-                      <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                      <TableCell data-label="Ações" align="right" sx={{ whiteSpace: "nowrap" }}>
                         <Tooltip title="Editar">
                           <span>
                             <IconButton
@@ -532,7 +651,7 @@ export function GenericCatalogManagement({
                               aria-label={`Editar ${row[definition.identity]}`}
                               onClick={() => openEditor(row)}
                             >
-                              <EditOutlined fontSize="small" />
+                              <UiIcon name="edit" scale="row" />
                             </IconButton>
                           </span>
                         </Tooltip>
@@ -549,11 +668,11 @@ export function GenericCatalogManagement({
                                 setUnknown(false);
                               }}
                             >
-                              <DeleteOutline fontSize="small" />
+                              <UiIcon name="delete" scale="row" />
                             </IconButton>
                           </span>
                         </Tooltip>
-                          {extraRowActions?.(row)}
+                        {extraRowActions?.(row)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -592,9 +711,19 @@ export function GenericCatalogManagement({
         onClose={closeEditor}
         fullWidth
         maxWidth="sm"
+        slotProps={{ paper: { className: "ip-crud-editor" } }}
         aria-labelledby="catalog-editor-title"
       >
-        <Box component="form" onSubmit={save} sx={{ display: "flex", flexDirection: "column", minHeight: 0, maxHeight: "calc(100dvh - 64px)" }}>
+        <Box
+          component="form"
+          onSubmit={save}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            maxHeight: "calc(100dvh - 64px)",
+          }}
+        >
           <DialogTitle id="catalog-editor-title">
             {editor?.original
               ? `Editar ${definition.singular}`
@@ -602,7 +731,18 @@ export function GenericCatalogManagement({
           </DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
-              {(unitsError || statesError) && <Alert severity="warning" action={<Button onClick={() => setReload(value => value + 1)}>Recarregar opções</Button>}>{unitsError || statesError}</Alert>}
+              {(unitsError || statesError) && (
+                <Alert
+                  severity="warning"
+                  action={
+                    <Button onClick={() => setReload((value) => value + 1)}>
+                      Recarregar opções
+                    </Button>
+                  }
+                >
+                  {unitsError || statesError}
+                </Alert>
+              )}
               <TextField
                 label={definition.identity === "UF" ? "Sigla do estado" : "Código"}
                 value={editor?.draft[definition.identity] ?? ""}
@@ -626,79 +766,98 @@ export function GenericCatalogManagement({
                   )
                 }
               />
-            {definition.fields.filter(field => !field.readOnly).map((field) => {
-                const value = editor?.draft[field.key] ?? "";
-                const currentUnit =
-                  field.kind === "unit" &&
-                  value !== "" &&
-                  !units.some((unit) => String(unit.CODIGO) === value);
-                const stateField = catalog === "cities" && field.key === "UF";
-                const historicState =
-                  stateField && value !== "" && !states.some((state) => state.UF === value);
-              const fieldError = editor?.original || value ? validation?.errors[field.key] : undefined;
-                return (
-                  <TextField
-                    key={field.key}
-                    label={field.label}
-                    required={field.required}
-                    value={value}
-                  select={field.kind === "unit" || field.kind === "enum" || stateField}
-                    disabled={saving || reloadingEditor}
-                  error={Boolean(fieldError)}
-                  helperText={fieldError ?? field.help}
-                    slotProps={{
-                      htmlInput: field.kind === "integer" ? { inputMode: "numeric" } : undefined,
-                    }}
-                    onChange={(event) =>
-                      setEditor(
-                        (current) =>
-                          current && {
-                            ...current,
-                            draft: { ...current.draft, [field.key]: event.target.value },
-                          },
-                      )
-                    }
-                  >
-                    {field.kind === "unit" && [
-                      <MenuItem key="empty" value="">
-                        {field.required ? "Selecione uma unidade" : "Sem unidade"}
-                      </MenuItem>,
-                      ...(currentUnit
-                        ? [
-                            <MenuItem key="historic" value={value} disabled>
-                              Unidade #{value} (referência histórica)
-                            </MenuItem>,
-                          ]
-                        : []),
-                      ...units
-                        .filter((unit) => unit.CODIGO > 0)
-                        .map((unit) => (
-                          <MenuItem key={unit.CODIGO} value={String(unit.CODIGO)}>
-                            {unit.DESCRICAO ?? "Sem descrição"} (#{unit.CODIGO})
+              {definition.fields
+                .filter((field) => !field.readOnly)
+                .map((field) => {
+                  const value = editor?.draft[field.key] ?? "";
+                  const currentUnit =
+                    field.kind === "unit" &&
+                    value !== "" &&
+                    !units.some((unit) => String(unit.CODIGO) === value);
+                  const stateField = catalog === "cities" && field.key === "UF";
+                  const historicState =
+                    stateField && value !== "" && !states.some((state) => state.UF === value);
+                  const fieldError =
+                    editor?.original || value ? validation?.errors[field.key] : undefined;
+                  return (
+                    <TextField
+                      key={field.key}
+                      label={field.label}
+                      required={field.required}
+                      value={value}
+                      select={field.kind === "unit" || field.kind === "enum" || stateField}
+                      disabled={saving || reloadingEditor}
+                      error={Boolean(fieldError)}
+                      helperText={fieldError ?? field.help}
+                      slotProps={{
+                        htmlInput: field.kind === "integer" ? { inputMode: "numeric" } : undefined,
+                      }}
+                      onChange={(event) =>
+                        setEditor(
+                          (current) =>
+                            current && {
+                              ...current,
+                              draft: { ...current.draft, [field.key]: event.target.value },
+                            },
+                        )
+                      }
+                    >
+                      {field.kind === "unit" && [
+                        <MenuItem key="empty" value="">
+                          {field.required ? "Selecione uma unidade" : "Sem unidade"}
+                        </MenuItem>,
+                        ...(currentUnit
+                          ? [
+                              <MenuItem key="historic" value={value} disabled>
+                                Unidade #{value} (referência histórica)
+                              </MenuItem>,
+                            ]
+                          : []),
+                        ...units
+                          .filter((unit) => unit.CODIGO > 0)
+                          .map((unit) => (
+                            <MenuItem key={unit.CODIGO} value={String(unit.CODIGO)}>
+                              {unit.DESCRICAO ?? "Sem descrição"} (#{unit.CODIGO})
+                            </MenuItem>
+                          )),
+                      ]}
+                      {field.kind === "enum" && [
+                        <MenuItem key="empty" value="">
+                          Não definido
+                        </MenuItem>,
+                        ...(value && !field.options?.some((option) => option.value === value)
+                          ? [
+                              <MenuItem key="historic" value={value} disabled>
+                                {value} (histórico)
+                              </MenuItem>,
+                            ]
+                          : []),
+                        ...(field.options ?? []).map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
                           </MenuItem>
                         )),
-                    ]}
-                  {field.kind === "enum" && [<MenuItem key="empty" value="">Não definido</MenuItem>, ...(value && !field.options?.some(option => option.value === value) ? [<MenuItem key="historic" value={value} disabled>{value} (histórico)</MenuItem>] : []), ...(field.options ?? []).map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)]}
-                    {stateField && [
-                      <MenuItem key="empty" value="">
-                        Sem estado
-                      </MenuItem>,
-                      ...(historicState
-                        ? [
-                            <MenuItem key="historic" value={value} disabled>
-                              {value} (referência histórica)
-                            </MenuItem>,
-                          ]
-                        : []),
-                      ...states.map((state) => (
-                        <MenuItem key={state.UF} value={state.UF}>
-                          {state.UF} · {state.NOME ?? "Sem nome"}
-                        </MenuItem>
-                      )),
-                    ]}
-                  </TextField>
-                );
-              })}
+                      ]}
+                      {stateField && [
+                        <MenuItem key="empty" value="">
+                          Sem estado
+                        </MenuItem>,
+                        ...(historicState
+                          ? [
+                              <MenuItem key="historic" value={value} disabled>
+                                {value} (referência histórica)
+                              </MenuItem>,
+                            ]
+                          : []),
+                        ...states.map((state) => (
+                          <MenuItem key={state.UF} value={state.UF}>
+                            {state.UF} · {state.NOME ?? "Sem nome"}
+                          </MenuItem>
+                        )),
+                      ]}
+                    </TextField>
+                  );
+                })}
               {mutationError && (
                 <Alert severity={unknown || conflict ? "warning" : "error"}>{mutationError}</Alert>
               )}
@@ -820,22 +979,54 @@ export function GenericCatalogManagement({
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </CrmPage>
   );
 }
 
-export function CatalogManagement({ catalog, token, instance }: { catalog: CrmCatalogName; token: string; instance: string }) {
-  const api = useMemo<CatalogManagementApi>(() => ({
-    setAuth: value => customersService.setAuth(value),
-    list: (params, context) => customersService.listCrmCatalog(catalog, params, context).then(response => ({ ...response, data: response.data.map(row => ({ ...row })) })),
-    get: (id, context) => customersService.getCrmCatalog(catalog, id, context).then(response => ({ ...response, data: { ...response.data } })),
-    create: (data, context) => customersService.createCrmCatalog(catalog, data as CreateCrmCatalogRequest<CrmCatalogName>, context),
-    update: (id, changes, expected, context) => customersService.updateCrmCatalog(catalog, id, { changes, expected }, context),
-    remove: (id, expected, context) => customersService.deleteCrmCatalog(catalog, id, expected, context),
-    getUnits: context => customersService.getCrmCatalogUnits(context),
-    getStates: context => customersService.getCrmCatalogStates(context),
-  }), [catalog]);
-  return <GenericCatalogManagement catalog={catalog} token={token} instance={instance} definition={CRM_CATALOGS[catalog]} api={api} />;
+export function CatalogManagement({
+  catalog,
+  token,
+  instance,
+}: {
+  catalog: CrmCatalogName;
+  token: string;
+  instance: string;
+}) {
+  const api = useMemo<CatalogManagementApi>(
+    () => ({
+      setAuth: (value) => customersService.setAuth(value),
+      list: (params, context) =>
+        customersService
+          .listCrmCatalog(catalog, params, context)
+          .then((response) => ({ ...response, data: response.data.map((row) => ({ ...row })) })),
+      get: (id, context) =>
+        customersService
+          .getCrmCatalog(catalog, id, context)
+          .then((response) => ({ ...response, data: { ...response.data } })),
+      create: (data, context) =>
+        customersService.createCrmCatalog(
+          catalog,
+          data as CreateCrmCatalogRequest<CrmCatalogName>,
+          context,
+        ),
+      update: (id, changes, expected, context) =>
+        customersService.updateCrmCatalog(catalog, id, { changes, expected }, context),
+      remove: (id, expected, context) =>
+        customersService.deleteCrmCatalog(catalog, id, expected, context),
+      getUnits: (context) => customersService.getCrmCatalogUnits(context),
+      getStates: (context) => customersService.getCrmCatalogStates(context),
+    }),
+    [catalog],
+  );
+  return (
+    <GenericCatalogManagement
+      catalog={catalog}
+      token={token}
+      instance={instance}
+      definition={CRM_CATALOGS[catalog]}
+      api={api}
+    />
+  );
 }
 
 export default function CrmCatalogManagement({ catalog }: { catalog: CrmCatalogName }) {

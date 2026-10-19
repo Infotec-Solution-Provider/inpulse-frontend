@@ -28,8 +28,9 @@ test("loads the real page with server pagination, sort and literal filters", asy
   );
   expect(await page.evaluate(() => window.segmentTest.reads.at(-1)?.NOME)).toBe("Não existe %_");
   await page.getByRole("button", { name: "Limpar filtros" }).click();
+  await page.getByRole("button", { name: "Filtros", exact: true }).click();
   await page.getByRole("textbox", { name: "Código", exact: true }).fill("0");
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
   await expect(page.getByText("1–1 de 1", { exact: true })).toBeVisible();
   await expect(page.getByRole("table")).toContainText("Código 0");
 });

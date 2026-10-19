@@ -16,7 +16,7 @@ const catalogCases = [
 ];
 async function initial(page: Page, query = "") {
   await page.goto(`${url}${query}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("button", { name: "Recarregar", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Atualizar lista", exact: true })).toBeEnabled();
 }
 for (const fixture of catalogCases)
   test(`${fixture.catalog}: creates, edits with original snapshot and deletes`, async ({
@@ -24,7 +24,12 @@ for (const fixture of catalogCases)
   }) => {
     await initial(page, `?catalog=${fixture.catalog}`);
     await expect(page.getByRole("heading", { name: fixture.title, exact: true })).toBeVisible();
-    await page.getByRole("button", { name: `Cadastrar ${fixture.singular}`, exact: true }).click();
+    await page
+      .getByRole("button", {
+        name: `${["origem", "marca", "mídia", "cidade"].includes(fixture.singular) ? "Nova" : "Novo"} ${fixture.singular}`,
+        exact: true,
+      })
+      .click();
     let dialog = page.getByRole("dialog");
     if (fixture.catalog === "states")
       await dialog.getByLabel("Sigla do estado", { exact: true }).fill("RS");
@@ -79,7 +84,7 @@ test("conflict preserves draft, blocks repeat write and reloads original", async
 for (const failure of ["unknown", "network", "duplicate-unknown"])
   test(`${failure}: requires reconciliation after uncertain write`, async ({ page }) => {
     await initial(page);
-    await page.getByRole("button", { name: "Cadastrar grupo", exact: true }).click();
+    await page.getByRole("button", { name: "Novo grupo", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Código", { exact: true }).fill("22");
     await dialog.getByLabel("Descrição", { exact: false }).fill("Nova tentativa");
@@ -91,9 +96,9 @@ for (const failure of ["unknown", "network", "duplicate-unknown"])
     await expect(dialog.getByRole("button", { name: "Salvar", exact: true })).toBeDisabled();
     await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
     await page.getByRole("button", { name: "Fechar formulário" }).click();
-    await expect(page.getByRole("button", { name: "Cadastrar grupo", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Novo grupo", exact: true })).toBeDisabled();
     await page.getByRole("button", { name: "Conferi os dados" }).click();
-    await expect(page.getByRole("button", { name: "Cadastrar grupo", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Novo grupo", exact: true })).toBeEnabled();
     expect(await page.evaluate(() => window.catalogTest.creates.length)).toBe(1);
   });
 test("reference refusal keeps the row and does not remove relations", async ({ page }) => {
@@ -149,7 +154,7 @@ test("switching tenant discards drafts and ignores late old responses", async ({
     window.catalogTest.listDelay = 400;
   });
   await page
-    .getByRole("button", { name: "Recarregar", exact: true, includeHidden: true })
+    .getByRole("button", { name: "Atualizar lista", exact: true, includeHidden: true })
     .evaluate((button) => (button as HTMLButtonElement).click());
   await page
     .getByRole("button", { name: "Trocar tenant", exact: true, includeHidden: true })
@@ -161,7 +166,7 @@ test("switching tenant discards drafts and ignores late old responses", async ({
 test("dark mobile form remains operable within viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await initial(page, "?catalog=brands&dark");
-  await page.getByRole("button", { name: "Cadastrar marca", exact: true }).click();
+  await page.getByRole("button", { name: "Nova marca", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Salvar", exact: true }),

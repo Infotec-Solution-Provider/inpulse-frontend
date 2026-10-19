@@ -13,7 +13,7 @@ export function usePathname() {
     window.addEventListener(routeEvent, sync);
     return () => window.removeEventListener(routeEvent, sync);
   }, []);
-  return pathname;
+  return pathname.split("?")[0];
 }
 export const TestLink = forwardRef<
   HTMLAnchorElement,
@@ -41,4 +41,9 @@ export function TestImage({
   ...props
 }: Omit<ComponentProps<"img">, "src"> & { src: string | { src: string }; priority?: boolean }) {
   return <img {...props} src={typeof src === "string" ? src : src.src} alt={alt} />;
+}
+
+export function useSearchParams() {
+  usePathname();
+  return new URLSearchParams(currentPath.split("?")[1] ?? "");
 }

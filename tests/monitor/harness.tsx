@@ -71,24 +71,20 @@ function Harness() {
       }}
     >
       <AppContext.Provider value={{ modal, openModal: setModal, closeModal: () => setModal(null) }}>
-        {isMonitorPath(pathname) ? (
-          <PilotDesignProvider>
-            <MonitorShell>
+        <MonitorShell>
+          {isMonitorPath(pathname) ? (
+            <PilotDesignProvider>
               <MonitorLayout>
                 <MonitorPage />
               </MonitorLayout>
-            </MonitorShell>
-            {appModal}
-          </PilotDesignProvider>
-        ) : (
-          <div style={{ height: "100%" }}>
-            <Header />
-            <main aria-label="Conteúdo legado" style={{ padding: 24 }}>
-              Página demonstrativa no layout anterior.
-            </main>
-            {appModal}
-          </div>
-        )}
+              {appModal}
+            </PilotDesignProvider>
+          ) : (
+            <div aria-label="Conteúdo legado" style={{ padding: 24 }}>
+              Página demonstrativa no layout anterior.{appModal}
+            </div>
+          )}
+        </MonitorShell>
       </AppContext.Provider>
     </AuthContext.Provider>
   );

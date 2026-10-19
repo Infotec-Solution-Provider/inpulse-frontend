@@ -29,6 +29,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CrmLookup, CrmMarketingFrame, useCrmMutation, useCrmSession } from "./shared";
 const definitions: Record<
   CrmExceptionKind,
@@ -71,7 +72,13 @@ export default function CrmExceptionsPage() {
   );
 }
 function ExceptionsWorkspace() {
-  const [kind, setKind] = useState<CrmExceptionKind>("cities");
+  const search = useSearchParams(),
+    router = useRouter(),
+    pathname = usePathname();
+  const requested = search?.get("kind") ?? "cities";
+  const kind: CrmExceptionKind = Object.hasOwn(definitions, requested)
+    ? (requested as CrmExceptionKind)
+    : "cities";
   return (
     <Stack gap={2}>
       <Typography color="text.secondary">
@@ -80,7 +87,7 @@ function ExceptionsWorkspace() {
       </Typography>
       <Tabs
         value={kind}
-        onChange={(_event, value) => setKind(value)}
+        onChange={(_event, value) => router.push(`${pathname}?kind=${value}`, { scroll: false })}
         variant="scrollable"
         allowScrollButtonsMobile
       >
@@ -373,7 +380,16 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
         labelRowsPerPage="Por página"
       />
       <Dialog fullWidth maxWidth="sm" open={!!editor} onClose={close}>
-        <Box component="form" onSubmit={save} sx={{ display: "flex", flexDirection: "column", minHeight: 0, maxHeight: "calc(100dvh - 64px)" }}>
+        <Box
+          component="form"
+          onSubmit={save}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            maxHeight: "calc(100dvh - 64px)",
+          }}
+        >
           <DialogTitle>
             {editor?.original ? "Editar exceção" : "Nova exceção"} · {spec.title}
           </DialogTitle>

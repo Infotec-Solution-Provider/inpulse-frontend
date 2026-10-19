@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { UserRole } from "@/lib/sdk-local";
 import {
   getNavigationItems,
+  navigationLeaves,
+  activeNavigationPath,
+  isModernCrmPath,
   isMonitorPath,
   isNavigationRouteActive,
   sidebarExpandedPreference,
@@ -9,9 +12,7 @@ import {
 } from "./navigation";
 
 const routes = (role: UserRole, parameters: Record<string, string> = {}, instance = "homolog") =>
-  getNavigationItems(parameters, role, instance).flatMap((item) =>
-    item.href ? [item.href] : (item.routes?.map((route) => route.href) ?? []),
-  );
+  navigationLeaves(getNavigationItems(parameters, role, instance)).map((item) => item.href);
 
 describe("shared navigation authorization", () => {
   it("does not expose administration or internal groups to external operators", () => {
@@ -63,7 +64,7 @@ describe("shared navigation authorization", () => {
       expect.arrayContaining([
         "/reports/goals-dashboard",
         "/reports/team-goals",
-        "/user-catalogs",
+        "/user-catalogs/user-groups",
         "/crm-campaigns",
       ]),
     );
@@ -95,5 +96,66 @@ describe("pilot route and scoped navigation preferences", () => {
     expect(sidebarExpandedPreference(null, 1280)).toBe(true);
     expect(sidebarExpandedPreference("compact", 1440)).toBe(false);
     expect(sidebarExpandedPreference("expanded", 1024)).toBe(true);
+  });
+});
+
+describe("hierarchical application navigation", () => {
+  const tree = getNavigationItems({}, UserRole.ADMIN, "homolog");
+  it("uses unique stable identities, expandable groups and direct catalog destinations", () => {
+    const ids: string[] = [];
+    const inspect = (nodes: typeof tree) =>
+      nodes.forEach((node) => {
+        ids.push(node.id);
+        if (node.kind === "group") {
+          expect(node.href).toBeUndefined();
+          expect(node.routes.length).toBeGreaterThan(0);
+          inspect(node.routes);
+        }
+      });
+    inspect(tree);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ["customers", "users"]) {
+      const group = tree.find((item) => item.id === id)!;
+      expect(group.routes?.[0].title).toBe("Cadastro");
+    }
+    expect(navigationLeaves(tree).map((item) => item.href)).not.toContain("/crm-catalogs");
+    expect(navigationLeaves(tree).map((item) => item.href)).not.toContain("/user-catalogs");
+  });
+  it("opens the exact ancestor chain for sales and customer detail aliases", () => {
+    expect(
+      activeNavigationPath(tree, "/homolog/user-catalogs/sales-types", "homolog").map(
+        (item) => item.id,
+      ),
+    ).toEqual(["users", "sales", "sales-types"]);
+    expect(
+      activeNavigationPath(tree, "/homolog/crm-customers/42", "homolog").map((item) => item.id),
+    ).toEqual(["customers", "customers-register"]);
+  });
+  it("selects one exception, including missing and invalid kind, without selecting all tabs", () => {
+    for (const [query, leaf] of [
+      ["kind=states", "exception-states"],
+      ["kind=customers", "exception-customers"],
+      ["", "exception-cities"],
+      ["kind=invalid", "exception-cities"],
+    ]) {
+      expect(
+        activeNavigationPath(tree, "/homolog/crm-exceptions", "homolog", query).map(
+          (item) => item.id,
+        ),
+      ).toEqual(["campaigns", "exceptions", leaf]);
+    }
+  });
+  it("prefers a query-specific report and respects route boundaries and visual scope", () => {
+    expect(
+      activeNavigationPath(
+        getNavigationItems({}, UserRole.ADMIN, "exatron"),
+        "/exatron/reports/dashboard",
+        "exatron",
+        "report=satisfactionSurvey",
+      ).at(-1)?.title,
+    ).toBe("Pesquisa de Satisfação");
+    expect(isModernCrmPath("/homolog/crm-customers/12")).toBe(true);
+    expect(isModernCrmPath("/homolog/customers-old")).toBe(false);
+    expect(isModernCrmPath("/homolog/reports/dashboard")).toBe(false);
   });
 });

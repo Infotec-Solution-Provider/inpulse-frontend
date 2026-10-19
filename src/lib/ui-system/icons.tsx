@@ -19,6 +19,8 @@ import {
   Pencil,
   Phone,
   Play,
+  Plus,
+  Trash2,
   RefreshCw,
   Search,
   SearchX,
@@ -57,6 +59,8 @@ export const uiIcons = {
   chevronDown: ChevronDown,
   pause: Pause,
   play: Play,
+  add: Plus,
+  delete: Trash2,
 } as const;
 
 export const uiIconMetrics = {

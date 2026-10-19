@@ -1,3 +1,4 @@
+import { PilotDesignProvider } from "../../src/lib/ui-system";
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
 import { CssBaseline, ThemeProvider } from "@mui/material";
@@ -82,8 +83,10 @@ document.documentElement.classList.toggle("dark", dark);
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider theme={dark ? darkTheme : lightTheme}>
     <CssBaseline />
-    <div style={{ height: "100dvh", overflow: "hidden" }}>
-      {modal ? <ModalHarness /> : selector ? <SelectorHarness /> : <CustomerSegmentsPage />}
-    </div>
+    <PilotDesignProvider style={{ height: "100dvh" }}>
+      <div style={{ height: "100dvh", overflow: "hidden" }}>
+        {modal ? <ModalHarness /> : selector ? <SelectorHarness /> : <CustomerSegmentsPage />}
+      </div>
+    </PilotDesignProvider>
   </ThemeProvider>,
 );

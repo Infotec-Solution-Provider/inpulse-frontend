@@ -1,4 +1,11 @@
 "use client";
+import {
+  CrmPage,
+  OperationalPanel,
+  FilterChipBar,
+  UiIcon,
+  useCrmQueryState,
+} from "@/lib/ui-system";
 
 import { useAuthContext } from "@/app/auth-context";
 import { createCacheScope } from "@/lib/cache/cache-scope";
@@ -82,13 +89,20 @@ function SegmentManagement({
   const [unitsError, setUnitsError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Segment | null>(null);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(0);
-  const [perPage, setPerPage] = useState(20);
-  const [sortBy, setSortBy] = useState<SortColumn>("NOME");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [nameFilter, setNameFilter] = useState("");
-  const [codeFilter, setCodeFilter] = useState("");
-  const [filters, setFilters] = useState<{ NOME?: string; CODIGO?: number }>({});
+  const [page, setPage] = useCrmQueryState("segments:page", 0);
+  const [perPage, setPerPage] = useCrmQueryState("segments:perPage", 20);
+  const [sortBy, setSortBy] = useCrmQueryState<SortColumn>("segments:sort", "NOME");
+  const [sortDirection, setSortDirection] = useCrmQueryState<SortDirection>(
+    "segments:direction",
+    "asc",
+  );
+  const [filters, setFilters] = useCrmQueryState<{ NOME?: string; CODIGO?: number }>(
+    "segments:filters",
+    {},
+  );
+  const [nameFilter, setNameFilter] = useState(filters.NOME ?? "");
+  const [codeFilter, setCodeFilter] = useState(String(filters.CODIGO ?? ""));
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterError, setFilterError] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -210,15 +224,15 @@ function SegmentManagement({
   useEffect(() => {
     if (!isDirty) return;
     const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
+      event?.preventDefault();
       event.returnValue = "";
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [isDirty]);
 
-  const applyFilters = (event: FormEvent) => {
-    event.preventDefault();
+  const applyFilters = (event?: FormEvent) => {
+    event?.preventDefault();
     const code = codeFilter.trim();
     if (
       code &&
@@ -232,6 +246,7 @@ function SegmentManagement({
     }
     setFilterError("");
     setPage(0);
+    setFiltersOpen(false);
     setFilters({
       ...(nameFilter.trim() ? { NOME: nameFilter.trim() } : {}),
       ...(code ? { CODIGO: Number(code) } : {}),
@@ -245,7 +260,7 @@ function SegmentManagement({
   };
 
   const save = async (event: FormEvent) => {
-    event.preventDefault();
+    event?.preventDefault();
     if (
       !editor ||
       !validation ||
@@ -271,7 +286,10 @@ function SegmentManagement({
             updateSegmentPayload(editor.draft, editor.original),
             { token: requestToken, instance },
           )
-        : await customersService.createSegment(createSegmentPayload(editor.draft), { token: requestToken, instance });
+        : await customersService.createSegment(createSegmentPayload(editor.draft), {
+            token: requestToken,
+            instance,
+          });
       if (!mounted.current || currentToken.current !== requestToken) return;
       void hybridCache.invalidateResource(createCacheScope(instance, userId), "customer-page");
       publishCustomerSegmentsChanged(instance);
@@ -328,7 +346,10 @@ function SegmentManagement({
     const requestToken = token;
     try {
       customersService.setAuth(token);
-      const { data } = await customersService.getSegment(editor.original.CODIGO, { token: requestToken, instance });
+      const { data } = await customersService.getSegment(editor.original.CODIGO, {
+        token: requestToken,
+        instance,
+      });
       if (!mounted.current || currentToken.current !== requestToken) return;
       setEditor({ original: data, draft: segmentDraft(data) });
       setConflict(false);
@@ -357,11 +378,15 @@ function SegmentManagement({
     setSaveError("");
     customersService.setAuth(token);
     try {
-      await customersService.deleteSegment(deleteTarget.CODIGO, {
-        NOME: deleteTarget.NOME,
-        ordem: deleteTarget.ordem,
-        COD_UNIDADE: deleteTarget.COD_UNIDADE,
-      }, { token: requestToken, instance });
+      await customersService.deleteSegment(
+        deleteTarget.CODIGO,
+        {
+          NOME: deleteTarget.NOME,
+          ordem: deleteTarget.ordem,
+          COD_UNIDADE: deleteTarget.COD_UNIDADE,
+        },
+        { token: requestToken, instance },
+      );
       if (!mounted.current || currentToken.current !== requestToken) return;
       setDeleteTarget(null);
       setSuccess("Segmento excluído com sucesso.");
@@ -391,48 +416,23 @@ function SegmentManagement({
   };
 
   return (
-    <div className="box-border h-full w-full overflow-y-auto bg-white px-4 py-8 text-black dark:bg-gray-900 dark:text-white">
-      <div className="mx-auto grid w-full max-w-[1480px] gap-6">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Breadcrumbs aria-label="Navegação" sx={{ mb: 1, fontSize: 14 }}>
-              <Link
-                component={NextLink}
-                href={`/${instance}/customers`}
-                underline="hover"
-                color="inherit"
-              >
-                Clientes
-              </Link>
-              <Typography component="span" variant="body2" color="text.secondary">
-                Cadastros auxiliares
-              </Typography>
-              <Typography component="span" variant="body2">
-                Segmentos
-              </Typography>
-            </Breadcrumbs>
-            <div className="flex items-center gap-3">
-              <span className="rounded-md bg-slate-100 p-2 dark:bg-slate-800">
-                <SegmentIcon />
-              </span>
-              <Typography variant="h4" component="h1" fontWeight={700}>
-                Segmentos
-              </Typography>
-            </div>
-            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Organize a classificação dos seus clientes.
-            </p>
-          </div>
-          <Button
-            startIcon={<Add />}
-            variant="contained"
-            disabled={reconcileRequired}
-            onClick={() => openEditor()}
-          >
-            Novo segmento
-          </Button>
-        </header>
-
+    <CrmPage
+      title="Segmentos"
+      description="Organize a classificação dos seus clientes."
+      count={loading ? undefined : total}
+      breadcrumbs={[{ label: "Clientes", href: `/${instance}/customers` }, { label: "Segmentos" }]}
+      actions={
+        <Button
+          startIcon={<UiIcon name="add" scale="toolbar" />}
+          variant="contained"
+          disabled={reconcileRequired}
+          onClick={() => openEditor()}
+        >
+          Novo segmento
+        </Button>
+      }
+    >
+      <div className="grid min-w-0 gap-4">
         {success && (
           <Alert severity="success" onClose={() => setSuccess("")}>
             {success}
@@ -455,10 +455,7 @@ function SegmentManagement({
           </Alert>
         )}
 
-        <section
-          aria-label="Consulta de segmentos"
-          className="min-w-0 rounded-md border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
-        >
+        <section aria-label="Consulta de segmentos" className="ip-crud-table min-w-0">
           <form
             onSubmit={applyFilters}
             className="flex flex-wrap items-start gap-3 border-b border-slate-200 p-4 dark:border-slate-700"
@@ -471,19 +468,15 @@ function SegmentManagement({
               slotProps={{ htmlInput: { maxLength: 50 } }}
               sx={{ flex: "1 1 220px" }}
             />
-            <TextField
-              label="Código"
-              size="small"
-              value={codeFilter}
-              onChange={(event) => {
-                setCodeFilter(event.target.value);
-                setFilterError("");
+            <Button
+              onClick={() => {
+                setCodeFilter(String(filters.CODIGO ?? ""));
+                setFiltersOpen(true);
               }}
-              error={Boolean(filterError)}
-              helperText={filterError}
-              slotProps={{ htmlInput: { inputMode: "numeric" } }}
-              sx={{ flex: "0 1 130px" }}
-            />
+              startIcon={<UiIcon name="filter" scale="toolbar" />}
+            >
+              Filtros
+            </Button>
             <Button type="submit" startIcon={<Search />} variant="outlined" sx={{ minHeight: 40 }}>
               Buscar
             </Button>
@@ -494,7 +487,7 @@ function SegmentManagement({
                   onClick={() => setReload((value) => value + 1)}
                   disabled={loading}
                 >
-                  <Refresh />
+                  <UiIcon name="refresh" scale="toolbar" />
                 </IconButton>
               </span>
             </Tooltip>
@@ -512,6 +505,50 @@ function SegmentManagement({
               </Button>
             )}
           </form>
+          <FilterChipBar
+            items={Object.entries(filters).map(([key, value]) => ({
+              key,
+              label: `${key === "NOME" ? "Nome" : "Código"}: ${value}`,
+              onDelete: () => {
+                setFilters((old) => {
+                  const next = { ...old };
+                  delete next[key as keyof typeof next];
+                  return next;
+                });
+                if (key === "NOME") setNameFilter("");
+                else setCodeFilter("");
+                setPage(0);
+              },
+            }))}
+            onShowAll={() => setFiltersOpen(true)}
+          />
+          <OperationalPanel
+            open={filtersOpen}
+            title="Filtros de segmentos"
+            onClose={() => setFiltersOpen(false)}
+            footer={
+              <>
+                <Button onClick={() => setFiltersOpen(false)}>Cancelar</Button>
+                <Button variant="contained" onClick={() => applyFilters()}>
+                  Aplicar filtros
+                </Button>
+              </>
+            }
+          >
+            <TextField
+              label="Código"
+              size="small"
+              value={codeFilter}
+              onChange={(event) => {
+                setCodeFilter(event.target.value);
+                setFilterError("");
+              }}
+              error={Boolean(filterError)}
+              helperText={filterError}
+              slotProps={{ htmlInput: { inputMode: "numeric" } }}
+              sx={{ flex: "0 1 130px" }}
+            />
+          </OperationalPanel>
 
           {loading && <LinearProgress aria-label="Carregando segmentos" />}
           {loadError ? (
@@ -567,15 +604,15 @@ function SegmentManagement({
                   <TableBody>
                     {segments.map((segment) => (
                       <TableRow key={segment.CODIGO} hover>
-                        <TableCell>{segment.CODIGO}</TableCell>
-                        <TableCell>
+                        <TableCell data-label="Código">{segment.CODIGO}</TableCell>
+                        <TableCell data-label="Nome">
                           {segment.NOME ?? <span className="text-slate-500">Sem nome</span>}
                         </TableCell>
-                        <TableCell>{segment.ordem ?? "—"}</TableCell>
-                        <TableCell>
+                        <TableCell data-label="Ordem">{segment.ordem ?? "—"}</TableCell>
+                        <TableCell data-label="Unidade">
                           {segment.COD_UNIDADE === null ? "—" : `Código ${segment.COD_UNIDADE}`}
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell data-label="Ações" align="right">
                           <Tooltip title="Editar segmento">
                             <span>
                               <IconButton
@@ -583,7 +620,7 @@ function SegmentManagement({
                                 onClick={() => openEditor(segment)}
                                 disabled={loading || reconcileRequired}
                               >
-                                <EditOutlined fontSize="small" />
+                                <UiIcon name="edit" scale="row" />
                               </IconButton>
                             </span>
                           </Tooltip>
@@ -600,7 +637,7 @@ function SegmentManagement({
                                   setConflict(false);
                                 }}
                               >
-                                <DeleteOutline fontSize="small" />
+                                <UiIcon name="delete" scale="row" />
                               </IconButton>
                             </span>
                           </Tooltip>
@@ -793,7 +830,13 @@ function SegmentManagement({
                   variant="outlined"
                   onClick={() => void reloadEditor()}
                   disabled={reloadingEditor}
-                  startIcon={reloadingEditor ? <CircularProgress size={16} /> : <Refresh />}
+                  startIcon={
+                    reloadingEditor ? (
+                      <CircularProgress size={16} />
+                    ) : (
+                      <UiIcon name="refresh" scale="toolbar" />
+                    )
+                  }
                 >
                   Descartar rascunho e recarregar dados atuais
                 </Button>
@@ -805,7 +848,7 @@ function SegmentManagement({
                     setReload((value) => value + 1);
                     setDiscardOpen(true);
                   }}
-                  startIcon={<Refresh />}
+                  startIcon={<UiIcon name="refresh" scale="toolbar" />}
                 >
                   Conferir lista de segmentos
                 </Button>
@@ -919,7 +962,7 @@ function SegmentManagement({
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </CrmPage>
   );
 }
 

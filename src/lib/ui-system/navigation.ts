@@ -16,12 +16,16 @@ export type NavigationIcon =
   | "campaign"
   | "reports"
   | "news";
-export interface NavigationItem {
+interface NavigationBase {
+  id: string;
   title: string;
-  icon: NavigationIcon;
-  href?: string;
-  routes?: NavigationRoute[];
+  icon?: NavigationIcon;
 }
+export type NavigationItem = NavigationBase &
+  (
+    | { kind: "link"; href: string; aliases?: string[]; routes?: never }
+    | { kind: "group"; routes: NavigationItem[]; href?: never }
+  );
 
 export const crudsRoutes = (
   params: Record<string, string>,
@@ -132,31 +136,201 @@ export function getNavigationItems(
   instance: string,
 ): NavigationItem[] {
   const isAdmin = role === UserRole.ADMIN;
-  const crud = crudsRoutes(parameters, isAdmin, role);
   const ai = aiRoutes(parameters);
-  const items: NavigationItem[] = [{ title: "Área de Atendimento", href: "/", icon: "headset" }];
-  if (isAdmin) items.push({ title: "Monitoria", href: "/monitor", icon: "monitor" });
-  if (isAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring)) {
-    items.push({ title: "Canais WhatsApp", href: "/channels", icon: "channels" });
-  }
-  if (crud.length) items.push({ title: "Cadastros", routes: crud, icon: "records" });
-  if (isAdmin) items.push({ title: "Campanhas CRM", icon: "campaign", routes: [{ title: "Campanhas", href: "/crm-campaigns" }, { title: "Resultados", href: "/crm-results" }, { title: "Exceções", href: "/crm-exceptions" }, { title: "Ordenar", href: "/crm-ordering" }] });
-  if (isAdmin && !isExternalOperator(role) && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels)) {
-    items.push({ title: "Pipelines", href: "/funnel", icon: "pipelines" });
-  }
-  if (isAdmin && ai.length) items.push({ title: "IA", routes: ai, icon: "ai" });
-  if (isAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages)) {
-    items.push({ title: "Disparos", href: "/tools/mass-messages", icon: "campaign" });
+  const link = (id: string, title: string, href: string, aliases?: string[]): NavigationItem => ({
+    id,
+    title,
+    href,
+    aliases,
+    kind: "link",
+  });
+  const group = (
+    id: string,
+    title: string,
+    routes: NavigationItem[],
+    icon: NavigationIcon = "records",
+  ): NavigationItem => ({ id, title, routes, icon, kind: "group" });
+  const items: NavigationItem[] = [
+    { ...link("attendance", "Área de Atendimento", "/"), icon: "headset" },
+  ];
+  if (isAdmin) items.push({ ...link("monitor", "Monitoria", "/monitor"), icon: "monitor" });
+  if (!isExternalOperator(role)) {
+    items.push(
+      group("customers", "Clientes", [
+        link("customers-register", "Cadastro", "/customers", ["/crm-customers"]),
+        ...(isAdmin
+          ? [
+              link("customer-groups", "Grupos", "/crm-catalogs/customer-groups"),
+              link("segments", "Segmentos", "/customer-segments"),
+              link("positions", "Cargos", "/crm-catalogs/positions"),
+              link("origins", "Origens", "/crm-catalogs/origins"),
+              link("brands", "Marcas", "/crm-catalogs/brands"),
+            ]
+          : []),
+      ]),
+    );
   }
   if (isAdmin) {
-    items.push({
-      title: "Relatórios",
-      routes: reportsRoutes(parameters, instance),
-      icon: "reports",
-    });
-    items.push({ title: "Novidades", href: "/changelog", icon: "news" });
+    items.push(
+      group("users", "Usuários", [
+        link("users-register", "Cadastro", "/users"),
+        link("user-groups", "Grupos", "/user-catalogs/user-groups"),
+        link("shifts", "Expedientes", "/user-catalogs/shifts"),
+        link("pauses", "Motivos de pausa", "/user-catalogs/pause-reasons"),
+        group("sales", "Vendas", [
+          link("purchases", "Lançamentos", "/crm-purchases"),
+          link("sales-types", "Catálogo de vendas", "/user-catalogs/sales-types"),
+        ]),
+      ]),
+    );
+    items.push(
+      group(
+        "campaigns",
+        "Campanhas CRM",
+        [
+          link("campaigns-register", "Cadastro", "/crm-campaigns"),
+          link("results", "Resultados", "/crm-results"),
+          link("ordering", "Ordenação", "/crm-ordering"),
+          group("exceptions", "Exceções", [
+            link("exception-cities", "Cidades", "/crm-exceptions?kind=cities"),
+            link("exception-customers", "Clientes", "/crm-exceptions?kind=customers"),
+            link("exception-states", "Estados", "/crm-exceptions?kind=states"),
+            link("exception-segments", "Segmentos", "/crm-exceptions?kind=segments"),
+          ]),
+        ],
+        "campaign",
+      ),
+    );
+    items.push(
+      group("general", "Cadastros gerais", [
+        link("cities", "Cidades", "/crm-catalogs/cities"),
+        link("states", "Estados", "/crm-catalogs/states"),
+        link("medias", "Mídias", "/crm-catalogs/medias"),
+      ]),
+    );
+  }
+  const communication: NavigationItem[] = [];
+  if (!isExternalOperator(role) && parameters.disable_contacts_crud !== "true")
+    communication.push(link("contacts", "Contatos", "/contacts"));
+  if (canAccessInternalGroups(parameters, role))
+    communication.push(link("internal-groups", "Grupos internos", "/internal-groups"));
+  if (isAdmin)
+    communication.push(
+      link("ready-messages", "Mensagens prontas", "/ready-messages"),
+      link("auto-response", "Resposta automática", "/auto-response"),
+      link("senders", "Identificar remetentes", "/whatsapp-senders"),
+      link("contact-requests", "Solicitações de contatos", "/contact-requests"),
+    );
+  if (communication.length) items.push(group("communication", "Comunicação", communication));
+  if (isAdmin)
+    items.push(
+      group("settings", "Configurações", [
+        link("parameters", "Parâmetros", "/parameters"),
+        ...(isFeatureEnabled(parameters, FEATURE_FLAGS.sipConfig)
+          ? [link("sip-config", "Configuração SIP", "/sip-config")]
+          : []),
+      ]),
+    );
+  if (isAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring)) {
+    items.push({ ...link("channels", "Canais WhatsApp", "/channels"), icon: "channels" });
+  }
+  if (isAdmin && !isExternalOperator(role) && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels)) {
+    items.push({ ...link("pipelines", "Pipelines", "/funnel"), icon: "pipelines" });
+  }
+  if (isAdmin && ai.length)
+    items.push(
+      group(
+        "ai",
+        "IA",
+        ai.map((route) => link(route.href.slice(1), route.title, route.href)),
+        "ai",
+      ),
+    );
+  if (isAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages)) {
+    items.push({ ...link("mass-messages", "Disparos", "/tools/mass-messages"), icon: "campaign" });
+  }
+  if (isAdmin) {
+    items.push(
+      group(
+        "reports",
+        "Relatórios",
+        reportsRoutes(parameters, instance).map((route, index) =>
+          link(`report-${index}`, route.title, route.href),
+        ),
+        "reports",
+      ),
+    );
+    items.push({ ...link("news", "Novidades", "/changelog"), icon: "news" });
   }
   return items;
+}
+
+export function navigationLeaves(
+  items: NavigationItem[],
+): Extract<NavigationItem, { kind: "link" }>[] {
+  return items.flatMap((item) => (item.kind === "link" ? [item] : navigationLeaves(item.routes)));
+}
+
+/** Most specific matching leaf wins; query-specific destinations remain distinct. */
+export function activeNavigationPath(
+  items: NavigationItem[],
+  pathname: string,
+  instance: string,
+  search = "",
+): NavigationItem[] {
+  let best: NavigationItem[] = [],
+    bestScore = -1;
+  const actualQuery = new URLSearchParams(search);
+  const visit = (nodes: NavigationItem[], parents: NavigationItem[]) => {
+    for (const item of nodes) {
+      if (item.kind === "group") {
+        visit(item.routes, [...parents, item]);
+        continue;
+      }
+      const [href, query] = item.href.split("?");
+      const wanted = new URLSearchParams(query);
+      let matchesQuery = true;
+      wanted.forEach((value, key) => {
+        let actual = actualQuery.get(key);
+        if (
+          href === "/crm-exceptions" &&
+          key === "kind" &&
+          !["cities", "customers", "states", "segments"].includes(actual ?? "")
+        )
+          actual = "cities";
+        if (actual !== value) matchesQuery = false;
+      });
+      if (!matchesQuery) continue;
+      for (const candidate of [href, ...(item.aliases ?? [])]) {
+        if (!isNavigationRouteActive(pathname, instance, candidate)) continue;
+        const score = candidate.length + wanted.size * 1000;
+        if (score > bestScore) {
+          bestScore = score;
+          best = [...parents, item];
+        }
+      }
+    }
+  };
+  visit(items, []);
+  return best;
+}
+
+export function isModernCrmPath(pathname: string): boolean {
+  const route = pathname.split("?")[0].split("/").filter(Boolean)[1];
+  return [
+    "monitor",
+    "customers",
+    "users",
+    "crm-customers",
+    "customer-segments",
+    "crm-catalogs",
+    "user-catalogs",
+    "crm-purchases",
+    "crm-campaigns",
+    "crm-results",
+    "crm-exceptions",
+    "crm-ordering",
+  ].includes(route);
 }
 
 export function isMonitorPath(pathname: string): boolean {

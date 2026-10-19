@@ -75,7 +75,7 @@ const server = await createServer({
       },
       load(id) {
         if (id === "\0monitor-preview:navigation")
-          return "export { usePathname } from '/tests/monitor/navigation-doubles.tsx'";
+          return "export { usePathname, useSearchParams } from '/tests/monitor/navigation-doubles.tsx'";
         if (id === "\0monitor-preview:next-link")
           return "export { TestLink as default } from '/tests/monitor/navigation-doubles.tsx'";
         if (id === "\0monitor-preview:next-image")

@@ -4,6 +4,7 @@ export default defineConfig({
   testMatch: "*.pw.ts",
   workers: 1,
   reporter: "list",
+  outputDir: "../test-results/monitor",
   use: {
     ...devices["Desktop Chrome"],
     baseURL: "http://127.0.0.1:4185",

@@ -9,6 +9,7 @@ import {
   useEffect,
   useReducer,
   useRef,
+  useMemo,
 } from "react";
 
 import { useAuthContext } from "@/app/auth-context";
@@ -62,9 +63,18 @@ const CUSTOMERS_BASE_URL: string =
 export default function CustomersProvider({ children }: ICustomersProviderProps) {
   const api = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
   const { token, user, instance } = useAuthContext();
-  const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
+  const scope = `${instance}:${user?.CODIGO ?? "anonymous"}`;
+  const cacheScope = useMemo(
+    () => (user ? createCacheScope(instance, user.CODIGO) : null),
+    [instance, user?.CODIGO],
+  );
+  const currentContext = `${scope}:${token ?? ""}`;
+  const contextRef = useRef(currentContext);
+  contextRef.current = currentContext;
+  const sequence = useRef(0);
 
   const [state, dispatch] = useReducer(customersReducer, {
+    scope,
     customers: [],
     totalRows: 0,
     filters: {
@@ -113,6 +123,11 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   );
 
   const loadCustomers = useCallback(async () => {
+    if (state.scope !== scope) return;
+    const started = currentContext,
+      request = ++sequence.current;
+    const active = () => contextRef.current === started && sequence.current === request;
+    api.current.setAuth(token ?? "");
     dispatch({ type: "change-loading", isLoading: true });
 
     try {
@@ -126,6 +141,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
           "customer-page",
           cacheKey,
         );
+        if (!active()) return;
         if (cached) {
           dispatch({
             type: "multiple",
@@ -137,6 +153,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         }
       }
       const res = await api.current.getCustomers(state.filters as unknown as CustomerListFilters);
+      if (!active()) return;
       if (cacheScope) void hybridCache.set(cacheScope, "customer-page", res, cacheKey);
       dispatch({
         type: "multiple",
@@ -147,11 +164,12 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
         ],
       });
     } catch (err) {
+      if (!active()) return;
       dispatch({ type: "change-loading", isLoading: false });
       Logger.error("Error loading customers", err as Error);
       toast.error("Falha ao carregar clientes!");
     }
-  }, [cacheScope, state.filters, token]);
+  }, [cacheScope, JSON.stringify(state.filters), token, scope, state.scope]);
 
   const searchCustomers = useCallback(
     async (term: string, filterBy: "RAZAO" | "COD_ERP" | "CODIGO" | "CPF_CNPJ" = "RAZAO") => {
@@ -188,19 +206,32 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
   );
 
   useEffect(() => {
-    if (!token || !api.current) return;
-    api.current.setAuth(token);
-    loadCustomers();
-  }, [token]);
-
+    if (state.scope !== scope) dispatch({ type: "reset-context", scope });
+  }, [scope, state.scope]);
+  useEffect(
+    () => () => {
+      sequence.current++;
+    },
+    [],
+  );
   useEffect(() => {
-    loadCustomers();
-  }, [state.filters.perPage, state.filters.page]);
+    if (token && state.scope === scope) void loadCustomers();
+  }, [token, scope, state.scope, JSON.stringify(state.filters)]);
+  const visibleState =
+    state.scope === scope
+      ? state
+      : {
+          scope,
+          customers: [],
+          totalRows: 0,
+          filters: { page: "1", perPage: "10" },
+          isLoading: false,
+        };
 
   return (
     <CustomersContext.Provider
       value={{
-        state,
+        state: visibleState,
         dispatch,
         updateCustomer,
         createCustomer,
