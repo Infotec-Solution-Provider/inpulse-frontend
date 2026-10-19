@@ -2,12 +2,18 @@ import ApiClient from "./api-client";
 import { DataResponse, MessageResponse, PaginatedResponse, RequestFilters } from "./types";
 import {
 	CreateCustomerDTO,
+	CreateSegmentRequest,
 	Customer,
 	CustomerFullDetail,
 	CustomerLookupOption,
+	CustomerSegmentAssignment,
 	FinishTelephonyScheduleDTO,
 	CustomerTelephonySchedule,
+	Segment,
+	SegmentListParams,
+	SetCustomerSegmentRequest,
 	UpdateCustomerDTO,
+	UpdateSegmentRequest,
 } from "./types/customers.types";
 
 class CustomersClient extends ApiClient {
@@ -96,6 +102,44 @@ class CustomersClient extends ApiClient {
 		);
 
 		return response.data.data;
+	}
+
+	public async listSegments(params?: SegmentListParams): Promise<PaginatedResponse<Segment>> {
+		const query = new URLSearchParams();
+		for (const [key, value] of Object.entries(params ?? {})) {
+			if (value !== undefined) query.set(key, String(value));
+		}
+		const queryString = query.toString();
+		const response = await this.ax.get<PaginatedResponse<Segment>>(
+			`/api/segments${queryString ? `?${queryString}` : ""}`,
+		);
+		return response.data;
+	}
+
+	public async getSegment(segmentId: number): Promise<DataResponse<Segment>> {
+		const response = await this.ax.get<DataResponse<Segment>>(`/api/segments/${segmentId}`);
+		return response.data;
+	}
+
+	public async createSegment(data: CreateSegmentRequest): Promise<DataResponse<Segment>> {
+		const response = await this.ax.post<DataResponse<Segment>>(`/api/segments`, data);
+		return response.data;
+	}
+
+	public async updateSegment(segmentId: number, data: UpdateSegmentRequest): Promise<DataResponse<Segment>> {
+		const response = await this.ax.patch<DataResponse<Segment>>(`/api/segments/${segmentId}`, data);
+		return response.data;
+	}
+
+	public async setCustomerSegment(
+		customerId: number,
+		data: SetCustomerSegmentRequest,
+	): Promise<DataResponse<CustomerSegmentAssignment>> {
+		const response = await this.ax.patch<DataResponse<CustomerSegmentAssignment>>(
+			`/api/customers/${customerId}/segment`,
+			data,
+		);
+		return response.data;
 	}
 
 	public async getOperators() {
