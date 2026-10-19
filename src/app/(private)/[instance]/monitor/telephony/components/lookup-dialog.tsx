@@ -35,6 +35,8 @@ interface LookupDialogProps {
   multiple?: boolean;
   initialSelection: TelephonyLookupOption[];
   description?: string;
+  allowEmpty?: boolean;
+  selectionHint?: string;
   loadPage: (request: LookupPageRequest) => Promise<TelephonyLookupResult>;
   onConfirm: (options: TelephonyLookupOption[]) => void;
   onClose: () => void;
@@ -45,6 +47,8 @@ export default function TelephonyLookupDialog({
   multiple = true,
   initialSelection,
   description,
+  allowEmpty = true,
+  selectionHint = "A seleção é mantida ao pesquisar ou trocar de página. Confirme para atualizar o filtro.",
   loadPage,
   onConfirm,
   onClose,
@@ -142,8 +146,11 @@ export default function TelephonyLookupDialog({
       aria-labelledby="telephony-lookup-title"
       slotProps={{ paper: { sx: dialogPaperSx } }}
     >
-      <DialogTitle id="telephony-lookup-title" className="flex items-center justify-between gap-2">
-        {title}
+      <DialogTitle
+        id="telephony-lookup-heading"
+        className="flex items-center justify-between gap-2"
+      >
+        <span id="telephony-lookup-title">{title}</span>
         <IconButton
           aria-label={`Fechar seleção de ${title.toLowerCase()}`}
           onClick={onClose}
@@ -301,14 +308,16 @@ export default function TelephonyLookupDialog({
               />
             ))}
           </div>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            A seleção é mantida ao pesquisar ou trocar de página. Confirme para atualizar o filtro.
-          </p>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{selectionHint}</p>
         </div>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={() => onConfirm(Array.from(selection.values()))}>
+        <Button
+          variant="contained"
+          disabled={!allowEmpty && selection.size === 0}
+          onClick={() => onConfirm(Array.from(selection.values()))}
+        >
           Confirmar seleção
         </Button>
       </DialogActions>

@@ -27,5 +27,19 @@ As regras de negócio SQL da telefonia são exercitadas separadamente no
 customers-service por `npm run test:telephony-monitor` (SQLite descartável em memória).
 Esta suíte de navegador não substitui o smoke test e EXPLAIN no MySQL do destino.
 
+`schedule-edit.pw.ts` cobre a edição individual de data/hora civil e operador da
+agenda, incluindo valores legados ausentes, seleção elegível paginada, patch só
+dos campos alterados, carteira preservada, conflito, erro de validação, duplo envio,
+resposta perdida e reconciliação por recibo. `not_confirmed` mantém a edição
+bloqueada: não prova rollback e nunca dispara novo PATCH automaticamente.
+Um recibo durável `applied` confirma a operação mesmo sem detalhe de releitura.
+Os códigos `SCHEDULE_EDIT_UNAVAILABLE` e `SCHEDULE_EDIT_NOT_COMMITTED` permitem
+nova tentativa manual; outros 503 continuam inconclusivos.
+Também cobre fechamento por tenant/usuário/modo, resposta atrasada, pausa de
+auto-refresh e telas móvel/paisagem/escura, com imagens `test-results/schedule-edit-*.png`.
+Os handlers de agendas são explícitos; uma mutation sem fixture responde 501 em
+vez de cair no mock de consulta. Prioridade e validade aparecem indisponíveis,
+sem campos graváveis até o contrato funcional ser confirmado.
+
 Os testes de lógica executam via `npm run test:unit` (incluem a monitoria) e a
 verificação de tipos via `npx tsc --noEmit --incremental false`.

@@ -27,6 +27,7 @@ import TelephonyResults from "./results";
 import TelephonyToolbar from "./toolbar";
 import { telephonyModes } from "./presentation";
 import TelephonyAppliedFilters from "./applied-filters";
+import ScheduleEditDialog from "./schedule-edit-dialog";
 
 function ScopedTelephonyMonitor() {
   const { instance, user } = useAuthContext();
@@ -50,13 +51,16 @@ function ScopedTelephonyMonitor() {
   }, [viewKey, view]);
   const [activeLookup, setActiveLookup] = useState<TelephonyLookupKind | null>(null);
   const [previewCustomerId, setPreviewCustomerId] = useState<number | null>(null);
+  const [editScheduleId, setEditScheduleId] = useState<number | null>(null);
+  const [savedNotice, setSavedNotice] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [knownOptions, setKnownOptions] = useState<
     Partial<Record<TelephonyLookupKind, TelephonyLookupOption[]>>
   >({});
   const [now, setNow] = useState(Date.now);
   const state = useTelephonyMonitor(mode, {
-    modalOpen: filtersOpen || activeLookup !== null || previewCustomerId !== null,
+    modalOpen:
+      filtersOpen || activeLookup !== null || previewCustomerId !== null || editScheduleId !== null,
   });
   const statesKey = JSON.stringify(state.filters.states);
   const citiesKey = JSON.stringify(state.filters.cities);
@@ -116,12 +120,21 @@ function ScopedTelephonyMonitor() {
     >
       <TelephonyToolbar
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={(next) => {
+          setEditScheduleId(null);
+          setSavedNotice(false);
+          setMode(next);
+        }}
         view={view}
         onViewChange={setView}
         state={state}
         now={now}
       />
+      {savedNotice && (
+        <Alert severity="success" onClose={() => setSavedNotice(false)}>
+          Agendamento atualizado.
+        </Alert>
+      )}
       <TelephonyFilters
         state={state}
         onLookup={setActiveLookup}
@@ -168,6 +181,10 @@ function ScopedTelephonyMonitor() {
             view={view}
             referenceMonth={state.appliedFilters.referenceMonth}
             onPreview={setPreviewCustomerId}
+            onEditSchedule={(id) => {
+              setSavedNotice(false);
+              setEditScheduleId(id);
+            }}
           />
         ) : !state.error ? (
           <div
@@ -188,6 +205,18 @@ function ScopedTelephonyMonitor() {
         ) : null}
       </div>
       <TelephonyPagination state={state} />
+      {mode === "schedules" && editScheduleId !== null && (
+        <ScheduleEditDialog
+          key={editScheduleId}
+          scheduleId={editScheduleId}
+          onClose={() => setEditScheduleId(null)}
+          onSaved={() => {
+            setEditScheduleId(null);
+            setSavedNotice(true);
+            state.refetch();
+          }}
+        />
+      )}
       {activeLookup && (
         <TelephonyLookupDialog
           key={activeLookup}

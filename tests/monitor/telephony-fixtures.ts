@@ -80,6 +80,7 @@ export async function setupTelephony(
   handlers: {
     search?: (route: Route, query: TelephonyQuery) => Promise<boolean>;
     options?: (route: Route, query: OptionsQuery) => Promise<boolean>;
+    schedules?: (route: Route) => Promise<boolean>;
   } = {},
 ) {
   const queries: TelephonyQuery[] = [];
@@ -103,6 +104,15 @@ export async function setupTelephony(
     await route.fulfill({ json: { data } });
   });
   await page.route("**/api/customers/monitor/telephony/**", async (route) => {
+    if (route.request().url().includes("/schedules/")) {
+      if (handlers.schedules && (await handlers.schedules(route))) return;
+      // Never let a mutation fall through to a fake successful search response.
+      await route.fulfill({
+        status: 501,
+        json: { message: "Schedule handler must be explicitly configured by this test." },
+      });
+      return;
+    }
     if (route.request().url().endsWith("/options")) {
       const query = route.request().postDataJSON() as OptionsQuery;
       optionQueries.push(query);
