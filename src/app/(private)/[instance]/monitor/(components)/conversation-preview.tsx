@@ -1,8 +1,8 @@
 "use client";
 
 import { Alert, Button, CircularProgress } from "@mui/material";
-import { RefreshCw, MessageSquareReply } from "lucide-react";
-import { OperationalPanel } from "@/lib/ui-system";
+import { MessageSquareReply } from "lucide-react";
+import { OperationalPanel, UiIcon } from "@/lib/ui-system";
 import { useContext, useEffect, useRef, useState } from "react";
 import type { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import { AuthContext } from "@/app/auth-context";
@@ -187,7 +187,7 @@ export default function MonitorConversationPreview({
         !replying && (
           <Button
             size="small"
-            startIcon={<RefreshCw size={14} />}
+            startIcon={<UiIcon name="refresh" scale="row" />}
             disabled={loading || retrySeconds > 0}
             onClick={() => {
               setRequestedCursor(null);
@@ -205,12 +205,12 @@ export default function MonitorConversationPreview({
           </div>
         ) : !chat.isFinished && !isReadOnlyMode ? (
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <p className="ip-muted max-w-80 text-xs">
+            <p className="ip-muted max-w-80 text-[13px]">
               A leitura do histórico não interfere no atendimento. Para intervir, ative a resposta.
             </p>
             <Button
               variant="contained"
-              startIcon={<MessageSquareReply size={16} />}
+              startIcon={<UiIcon icon={MessageSquareReply} scale="row" />}
               disabled={loading || !!error}
               onClick={enableReply}
             >
@@ -282,9 +282,7 @@ export default function MonitorConversationPreview({
               </div>
             )}
             {!loading && !error && messages.length === 0 && (
-              <p className="p-8 text-center text-sm text-slate-500">
-                Nenhuma mensagem nesta conversa.
-              </p>
+              <p className="ip-muted p-8 text-center text-sm">Nenhuma mensagem nesta conversa.</p>
             )}
             <ul className="flex flex-col gap-2">
               {messages.map((message, index) => {

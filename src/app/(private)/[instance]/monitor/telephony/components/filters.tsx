@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowLeft, CircleHelp, Search, SlidersHorizontal } from "lucide-react";
-import { OperationalIconButton, OperationalPanel } from "@/lib/ui-system";
+import { OperationalIconButton, OperationalPanel, UiIcon } from "@/lib/ui-system";
 import {
   Button,
   Checkbox,
@@ -151,7 +150,7 @@ export default function TelephonyFilters({
                     tooltip="Pesquisar clientes"
                     disabled={isLoading && !hasUnappliedFilters}
                   >
-                    <Search size={16} />
+                    <UiIcon name="search" scale="toolbar" />
                   </OperationalIconButton>
                 </InputAdornment>
               ),
@@ -173,7 +172,7 @@ export default function TelephonyFilters({
           aria-haspopup="dialog"
           onClick={openDialog}
         >
-          <SlidersHorizontal size={18} />
+          <UiIcon name="filter" scale="toolbar" />
           {appliedCount > 0 && <span className="ip-icon-action-count">{appliedCount}</span>}
         </OperationalIconButton>
         {children}
@@ -201,7 +200,7 @@ export default function TelephonyFilters({
         headerAction={
           lookupContent ? (
             <IconButton aria-label="Voltar aos filtros" onClick={onLookupBack}>
-              <ArrowLeft size={18} />
+              <UiIcon name="back" scale="toolbar" />
             </IconButton>
           ) : undefined
         }
@@ -292,7 +291,7 @@ export default function TelephonyFilters({
                       size="small"
                       className="ip-muted"
                     >
-                      <CircleHelp size={16} aria-hidden="true" />
+                      <UiIcon name="info" scale="metadata" />
                     </IconButton>
                   </Tooltip>
                 </div>
@@ -329,7 +328,7 @@ export default function TelephonyFilters({
                       size="small"
                       className="ip-muted"
                     >
-                      <CircleHelp size={16} aria-hidden="true" />
+                      <UiIcon name="info" scale="metadata" />
                     </IconButton>
                   </Tooltip>
                 </div>

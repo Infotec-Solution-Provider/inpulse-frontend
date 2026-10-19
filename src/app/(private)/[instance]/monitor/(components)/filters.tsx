@@ -1,6 +1,5 @@
 "use client";
 
-import { List, LayoutGrid, Search, SlidersHorizontal } from "lucide-react";
 import {
   Button,
   InputAdornment,
@@ -12,7 +11,7 @@ import {
 } from "@mui/material";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { FilterChipBar, OperationalIconButton, OperationalPanel } from "@/lib/ui-system";
+import { FilterChipBar, OperationalIconButton, OperationalPanel, UiIcon } from "@/lib/ui-system";
 import useInternalChatContext from "../../internal-context";
 import useMonitorContext from "../context";
 import { createInitialFilters } from "../filters-state";
@@ -41,7 +40,8 @@ function FilterCheckbox({
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="h-4 w-4 accent-violet-600"
+        className="h-4 w-4"
+        style={{ accentColor: "var(--ip-accent)" }}
       />
       {children}
     </label>
@@ -59,9 +59,7 @@ function FilterDateRange({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-        {label}
-      </legend>
+      <legend className="ip-muted mb-1 text-[13px] font-medium">{label}</legend>
       <div className="grid min-w-0 grid-cols-2 gap-2">
         <TextField
           type="date"
@@ -109,7 +107,7 @@ function dialogFilterCount(filters: MonitorFiltersState): number {
   ].filter(Boolean).length;
 }
 
-const sectionTitle = "ip-muted mb-3 text-xs font-semibold uppercase tracking-wide";
+const sectionTitle = "ip-muted mb-3 text-[13px] font-semibold";
 
 export default function MonitorFilters() {
   const {
@@ -178,7 +176,7 @@ export default function MonitorFilters() {
                       background: hasUnappliedFilters ? "var(--ip-accent-soft)" : undefined,
                     }}
                   >
-                    <Search size={18} />
+                    <UiIcon name="search" scale="toolbar" />
                   </OperationalIconButton>
                 </InputAdornment>
               ),
@@ -215,7 +213,7 @@ export default function MonitorFilters() {
           aria-haspopup="dialog"
           onClick={openDialog}
         >
-          <SlidersHorizontal size={18} />
+          <UiIcon name="filter" scale="toolbar" />
           {appliedCount > 0 && <span className="ip-icon-action-count">{appliedCount}</span>}
         </OperationalIconButton>
         <ToggleButtonGroup
@@ -230,19 +228,21 @@ export default function MonitorFilters() {
         >
           <Tooltip title="Lista compacta" describeChild>
             <ToggleButton value="compact" aria-label="Exibir lista compacta">
-              <List size={18} />
+              <UiIcon name="list" scale="toolbar" />
             </ToggleButton>
           </Tooltip>
           <Tooltip title="Cartões" describeChild>
             <ToggleButton value="cards" aria-label="Exibir cartões">
-              <LayoutGrid size={18} />
+              <UiIcon name="cards" scale="toolbar" />
             </ToggleButton>
           </Tooltip>
         </ToggleButtonGroup>
         <p
           role="status"
           className={
-            hasUnappliedFilters && !open ? "basis-full text-xs text-[var(--ip-warning)]" : "sr-only"
+            hasUnappliedFilters && !open
+              ? "basis-full text-[13px] text-[var(--ip-warning)]"
+              : "sr-only"
           }
         >
           {hasUnappliedFilters
@@ -285,7 +285,7 @@ export default function MonitorFilters() {
               type="submit"
               form="conversation-monitor-filters"
               variant="contained"
-              startIcon={<Search size={16} />}
+              startIcon={<UiIcon name="search" scale="row" />}
             >
               Aplicar filtros
             </Button>

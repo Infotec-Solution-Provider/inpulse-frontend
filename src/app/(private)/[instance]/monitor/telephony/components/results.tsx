@@ -1,8 +1,7 @@
 "use client";
 
 import { Tooltip } from "@mui/material";
-import { CalendarClock, Eye, Pencil, Phone } from "lucide-react";
-import { OperationalIconButton } from "@/lib/ui-system";
+import { OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import type { TelephonyMonitorItem, TelephonyMonitorMode, TelephonyMonitorView } from "../types";
 import { displayDate, displayDuration, displayMonth, telephonyModes } from "./presentation";
@@ -19,7 +18,7 @@ interface TelephonyResultsProps {
 
 function Activity({ item }: { item: TelephonyMonitorItem }) {
   return (
-    <div className="space-y-1.5 text-xs">
+    <div className="ip-telephony-metadata space-y-0.5">
       <p className="tabular-nums">
         <strong className="font-medium">{item.metrics.monthCalls}</strong>{" "}
         {item.metrics.monthCalls === 1 ? "ligação" : "ligações"}
@@ -27,7 +26,7 @@ function Activity({ item }: { item: TelephonyMonitorItem }) {
         <strong className="font-medium">{item.metrics.monthContacts}</strong>{" "}
         {item.metrics.monthContacts === 1 ? "contato" : "contatos"}
       </p>
-      {item.metrics.neverWorked && <span className="ip-badge">Nunca trabalhado</span>}
+      {item.metrics.neverWorked && <p className="ip-muted">Nunca trabalhado</p>}
     </div>
   );
 }
@@ -35,13 +34,21 @@ function Activity({ item }: { item: TelephonyMonitorItem }) {
 function EventInfo({ item, mode }: { item: TelephonyMonitorItem; mode: TelephonyMonitorMode }) {
   if (mode === "schedules")
     return (
-      <div className="space-y-0.5">
+      <div className="ip-telephony-event space-y-0.5">
         <p className="flex items-start gap-1.5 font-semibold tabular-nums">
-          <CalendarClock size={15} className="ip-muted mt-0.5 shrink-0" />
+          <UiIcon name="calendar" scale="metadata" className="ip-muted mt-0.5 shrink-0" />
           {displayDate(item.schedule?.at ?? null)}
         </p>
-        <p className="ip-muted text-xs">{item.schedule?.campaignName || "Sem campanha"}</p>
-        <p className="text-xs">
+        <p
+          className="ip-telephony-event-detail ip-telephony-metadata ip-muted"
+          title={item.schedule?.campaignName || "Sem campanha"}
+        >
+          {item.schedule?.campaignName || "Sem campanha"}
+        </p>
+        <p
+          className="ip-telephony-event-detail ip-telephony-metadata"
+          title={`Operador da agenda: ${item.schedule?.operatorName || "Sem operador"}`}
+        >
           <span className="ip-muted">Operador da agenda: </span>
           {item.schedule?.operatorName || "Sem operador"}
         </p>
@@ -49,31 +56,33 @@ function EventInfo({ item, mode }: { item: TelephonyMonitorItem; mode: Telephony
     );
   if (mode === "calls")
     return (
-      <div className="space-y-0.5">
+      <div className="ip-telephony-event space-y-0.5">
         <p className="flex items-start gap-1.5 font-semibold tabular-nums">
-          <Phone size={15} className="ip-muted mt-0.5 shrink-0" />
+          <UiIcon name="phone" scale="metadata" className="ip-muted mt-0.5 shrink-0" />
           {displayDate(item.call?.startedAt ?? item.call?.finishedAt ?? null)}
         </p>
         {!item.call?.startedAt && item.call?.finishedAt && (
-          <p className="ip-muted text-xs">Data de finalização; início não informado.</p>
+          <p className="ip-muted ip-telephony-metadata">
+            Data de finalização; início não informado.
+          </p>
         )}
-        <p className="text-xs">
+        <p className="ip-telephony-metadata">
           {item.call?.result || "Resultado não informado"}
           <span className="ip-muted"> · {displayDuration(item.call?.durationSeconds ?? null)}</span>
         </p>
         {item.call?.operatorName && (
-          <p className="text-xs">
+          <p className="ip-telephony-metadata">
             <span className="ip-muted">Operador da ligação: </span>
             {item.call.operatorName}
           </p>
         )}
         {item.call?.phone && item.call.phone !== item.customer.phone && (
-          <p className="ip-muted text-xs">Telefone utilizado: {item.call.phone}</p>
+          <p className="ip-muted ip-telephony-metadata">Telefone utilizado: {item.call.phone}</p>
         )}
       </div>
     );
   return (
-    <div className="space-y-1 text-xs">
+    <div className="ip-telephony-metadata space-y-1">
       <p>
         Último contato:{" "}
         <span className="tabular-nums">{displayDate(item.metrics.lastContactAt, false)}</span>
@@ -102,12 +111,18 @@ function CustomerInfo({ item }: { item: TelephonyMonitorItem }) {
         {name}
       </p>
       {identityContext && (
-        <p className="ip-telephony-customer-context ip-muted text-xs" title={identityContext}>
+        <p
+          className="ip-telephony-customer-context ip-telephony-metadata ip-muted"
+          title={identityContext}
+        >
           {identityContext}
         </p>
       )}
       {phoneAndDocument && (
-        <p className="ip-telephony-customer-context text-xs tabular-nums" title={phoneAndDocument}>
+        <p
+          className="ip-telephony-customer-context ip-telephony-metadata tabular-nums"
+          title={phoneAndDocument}
+        >
           {phoneAndDocument}
         </p>
       )}
@@ -137,7 +152,7 @@ export default function TelephonyResults({
         tooltip="Ver cliente"
         onClick={() => onPreview(item.customer.id)}
       >
-        <Eye size={17} />
+        <UiIcon name="view" scale="row" />
       </OperationalIconButton>
       {mode === "schedules" && item.schedule && (
         <OperationalIconButton
@@ -146,7 +161,7 @@ export default function TelephonyResults({
           label={`Editar agendamento ${item.schedule.id} de ${item.customer.name || item.customer.id}`}
           tooltip="Editar agendamento"
         >
-          <Pencil size={17} />
+          <UiIcon name="edit" scale="row" />
         </OperationalIconButton>
       )}
     </div>
@@ -185,11 +200,13 @@ export default function TelephonyResults({
                   <td className="ip-telephony-event-cell">
                     <EventInfo item={item} mode={mode} />
                   </td>
-                  <td className="text-xs">{item.customer.operatorName || "Sem operador"}</td>
+                  <td className="ip-telephony-metadata">
+                    {item.customer.operatorName || "Sem operador"}
+                  </td>
                   <td>
                     <Activity item={item} />
                   </td>
-                  <td className="text-xs tabular-nums">
+                  <td className="ip-telephony-metadata tabular-nums">
                     {displayDate(item.metrics.nextRepurchaseAt, false)}
                   </td>
                   <td>{actions(item)}</td>
@@ -220,7 +237,7 @@ export default function TelephonyResults({
               <p className="sr-only">{eventLabel}</p>
               <EventInfo item={item} mode={mode} />
             </div>
-            <dl className="grid grid-cols-2 gap-3 text-xs">
+            <dl className="ip-telephony-metadata grid grid-cols-2 gap-3">
               <div>
                 <dt className="ip-muted">Operador do cliente</dt>
                 <dd className="mt-1 break-words">{item.customer.operatorName || "Sem operador"}</dd>
@@ -232,7 +249,7 @@ export default function TelephonyResults({
                 </dd>
               </div>
             </dl>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            <div className="ip-telephony-metadata flex flex-wrap items-center gap-x-2 gap-y-1">
               <p className="ip-muted">Atividade em {displayMonth(referenceMonth)}</p>
               <Activity item={item} />
             </div>

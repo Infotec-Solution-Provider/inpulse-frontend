@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { UiIcon } from "@/lib/ui-system";
 import { IconButton, MenuItem, TextField } from "@mui/material";
 import type useTelephonyMonitor from "../use-telephony-monitor";
 
@@ -27,14 +28,14 @@ export default function TelephonyPagination({
           </MenuItem>
         ))}
       </TextField>
-      <div className="ip-muted flex items-center gap-2 text-xs">
+      <div className="ip-telephony-metadata ip-muted flex items-center gap-2">
         <IconButton
           aria-label="Página anterior da telefonia"
           size="small"
           disabled={state.page <= 1 || state.isLoading}
           onClick={() => state.setPage((page) => Math.max(1, page - 1))}
         >
-          <ChevronLeft size={17} />
+          <UiIcon icon={ChevronLeft} scale="toolbar" />
         </IconButton>
         <p className="tabular-nums">
           Página {state.page} de {totalPages}
@@ -45,7 +46,7 @@ export default function TelephonyPagination({
           disabled={state.page >= totalPages || state.isLoading}
           onClick={() => state.setPage((page) => Math.min(totalPages, page + 1))}
         >
-          <ChevronRight size={17} />
+          <UiIcon icon={ChevronRight} scale="toolbar" />
         </IconButton>
       </div>
     </nav>

@@ -1,8 +1,7 @@
 "use client";
 
 import { ToggleButton, ToggleButtonGroup, Tooltip } from "@mui/material";
-import { CircleHelp, LayoutGrid, List } from "lucide-react";
-import { MonitorRefreshActions } from "@/lib/ui-system";
+import { MonitorRefreshActions, UiIcon } from "@/lib/ui-system";
 import type { TelephonyMonitorMode, TelephonyMonitorView } from "../types";
 import type useTelephonyMonitor from "../use-telephony-monitor";
 import { telephonyModes } from "./presentation";
@@ -45,7 +44,7 @@ export default function TelephonyToolbar({
         <div className="min-w-0">
           <h1>Monitoria de telefonia</h1>
           <p
-            className="ip-muted mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs"
+            className="ip-telephony-metadata ip-muted mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1"
             role="status"
           >
             <span
@@ -102,12 +101,12 @@ export default function TelephonyToolbar({
               aria-label={telephonyModes[mode].description}
               className="ip-muted hidden shrink-0 rounded p-1 sm:inline-flex"
             >
-              <CircleHelp size={15} />
+              <UiIcon name="info" scale="metadata" />
             </span>
           </Tooltip>
         </div>
         <div
-          className="ip-muted flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs"
+          className="ip-telephony-metadata ip-muted flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1"
           aria-label="Indicadores de telefonia"
         >
           <p className="whitespace-nowrap">
@@ -146,12 +145,12 @@ export default function TelephonyToolbar({
         >
           <Tooltip title="Lista compacta" describeChild>
             <ToggleButton value="compact" aria-label="Exibir lista compacta">
-              <List size={16} />
+              <UiIcon name="list" scale="toolbar" />
             </ToggleButton>
           </Tooltip>
           <Tooltip title="Cartões" describeChild>
             <ToggleButton value="cards" aria-label="Exibir cartões">
-              <LayoutGrid size={16} />
+              <UiIcon name="cards" scale="toolbar" />
             </ToggleButton>
           </Tooltip>
         </ToggleButtonGroup>
