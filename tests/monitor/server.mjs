@@ -18,6 +18,8 @@ const stubs = {
   "chat-messages-list": `export { TestMessages as default } from '${doubles}'`,
   "chat-send-message-area": `export { TestComposer as default } from '${doubles}'`,
   "customer-crm-detail-modal": `export { TestCustomerDetail as default } from '${doubles}'`,
+  "lazy-notifications-dropdown": `export { TestNotifications as default } from '${doubles}'`,
+  "notification-preferences-modal": `export { TestNotificationPreferences as default } from '${doubles}'`,
 };
 const server = await createServer({
   configFile: false,
@@ -33,6 +35,9 @@ const server = await createServer({
       name: "isolated-monitor",
       enforce: "pre",
       resolveId(source) {
+        if (source === "next/navigation") return "\0monitor:navigation";
+        if (source === "next/link") return "\0monitor:next-link";
+        if (source === "next/image") return "\0monitor:next-image";
         const name = source
           .replaceAll("\\", "/")
           .split("/")
@@ -41,6 +46,12 @@ const server = await createServer({
         if (name in stubs) return `\0monitor:${name}`;
       },
       load(id) {
+        if (id === "\0monitor:navigation")
+          return "export { usePathname } from '/tests/monitor/navigation-doubles.tsx'";
+        if (id === "\0monitor:next-link")
+          return "export { TestLink as default } from '/tests/monitor/navigation-doubles.tsx'";
+        if (id === "\0monitor:next-image")
+          return "export { TestImage as default } from '/tests/monitor/navigation-doubles.tsx'";
         if (id.startsWith("\0monitor:")) return stubs[id.slice("\0monitor:".length)];
       },
     },

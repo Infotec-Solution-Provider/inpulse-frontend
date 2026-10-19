@@ -1,4 +1,14 @@
-import { createContext, createElement, useContext } from "react";
+import { createContext, createElement, useContext, useState } from "react";
+import {
+  Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+} from "@mui/material";
+import { Bell } from "lucide-react";
 import type { ReactNode } from "react";
 import type { User } from "../../src/lib/sdk-local";
 import type { DetailedChat } from "../../src/app/(private)/[instance]/whatsapp-context";
@@ -17,6 +27,7 @@ declare global {
       fail: () => void;
       opened: () => boolean[];
       dark: () => void;
+      navigate: (path: string) => void;
     };
   }
 }
@@ -25,6 +36,7 @@ export const AuthContext = createContext({
   instance: "tenant-a",
   token: "test-token",
   user: { CODIGO: 1, NOME: "Supervisor", NIVEL: "ADMIN" } as User,
+  signOut: () => undefined,
 });
 export const useAuthContext = () => useContext(AuthContext);
 export const state = {
@@ -42,6 +54,7 @@ const pendingAction = (type: string, chatId: number) =>
   });
 const currentChat = { id: 999, chatType: "wpp" } as DetailedChat;
 const whatsapp = {
+  parameters: {} as Record<string, string>,
   sectors: [{ id: 1, name: "Atendimento" }],
   currentChat,
   setCurrentChat: () => undefined,
@@ -94,12 +107,51 @@ export const TestComposer = () => createElement("textarea", { "aria-label": "Men
 export const TestCustomerDetail = ({
   customerId,
   canEdit,
+  presentation,
 }: {
   customerId: number;
   canEdit: boolean;
+  presentation?: "modal" | "panel";
 }) =>
   createElement(
     "div",
-    { role: "dialog", "aria-label": "Detalhes do cliente" },
+    presentation === "panel" ? {} : { role: "dialog", "aria-label": "Detalhes do cliente" },
     `Cliente ${customerId} · ${canEdit ? "Edição habilitada" : "Somente leitura"}`,
   );
+
+// Notification backends are outside this harness; real shell/theme/portal behavior is exercised.
+export function TestNotifications() {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return createElement(
+    "div",
+    {},
+    createElement(
+      IconButton,
+      { "aria-label": "notificações", onClick: (event) => setAnchor(event.currentTarget) },
+      createElement(Bell, { size: 18 }),
+    ),
+    createElement(
+      Menu,
+      { open: Boolean(anchor), anchorEl: anchor, onClose: () => setAnchor(null) },
+      createElement(MenuItem, { onClick: () => setAnchor(null) }, "Nenhuma notificação"),
+    ),
+  );
+}
+export function TestNotificationPreferences({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  return createElement(
+    Dialog,
+    { open, onClose },
+    createElement(DialogTitle, {}, "Preferências de notificação"),
+    createElement(
+      DialogContent,
+      {},
+      createElement(Button, { onClick: onClose }, "Fechar preferências"),
+    ),
+  );
+}

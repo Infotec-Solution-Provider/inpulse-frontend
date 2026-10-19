@@ -1,5 +1,10 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import type { MonitorFiltersState } from "../../src/app/(private)/[instance]/monitor/types";
+import { uiPalette } from "../../src/lib/ui-system/tokens";
+
+function cssRgb(hex: string) {
+  return `rgb(${[1, 3, 5].map((index) => Number.parseInt(hex.slice(index, index + 2), 16)).join(", ")})`;
+}
 
 interface Query {
   page: number;
@@ -99,6 +104,7 @@ async function setup(page: Page, handler?: (route: Route, query: Query) => Promi
 test("aplica filtros, persiste preferências sem texto e pagina os resultados", async ({ page }) => {
   const { queries, errors } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
+  await expect(page.getByRole("list", { name: "Lista compacta de conversas" })).toBeVisible();
   const first = page.getByRole("article").first();
   await expect(first.getByText("2 mensagens não lidas", { exact: true })).toBeAttached();
   await expect(first.getByText(/^d+ não lidas?$/)).toHaveCount(0);
@@ -109,9 +115,9 @@ test("aplica filtros, persiste preferências sem texto e pagina os resultados", 
   await page.getByRole("button", { name: "Buscar", exact: true }).click();
   await expect(page.getByRole("article")).toHaveCount(1);
   expect(queries.at(-1)?.filters.searchText).toBe("nova busca");
-  await page.getByRole("button", { name: "Exibir lista compacta" }).click();
+  await page.getByRole("button", { name: "Exibir cartões" }).click();
   await page.reload();
-  await expect(page.getByRole("list", { name: "Lista compacta de conversas" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Lista de conversas", exact: true })).toBeVisible();
   await expect(page.getByLabel("Pesquisar", { exact: true })).toHaveValue("");
   await expect(page.getByRole("article")).toHaveCount(20);
   await page.getByRole("button", { name: "Próxima página" }).click();
@@ -144,10 +150,12 @@ test("ignora resposta antiga e isola preferências/dados ao mudar instância", a
   await page.getByRole("button", { name: "Buscar", exact: true }).click();
   await expect(page.getByRole("heading", { name: "atual", exact: true })).toBeVisible();
   release?.();
-  await page.getByRole("button", { name: "Exibir lista compacta" }).click();
+  await page.getByRole("button", { name: "Exibir cartões" }).click();
   await page.evaluate(() => window.monitorHarness.switchTenant("tenant-b"));
   await expect(page.getByLabel("Pesquisar", { exact: true })).toHaveValue("");
-  await expect(page.getByRole("list", { name: "Lista de conversas", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Lista compacta de conversas", exact: true }),
+  ).toBeVisible();
   await expect(page.getByText("Resposta antiga", { exact: true })).toHaveCount(0);
   expect(queries.at(-1)?.filters.searchText).toBe("");
 });
@@ -246,12 +254,113 @@ test("filtro rápido não aplica rascunho e acesso direto exige administrador", 
   expect(await page.evaluate(() => window.monitorHarness.listeners())).toBe(0);
 });
 
+test("chips resumem filtros e remover uma condição preserva os demais rascunhos", async ({
+  page,
+}) => {
+  const { queries, errors } = await setup(page);
+  await expect(page.getByRole("article")).toHaveCount(20);
+  await page.getByRole("button", { name: /^Filtros/ }).click();
+  const panel = page.getByRole("dialog", { name: "Filtros da monitoria", exact: true });
+  await panel.getByRole("combobox", { name: "Atendente / participante" }).click();
+  await page.getByRole("option", { name: "Ana", exact: true }).click();
+  await panel.getByRole("checkbox", { name: "Incluir bots" }).check();
+  await panel.getByRole("checkbox", { name: "Apenas não lidas" }).check();
+  await panel.getByLabel("Data de início: de", { exact: true }).fill("2026-10-01");
+  await panel.getByRole("button", { name: "Aplicar filtros" }).click();
+  await expect.poll(() => queries.at(-1)?.filters.user).toBe(2);
+  const chips = page.getByLabel("Filtros aplicados", { exact: true });
+  await expect(chips.locator(".MuiChip-root")).toHaveCount(3);
+  await expect(chips.getByRole("button", { name: "+1 filtros", exact: true })).toBeVisible();
+  await chips.getByRole("button", { name: "+1 filtros", exact: true }).click();
+  await expect(panel.getByRole("checkbox", { name: "Incluir bots" })).toBeChecked();
+  await expect(panel.getByLabel("Data de início: de", { exact: true })).toHaveValue("2026-10-01");
+  await panel.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await page.getByLabel("Pesquisar", { exact: true }).fill("rascunho não aplicado");
+  const userChip = chips.getByRole("button", {
+    name: "Filtro aplicado Atendente: Ana. Pressione Delete para remover.",
+    exact: true,
+  });
+  await userChip.focus();
+  await userChip.press("Delete");
+  await expect.poll(() => queries.at(-1)?.filters.user).toBe("all");
+  expect(queries.at(-1)?.filters).toMatchObject({
+    searchText: "",
+    showBots: true,
+    showUnreadOnly: true,
+  });
+  await expect(page.getByLabel("Pesquisar", { exact: true })).toHaveValue("rascunho não aplicado");
+  await expect(page.getByText("Há alterações de filtros para aplicar.")).toBeVisible();
+  await expect(chips.getByText("Atendente: Ana", { exact: true })).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("painel de filtros pausa socket e fallback, cancela o rascunho e restaura foco", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const { queries, errors } = await setup(page);
+  await expect(page.getByRole("article")).toHaveCount(20);
+  await expect(page.getByRole("button", { name: "Atualizar", exact: true })).toBeEnabled();
+  const listeners = await page.evaluate(() => window.monitorHarness.listeners());
+  const initial = queries.length;
+  const filterButton = page.getByRole("button", { name: /^Filtros/ });
+  await filterButton.click();
+  const panel = page.getByRole("dialog", { name: "Filtros da monitoria", exact: true });
+  await panel.getByRole("checkbox", { name: "Incluir bots" }).check();
+  await page.evaluate(() => window.monitorHarness.emit());
+  await page.clock.runFor(65_000);
+  expect(queries).toHaveLength(initial);
+  await expect(panel.getByRole("button", { name: "Aplicar filtros" })).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveCount(0);
+  await expect(filterButton).toBeFocused();
+  await expect.poll(() => queries.length).toBe(initial + 1);
+  expect(queries.at(-1)?.filters.showBots).toBe(false);
+  expect(await page.evaluate(() => window.monitorHarness.listeners())).toBe(listeners);
+  await filterButton.click();
+  await expect(panel.getByRole("checkbox", { name: "Incluir bots" })).not.toBeChecked();
+  await panel.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(errors).toEqual([]);
+});
+
+test("menu de ações mantém a linha estável durante socket e fallback e retoma ao fechar", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const { queries, errors } = await setup(page);
+  await expect(page.getByRole("article")).toHaveCount(20);
+  await expect(page.getByRole("button", { name: "Atualizar", exact: true })).toBeEnabled();
+  const listeners = await page.evaluate(() => window.monitorHarness.listeners());
+  const initial = queries.length;
+  const menuButton = page.getByRole("button", { name: "Mais ações de Contato 1", exact: true });
+  await menuButton.click();
+  const transfer = page.getByRole("menuitem", {
+    name: "Transferir atendimento de Contato 1",
+    exact: true,
+  });
+  await expect(transfer).toBeVisible();
+  await page.evaluate(() => window.monitorHarness.emit());
+  await page.clock.runFor(65_000);
+  expect(queries).toHaveLength(initial);
+  await expect(transfer).toBeVisible();
+  await expect(page.getByRole("article", { includeHidden: true })).toHaveCount(20);
+  expect(await page.evaluate(() => window.monitorHarness.actions())).toEqual([]);
+  await page.keyboard.press("Escape");
+  await expect(transfer).toHaveCount(0);
+  await expect(menuButton).toBeFocused();
+  await expect.poll(() => queries.length).toBe(initial + 1);
+  expect(await page.evaluate(() => window.monitorHarness.listeners())).toBe(listeners);
+  expect(errors).toEqual([]);
+});
+
 test("finalização aguarda confirmação e atualiza só após sucesso", async ({ page }) => {
   const { queries, errors } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
   await expect(page.getByRole("button", { name: /^Filtros/ })).toBeInViewport();
   const initial = queries.length;
-  await page.getByRole("button", { name: /Finalizar.*Contato 1$/ }).click();
+  await expect(page.getByRole("menuitem", { name: /Finalizar.*Contato 1$/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Mais ações de Contato 1", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Finalizar.*Contato 1$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Finalizar conversa" });
   await dialog.getByRole("combobox", { name: "Resultado" }).click();
   await page.getByRole("option", { name: "Concluído" }).click();
@@ -273,7 +382,8 @@ test("transferência com falha mantém modal e troca de tenant fecha ação anti
   const { queries } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
   const initial = queries.length;
-  await page.getByRole("button", { name: /Transferir.*Contato 1$/ }).click();
+  await page.getByRole("button", { name: "Mais ações de Contato 1", exact: true }).click();
+  await page.getByRole("menuitem", { name: /Transferir.*Contato 1$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Transferir conversa" });
   await dialog.getByRole("combobox", { name: "Usuário" }).click();
   await page.getByRole("option", { name: "Ana", exact: true }).click();
@@ -295,6 +405,7 @@ test("visualiza histórico sem leitura automática e só abre envio por ação e
   await page.getByRole("button", { name: /Visualizar.*Contato 1$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Contato 1", exact: true });
   await expect(dialog.getByText("Mensagem do histórico")).toBeVisible();
+  await expect(dialog).toHaveCSS("width", "720px");
   expect(await page.evaluate(() => window.monitorHarness.opened())).toEqual([]);
   await dialog.getByRole("button", { name: "Responder nesta conversa" }).click();
   await expect(dialog.getByRole("textbox", { name: "Mensagem" })).toBeVisible();
@@ -306,6 +417,8 @@ test("datas incluem todo o dia escolhido no fuso do navegador", async ({ page })
   const { queries } = await setup(page);
   await expect(page.getByRole("article")).toHaveCount(20);
   await page.getByRole("button", { name: /^Filtros/ }).click();
+  const panel = page.getByRole("dialog", { name: "Filtros da monitoria", exact: true });
+  await expect(panel).toHaveCSS("width", "480px");
   await page.getByLabel("Data de início: de", { exact: true }).fill("2026-09-25");
   await page.getByLabel("Data de início: até", { exact: true }).fill("2026-09-25");
   await page.getByRole("button", { name: "Aplicar filtros" }).click();
@@ -328,10 +441,12 @@ test("layout desktop/mobile sem overflow horizontal", async ({ page }) => {
   await page.evaluate(() => window.monitorHarness.dark());
   await expect(
     page.getByRole("region", { name: "Indicadores da monitoria" }).getByRole("button").first(),
-  ).toHaveCSS("background-color", "rgb(30, 41, 59)");
+  ).toHaveCSS("background-color", cssRgb(uiPalette.dark.surface));
   await page.screenshot({ path: "test-results/monitor-compact-dark.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: /^Filtros/ }).click();
+  const panel = page.getByRole("dialog", { name: "Filtros da monitoria", exact: true });
+  await expect(panel).toHaveCSS("width", "390px");
   await expect(page.getByRole("button", { name: "Aplicar filtros" })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,

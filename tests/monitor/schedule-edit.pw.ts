@@ -105,8 +105,7 @@ const openEditor = (page: Page) =>
   page
     .getByRole("button", { name: "Editar agendamento 1 de Cliente telefonia 1", exact: true })
     .click();
-const editor = (page: Page) =>
-  page.getByRole("dialog", { name: "Editar agendamento", exact: true });
+const editor = (page: Page) => page.getByRole("dialog", { name: /^Editar agendamento/ });
 const dateField = (page: Page) => page.getByLabel("Data e hora do agendamento", { exact: true });
 const saveButton = (page: Page) =>
   editor(page).getByRole("button", { name: "Salvar agendamento", exact: true });
@@ -128,7 +127,8 @@ test("edita horário civil e operador da agenda, preservando carteira, paginaç�
   ).toBeVisible();
   await dateField(page).fill("2026-10-21T00:05");
   await editor(page).getByRole("button", { name: "Alterar operador", exact: true }).click();
-  const lookup = page.getByRole("dialog", { name: "Operador do agendamento", exact: true });
+  const lookup = page.getByRole("dialog", { name: /^Operador do agendamento/ });
+  await expect(page.getByRole("dialog")).toHaveCount(1);
   await lookup.getByRole("button", { name: "Go to page 2", exact: true }).click();
   await lookup.getByRole("radio", { name: "Operador 21", exact: true }).check();
   await lookup.getByLabel("Pesquisar operador do agendamento", { exact: true }).fill("inexistente");
@@ -136,6 +136,11 @@ test("edita horário civil e operador da agenda, preservando carteira, paginaç�
   await expect(lookup.getByText("Nenhuma opção encontrada para esta pesquisa.")).toBeVisible();
   await expect(lookup.getByText("1 selecionado", { exact: true })).toBeVisible();
   await lookup.getByRole("button", { name: "Confirmar seleção", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(
+    editor(page).getByRole("button", { name: "Alterar operador", exact: true }),
+  ).toBeFocused();
+  await expect(dateField(page)).toHaveValue("2026-10-21T00:05");
   await saveButton(page).press("Enter");
   await expect(editor(page)).toHaveCount(0);
   await expect(page.getByRole("alert")).toContainText("Agendamento atualizado");
@@ -147,7 +152,11 @@ test("edita horário civil e operador da agenda, preservando carteira, paginaç�
   });
   expect(state.operatorQueries.some((query) => query.get("page") === "2")).toBe(true);
   await expect.poll(() => state.queries.at(-1)?.filters.searchText).toBe("Cliente");
-  await expect(page.getByRole("table").getByText("Ana", { exact: true })).toBeVisible();
+  const registeredOperator = page
+    .getByRole("table")
+    .getByRole("cell")
+    .filter({ hasText: "Cadastro do cliente" });
+  await expect(registeredOperator).toContainText("Ana");
   await expect(page.getByRole("table").getByText(/Operador 21/)).toBeVisible();
   await openEditor(page);
   await expect(dateField(page)).toHaveValue("2026-10-21T00:05");
@@ -169,9 +178,14 @@ test("mantém data ausente e operador atual fora do resultado da pesquisa até e
   await openEditor(page);
   await expect(dateField(page)).toHaveValue("");
   await editor(page).getByRole("button", { name: "Alterar operador", exact: true }).click();
-  const lookup = page.getByRole("dialog", { name: "Operador do agendamento", exact: true });
+  const lookup = page.getByRole("dialog", { name: /^Operador do agendamento/ });
+  await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(lookup.getByText("Operador legado", { exact: true })).toBeVisible();
   await lookup.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(
+    editor(page).getByRole("button", { name: "Alterar operador", exact: true }),
+  ).toBeFocused();
   await expect(editor(page).getByText("Operador legado", { exact: true })).toBeVisible();
   await saveButton(page).click();
   await expect(editor(page).getByRole("alert")).toContainText("Altere a data e hora ou o operador");

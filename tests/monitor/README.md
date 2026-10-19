@@ -43,3 +43,17 @@ sem campos graváveis até o contrato funcional ser confirmado.
 
 Os testes de lógica executam via `npm run test:unit` (incluem a monitoria) e a
 verificação de tipos via `npx tsc --noEmit --incremental false`.
+
+O piloto também renderiza `MonitorShell`, `PilotDesignProvider` e o provider real
+de preferências de tema. Next Link/Image/navegação são adaptados para navegação
+local, sem servidor Next ou autenticação real. Notificações e cadastro do cliente
+continuam simulados; o tema, o host de overlays, os menus e o foco são reais.
+
+`ui-system.pw.ts` cobre claro/escuro/sistema, migração da preferência anterior,
+persistência da lateral por usuário/tenant, dimensões240/64, menu mobile320px,
+menus por teclado, retorno ao layout legado, tooltip sem recorte e foco/ARIA da
+consulta lateral. Não é uma auditoria manual com leitor de tela.
+
+As regressões de Conversas cobrem chips3+N, remoção independente do rascunho e
+pausa durante filtros/menu de ações. As seleções da Telefonia usam subvisões no
+mesmo painel ou editor, preservando um único diálogo e o foco ao retornar.

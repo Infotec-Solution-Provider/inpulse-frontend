@@ -1,6 +1,12 @@
 import { createRoot } from "react-dom/client";
 import { useState, type ReactNode } from "react";
-import { createTheme, ThemeProvider, Modal } from "@mui/material";
+import { Modal } from "@mui/material";
+import { ThemeProvider, useThemeContext } from "../../src/app/theme-context";
+import { PilotDesignProvider } from "../../src/lib/ui-system";
+import MonitorShell from "../../src/lib/ui-system/monitor-shell";
+import Header from "../../src/app/(private)/[instance]/header";
+import { isMonitorPath } from "../../src/lib/ui-system/navigation";
+import { navigate, usePathname } from "./navigation-doubles";
 import MonitorPage from "../../src/app/(private)/[instance]/monitor/page";
 import MonitorLayout from "../../src/app/(private)/[instance]/monitor/layout";
 import { AuthContext, AppContext, socket, state } from "./doubles";
@@ -13,13 +19,15 @@ function Harness() {
   const [role, setRole] = useState("ADMIN");
   const [userId, setUserId] = useState(1);
   const [modal, setModal] = useState<ReactNode>(null);
-  const [dark, setDark] = useState(false);
+  const { setPreference } = useThemeContext();
+  const pathname = usePathname();
   authSession.setAccessToken(token);
   Object.assign(window, {
     monitorHarness: {
       switchTenant: (name: string) => {
         setInstance(name);
         setToken(`test-${name}`);
+        navigate(`/${name}/monitor`);
       },
       refreshToken: () => setToken("refreshed-token"),
       switchUser: (id: number) => {
@@ -34,36 +42,59 @@ function Harness() {
       fail: () => state.actions.at(-1)?.reject(),
       opened: () => state.opened,
       dark: () => {
-        document.documentElement.classList.add("dark");
-        setDark(true);
+        setPreference("dark");
       },
+      navigate,
     },
   });
+  const appModal = (
+    <Modal
+      open={!!modal}
+      onClose={(_event, reason) => {
+        if (reason !== "backdropClick") setModal(null);
+      }}
+      style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <div>{modal}</div>
+    </Modal>
+  );
   return (
-    <ThemeProvider theme={createTheme({ palette: { mode: dark ? "dark" : "light" } })}>
-      <AuthContext.Provider
-        value={{
-          instance,
-          token,
-          user: { CODIGO: userId, NOME: "Supervisor", NIVEL: role } as never,
-        }}
-      >
-        <AppContext.Provider
-          value={{ modal, openModal: setModal, closeModal: () => setModal(null) }}
-        >
-          <MonitorLayout>
-            <MonitorPage />
-          </MonitorLayout>
-          <Modal
-            open={!!modal}
-            onClose={() => setModal(null)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
-            <div>{modal}</div>
-          </Modal>
-        </AppContext.Provider>
-      </AuthContext.Provider>
-    </ThemeProvider>
+    <AuthContext.Provider
+      value={{
+        instance,
+        token,
+        user: { CODIGO: userId, NOME: "Supervisor", NIVEL: role } as never,
+        signOut: () => {
+          setToken("");
+          setModal(null);
+        },
+      }}
+    >
+      <AppContext.Provider value={{ modal, openModal: setModal, closeModal: () => setModal(null) }}>
+        {isMonitorPath(pathname) ? (
+          <PilotDesignProvider>
+            <MonitorShell>
+              <MonitorLayout>
+                <MonitorPage />
+              </MonitorLayout>
+            </MonitorShell>
+            {appModal}
+          </PilotDesignProvider>
+        ) : (
+          <div style={{ height: "100%" }}>
+            <Header />
+            <main aria-label="Conteúdo legado" style={{ padding: 24 }}>
+              Página demonstrativa no layout anterior.
+            </main>
+            {appModal}
+          </div>
+        )}
+      </AppContext.Provider>
+    </AuthContext.Provider>
   );
 }
-createRoot(document.getElementById("root")!).render(<Harness />);
+createRoot(document.getElementById("root")!).render(
+  <ThemeProvider>
+    <Harness />
+  </ThemeProvider>,
+);

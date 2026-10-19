@@ -13,11 +13,16 @@ test("telefonia aplica seleções múltiplas paginadas apenas após confirmar e 
   await openFilters(page);
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  await expect(dialog).toHaveCount(1);
   await dialog.getByRole("checkbox", { name: "Campanha 1", exact: true }).check();
   await dialog.getByRole("button", { name: "Go to page 2", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "Campanha 21", exact: true }).check();
   await expect(dialog.getByText("2 de 100 selecionados", { exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "Confirmar seleção" }).click();
+  await expect(dialog).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Selecionar campanhas", exact: true }),
+  ).toBeFocused();
   expect(queries.at(-1)?.filters.campaignIds).toEqual([]);
   await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
   await expect.poll(() => queries.at(-1)?.filters.campaignIds).toEqual([1, 21]);
@@ -43,6 +48,10 @@ test("telefonia aplica seleções múltiplas paginadas apenas após confirmar e 
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "Campanha 2", exact: true }).check();
   await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialog).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Selecionar campanhas", exact: true }),
+  ).toBeFocused();
   await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
   expect(queries.at(-1)?.filters.campaignIds).toEqual([1, 21]);
   expect(errors).toEqual([]);
@@ -204,21 +213,24 @@ test("telefonia tem layout desktop e móvel sem overflow de página", async ({ p
   const resultArea = await page
     .getByLabel("Resultados da telefonia", { exact: true })
     .boundingBox();
-  expect(resultArea!.height).toBeGreaterThan(400);
+  // The shared navigation and compact summary leave a useful independently scrolling list.
+  expect(resultArea!.height).toBeGreaterThan(300);
   await openFilters(page);
   const filterDialog = await page.getByRole("dialog").boundingBox();
   expect(filterDialog!.y + filterDialog!.height).toBeLessThanOrEqual(800);
+  expect(filterDialog!.width).toBe(480);
+  expect(filterDialog!.x + filterDialog!.width).toBe(1440);
   await expect(page.getByRole("button", { name: "Aplicar filtros", exact: true })).toBeInViewport();
   await page.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.evaluate(() => window.monitorHarness.dark());
   await expect(page.getByRole("table").locator("..")).toHaveCSS(
     "background-color",
-    "rgb(30, 41, 59)",
+    "rgb(25, 26, 31)",
   );
   await expect(
     page.locator("label").filter({ hasText: "Pesquisar cliente ou telefone" }),
-  ).toHaveCSS("color", "rgba(255, 255, 255, 0.7)");
+  ).toHaveCSS("color", "rgb(176, 176, 191)");
   await page.screenshot({ path: "test-results/monitor-telephony-dark.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
@@ -230,7 +242,11 @@ test("telefonia tem layout desktop e móvel sem overflow de página", async ({ p
   await openFilters(page);
   await page.getByRole("button", { name: "Selecionar campanhas", exact: true }).click();
   await expect(page.getByRole("checkbox", { name: "Campanha 1", exact: true })).toBeVisible();
-  await expect(page.locator(".MuiDialog-container").last()).toHaveCSS("opacity", "1");
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(page.locator(".MuiDrawer-paper")).toHaveCSS("transform", "none");
+  await expect(
+    page.getByRole("button", { name: "Confirmar seleção", exact: true }),
+  ).toBeInViewport();
   await page.screenshot({ path: "test-results/monitor-telephony-mobile.png" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -434,4 +450,49 @@ test("telefonia alterna entre cartões e lista compacta e lembra a escolha", asy
   await expect(page.getByRole("table")).toHaveCount(0);
   await page.getByRole("button", { name: "Exibir lista compacta", exact: true }).click();
   await expect(page.getByRole("table")).toBeVisible();
+});
+
+test("chips limitados a três abrem todos os filtros e mantêm o rascunho ao cancelar", async ({
+  page,
+}) => {
+  const { queries, errors } = await setupTelephony(page);
+  await openFilters(page);
+  for (const [label, option] of [
+    ["campanhas", "Campanha 1"],
+    ["grupos de clientes", "Grupo 1"],
+    ["origens", "Origem 1"],
+  ]) {
+    await page.getByRole("button", { name: `Selecionar ${label}`, exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await page.getByRole("checkbox", { name: option, exact: true }).check();
+    await page.getByRole("button", { name: "Confirmar seleção", exact: true }).click();
+  }
+  await page.getByRole("checkbox", { name: "Nunca trabalhados", exact: true }).check();
+  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  await expect.poll(() => queries.at(-1)?.filters.neverWorked).toBe(true);
+  const chips = page.getByLabel("Filtros aplicados", { exact: true });
+  await expect(chips.getByRole("button", { name: /^Filtro aplicado/ })).toHaveCount(3);
+  await expect(chips.getByRole("button", { name: "+1 filtros", exact: true })).toBeVisible();
+  await page
+    .getByLabel("Pesquisar cliente ou telefone", { exact: true })
+    .fill("rascunho preservado");
+  await chips.getByRole("button", { name: "+1 filtros", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await expect(
+    page.getByRole("checkbox", { name: "Nunca trabalhados", exact: true }),
+  ).toBeChecked();
+  await page.getByRole("checkbox", { name: "Nunca trabalhados", exact: true }).uncheck();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(page.getByLabel("Pesquisar cliente ou telefone", { exact: true })).toHaveValue(
+    "rascunho preservado",
+  );
+  expect(queries.at(-1)?.filters.neverWorked).toBe(true);
+  expect(queries.at(-1)?.filters.searchText).toBe("");
+  await chips.getByRole("button", { name: /^Filtro aplicado Campanhas: 1/ }).press("Delete");
+  await expect.poll(() => queries.at(-1)?.filters.campaignIds).toEqual([]);
+  expect(queries.at(-1)?.filters.searchText).toBe("");
+  await expect(
+    chips.getByRole("button", { name: /^Filtro aplicado Nunca trabalhados/ }),
+  ).toBeVisible();
+  expect(errors).toEqual([]);
 });
