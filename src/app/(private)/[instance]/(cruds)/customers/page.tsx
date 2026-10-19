@@ -11,8 +11,8 @@ export default function CustomersManagementPage() {
     <div className="relative box-border flex h-screen w-screen flex-col px-10 pt-5">
       {user?.NIVEL === UserRole.ADMIN && (
         <div className="mb-3 flex justify-end">
-          <Button component={Link} href={`/${instance}/customer-segments`} size="small">
-            Cadastros auxiliares · Segmentos
+          <Button component={Link} href={`/${instance}/crm-catalogs`} size="small">
+            Cadastros auxiliares
           </Button>
         </div>
       )}
