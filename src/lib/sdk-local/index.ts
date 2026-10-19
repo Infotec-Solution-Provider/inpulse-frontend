@@ -14,3 +14,6 @@ export { default as WalletsClient } from "./wallets.client";
 export { default as InternalChatClient } from "./internal.client";
 export { default as ReadyMessageClient} from "./ready-message.client";
 export { default as CustomerSearchClient } from "./customer-search.client";
+export { default as CrmMarketingClient } from "./crm-marketing.client";
+export { default as CrmCampaignGenerationClient } from "./crm-campaign-generation.client";
+export type { CrmGenerationExpected, CrmGenerationInput, CrmGenerationPreview } from "./crm-campaign-generation.client";
