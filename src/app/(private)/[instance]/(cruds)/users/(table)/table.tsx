@@ -1,4 +1,5 @@
 "use client";
+import { TableHead } from "@mui/material";
 import { useAuthContext } from "@/app/auth-context";
 import { User, UserRole } from "@/lib/sdk-local";
 import {
@@ -44,92 +45,81 @@ export default function UsersTable() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <TableContainer
-        className="scrollbar-whatsapp mx-auto overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
-        sx={{
-          height: "calc(100vh - 280px)",
-          minHeight: "400px",
-          maxHeight: "70vh",
-        }}
-      >
-        <Table className="scrollbar-whatsapp" stickyHeader>
-          <UsersTableHeader />
-          <TableBody
-            sx={{
-              minHeight: state.isLoading || state.users.length === 0 ? "300px" : "auto",
-            }}
-          >
-            {state.isLoading && (
-              <TableRow sx={{ height: "300px" }}>
-                <TableCell
-                  colSpan={7}
-                  className="border-0"
-                  sx={{
-                    textAlign: "center",
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <CircularProgress size={40} />
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Carregando usuários...
-                    </span>
-                  </div>
-                </TableCell>
+    <div className="flex min-w-0 w-full flex-col gap-4">
+      <UsersTableHeader />
+      <div className="ip-crud-table">
+        <TableContainer className="w-full overflow-auto">
+          <Table className="scrollbar-whatsapp" stickyHeader>
+            <TableHead>
+              <TableRow>
+                {["Usuário", "E-mail", "Perfil", "Setor", "Ações"].map((label) => (
+                  <TableCell key={label}>{label}</TableCell>
+                ))}
               </TableRow>
-            )}
-            {!state.isLoading && state.users.length === 0 && (
-              <TableRow sx={{ height: "300px" }}>
-                <TableCell
-                  colSpan={7}
-                  className="border-0"
-                  sx={{
-                    textAlign: "center",
-                    backgroundColor: "transparent",
-                    borderBottom: "none",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-2 py-8">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Nenhum usuário encontrado
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-            {!state.isLoading &&
-              state.users.map((user) => (
-                <UsersTableItem
-                  key={`${user.NOME}_${user.CODIGO}`}
-                  user={user}
-                  canEdit={canEdit}
-                  canUseSipConfig={canUseSipConfig}
-                  openEditModalHandler={openEditUserModal}
-                  openSipConfigModalHandler={openSipConfigModal}
-                />
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
-        {canEdit && (
-          <Button
-            onClick={() => openUserModal()}
-            variant="contained"
-            color="primary"
-            size="medium"
-            className="w-full sm:w-auto"
-          >
-            + Cadastrar Usuário
-          </Button>
-        )}
+            </TableHead>
+            <TableBody
+              sx={{
+                minHeight: state.isLoading || state.users.length === 0 ? "300px" : "auto",
+              }}
+            >
+              {state.isLoading && (
+                <TableRow sx={{ height: "300px" }}>
+                  <TableCell
+                    colSpan={5}
+                    className="border-0"
+                    sx={{
+                      textAlign: "center",
+                      backgroundColor: "transparent",
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-3 py-8">
+                      <CircularProgress size={40} />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        Carregando usuários...
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!state.isLoading && state.users.length === 0 && (
+                <TableRow sx={{ height: "300px" }}>
+                  <TableCell
+                    colSpan={5}
+                    className="border-0"
+                    sx={{
+                      textAlign: "center",
+                      backgroundColor: "transparent",
+                      borderBottom: "none",
+                    }}
+                  >
+                    <div className="flex flex-col items-center gap-2 py-8">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        Nenhum usuário encontrado
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!state.isLoading &&
+                state.users.map((user) => (
+                  <UsersTableItem
+                    key={`${user.NOME}_${user.CODIGO}`}
+                    user={user}
+                    canEdit={canEdit}
+                    canUseSipConfig={canUseSipConfig}
+                    openEditModalHandler={openEditUserModal}
+                    openSipConfigModalHandler={openSipConfigModal}
+                  />
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
         <TablePagination
           component="div"
           count={Number(state.totalRows || 0)}
           page={Number(state.filters.page || 1) - 1}
           rowsPerPage={Number(state.filters.perPage || 10)}
-          labelRowsPerPage="Entradas por página"
+          labelRowsPerPage="Por página"
           labelDisplayedRows={(info) => {
             const { from, to, count } = info;
             return `${from}-${to} de ${count}`;

@@ -1,4 +1,6 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import {
   CrmPage,
   CrmToolbar,
@@ -31,12 +33,14 @@ import customersService from "@/lib/services/customers.service";
 import type { CrmRequestContext } from "@/lib/sdk-local/crm-request-context";
 import { Add, DeleteOutline, EditOutlined, Refresh, Search } from "@mui/icons-material";
 import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Alert,
   Box,
   Breadcrumbs,
   Button,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -137,10 +141,23 @@ export function GenericCatalogManagement({
   extraRowActions?: (row: CatalogRecord) => ReactNode;
   extraContent?: ReactNode;
 }) {
-  const columns = [
-    { key: definition.identity, label: definition.identity === "UF" ? "UF" : "Código" },
-    ...definition.fields,
-  ];
+  const columns =
+    catalog === "shifts"
+      ? [
+          { key: definition.identity, label: "Código" },
+          { key: "DESCRICAO", label: "Descrição" },
+          ...[1, 2, 3].map((index) => ({
+            key: `__INTERVAL_${index}`,
+            label: `Intervalo ${index}`,
+          })),
+        ]
+      : [
+          { key: definition.identity, label: definition.identity === "UF" ? "UF" : "Código" },
+          ...definition.fields.filter(
+            (field) =>
+              field.key !== "ID_COUNT" && !["ORDEMESTADO", "ORDEMCIDADE"].includes(field.key),
+          ),
+        ];
   const [rows, setRows] = useState<CatalogRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useCrmQueryState(`${catalog}:page`, 0);
@@ -175,6 +192,7 @@ export function GenericCatalogManagement({
   const [reconcileRequired, setReconcileRequired] = useState(false);
   const [success, setSuccess] = useState("");
   const [discard, setDiscard] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const alive = useRef(true);
   const currentToken = useRef(token);
   currentToken.current = token;
@@ -282,6 +300,7 @@ export function GenericCatalogManagement({
     setUnknown(false);
     setSuccess("");
   };
+  useCrmLeaveGuard(Boolean(dirty), saving, unknown || reconcileRequired);
   const closeEditor = () => {
     if (saving || reloadingEditor) return;
     if (dirty || unknown) setDiscard(true);
@@ -420,6 +439,12 @@ export function GenericCatalogManagement({
     });
   };
   const display = (record: CatalogRecord, key: string) => {
+    if (key.startsWith("__INTERVAL_")) {
+      const index = key.slice(-1),
+        flag = record[`HORARIO_${index}`];
+      if (flag === "NAO") return "Não utilizado";
+      return `${flag === "SIM" ? "" : "Não definido · "}${record[`ENTRADA_${index}`] ?? "—"} – ${record[`SAIDA_${index}`] ?? "—"}`;
+    }
     const value = record[key];
     if (value === null || value === undefined) return "—";
     const field = definition.fields.find((field) => field.key === key);
@@ -432,6 +457,92 @@ export function GenericCatalogManagement({
     return String(value) || "(vazio)";
   };
 
+  const renderEditorField = (field: CatalogDefinition["fields"][number]) => {
+    const value = editor?.draft[field.key] ?? "";
+    const currentUnit =
+      field.kind === "unit" && value !== "" && !units.some((unit) => String(unit.CODIGO) === value);
+    const stateField = catalog === "cities" && field.key === "UF";
+    const historicState = stateField && value !== "" && !states.some((state) => state.UF === value);
+    const fieldError = editor?.original || value ? validation?.errors[field.key] : undefined;
+    return (
+      <TextField
+        key={field.key}
+        label={field.label}
+        required={field.required}
+        value={value}
+        select={field.kind === "unit" || field.kind === "enum" || stateField}
+        disabled={saving || reloadingEditor}
+        error={Boolean(fieldError)}
+        helperText={fieldError ?? field.help}
+        slotProps={{
+          htmlInput: field.kind === "integer" ? { inputMode: "numeric" } : undefined,
+        }}
+        onChange={(event) =>
+          setEditor(
+            (current) =>
+              current && {
+                ...current,
+                draft: { ...current.draft, [field.key]: event.target.value },
+              },
+          )
+        }
+      >
+        {field.kind === "unit" && [
+          <MenuItem key="empty" value="">
+            {field.required ? "Selecione uma unidade" : "Sem unidade"}
+          </MenuItem>,
+          ...(currentUnit
+            ? [
+                <MenuItem key="historic" value={value} disabled>
+                  Unidade #{value} (referência histórica)
+                </MenuItem>,
+              ]
+            : []),
+          ...units
+            .filter((unit) => unit.CODIGO > 0)
+            .map((unit) => (
+              <MenuItem key={unit.CODIGO} value={String(unit.CODIGO)}>
+                {unit.DESCRICAO ?? "Sem descrição"} (#{unit.CODIGO})
+              </MenuItem>
+            )),
+        ]}
+        {field.kind === "enum" && [
+          <MenuItem key="empty" value="">
+            Não definido
+          </MenuItem>,
+          ...(value && !field.options?.some((option) => option.value === value)
+            ? [
+                <MenuItem key="historic" value={value} disabled>
+                  {value} (histórico)
+                </MenuItem>,
+              ]
+            : []),
+          ...(field.options ?? []).map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              {option.label}
+            </MenuItem>
+          )),
+        ]}
+        {stateField && [
+          <MenuItem key="empty" value="">
+            Sem estado
+          </MenuItem>,
+          ...(historicState
+            ? [
+                <MenuItem key="historic" value={value} disabled>
+                  {value} (referência histórica)
+                </MenuItem>,
+              ]
+            : []),
+          ...states.map((state) => (
+            <MenuItem key={state.UF} value={state.UF}>
+              {state.UF} · {state.NOME ?? "Sem nome"}
+            </MenuItem>
+          )),
+        ]}
+      </TextField>
+    );
+  };
   return (
     <CrmPage
       title={definition.title}
@@ -610,7 +721,9 @@ export function GenericCatalogManagement({
                       sortDirection={sortBy === column.key ? sortDirection : false}
                     >
                       <TableSortLabel
-                        disabled={definition.sortable === false}
+                        disabled={
+                          definition.sortable === false || column.key.startsWith("__INTERVAL_")
+                        }
                         active={sortBy === column.key}
                         direction={sortBy === column.key ? sortDirection : "asc"}
                         onClick={() => {
@@ -710,7 +823,7 @@ export function GenericCatalogManagement({
         open={Boolean(editor)}
         onClose={closeEditor}
         fullWidth
-        maxWidth="sm"
+        maxWidth={catalog === "shifts" ? "md" : "sm"}
         slotProps={{ paper: { className: "ip-crud-editor" } }}
         aria-labelledby="catalog-editor-title"
       >
@@ -766,98 +879,64 @@ export function GenericCatalogManagement({
                   )
                 }
               />
-              {definition.fields
-                .filter((field) => !field.readOnly)
-                .map((field) => {
-                  const value = editor?.draft[field.key] ?? "";
-                  const currentUnit =
-                    field.kind === "unit" &&
-                    value !== "" &&
-                    !units.some((unit) => String(unit.CODIGO) === value);
-                  const stateField = catalog === "cities" && field.key === "UF";
-                  const historicState =
-                    stateField && value !== "" && !states.some((state) => state.UF === value);
-                  const fieldError =
-                    editor?.original || value ? validation?.errors[field.key] : undefined;
-                  return (
-                    <TextField
-                      key={field.key}
-                      label={field.label}
-                      required={field.required}
-                      value={value}
-                      select={field.kind === "unit" || field.kind === "enum" || stateField}
-                      disabled={saving || reloadingEditor}
-                      error={Boolean(fieldError)}
-                      helperText={fieldError ?? field.help}
-                      slotProps={{
-                        htmlInput: field.kind === "integer" ? { inputMode: "numeric" } : undefined,
-                      }}
-                      onChange={(event) =>
-                        setEditor(
-                          (current) =>
-                            current && {
-                              ...current,
-                              draft: { ...current.draft, [field.key]: event.target.value },
-                            },
-                        )
-                      }
-                    >
-                      {field.kind === "unit" && [
-                        <MenuItem key="empty" value="">
-                          {field.required ? "Selecione uma unidade" : "Sem unidade"}
-                        </MenuItem>,
-                        ...(currentUnit
-                          ? [
-                              <MenuItem key="historic" value={value} disabled>
-                                Unidade #{value} (referência histórica)
-                              </MenuItem>,
-                            ]
-                          : []),
-                        ...units
-                          .filter((unit) => unit.CODIGO > 0)
-                          .map((unit) => (
-                            <MenuItem key={unit.CODIGO} value={String(unit.CODIGO)}>
-                              {unit.DESCRICAO ?? "Sem descrição"} (#{unit.CODIGO})
-                            </MenuItem>
-                          )),
-                      ]}
-                      {field.kind === "enum" && [
-                        <MenuItem key="empty" value="">
-                          Não definido
-                        </MenuItem>,
-                        ...(value && !field.options?.some((option) => option.value === value)
-                          ? [
-                              <MenuItem key="historic" value={value} disabled>
-                                {value} (histórico)
-                              </MenuItem>,
-                            ]
-                          : []),
-                        ...(field.options ?? []).map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        )),
-                      ]}
-                      {stateField && [
-                        <MenuItem key="empty" value="">
-                          Sem estado
-                        </MenuItem>,
-                        ...(historicState
-                          ? [
-                              <MenuItem key="historic" value={value} disabled>
-                                {value} (referência histórica)
-                              </MenuItem>,
-                            ]
-                          : []),
-                        ...states.map((state) => (
-                          <MenuItem key={state.UF} value={state.UF}>
-                            {state.UF} · {state.NOME ?? "Sem nome"}
-                          </MenuItem>
-                        )),
-                      ]}
-                    </TextField>
-                  );
-                })}
+              {[
+                ...new Set(
+                  definition.fields
+                    .filter((field) => !field.readOnly)
+                    .map((field) => field.group ?? ""),
+                ),
+              ].map((group) => {
+                const fields = definition.fields.filter(
+                  (field) => !field.readOnly && (field.group ?? "") === group,
+                );
+                const content = (
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 2,
+                      gridTemplateColumns: {
+                        xs: "minmax(0,1fr)",
+                        sm: group.startsWith("Intervalo")
+                          ? "repeat(3,minmax(0,1fr))"
+                          : "minmax(0,1fr)",
+                      },
+                    }}
+                  >
+                    {fields.map(renderEditorField)}
+                  </Box>
+                );
+                return fields.every((field) => field.advanced) ? (
+                  <Accordion
+                    key={group}
+                    expanded={
+                      Boolean(openSections[group]) ||
+                      fields.some(
+                        (field) =>
+                          Boolean(validation?.errors[field.key]) &&
+                          Boolean(editor?.draft[field.key]),
+                      )
+                    }
+                    onChange={(_, open) => setOpenSections((old) => ({ ...old, [group]: open }))}
+                    disableGutters
+                    elevation={0}
+                    className="ip-crud-advanced"
+                  >
+                    <AccordionSummary expandIcon={<UiIcon name="chevronDown" scale="metadata" />}>
+                      <Typography fontSize={14}>{group}</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>{content}</AccordionDetails>
+                  </Accordion>
+                ) : (
+                  <Box key={group}>
+                    {group && (
+                      <Typography component="h3" fontSize={14} fontWeight={600} mb={1}>
+                        {group}
+                      </Typography>
+                    )}
+                    {content}
+                  </Box>
+                );
+              })}
               {mutationError && (
                 <Alert severity={unknown || conflict ? "warning" : "error"}>{mutationError}</Alert>
               )}

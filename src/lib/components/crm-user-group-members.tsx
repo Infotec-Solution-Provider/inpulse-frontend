@@ -1,4 +1,7 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { getCustomerSegmentsError } from "@/lib/customer-segments-error";
 import type { CrmUserGroupMember, CrmUserOption } from "@/lib/sdk-local/types/crm-users.types";
 import crmUsersService from "@/lib/services/crm-users.service";
@@ -7,7 +10,6 @@ import {
   Alert,
   Autocomplete,
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -49,6 +51,13 @@ export default function CrmUserGroupMembers({
   const [error, setError] = useState("");
   const [optionsError, setOptionsError] = useState("");
   const [removing, setRemoving] = useState<CrmUserGroupMember | null>(null);
+  const [discardClose, setDiscardClose] = useState(false);
+  const close = () => {
+    if (saving) return;
+    if (code || selected) setDiscardClose(true);
+    else onClose();
+  };
+  useCrmLeaveGuard(Boolean(code || selected), saving, blocked);
   const alive = useRef(true);
   const activeToken = useRef(token);
   activeToken.current = token;
@@ -118,7 +127,8 @@ export default function CrmUserGroupMembers({
   const handleError = (failure: unknown) => {
     const details = getCustomerSegmentsError(failure);
     setBlocked(
-      details.status === 401 || details.status === 409 ||
+      details.status === 401 ||
+        details.status === 409 ||
         details.outcome === "UNKNOWN" ||
         details.status === undefined ||
         details.status >= 500,
@@ -180,11 +190,10 @@ export default function CrmUserGroupMembers({
   return (
     <Dialog
       open
-      onClose={() => {
-        if (!saving) onClose();
-      }}
+      onClose={close}
       fullWidth
       maxWidth="md"
+      slotProps={{ paper: { className: "ip-crud-editor" } }}
       aria-labelledby="group-members-title"
     >
       <DialogTitle id="group-members-title">Membros · {groupName}</DialogTitle>
@@ -248,7 +257,7 @@ export default function CrmUserGroupMembers({
               Adicionar
             </Button>
           </Stack>
-          <div style={{ overflowX: "auto" }}>
+          <div className="ip-crud-table" style={{ overflowX: "auto" }}>
             <Table size="small" aria-label="Membros do grupo">
               <TableHead>
                 <TableRow>
@@ -261,20 +270,20 @@ export default function CrmUserGroupMembers({
               <TableBody>
                 {members.map((member) => (
                   <TableRow key={member.CODIGO}>
-                    <TableCell>{member.CODIGO}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Código do vínculo">{member.CODIGO}</TableCell>
+                    <TableCell data-label="Usuário">
                       {member.OPERADOR_NOME ?? "Usuário indisponível"}{" "}
                       {member.OPERADOR !== null && `(#${member.OPERADOR})`}
                     </TableCell>
-                    <TableCell>{member.OPERADOR_ATIVO ?? "—"}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Ativo">{member.OPERADOR_ATIVO ?? "—"}</TableCell>
+                    <TableCell data-label="Ações">
                       <IconButton
                         color="error"
                         aria-label={`Remover membro ${member.CODIGO}`}
                         disabled={saving || blocked}
                         onClick={() => setRemoving(member)}
                       >
-                        <DeleteOutline />
+                        <UiIcon name="delete" scale="row" />
                       </IconButton>
                     </TableCell>
                   </TableRow>
@@ -290,7 +299,7 @@ export default function CrmUserGroupMembers({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button disabled={saving} onClick={onClose}>
+        <Button disabled={saving} onClick={close}>
           Fechar
         </Button>
       </DialogActions>
@@ -320,6 +329,23 @@ export default function CrmUserGroupMembers({
             onClick={() => removing && void write(removing)}
           >
             Remover vínculo
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={discardClose}
+        onClose={() => setDiscardClose(false)}
+        aria-labelledby="discard-group-selection"
+      >
+        <DialogTitle id="discard-group-selection">Descartar a seleção?</DialogTitle>
+        <DialogContent>
+          O vínculo ainda não foi confirmado nesta tela. Confira os membros antes de tentar
+          adicioná-lo novamente.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDiscardClose(false)}>Continuar editando</Button>
+          <Button color="error" onClick={onClose}>
+            Descartar e fechar
           </Button>
         </DialogActions>
       </Dialog>

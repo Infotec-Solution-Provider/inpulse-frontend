@@ -1,281 +1,148 @@
-import { FilterAlt, FilterAltOff, Search } from "@mui/icons-material";
+"use client";
+import { Button, TextField, MenuItem } from "@mui/material";
+import { useState } from "react";
 import {
-  Chip,
-  IconButton,
-  MenuItem,
-  SxProps,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Theme,
-  Tooltip,
-} from "@mui/material";
+  CrmToolbar,
+  OperationalPanel,
+  OperationalIconButton,
+  UiIcon,
+  FilterChipBar,
+} from "@/lib/ui-system";
+import type { RequestFilters, User } from "@/lib/sdk-local";
 import { useUsersContext } from "../users-context";
-import { USERS_TABLE_COLUMNS } from "./table-config";
-import { User } from "@/lib/sdk-local";
-
-const textFieldStlye: SxProps<Theme> = {
-  "& .MuiOutlinedInput-root": {
-    fontSize: "0.875rem",
-  },
+const labels: Record<string, string> = {
+  NOME: "Nome",
+  LOGIN: "Login",
+  EMAIL: "E-mail",
+  CODIGO: "Código",
+  NIVEL: "Perfil",
+  SETOR: "Setor",
 };
-
-const isKeyOfUser = (key: string): key is keyof User => {
-  const accepted: string[] = ["CODIGO", "NOME", "LOGIN", "EMAIL", "NIVEL", "SETOR"];
-  return accepted.includes(key);
-};
-
-const textFieldClassName = "w-full bg-slate-200 dark:bg-slate-700";
-
-export default function UsersTableHeader() {
-  const { dispatch, loadUsers, state, sectors } = useUsersContext();
-
-  const activeFilters = Object.keys(state.filters).filter((k) => {
-    const key = k as keyof typeof state.filters;
-    const isPageFilter = key === "page" || key === "perPage";
-    const isFilterActive = state.filters[key] && state.filters[key] !== "none";
-
-    return !isPageFilter && isFilterActive;
-  });
-
-  const activeFiltersCount = activeFilters.length;
-
-  const onClickSearch = () => loadUsers();
-  const onClearFilters = () => dispatch({ type: "clear-filters" });
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      onClickSearch();
-    }
+export default function UsersFilters() {
+  const { state, dispatch, loadUsers, sectors } = useUsersContext();
+  const [open, setOpen] = useState(false),
+    [name, setName] = useState(state.filters.NOME ?? ""),
+    [draft, setDraft] = useState({ ...state.filters });
+  const apply = (filters: RequestFilters<User>) => {
+    dispatch({
+      type: "apply-filters",
+      filters: Object.fromEntries(
+        Object.entries(filters).filter(([, v]) => v !== "" && v !== undefined),
+      ) as RequestFilters<User>,
+    });
+    setOpen(false);
   };
-
-  const handleChangeFilter = (key: string) => {
-    return (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!isKeyOfUser(key)) return;
-      const value = event.target.value || null;
-      if (value === null || value === "{{all}}") {
-        dispatch({ type: "remove-filter", key });
-      } else {
-        dispatch({ type: "change-filter", key, value });
-      }
-    };
+  const show = () => {
+    setDraft({ ...state.filters, NOME: name });
+    setOpen(true);
   };
-
   return (
-    <TableHead>
-      <TableRow
-        className="bg-slate-200 dark:bg-slate-800"
-        sx={{
-          "& .MuiTableCell-root": {
-            borderBottom: "2px solid",
-            borderColor: (theme) =>
-              theme.palette.mode === "dark" ? "rgb(71 85 105)" : "rgb(226 232 240)",
-            fontWeight: 600,
-            fontSize: "0.875rem",
-            color: (theme) => theme.palette.text.primary,
-            paddingTop: "1rem",
-            paddingBottom: "1rem",
-          },
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          apply({ ...state.filters, NOME: name });
         }}
       >
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.CODIGO.width,
-            minWidth: USERS_TABLE_COLUMNS.CODIGO.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.CODIGO.label}
-            </label>
+        <CrmToolbar>
+          <TextField
+            label="Buscar usuário por nome"
+            size="small"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            sx={{ flex: "1 1 140px", maxWidth: 480, minWidth: 0 }}
+          />
+          <OperationalIconButton type="submit" label="Buscar usuários" tooltip="Buscar">
+            <UiIcon name="search" scale="toolbar" />
+          </OperationalIconButton>
+          <OperationalIconButton label="Filtros de usuários" tooltip="Filtros" onClick={show}>
+            <UiIcon name="filter" scale="toolbar" />
+          </OperationalIconButton>
+          <OperationalIconButton
+            label="Atualizar usuários"
+            tooltip="Atualizar"
+            disabled={state.isLoading}
+            onClick={loadUsers}
+          >
+            <UiIcon name="refresh" scale="toolbar" />
+          </OperationalIconButton>
+        </CrmToolbar>
+      </form>
+      <FilterChipBar
+        items={Object.entries(state.filters)
+          .filter(([k, v]) => !["page", "perPage"].includes(k) && v)
+          .map(([key, value]) => ({
+            key,
+            label: `${labels[key] ?? key}: ${key === "SETOR" ? (sectors.find((s) => String(s.id) === value)?.name ?? value) : value}`,
+            onDelete: () => {
+              const next = { ...state.filters };
+              delete next[key as keyof typeof next];
+              if (key === "NOME") setName("");
+              apply(next);
+            },
+          }))}
+        onShowAll={show}
+        onClearAll={() => {
+          setName("");
+          apply({ perPage: state.filters.perPage });
+        }}
+      />
+      <OperationalPanel
+        open={open}
+        title="Filtros de usuários"
+        onClose={() => setOpen(false)}
+        footer={
+          <>
+            <Button onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button variant="contained" onClick={() => apply(draft)}>
+              Aplicar filtros
+            </Button>
+          </>
+        }
+      >
+        <div className="ip-crud-grid">
+          {(["CODIGO", "LOGIN", "EMAIL"] as const).map((key) => (
             <TextField
-              variant="outlined"
-              size="small"
-              placeholder={USERS_TABLE_COLUMNS.CODIGO.placeholder}
-              value={state.filters.CODIGO || ""}
-              onChange={handleChangeFilter("CODIGO")}
-              onKeyDown={handleKeyPress}
-              className={textFieldClassName}
-              sx={textFieldStlye}
+              key={key}
+              label={labels[key]}
+              value={draft[key] ?? ""}
+              onChange={(e) => setDraft((old) => ({ ...old, [key]: e.target.value }))}
             />
-          </div>
-        </TableCell>
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.NOME.width,
-            minWidth: USERS_TABLE_COLUMNS.NOME.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.NOME.label}
-            </label>
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder={USERS_TABLE_COLUMNS.NOME.placeholder}
-              value={state.filters.NOME || ""}
-              onChange={handleChangeFilter("NOME")}
-              onKeyDown={handleKeyPress}
-              className={textFieldClassName}
-              sx={textFieldStlye}
-            />
-          </div>
-        </TableCell>
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.LOGIN.width,
-            minWidth: USERS_TABLE_COLUMNS.LOGIN.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.LOGIN.label}
-            </label>
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder={USERS_TABLE_COLUMNS.LOGIN.placeholder}
-              value={state.filters.LOGIN || ""}
-              onChange={handleChangeFilter("LOGIN")}
-              onKeyDown={handleKeyPress}
-              className={textFieldClassName}
-              sx={textFieldStlye}
-            />
-          </div>
-        </TableCell>
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.EMAIL.width,
-            minWidth: USERS_TABLE_COLUMNS.EMAIL.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.EMAIL.label}
-            </label>
-            <TextField
-              variant="outlined"
-              size="small"
-              placeholder={USERS_TABLE_COLUMNS.EMAIL.placeholder}
-              value={state.filters.EMAIL || ""}
-              onChange={handleChangeFilter("EMAIL")}
-              onKeyDown={handleKeyPress}
-              className={textFieldClassName}
-              sx={textFieldStlye}
-            />
-          </div>
-        </TableCell>
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.NIVEL.width,
-            minWidth: USERS_TABLE_COLUMNS.NIVEL.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.NIVEL.label}
-            </label>
-            <TextField
-              select
-              variant="outlined"
-              size="small"
-              value={state.filters.NIVEL || "{{all}}"}
-              onChange={handleChangeFilter("NIVEL")}
-              className={textFieldClassName}
-              sx={textFieldStlye}
-            >
-              {USERS_TABLE_COLUMNS.NIVEL.options?.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </div>
-        </TableCell>
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.SETOR.width,
-            minWidth: USERS_TABLE_COLUMNS.SETOR.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.SETOR.label}
-            </label>
-            <TextField
-              select
-              variant="outlined"
-              size="small"
-              value={state.filters.SETOR || "{{all}}"}
-              onChange={handleChangeFilter("SETOR")}
-              className={textFieldClassName}
-              sx={textFieldStlye}
-            >
-              <MenuItem value="{{all}}">Todos</MenuItem>
-              {sectors.map((sector: { id: number; name: string }) => (
-                <MenuItem key={sector.id} value={sector.id.toString()}>
-                  {sector.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </div>
-        </TableCell>
-        <TableCell
-          className="px-3"
-          sx={{
-            width: USERS_TABLE_COLUMNS.ACTIONS.width,
-            minWidth: USERS_TABLE_COLUMNS.ACTIONS.width,
-          }}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              {USERS_TABLE_COLUMNS.ACTIONS.label}
-            </label>
-            <div className="flex min-h-[40px] w-32 items-center gap-1">
-              <Tooltip title="Pesquisar" arrow>
-                <IconButton
-                  onClick={onClickSearch}
-                  size="small"
-                  color="primary"
-                  className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500"
-                >
-                  <Search fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              {activeFiltersCount > 0 ? (
-                <>
-                  <Tooltip title="Limpar filtros" arrow>
-                    <IconButton
-                      onClick={onClearFilters}
-                      size="small"
-                      color="error"
-                      className="bg-red-500 text-white hover:bg-red-600 dark:bg-red-800 dark:hover:bg-red-700"
-                    >
-                      <FilterAltOff fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Chip
-                    icon={<FilterAlt fontSize="small" />}
-                    label={activeFiltersCount}
-                    size="small"
-                    color="primary"
-                  />
-                </>
-              ) : (
-                <div className="w-[88px]" />
-              )}
-            </div>
-          </div>
-        </TableCell>
-      </TableRow>
-    </TableHead>
+          ))}
+          <TextField
+            select
+            label="Perfil"
+            value={draft.NIVEL ?? ""}
+            onChange={(e) => setDraft((old) => ({ ...old, NIVEL: e.target.value }))}
+          >
+            <MenuItem value="">Todos</MenuItem>
+            {[
+              ["ADMIN", "Administrador"],
+              ["ATIVO", "Ativo"],
+              ["RECEP", "Receptivo"],
+              ["AMBOS", "Ambos"],
+              ["EXTERNO", "Externo"],
+            ].map(([value, label]) => (
+              <MenuItem key={value} value={value}>
+                {label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Setor"
+            value={draft.SETOR ?? ""}
+            onChange={(e) => setDraft((old) => ({ ...old, SETOR: e.target.value }))}
+          >
+            <MenuItem value="">Todos</MenuItem>
+            {sectors.map((sector) => (
+              <MenuItem key={sector.id} value={String(sector.id)}>
+                {sector.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </div>
+      </OperationalPanel>
+    </>
   );
 }

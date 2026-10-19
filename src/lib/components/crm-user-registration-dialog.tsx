@@ -1,4 +1,6 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { useAuthContext } from "@/app/auth-context";
 import { getCustomerSegmentsError } from "@/lib/customer-segments-error";
 import {
@@ -19,7 +21,6 @@ import {
   Alert,
   Box,
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -55,6 +56,7 @@ export default function CrmUserRegistrationDialog({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [associationBusy, setAssociationBusy] = useState(false);
+  const [associationDirty, setAssociationDirty] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [blocked, setBlocked] = useState(false);
@@ -128,7 +130,10 @@ export default function CrmUserRegistrationDialog({
   }, [load]);
   const validation = validateUserRegistration(fields, draft, detail);
   const dirty =
-    Boolean(avatar) || (detail ? validation.hasChanges : Object.values(draft).some(Boolean));
+    associationDirty ||
+    Boolean(avatar) ||
+    (detail ? validation.hasChanges : Object.values(draft).some(Boolean));
+  useCrmLeaveGuard(dirty, saving || associationBusy, blocked);
   const close = () => {
     if (saving || associationBusy) return;
     if (dirty || blocked) setDiscard("close");
@@ -213,13 +218,15 @@ export default function CrmUserRegistrationDialog({
       const unknown = outcome === "UNKNOWN" || status === undefined || status >= 500;
       setBlocked(status === 401 || status === 409 || status === 404 || unknown);
       setError(
-        status === 401 ? "Sua sessão expirou ou mudou. Recarregue os dados antes de continuar." : unknown
-          ? "Não foi possível confirmar a gravação. Ela pode ter sido concluída. Confira o cadastro antes de tentar novamente."
-          : status === 409
-            ? "O cadastro foi alterado ou o login já está em uso. Seu rascunho foi preservado. Recarregue os dados antes de continuar."
-            : status === 403
-              ? "Você não tem permissão para alterar este cadastro."
-              : "Não foi possível salvar. Revise os campos informados.",
+        status === 401
+          ? "Sua sessão expirou ou mudou. Recarregue os dados antes de continuar."
+          : unknown
+            ? "Não foi possível confirmar a gravação. Ela pode ter sido concluída. Confira o cadastro antes de tentar novamente."
+            : status === 409
+              ? "O cadastro foi alterado ou o login já está em uso. Seu rascunho foi preservado. Recarregue os dados antes de continuar."
+              : status === 403
+                ? "Você não tem permissão para alterar este cadastro."
+                : "Não foi possível salvar. Revise os campos informados.",
       );
     } finally {
       writing.current = false;
@@ -240,10 +247,23 @@ export default function CrmUserRegistrationDialog({
   const groups = [
     ...new Set(fields.filter((field) => field.name !== "AVATAR_ID").map((field) => field.group)),
   ];
-  const roleLabels: Record<string, string> = { ADMIN: "Administrador", ATIVO: "Ativo", RECEP: "Receptivo", AMBOS: "Ativo e receptivo", EXTERNO: "Externo" };
+  const roleLabels: Record<string, string> = {
+    ADMIN: "Administrador",
+    ATIVO: "Ativo",
+    RECEP: "Receptivo",
+    AMBOS: "Ativo e receptivo",
+    EXTERNO: "Externo",
+  };
   const busy = saving || associationBusy;
   return (
-    <Dialog open onClose={close} fullWidth maxWidth="md" aria-labelledby="user-registration-title">
+    <Dialog
+      open
+      onClose={close}
+      fullWidth
+      maxWidth="md"
+      slotProps={{ paper: { className: "ip-crud-editor" } }}
+      aria-labelledby="user-registration-title"
+    >
       <Box
         component="form"
         onSubmit={save}
@@ -277,7 +297,9 @@ export default function CrmUserRegistrationDialog({
             )}
             {groups.map((group) => (
               <Stack key={group} spacing={2}>
-                <Typography variant="h6">{group}</Typography>
+                <Typography component="h3" fontSize={14} fontWeight={600}>
+                  {group}
+                </Typography>
                 <Box
                   sx={{
                     display: "grid",
@@ -348,7 +370,13 @@ export default function CrmUserRegistrationDialog({
                                 ))
                               : (field.options ?? []).map((option) => (
                                   <MenuItem key={option} value={option}>
-                                    {field.name === "NIVEL" ? roleLabels[option] ?? option : option === "SIM" ? "Sim" : option === "NAO" ? "Não" : option}
+                                    {field.name === "NIVEL"
+                                      ? (roleLabels[option] ?? option)
+                                      : option === "SIM"
+                                        ? "Sim"
+                                        : option === "NAO"
+                                          ? "Não"
+                                          : option}
                                   </MenuItem>
                                 ))),
                           ]}
@@ -381,6 +409,9 @@ export default function CrmUserRegistrationDialog({
             {managedUserId && (
               <>
                 <Divider />
+                <Typography component="h3" fontSize={14} fontWeight={600}>
+                  Associações no CRM
+                </Typography>
                 <CrmUserShiftSelector
                   key={`${instance}:${managedUserId}`}
                   userId={managedUserId}
@@ -388,6 +419,7 @@ export default function CrmUserRegistrationDialog({
                   instance={instance}
                   onSaved={onSaved}
                   onBusyChange={setAssociationBusy}
+                  onDirtyChange={setAssociationDirty}
                 />
                 <Button component={Link} href={`/${instance}/user-catalogs/user-groups`}>
                   Gerenciar grupos e membros

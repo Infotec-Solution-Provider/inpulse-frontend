@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./crm-users",
+  outputDir: "../test-results-crm-users",
   testMatch: "*.pw.ts",
   workers: 1,
   timeout: 60_000,

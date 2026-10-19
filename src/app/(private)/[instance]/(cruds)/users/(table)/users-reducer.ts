@@ -33,16 +33,19 @@ export type ChangeUsersStateAction =
   | PaginationActions
   | FilterActions
   | UserActions
-  | ChangeLoadingAction;
+  | ChangeLoadingAction
+  | { type: "apply-filters"; filters: RequestFilters<User> };
 
 // Reducer Function
 export default function usersReducer(
   prev: UsersContextState,
   action: ChangeUsersStateAction | MultipleActions,
 ): UsersContextState {
-  const next = { ...prev };
+  const next = { ...prev, filters: { ...prev.filters } };
 
   switch (action.type) {
+    case "apply-filters":
+      return { ...next, filters: { ...action.filters, page: "1" } };
     case "change-loading":
       return { ...next, isLoading: action.isLoading };
     case "change-page":

@@ -1,11 +1,12 @@
 "use client";
+import { CrmLeaveGuardProvider } from "@/lib/ui-system/leave-guard";
 import AppProvider from "@/app/(private)/[instance]/app-context";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
 import { FEATURE_FLAGS, FeatureFlag, isFeatureEnabled } from "@/lib/feature-flags";
 import { canAccessPrivatePathForRole } from "@/lib/permissions/operator-access";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ReactElement, ReactNode, useContext, useState } from "react";
 import ContactsProvider from "./(cruds)/contacts/contacts-context";
 import CustomersProvider from "./(cruds)/customers/customers-context";
@@ -119,6 +120,7 @@ function AppFrame({
 }: AppLayoutProps & { modal: ReactNode; setModal: (value: ReactNode | null) => void }) {
   const pathname = usePathname();
   const { instance, user } = useContext(AuthContext);
+  const router = useRouter();
   const content = (
     <>
       <RouteFeatureGate>{children}</RouteFeatureGate>
@@ -127,15 +129,20 @@ function AppFrame({
   );
   return (
     <CrmQueryProvider scope={`${instance}:${user?.CODIGO ?? "anonymous"}`}>
-      <MonitorShell>
-        {isModernCrmPath(pathname) ? (
-          <PilotDesignProvider style={{ height: "100%", minWidth: 0 }}>
-            {content}
-          </PilotDesignProvider>
-        ) : (
-          content
-        )}
-      </MonitorShell>
+      <CrmLeaveGuardProvider
+        scope={`${instance}:${user?.CODIGO ?? "anonymous"}`}
+        navigate={(url) => router.push(url)}
+      >
+        <MonitorShell>
+          {isModernCrmPath(pathname) ? (
+            <PilotDesignProvider style={{ height: "100%", minWidth: 0 }}>
+              {content}
+            </PilotDesignProvider>
+          ) : (
+            content
+          )}
+        </MonitorShell>
+      </CrmLeaveGuardProvider>
     </CrmQueryProvider>
   );
 }

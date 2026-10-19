@@ -1,11 +1,11 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 import { getCustomerSegmentsError } from "@/lib/customer-segments-error";
 import crmUsersService from "@/lib/services/crm-users.service";
 import {
   Alert,
   Autocomplete,
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -25,12 +25,14 @@ export default function CrmUserShiftSelector({
   instance,
   onSaved,
   onBusyChange,
+  onDirtyChange,
 }: {
   userId: number;
   token: string;
   instance: string;
   onSaved?: () => void;
   onBusyChange?: (busy: boolean) => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [original, setOriginal] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -44,6 +46,9 @@ export default function CrmUserShiftSelector({
   const [optionsError, setOptionsError] = useState("");
   const [clearOpen, setClearOpen] = useState(false);
   const [success, setSuccess] = useState("");
+  useEffect(() => {
+    onDirtyChange?.(loaded && (selected?.CODIGO ?? null) !== original);
+  }, [loaded, selected?.CODIGO, original, onDirtyChange]);
   const alive = useRef(true);
   const activeToken = useRef(token);
   activeToken.current = token;
@@ -161,7 +166,13 @@ export default function CrmUserShiftSelector({
     } catch (failure) {
       if (!alive.current || activeToken.current !== auth) return;
       const { status, outcome } = getCustomerSegmentsError(failure);
-      setBlocked(status === 401 || status === 409 || outcome === "UNKNOWN" || status === undefined || status >= 500);
+      setBlocked(
+        status === 401 ||
+          status === 409 ||
+          outcome === "UNKNOWN" ||
+          status === undefined ||
+          status >= 500,
+      );
       setError(
         outcome === "UNKNOWN" || status === undefined || status >= 500
           ? "Não foi possível confirmar a gravação. Recarregue o expediente antes de tentar novamente."

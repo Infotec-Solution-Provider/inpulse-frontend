@@ -1,148 +1,66 @@
-import { Edit, SettingsPhone } from "@mui/icons-material";
-import { User } from "@/lib/sdk-local";
-import { IconButton, TableCell, TableRow } from "@mui/material";
+"use client";
+import type { User } from "@/lib/sdk-local";
+import { TableRow, TableCell } from "@mui/material";
+import { OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import { useUsersContext } from "../users-context";
-import { USERS_TABLE_COLUMNS } from "./table-config";
-
-interface UsersTableItemProps {
+interface Props {
   user: User;
   canEdit: boolean;
   canUseSipConfig: boolean;
   openEditModalHandler: (user: User) => void;
   openSipConfigModalHandler: (user: User) => void;
 }
-
 export default function UsersTableItem({
   user,
   canEdit,
   canUseSipConfig,
   openEditModalHandler,
   openSipConfigModalHandler,
-}: UsersTableItemProps) {
+}: Props) {
   const { sectors } = useUsersContext();
-  const sector = sectors.find((s) => s.id === user.SETOR);
-
-  const getNivelLabel = (nivel: string | null) => {
-    switch (nivel) {
-      case "ADMIN":
-        return "Administrador";
-      case "ATIVO":
-        return "Ativo";
-      case "RECEP":
-        return "Recepção";
-      case "AMBOS":
-        return "Ambos";
-      case "EXTERNO":
-        return "Externo";
-      default:
-        return "N/D";
-    }
-  };
-
+  const roles: Record<string, string> = {
+      ADMIN: "Administrador",
+      ATIVO: "Ativo",
+      RECEP: "Receptivo",
+      AMBOS: "Ambos",
+      EXTERNO: "Externo",
+    },
+    name = user.NOME || `Usuário #${user.CODIGO}`;
   return (
-    <TableRow
-      className="transition-colors even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
-      sx={{
-        "& .MuiTableCell-root": {
-          borderBottom: "1px solid",
-          borderColor: (theme) =>
-            theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(226 232 240)",
-        },
-      }}
-    >
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.CODIGO.width,
-          maxWidth: USERS_TABLE_COLUMNS.CODIGO.width,
-        }}
-      >
-        <span className="font-mono text-sm font-medium">{user.CODIGO}</span>
+    <TableRow hover>
+      <TableCell className="ip-crud-customer-identity" data-label="Usuário">
+        <div>
+          <strong style={{ fontWeight: 500 }}>{name}</strong>
+          <div className="ip-muted" style={{ fontSize: 12, marginTop: 3 }}>
+            #{user.CODIGO} · {user.LOGIN || "Sem login"}
+          </div>
+        </div>
       </TableCell>
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.NOME.width,
-          maxWidth: USERS_TABLE_COLUMNS.NOME.width,
-        }}
-      >
-        <p className="truncate text-sm font-medium">{user.NOME || "N/D"}</p>
+      <TableCell data-label="E-mail">{user.EMAIL || "—"}</TableCell>
+      <TableCell data-label="Perfil">{roles[user.NIVEL ?? ""] ?? user.NIVEL ?? "—"}</TableCell>
+      <TableCell data-label="Setor">
+        {sectors.find((s) => s.id === user.SETOR)?.name ??
+          (user.SETOR ? `Setor #${user.SETOR}` : "—")}
       </TableCell>
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.LOGIN.width,
-          maxWidth: USERS_TABLE_COLUMNS.LOGIN.width,
-        }}
-      >
-        <p className="font-mono text-sm">{user.LOGIN || "N/D"}</p>
-      </TableCell>
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.EMAIL.width,
-          maxWidth: USERS_TABLE_COLUMNS.EMAIL.width,
-        }}
-      >
-        <p className="truncate text-sm">{user.EMAIL || "N/D"}</p>
-      </TableCell>
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.NIVEL.width,
-          maxWidth: USERS_TABLE_COLUMNS.NIVEL.width,
-        }}
-      >
-        <span
-          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-            user.NIVEL === "ADMIN"
-              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-              : user.NIVEL === "EXTERNO"
-                ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
-                : user.NIVEL === "ATIVO" || user.NIVEL === "RECEP" || user.NIVEL === "AMBOS"
-                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                  : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-          }`}
-        >
-          {getNivelLabel(user.NIVEL)}
-        </span>
-      </TableCell>
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.SETOR.width,
-          maxWidth: USERS_TABLE_COLUMNS.SETOR.width,
-        }}
-      >
-        <p className="truncate text-sm">{sector?.name || "N/D"}</p>
-      </TableCell>
-      <TableCell
-        className="px-3 py-3"
-        sx={{
-          width: USERS_TABLE_COLUMNS.ACTIONS.width,
-          maxWidth: USERS_TABLE_COLUMNS.ACTIONS.width,
-        }}
-      >
-        <div className="flex items-center gap-1">
+      <TableCell data-label="Ações" align="right">
+        <div className="flex justify-end gap-1">
           {canUseSipConfig && (
-            <IconButton
-              title="Configurar SIP"
+            <OperationalIconButton
+              label={`Configurar SIP de ${name}`}
+              tooltip="Configurar SIP"
               onClick={() => openSipConfigModalHandler(user)}
-              size="small"
-              className="text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
             >
-              <SettingsPhone fontSize="small" />
-            </IconButton>
+              <UiIcon name="phone" scale="row" />
+            </OperationalIconButton>
           )}
           {canEdit && (
-            <IconButton
-              title="Editar Usuário"
+            <OperationalIconButton
+              label={`Editar ${name}`}
+              tooltip="Editar usuário"
               onClick={() => openEditModalHandler(user)}
-              size="small"
-              className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
             >
-              <Edit fontSize="small" />
-            </IconButton>
+              <UiIcon name="edit" scale="row" />
+            </OperationalIconButton>
           )}
         </div>
       </TableCell>

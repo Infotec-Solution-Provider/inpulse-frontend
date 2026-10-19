@@ -18,6 +18,14 @@ export const WhatsappContext = createContext({
   loaded: true,
   sectors: [],
   currentChat: null,
+  wppApi: {
+    current: {
+      setAuth() {},
+      async getSectors() {
+        return [{ id: 1, name: "Equipe demonstrativa" }];
+      },
+    },
+  },
 });
 export const useWhatsappContext = () => useContext(WhatsappContext);
 export function Empty() {

@@ -12,6 +12,8 @@ export interface CatalogField {
   maxLength?: number;
   required?: boolean;
   help?: string;
+  group?: string;
+  advanced?: boolean;
 }
 export interface CatalogDefinition {
   title: string;
@@ -41,6 +43,8 @@ const order = (key: string, label: string): CatalogField => ({
   key,
   label,
   kind: "integer",
+  group: "Opções avançadas",
+  advanced: true,
   help: "Vazio preserva o padrão na criação e grava sem valor na edição.",
 });
 
@@ -118,6 +122,8 @@ export const CRM_CATALOGS: Record<CrmCatalogName, CatalogDefinition> = {
       {
         key: "FUSOHORARIO",
         label: "Fuso horário CRM",
+        group: "Opções avançadas",
+        advanced: true,
         kind: "integer",
         help: "Valor numérico do CRM. Vazio usa zero no cadastro.",
       },
@@ -131,7 +137,10 @@ export function isCrmCatalog(value: string): value is CrmCatalogName {
 export function catalogDraft(catalog: CrmCatalogName, record?: CatalogRecord): CatalogDraft {
   return catalogDefinitionDraft(CRM_CATALOGS[catalog], record);
 }
-export function catalogDefinitionDraft(definition: CatalogDefinition, record?: CatalogRecord): CatalogDraft {
+export function catalogDefinitionDraft(
+  definition: CatalogDefinition,
+  record?: CatalogRecord,
+): CatalogDraft {
   return Object.fromEntries(
     [definition.identity, ...definition.fields.map((field) => field.key)].map((key) => [
       key,
@@ -142,8 +151,16 @@ export function catalogDefinitionDraft(definition: CatalogDefinition, record?: C
 export function catalogExpected(catalog: CrmCatalogName, record: CatalogRecord): CatalogRecord {
   return catalogDefinitionExpected(CRM_CATALOGS[catalog], record);
 }
-export function catalogDefinitionExpected(definition: CatalogDefinition, record: CatalogRecord): CatalogRecord {
-  return Object.fromEntries([...(definition.expectedIncludesIdentity ? [{ key: definition.identity }] : []), ...definition.fields.filter(field => !field.readOnly)].map((field) => [field.key, record[field.key]]));
+export function catalogDefinitionExpected(
+  definition: CatalogDefinition,
+  record: CatalogRecord,
+): CatalogRecord {
+  return Object.fromEntries(
+    [
+      ...(definition.expectedIncludesIdentity ? [{ key: definition.identity }] : []),
+      ...definition.fields.filter((field) => !field.readOnly),
+    ].map((field) => [field.key, record[field.key]]),
+  );
 }
 export function validateCatalogDraft(
   catalog: CrmCatalogName,
@@ -152,13 +169,20 @@ export function validateCatalogDraft(
 ) {
   return validateCatalogDefinition(CRM_CATALOGS[catalog], draft, original);
 }
-export function validateCatalogDefinition(definition: CatalogDefinition, draft: CatalogDraft, original?: CatalogRecord) {
+export function validateCatalogDefinition(
+  definition: CatalogDefinition,
+  draft: CatalogDraft,
+  original?: CatalogRecord,
+) {
   const errors: Record<string, string> = {};
   const changes: CatalogRecord = {};
   const compatible = (value: string) =>
     Array.from(value).every(
       (char) =>
-        char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 255 && char.charCodeAt(0) !== 127 && !(char.charCodeAt(0) >= 128 && char.charCodeAt(0) < 160),
+        char.charCodeAt(0) >= 32 &&
+        char.charCodeAt(0) <= 255 &&
+        char.charCodeAt(0) !== 127 &&
+        !(char.charCodeAt(0) >= 128 && char.charCodeAt(0) < 160),
     );
   const integer = (value: string) =>
     /^-?\d+$/.test(value) &&
@@ -168,7 +192,9 @@ export function validateCatalogDefinition(definition: CatalogDefinition, draft: 
   if (!original && !definition.autoId) {
     const value = (draft[definition.identity] ?? "").trim();
     if (definition.identityKind === "text") {
-      if (!value || value.length > (definition.identityMaxLength ?? 50) || !compatible(value)) errors[definition.identity] = `Informe um código com até ${definition.identityMaxLength ?? 50} caracteres compatíveis com o CRM.`;
+      if (!value || value.length > (definition.identityMaxLength ?? 50) || !compatible(value))
+        errors[definition.identity] =
+          `Informe um código com até ${definition.identityMaxLength ?? 50} caracteres compatíveis com o CRM.`;
       changes[definition.identity] = value;
     } else if (definition.identity === "UF") {
       if (!/^[A-Z]{2}$/.test(value)) errors.UF = "Informe uma sigla com duas letras maiúsculas.";
@@ -192,7 +218,8 @@ export function validateCatalogDefinition(definition: CatalogDefinition, draft: 
             ? "Selecione uma unidade cadastrada."
             : "Informe um número inteiro entre -2147483648 e 2147483647.";
       if (!value && field.required) errors[field.key] = "Selecione uma unidade cadastrada.";
-      if (value && field.minimum !== undefined && Number(value) < field.minimum) errors[field.key] = `Informe um inteiro a partir de ${field.minimum}.`;
+      if (value && field.minimum !== undefined && Number(value) < field.minimum)
+        errors[field.key] = `Informe um inteiro a partir de ${field.minimum}.`;
       if (value) changes[field.key] = Number(value);
       else if (original) {
         if (field.key === "FUSOHORARIO")
@@ -201,10 +228,21 @@ export function validateCatalogDefinition(definition: CatalogDefinition, draft: 
       }
     } else if (field.kind === "enum" || field.kind === "time" || field.kind === "decimal") {
       if (!value && field.required) errors[field.key] = "Informe um valor.";
-      if (value && field.kind === "enum" && !field.options?.some(option => option.value === value)) errors[field.key] = "Selecione uma opção válida.";
-      if (value && field.kind === "time" && !/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(value)) errors[field.key] = "Informe o horário no formato HH:mm:ss.";
+      if (
+        value &&
+        field.kind === "enum" &&
+        !field.options?.some((option) => option.value === value)
+      )
+        errors[field.key] = "Selecione uma opção válida.";
+      if (value && field.kind === "time" && !/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(value))
+        errors[field.key] = "Informe o horário no formato HH:mm:ss.";
       const normalized = field.kind === "decimal" ? value.replace(",", ".") : value;
-      if (normalized && field.kind === "decimal" && !/^-?(?:0|[1-9]\d?)(?:\.\d{1,2})?$/.test(normalized)) errors[field.key] = "Informe um decimal entre -99,99 e 99,99, com até duas casas.";
+      if (
+        normalized &&
+        field.kind === "decimal" &&
+        !/^-?(?:0|[1-9]\d?)(?:\.\d{1,2})?$/.test(normalized)
+      )
+        errors[field.key] = "Informe um decimal entre -99,99 e 99,99, com até duas casas.";
       if (normalized) changes[field.key] = normalized;
       else if (original) changes[field.key] = null;
     } else {
@@ -215,7 +253,12 @@ export function validateCatalogDefinition(definition: CatalogDefinition, draft: 
       )
         errors[field.key] =
           `Informe ${field.required ? "um texto" : "texto"} com até ${field.maxLength} caracteres compatíveis com o CRM.`;
-      if (definition === CRM_CATALOGS.cities && field.key === "UF" && value && !/^[A-Z]{2}$/.test(value))
+      if (
+        definition === CRM_CATALOGS.cities &&
+        field.key === "UF" &&
+        value &&
+        !/^[A-Z]{2}$/.test(value)
+      )
         errors.UF = "Selecione um estado cadastrado.";
       if (value || field.required) changes[field.key] = value;
       else if (original || field.key === "COD_ERPMARCA" || field.key === "UF")

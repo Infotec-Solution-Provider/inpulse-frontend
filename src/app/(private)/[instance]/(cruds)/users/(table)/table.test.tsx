@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UserRole } from "@/lib/sdk-local/types/user.types";
 import UsersTable from "./table";
+import UsersPage from "../page";
 import { USERS_TABLE_COLUMNS } from "./table-config";
 
 const session = vi.hoisted(() => ({ role: "ADMIN" as string | null, sipEnabled: true }));
@@ -51,20 +52,20 @@ describe("users table API and authorization contract", () => {
       session.role = role;
       const html = renderToStaticMarkup(<UsersTable />);
       expect(html).toContain("Maria");
-      expect(html).not.toContain("Cadastrar Usuário");
-      expect(html).not.toContain('title="Editar Usuário"');
-      expect(html).not.toContain('title="Configurar SIP"');
+      expect(renderToStaticMarkup(<UsersPage />)).not.toContain("Novo usuário");
+      expect(html).not.toContain('aria-label="Editar Maria"');
+      expect(html).not.toContain('aria-label="Configurar SIP de Maria"');
     },
   );
 
   it("preserves administrator actions and the SIP feature gate", () => {
     const enabled = renderToStaticMarkup(<UsersTable />);
-    expect(enabled).toContain("Cadastrar Usuário");
-    expect(enabled).toContain('title="Editar Usuário"');
-    expect(enabled).toContain('title="Configurar SIP"');
+    expect(renderToStaticMarkup(<UsersPage />)).toContain("Novo usuário");
+    expect(enabled).toContain('aria-label="Editar Maria"');
+    expect(enabled).toContain('aria-label="Configurar SIP de Maria"');
     session.sipEnabled = false;
     const disabled = renderToStaticMarkup(<UsersTable />);
-    expect(disabled).toContain('title="Editar Usuário"');
-    expect(disabled).not.toContain('title="Configurar SIP"');
+    expect(disabled).toContain('aria-label="Editar Maria"');
+    expect(disabled).not.toContain('aria-label="Configurar SIP de Maria"');
   });
 });

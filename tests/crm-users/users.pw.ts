@@ -38,8 +38,8 @@ test("legacy user dialog keeps an unsaved draft on token renewal in the same ten
 for (const catalog of ["user-groups", "shifts", "pause-reasons", "sales-types"])
   test(`${catalog}: complete catalog workflow preserves snapshots`, async ({ page }) => {
     await page.goto(`${url}?catalog=${catalog}`, { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("button", { name: "Recarregar", exact: true })).toBeEnabled();
-    await page.getByRole("button", { name: /^Cadastrar/ }).click();
+    await expect(page.getByRole("button", { name: "Atualizar lista", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: /^(Novo|Nova) / }).click();
     let dialog = page.getByRole("dialog");
     await dialog
       .getByLabel("Código", { exact: true })

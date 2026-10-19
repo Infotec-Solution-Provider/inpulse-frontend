@@ -6,6 +6,9 @@ const require = createRequire(import.meta.url),
 const root = fileURLToPath(new URL("../../", import.meta.url)),
   doubles = "/tests/crm-ui/doubles.tsx";
 const stubs = {
+  "customer-crm.client": `export {FakeCrmClient as default} from "/tests/crm-registration/doubles.ts"`,
+  "crm-users.service": `export {crmUsersService as default} from "/tests/crm-users/doubles.ts"`,
+  "files.service": `export {filesService as default} from "/tests/crm-users/doubles.ts"`,
   "auth-context": `export {AuthContext,useAuthContext} from '${doubles}'`,
   "app-context": `export {AppContext,useAppContext} from '${doubles}'`,
   "whatsapp-context": `export {WhatsappContext,useWhatsappContext} from '${doubles}'`,
@@ -78,6 +81,27 @@ const server = await createServer({
           if (req.method !== "GET") {
             res.statusCode = 405;
             return res.end(JSON.stringify({ code: "PREVIEW_READ_ONLY" }));
+          }
+          if (url.pathname === "/api/users") {
+            const all = Array.from({ length: 24 }, (_, i) => ({
+              CODIGO: 42 + i,
+              NOME: i ? `Usuário demonstrativo ${i}` : "Maria",
+              LOGIN: `demo${i}`,
+              EMAIL: `demo${i}@example.invalid`,
+              NIVEL: "ATIVO",
+              SETOR: 1,
+            })).filter(
+              (row) =>
+                !url.searchParams.get("NOME") || row.NOME.includes(url.searchParams.get("NOME")),
+            );
+            const page = Number(url.searchParams.get("page") || 1),
+              perPage = Number(url.searchParams.get("perPage") || 10);
+            return res.end(
+              JSON.stringify({
+                data: all.slice((page - 1) * perPage, page * perPage),
+                page: { page, perPage, totalRows: all.length },
+              }),
+            );
           }
           if (url.pathname === "/api/customers") {
             let data = rows.filter(

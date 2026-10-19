@@ -28,18 +28,21 @@ export const CRM_USER_CATALOGS: Record<CrmUserCatalogName, CatalogDefinition> = 
       ...[1, 2, 3].flatMap((index) => [
         {
           key: `HORARIO_${index}`,
+          group: `Intervalo ${index}`,
           label: `Usar intervalo ${index}`,
           kind: "enum",
           options: yesNo,
         } as CatalogField,
         {
           key: `ENTRADA_${index}`,
+          group: `Intervalo ${index}`,
           label: `Entrada ${index}`,
           kind: "time",
           help: "Horário HH:mm:ss. Valores históricos são preservados.",
         } as CatalogField,
         {
           key: `SAIDA_${index}`,
+          group: `Intervalo ${index}`,
           label: `Saída ${index}`,
           kind: "time",
           help: "Horário HH:mm:ss. Intervalos noturnos são permitidos.",
@@ -56,12 +59,19 @@ export const CRM_USER_CATALOGS: Record<CrmUserCatalogName, CatalogDefinition> = 
       description(50),
       {
         key: "TEMPO_MAX_SEG",
+        group: "Regras da pausa",
         label: "Tempo máximo (segundos)",
         kind: "integer",
         minimum: 0,
         help: "Informe zero ou um número positivo de segundos.",
       },
-      { key: "PRODUTIVIDADE", label: "Conta como produtiva", kind: "enum", options: yesNo },
+      {
+        group: "Regras da pausa",
+        key: "PRODUTIVIDADE",
+        label: "Conta como produtiva",
+        kind: "enum",
+        options: yesNo,
+      },
     ],
   },
   "sales-types": {

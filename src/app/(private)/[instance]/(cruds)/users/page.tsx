@@ -1,15 +1,30 @@
 "use client";
-import UsersTable from "./(table)/table";
-import { useAuthContext } from "@/app/auth-context";
+import { CrmPage, UiIcon } from "@/lib/ui-system";
 import { Button } from "@mui/material";
-import Link from "next/link";
-
+import { useAuthContext } from "@/app/auth-context";
+import { useUsersContext } from "./users-context";
+import UsersTable from "./(table)/table";
 export default function UsersManagementPage() {
-  const { instance, user } = useAuthContext();
+  const { user } = useAuthContext(),
+    { state, openUserModal } = useUsersContext();
   return (
-    <div className="relative box-border flex h-full w-full min-w-0 flex-col overflow-auto px-4 pt-5 md:px-10">
-      {user?.NIVEL === "ADMIN" && <div className="mb-3 flex justify-end"><Button component={Link} href={`/${instance}/user-catalogs`}>Cadastros de usuários</Button></div>}
+    <CrmPage
+      title="Usuários"
+      description="Organize a equipe, os acessos e as associações no CRM."
+      count={state.isLoading ? undefined : state.totalRows}
+      actions={
+        user?.NIVEL === "ADMIN" ? (
+          <Button
+            variant="contained"
+            startIcon={<UiIcon name="add" scale="toolbar" />}
+            onClick={() => openUserModal()}
+          >
+            Novo usuário
+          </Button>
+        ) : undefined
+      }
+    >
       <UsersTable />
-    </div>
+    </CrmPage>
   );
 }

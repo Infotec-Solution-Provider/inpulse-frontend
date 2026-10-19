@@ -1,3 +1,4 @@
+import { PilotDesignProvider } from "../../src/lib/ui-system";
 import { createRoot } from "react-dom/client";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import lightTheme from "../../src/lib/themes/light";
@@ -74,6 +75,8 @@ function Harness() {
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider theme={params.has("dark") ? darkTheme : lightTheme}>
     <CssBaseline />
-    <Harness />
+    <PilotDesignProvider style={{ height: "100dvh" }}>
+      <Harness />
+    </PilotDesignProvider>
   </ThemeProvider>,
 );

@@ -1,4 +1,6 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import {
   CrmPage,
   OperationalPanel,
@@ -39,7 +41,6 @@ import {
   Breadcrumbs,
   Button,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -212,6 +213,7 @@ function SegmentManagement({
       ? validation?.hasChanges
       : editor.draft.name !== "" || editor.draft.order !== "" || Boolean(editor.draft.unit));
 
+  useCrmLeaveGuard(Boolean(isDirty), saving, writeUnknown || reconcileRequired);
   const closeEditor = useCallback(() => {
     if (saving || reloadingEditor) return;
     if (isDirty) {

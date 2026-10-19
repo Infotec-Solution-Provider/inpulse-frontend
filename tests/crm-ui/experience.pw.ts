@@ -43,7 +43,12 @@ test("customer query and pagination survive visiting related catalogs", async ({
   await open(page);
   await page.getByRole("button", { name: "Go to next page" }).click();
   await expect(page.getByRole("table")).toContainText("Cliente demonstrativo 11");
-  await page.getByRole("button", { name: "Clientes", exact: true }).click();
+  if (
+    (await page
+      .getByRole("button", { name: "Clientes", exact: true })
+      .getAttribute("aria-expanded")) !== "true"
+  )
+    await page.getByRole("button", { name: "Clientes", exact: true }).click();
   await page
     .locator("#navigation-customers")
     .getByRole("link", { name: "Segmentos", exact: true })
@@ -110,4 +115,72 @@ test("real customer rows reflow in six dimensions with no page overflow", async 
     .locator('[aria-current="page"]');
   await expect(selected).toHaveCSS("background-color", "rgb(48, 32, 68)");
   await page.screenshot({ path: `${folder}/customers-dark-1440x900.png` });
+});
+
+test("full customer draft requires confirmation before leaving through the menu", async ({
+  page,
+}) => {
+  await open(page);
+  await page.getByRole("button", { name: "Novo cliente", exact: true }).click();
+  await page.getByLabel("Nome fantasia", { exact: true }).fill("Rascunho demonstrativo");
+  if (
+    (await page
+      .getByRole("button", { name: "Clientes", exact: true })
+      .getAttribute("aria-expanded")) !== "true"
+  )
+    await page.getByRole("button", { name: "Clientes", exact: true }).click();
+  await page
+    .locator("#navigation-customers")
+    .getByRole("link", { name: "Segmentos", exact: true })
+    .click();
+  await expect(page.getByRole("dialog", { name: /Descartar altera/ })).toBeVisible();
+  await page.getByRole("button", { name: "Continuar editando", exact: true }).click();
+  await expect(page.getByLabel("Nome fantasia", { exact: true })).toHaveValue(
+    "Rascunho demonstrativo",
+  );
+  await page
+    .locator("#navigation-customers")
+    .getByRole("link", { name: "Segmentos", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Descartar e sair", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Segmentos", exact: true })).toBeVisible();
+});
+
+test("users list query survives a visit to expedients and resets for another actor", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/users"));
+  await expect(page.getByRole("table")).toContainText("Maria");
+  await page.getByRole("button", { name: "Go to next page" }).click();
+  await expect(page.getByRole("table")).toContainText("Usuário demonstrativo 10");
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/user-catalogs/shifts"));
+  await expect(page.getByRole("heading", { name: "Expedientes", exact: true })).toBeVisible();
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/users"));
+  await expect(page.getByRole("table")).toContainText("Usuário demonstrativo 10");
+  await page.evaluate(() => window.crmUiTest.switchActor(2));
+  await expect(page.getByRole("table")).toContainText("Maria");
+});
+
+test("users, grouped expedients and full registration fit desktop and narrow screens", async ({
+  page,
+}) => {
+  await open(page);
+  const folder = resolve(
+    "C:/Workspace/infotec/planejamento/cross-service/INF-20261019-004-crm-ui-navigation/artifacts",
+  );
+  for (const width of [1440, 1280, 1024, 390, 320, 844]) {
+    await page.setViewportSize({ width, height: width === 844 ? 390 : 900 });
+    for (const route of ["users", "user-catalogs/shifts", "crm-customers/new"]) {
+      await page.evaluate((route) => window.crmUiTest.navigate(`/tenant-a/${route}`), route);
+      await expect(page.locator("h1")).toBeVisible();
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+        .toBe(true);
+      if ([1440, 320].includes(width))
+        await page.screenshot({
+          path: `${folder}/wave2-${route.replaceAll("/", "-")}-${width}.png`,
+        });
+    }
+  }
 });

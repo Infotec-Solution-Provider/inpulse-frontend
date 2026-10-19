@@ -110,6 +110,7 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
       MuiPopover: {
         defaultProps: { container },
         styleOverrides: {
+          root: { zIndex: 1400 },
           paper: {
             border: "1px solid " + colors.border,
             borderRadius: 8,
@@ -118,7 +119,7 @@ export function createPilotTheme(mode: UiMode, container?: () => HTMLElement | n
           },
         },
       },
-      MuiPopper: { defaultProps: { container } },
+      MuiPopper: { defaultProps: { container }, styleOverrides: { root: { zIndex: 1400 } } },
       MuiMenuItem: {
         styleOverrides: {
           root: {

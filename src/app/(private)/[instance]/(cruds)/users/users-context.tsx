@@ -1,6 +1,7 @@
 "use client";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import { AuthContext } from "@/app/auth-context";
-import { CreateUserDTO, UpdateUserDTO, User, UsersClient } from "@/lib/sdk-local";
+import { CreateUserDTO, UpdateUserDTO, User, UsersClient, RequestFilters } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
   ActionDispatch,
@@ -52,15 +53,33 @@ export const useUsersContext = () => {
 export default function UsersProvider({ children }: IUsersProviderProps) {
   const { wppApi } = useContext(WhatsappContext);
   const { token } = useContext(AuthContext);
+  const [query, setQuery] = useCrmQueryState<RequestFilters<User>>("users:list", {
+    page: "1",
+    perPage: "10",
+  });
   const [state, dispatch] = useReducer(usersReducer, {
     users: [],
     totalRows: 0,
-    filters: { page: "1", perPage: "10" },
+    filters: query,
     isLoading: false,
   });
   const [modal, setModal] = useState<ReactNode>(null);
   const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
   const apiRef = useRef(new UsersClient(USERS_URL));
+  const alive = useRef(true),
+    requestSequence = useRef(0),
+    currentToken = useRef(token);
+  currentToken.current = token;
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      requestSequence.current++;
+    };
+  }, []);
+  useEffect(() => {
+    setQuery(state.filters);
+  }, [JSON.stringify(state.filters)]);
 
   const createUser = useCallback(
     async (data: CreateUserDTO) => {
@@ -102,14 +121,16 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   }, []);
 
   const loadUsers = useCallback(async () => {
+    const auth = token,
+      request = ++requestSequence.current;
+    const active = () =>
+      alive.current && currentToken.current === auth && requestSequence.current === request;
+    if (!token) return;
+    apiRef.current.setAuth(token);
     dispatch({ type: "change-loading", isLoading: true });
-
     try {
-      if (!token) {
-        return dispatch({ type: "change-loading", isLoading: false });
-      }
       const res = await apiRef.current.getUsers(state.filters);
-
+      if (!active()) return;
       dispatch({
         type: "multiple",
         actions: [
@@ -119,29 +140,32 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         ],
       });
     } catch {
-      dispatch({ type: "change-loading", isLoading: false });
-      toast.error("Falha ao carregar usuários!");
+      if (active()) {
+        dispatch({ type: "change-loading", isLoading: false });
+        toast.error("Falha ao carregar usuários!");
+      }
     }
-  }, [state.filters, token]);
-
+  }, [JSON.stringify(state.filters), token]);
   useEffect(() => {
-    if (!token || !apiRef.current) return;
-    apiRef.current.setAuth(token);
-    loadUsers();
-  }, [token]);
-
+    void loadUsers();
+  }, [token, JSON.stringify(state.filters)]);
   useEffect(() => {
+    let active = true;
     if (wppApi.current && token) {
       wppApi.current.setAuth(token);
-      wppApi.current.getSectors().then((data) => {
-        setSectors(data);
-      });
+      void wppApi.current
+        .getSectors()
+        .then((data) => {
+          if (active && alive.current && currentToken.current === token) setSectors(data);
+        })
+        .catch(() => {
+          if (active) setSectors([]);
+        });
     }
+    return () => {
+      active = false;
+    };
   }, [wppApi, token]);
-
-  useEffect(() => {
-    loadUsers();
-  }, [state.filters.perPage, state.filters.page]);
 
   return (
     <UsersContext.Provider

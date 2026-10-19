@@ -1,4 +1,7 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { CrmPage, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { useAuthContext } from "@/app/auth-context";
 import CustomerCrmClient from "@/lib/sdk-local/customer-crm.client";
 import type {
@@ -37,7 +40,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -212,7 +214,12 @@ function CrmFields({
   manualCode?: boolean;
   original?: CustomerCrmRecord;
 }) {
-  const [expanded, setExpanded] = useState<string[]>(["identification"]);
+  const [expanded, setExpanded] = useState<string[]>([
+    ...new Set([
+      "identification",
+      ...fields.filter((field) => field.required).map((field) => field.group),
+    ]),
+  ]);
   useEffect(() => {
     const first = fields.find((field) => errors[field.name]);
     if (first)
@@ -292,7 +299,10 @@ function CrmFields({
         }}
         error={Boolean(errors[field.name])}
         helperText={
-          errors[field.name] || (field.maxLength ? `Até ${field.maxLength} caracteres` : undefined)
+          errors[field.name] ||
+          (field.maxLength && String(value ?? "").length > field.maxLength * 0.8
+            ? `${String(value ?? "").length} de ${field.maxLength} caracteres`
+            : undefined)
         }
         slotProps={{
           inputLabel: field.type === "date" ? { shrink: true } : {},
@@ -333,7 +343,9 @@ function CrmFields({
             variant="outlined"
           >
             <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography fontWeight={600}>{group.label}</Typography>
+              <Typography component="h3" fontSize={14} fontWeight={600}>
+                {group.label}
+              </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Box
@@ -489,6 +501,7 @@ export function CustomerCrmEditor({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [contact, dirty, saving]);
+  useCrmLeaveGuard(dirty || Boolean(contact), saving, Boolean(gate) || reconcile);
   const invalidate = () => {
     void hybridCache
       .invalidateResource(createCacheScope(instance, userId), "customer-page")
@@ -620,70 +633,37 @@ export function CustomerCrmEditor({
     }
   };
   return (
-    <Box
-      sx={{
-        p: { xs: 2, md: 3 },
-        width: "100%",
-        minWidth: 0,
-        maxWidth: 1440,
-        mx: "auto",
-        color: "text.primary",
-      }}
+    <CrmPage
+      title={
+        customerId === undefined
+          ? "Novo cadastro de cliente"
+          : String(snapshot?.record.RAZAO || "Cadastro do cliente")
+      }
+      description={
+        customerId === undefined
+          ? "Preencha os dados de identificação e os vínculos comerciais."
+          : `Código ${customerId}`
+      }
+      breadcrumbs={[
+        { label: "Clientes", href: `/${instance}/customers` },
+        { label: customerId === undefined ? "Novo cadastro" : "Cadastro" },
+      ]}
+      actions={
+        <OperationalIconButton
+          label="Conferir dados"
+          tooltip="Conferir dados"
+          onClick={confer}
+          disabled={
+            saving ||
+            gate?.state === "pending" ||
+            loading ||
+            (customerId === undefined && Boolean(gate))
+          }
+        >
+          <UiIcon name="refresh" scale="toolbar" />
+        </OperationalIconButton>
+      }
     >
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={2}
-        justifyContent="space-between"
-        alignItems={{ sm: "center" }}
-        sx={{ mb: 2 }}
-      >
-        <Box>
-          <Button
-            size="small"
-            startIcon={<ArrowBack />}
-            onClick={() =>
-              dirty ? setDiscardAction("leave") : router.push(`/${instance}/customers`)
-            }
-            disabled={saving}
-          >
-            Clientes
-          </Button>
-          <Typography variant="h5" component="h1" fontWeight={700}>
-            {customerId === undefined
-              ? "Novo cadastro de cliente"
-              : snapshot?.record.RAZAO || "Cadastro do cliente"}
-          </Typography>
-          {customerId !== undefined && (
-            <Typography variant="body2" color="text.secondary">
-              Código {customerId}
-            </Typography>
-          )}
-        </Box>
-        <Stack direction="row" spacing={1}>
-          <Button
-            startIcon={<Refresh />}
-            onClick={confer}
-            disabled={
-              saving ||
-              gate?.state === "pending" ||
-              loading ||
-              (customerId === undefined && Boolean(gate))
-            }
-          >
-            Conferir dados
-          </Button>
-          {tab === 0 && (
-            <Button
-              variant="contained"
-              startIcon={<SaveOutlined />}
-              onClick={() => void save()}
-              disabled={blocked || loading || !parsed.hasChanges}
-            >
-              Salvar cadastro
-            </Button>
-          )}
-        </Stack>
-      </Stack>
       {loading && <LinearProgress sx={{ mb: 2 }} />}
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
@@ -762,7 +742,7 @@ export function CustomerCrmEditor({
                     Adicionar contato
                   </Button>
                 </Box>
-                <TableContainer sx={{ maxWidth: "100%" }}>
+                <TableContainer className="ip-crud-table" sx={{ maxWidth: "100%" }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -775,14 +755,14 @@ export function CustomerCrmEditor({
                     <TableBody>
                       {contacts.map((item) => (
                         <TableRow key={String(item.record.CODIGO)}>
-                          <TableCell>{item.record.NOME}</TableCell>
-                          <TableCell sx={{ overflowWrap: "anywhere" }}>
+                          <TableCell data-label="Nome">{item.record.NOME}</TableCell>
+                          <TableCell data-label="E-mail" sx={{ overflowWrap: "anywhere" }}>
                             {item.record.EMAIL || "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label="Telefone">
                             {item.record.CELULAR || item.record.FONE_DIRETO || "—"}
                           </TableCell>
-                          <TableCell align="right">
+                          <TableCell data-label="Ações" align="right">
                             <Tooltip title="Editar contato">
                               <span>
                                 <IconButton
@@ -794,7 +774,7 @@ export function CustomerCrmEditor({
                                     setMessage("");
                                   }}
                                 >
-                                  <EditOutlined />
+                                  <UiIcon name="edit" scale="row" />
                                 </IconButton>
                               </span>
                             </Tooltip>
@@ -805,7 +785,7 @@ export function CustomerCrmEditor({
                                   disabled={blocked || !item.writable}
                                   onClick={() => setDeleteTarget({ kind: "contact", record: item })}
                                 >
-                                  <DeleteOutline />
+                                  <UiIcon name="delete" scale="row" />
                                 </IconButton>
                               </span>
                             </Tooltip>
@@ -859,7 +839,7 @@ export function CustomerCrmEditor({
                     Vincular marca
                   </Button>
                 </Stack>
-                <TableContainer>
+                <TableContainer className="ip-crud-table">
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -871,19 +851,19 @@ export function CustomerCrmEditor({
                     <TableBody>
                       {brands.map((item) => (
                         <TableRow key={String(item.record.CODIGO)}>
-                          <TableCell>
+                          <TableCell data-label="Marca">
                             {item.brandName || `Marca ${item.record.MARCA}`}{" "}
                             <Chip size="small" label={`Vínculo ${item.record.CODIGO}`} />
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label="Última compra">
                             {item.record.DATA_ULTIMA_COMPRA
                               ? String(item.record.DATA_ULTIMA_COMPRA)
                               : "Sem compra registrada"}
                           </TableCell>
-                          <TableCell align="right">
+                          <TableCell data-label="Ações" align="right">
                             <Button
                               size="small"
-                              startIcon={<DeleteOutline />}
+                              startIcon={<UiIcon name="delete" scale="row" />}
                               disabled={blocked || !item.removable}
                               onClick={() => setDeleteTarget({ kind: "brand", record: item })}
                             >
@@ -987,6 +967,18 @@ export function CustomerCrmEditor({
           </Button>
         </DialogActions>
       </Dialog>
+      {tab === 0 && (
+        <footer className="ip-crud-save-footer">
+          <Button
+            variant="contained"
+            startIcon={<UiIcon name="finish" scale="toolbar" />}
+            onClick={() => void save()}
+            disabled={blocked || loading || !parsed.hasChanges}
+          >
+            {saving ? "Salvando…" : "Salvar cadastro"}
+          </Button>
+        </footer>
+      )}
       <Dialog open={Boolean(discardAction)} onClose={() => setDiscardAction(null)}>
         <DialogTitle>
           {discardAction === "new" ? "Iniciar outro cadastro?" : "Descartar o rascunho?"}
@@ -1005,7 +997,7 @@ export function CustomerCrmEditor({
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </CrmPage>
   );
 }
 export default function CustomerCrmManagement({ customerId }: { customerId?: number }) {
