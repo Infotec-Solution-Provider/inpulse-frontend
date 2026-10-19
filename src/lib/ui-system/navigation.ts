@@ -11,6 +11,11 @@ export type NavigationIcon =
   | "monitor"
   | "channels"
   | "records"
+  | "customers"
+  | "users"
+  | "communication"
+  | "settings"
+  | "dispatch"
   | "pipelines"
   | "ai"
   | "campaign"
@@ -156,37 +161,47 @@ export function getNavigationItems(
   if (isAdmin) items.push({ ...link("monitor", "Monitoria", "/monitor"), icon: "monitor" });
   if (!isExternalOperator(role)) {
     items.push(
-      group("customers", "Clientes", [
-        link("customers-register", "Cadastro", "/customers", ["/crm-customers"]),
-        ...(isAdmin
-          ? [
-              link("customer-groups", "Grupos", "/crm-catalogs/customer-groups"),
-              link("segments", "Segmentos", "/customer-segments"),
-              link("positions", "Cargos", "/crm-catalogs/positions"),
-              link("origins", "Origens", "/crm-catalogs/origins"),
-              link("brands", "Marcas", "/crm-catalogs/brands"),
-            ]
-          : []),
-      ]),
+      group(
+        "customers",
+        "Clientes",
+        [
+          link("customers-register", "Cadastro", "/customers", ["/crm-customers"]),
+          ...(isAdmin
+            ? [
+                link("customer-groups", "Grupos", "/crm-catalogs/customer-groups"),
+                link("segments", "Segmentos", "/customer-segments"),
+                link("positions", "Cargos", "/crm-catalogs/positions"),
+                link("origins", "Origens", "/crm-catalogs/origins"),
+                link("brands", "Marcas", "/crm-catalogs/brands"),
+              ]
+            : []),
+        ],
+        "customers",
+      ),
     );
   }
   if (isAdmin) {
     items.push(
-      group("users", "Usuários", [
-        link("users-register", "Cadastro", "/users"),
-        link("user-groups", "Grupos", "/user-catalogs/user-groups"),
-        link("shifts", "Expedientes", "/user-catalogs/shifts"),
-        link("pauses", "Motivos de pausa", "/user-catalogs/pause-reasons"),
-        group("sales", "Vendas", [
-          link("purchases", "Lançamentos", "/crm-purchases"),
-          link("sales-types", "Catálogo de vendas", "/user-catalogs/sales-types"),
-        ]),
-      ]),
+      group(
+        "users",
+        "Usuários",
+        [
+          link("users-register", "Cadastro", "/users"),
+          link("user-groups", "Grupos", "/user-catalogs/user-groups"),
+          link("shifts", "Expedientes", "/user-catalogs/shifts"),
+          link("pauses", "Motivos de pausa", "/user-catalogs/pause-reasons"),
+          group("sales", "Vendas", [
+            link("purchases", "Lançamentos", "/crm-purchases"),
+            link("sales-types", "Catálogo de vendas", "/user-catalogs/sales-types"),
+          ]),
+        ],
+        "users",
+      ),
     );
     items.push(
       group(
         "campaigns",
-        "Campanhas CRM",
+        "Campanhas",
         [
           link("campaigns-register", "Cadastro", "/crm-campaigns"),
           link("results", "Resultados", "/crm-results"),
@@ -202,7 +217,7 @@ export function getNavigationItems(
       ),
     );
     items.push(
-      group("general", "Cadastros gerais", [
+      group("general", "Outros", [
         link("cities", "Cidades", "/crm-catalogs/cities"),
         link("states", "Estados", "/crm-catalogs/states"),
         link("medias", "Mídias", "/crm-catalogs/medias"),
@@ -221,15 +236,21 @@ export function getNavigationItems(
       link("senders", "Identificar remetentes", "/whatsapp-senders"),
       link("contact-requests", "Solicitações de contatos", "/contact-requests"),
     );
-  if (communication.length) items.push(group("communication", "Comunicação", communication));
+  if (communication.length)
+    items.push(group("communication", "Comunicação", communication, "communication"));
   if (isAdmin)
     items.push(
-      group("settings", "Configurações", [
-        link("parameters", "Parâmetros", "/parameters"),
-        ...(isFeatureEnabled(parameters, FEATURE_FLAGS.sipConfig)
-          ? [link("sip-config", "Configuração SIP", "/sip-config")]
-          : []),
-      ]),
+      group(
+        "settings",
+        "Configurações",
+        [
+          link("parameters", "Parâmetros", "/parameters"),
+          ...(isFeatureEnabled(parameters, FEATURE_FLAGS.sipConfig)
+            ? [link("sip-config", "Configuração SIP", "/sip-config")]
+            : []),
+        ],
+        "settings",
+      ),
     );
   if (isAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.whatsappSessionMonitoring)) {
     items.push({ ...link("channels", "Canais WhatsApp", "/channels"), icon: "channels" });
@@ -247,7 +268,7 @@ export function getNavigationItems(
       ),
     );
   if (isAdmin && isFeatureEnabled(parameters, FEATURE_FLAGS.massMessages)) {
-    items.push({ ...link("mass-messages", "Disparos", "/tools/mass-messages"), icon: "campaign" });
+    items.push({ ...link("mass-messages", "Disparos", "/tools/mass-messages"), icon: "dispatch" });
   }
   if (isAdmin) {
     items.push(

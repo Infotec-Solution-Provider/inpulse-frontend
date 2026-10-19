@@ -550,9 +550,7 @@ export function GenericCatalogManagement({
       count={loading ? undefined : total}
       breadcrumbs={[
         {
-          label: ["cities", "states", "medias"].includes(catalog)
-            ? "Cadastros gerais"
-            : parentTitle,
+          label: ["cities", "states", "medias"].includes(catalog) ? "Outros" : parentTitle,
           href: ["cities", "states", "medias"].includes(catalog)
             ? undefined
             : `/${instance}${parentHref}`,

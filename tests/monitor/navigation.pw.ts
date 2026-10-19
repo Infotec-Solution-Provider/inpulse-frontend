@@ -51,7 +51,7 @@ test("query-specific exception links select a single leaf and its ancestors", as
     window.monitorHarness.navigate("/tenant-a/crm-exceptions?kind=segments"),
   );
   const nav = page.getByRole("navigation", { name: "Navegação principal" });
-  await expect(nav.getByRole("button", { name: "Campanhas CRM", exact: true })).toHaveAttribute(
+  await expect(nav.getByRole("button", { name: "Campanhas", exact: true })).toHaveAttribute(
     "aria-expanded",
     "true",
   );

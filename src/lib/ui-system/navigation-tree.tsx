@@ -12,7 +12,13 @@ import {
   Tooltip,
 } from "@mui/material";
 import {
-  AudioLines,
+  Monitor,
+  BriefcaseBusiness,
+  UserRound,
+  MessageCircle,
+  Settings,
+  Send,
+  Newspaper,
   Blocks,
   ChartNoAxesCombined,
   ChevronDown,
@@ -31,14 +37,19 @@ import { activeNavigationPath, type NavigationIcon, type NavigationItem } from "
 
 const icons: Record<NavigationIcon, typeof Headset> = {
   headset: Headset,
-  monitor: AudioLines,
+  monitor: Monitor,
   channels: RadioTower,
   records: Blocks,
+  customers: BriefcaseBusiness,
+  users: UserRound,
+  communication: MessageCircle,
+  settings: Settings,
+  dispatch: Send,
   pipelines: Workflow,
   ai: Sparkles,
   campaign: Megaphone,
   reports: ChartNoAxesCombined,
-  news: Sparkles,
+  news: Newspaper,
 };
 type Props = {
   items: NavigationItem[];
