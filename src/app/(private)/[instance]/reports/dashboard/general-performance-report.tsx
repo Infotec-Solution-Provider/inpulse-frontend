@@ -716,7 +716,7 @@ export default function GeneralPerformanceReport({
                     <DashboardLabelWithTooltip label="Taxa pend." tooltip="Índice de pendências em relação ao volume finalizado do setor." />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="1ª devolutiva" tooltip="Tempo médio até a primeira resposta operacional aos clientes do setor. Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, não entram nesse cálculo." />
+                    <DashboardLabelWithTooltip label="1ª devolutiva" tooltip="Média por conversa do tempo corrido até a primeira resposta da operação. Respostas em outro dia e cortesias até 1 hora após um encerramento ficam fora. Bots não contam; templates podem contar." />
                   </th>
                   <th className="px-3 py-3">
                     <DashboardLabelWithTooltip label="Ciclo" tooltip="Tempo médio total do atendimento até a finalização." />

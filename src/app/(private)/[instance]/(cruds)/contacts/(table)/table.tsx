@@ -3,12 +3,14 @@
 import {
   Button,
   CircularProgress,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TablePagination,
   TableRow,
+  TextField,
 } from "@mui/material";
 import { useContactsContext } from "../contacts-context";
 import ContactsTableHeader from "./table-header";
@@ -27,6 +29,25 @@ export default function ContactsTable() {
 
   return (
     <div className="flex h-full w-full flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-medium text-slate-800 dark:text-slate-100" aria-live="polite">
+            {state.isLoading ? "Carregando contatos…" : `${state.totalRows.toLocaleString("pt-BR")} contatos${state.filters.hasCustomer === "false" ? " sem cliente" : state.filters.hasCustomer === "true" ? " com cliente" : " ativos"}`}
+          </p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Contatos não excluídos. O total respeita os filtros aplicados.
+          </p>
+        </div>
+        <TextField
+          select size="small" label="Vínculo com cliente" value={state.filters.hasCustomer || ""}
+          onChange={(event) => dispatch({ type: "change-filter", key: "hasCustomer", value: event.target.value })}
+          sx={{ minWidth: 210 }}
+        >
+          <MenuItem value="">Todos os contatos</MenuItem>
+          <MenuItem value="false">Sem cliente</MenuItem>
+          <MenuItem value="true">Com cliente</MenuItem>
+        </TextField>
+      </div>
       <TableContainer className="scrollbar-whatsapp h-[calc(100vh-280px)] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
         <Table stickyHeader>
           <ContactsTableHeader />

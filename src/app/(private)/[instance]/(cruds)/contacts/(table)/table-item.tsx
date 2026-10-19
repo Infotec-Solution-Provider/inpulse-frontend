@@ -4,7 +4,7 @@ import { WppContact } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import { IconButton, TableCell, TableRow, Tooltip, Chip } from "@mui/material";
+import { Button, IconButton, TableCell, TableRow, Tooltip, Chip } from "@mui/material";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
 import { useContactsContext } from "../contacts-context";
 
@@ -24,7 +24,7 @@ export default function ContactsTableItem({
   openEditModalHandler,
   deleteContactHandler,
 }: ContactsTableItemProps) {
-  const { customerMap, customerObjectMap } = useContactsContext();
+  const { customerMap, customerObjectMap, openLinkCustomerModal } = useContactsContext();
 
   const safeFormatPhone = (phone: string): string => {
     try {
@@ -48,7 +48,14 @@ export default function ContactsTableItem({
       </TableCell>
       <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width }}>
         <div className="flex flex-col">
-          <span className="text-slate-700 dark:text-slate-300">{customerName || "—"}</span>
+          <span className="text-slate-700 dark:text-slate-300">
+            {customerName || (customerId ? `Cliente ${customerId} · dados indisponíveis` : "Sem cliente vinculado")}
+          </span>
+          {contact.customerId == null && !contact.CLIENTE_ID && !customerObj && (
+            <Button size="small" onClick={() => openLinkCustomerModal(contact)} sx={{ alignSelf: "flex-start", paddingLeft: 0 }}>
+              Vincular cliente
+            </Button>
+          )}
           {customerObj?.CODIGO_ERP && (
             <small className="text-slate-400 dark:text-slate-500">ERP: {customerObj.CODIGO_ERP}</small>
           )}

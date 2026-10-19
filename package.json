@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "vitest run src",
+    "test:contact-quality": "vitest run contacts-query && playwright test --config tests/contact-quality.config.ts",
     "test:monitor": "vitest run monitor socket-subscriptions",
     "test:monitor:e2e": "playwright test --config tests/monitor.config.ts",
     "test:channels:e2e": "playwright test --config tests/channels.config.ts",
