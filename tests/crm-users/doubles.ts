@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { createContext, useSyncExternalStore } from "react";
 import type { CatalogRecord } from "../../src/lib/crm-catalogs-form";
 import type {
   CrmUserCatalogName,
@@ -15,8 +15,8 @@ let auth = {
 };
 let snapshot = JSON.stringify(auth);
 const listeners = new Set<() => void>();
-export function switchAuth(instance: string, token: string) {
-  auth = { ...auth, instance, token };
+export function switchAuth(instance: string, token: string, actorId = auth.user.CODIGO) {
+  auth = { ...auth, instance, token, user: { ...auth.user, CODIGO: actorId } };
   snapshot = JSON.stringify(auth);
   for (const listener of listeners) listener();
 }
@@ -134,6 +134,12 @@ interface State {
   shift: number | null;
   saved: number;
   uploads: number;
+  closed: number;
+  finishes: { resultId: number; scheduleDate: string | null }[];
+  finishRequests: { operationId: string; finishedAt: string }[];
+  finishFailure: number;
+  finishStatus: "applied" | "not_confirmed";
+  finishChecks: string[];
 }
 declare global {
   interface Window {
@@ -165,8 +171,57 @@ window.userTest = {
   shift: 0,
   saved: 0,
   uploads: 0,
+  closed: 0,
+  finishes: [],
+  finishRequests: [],
+  finishFailure: 0,
+  finishStatus: "not_confirmed",
+  finishChecks: [],
 };
 const state = window.userTest;
+export const AuthContext = createContext(auth);
+const app = {
+  closeModal: () => {
+    state.closed += 1;
+  },
+};
+export const AppContext = createContext(app);
+export function useAppContext() {
+  return app;
+}
+const whatsapp = {
+  currentChat: { id: 42 },
+  wppApi: {
+    current: {
+      setAuth() {},
+      async getResults() {
+        return [
+          { id: 1, name: "Finalizado", COD_ACAO: 1 },
+          { id: 2, name: "Reagendar", COD_ACAO: 2 },
+          { id: 3, name: "Outro reagendamento", COD_ACAO: 2 },
+        ];
+      },
+    },
+  },
+  async finishChat(_chatId: number, resultId: number, scheduleDate: Date | null) {
+    state.finishes.push({ resultId, scheduleDate: scheduleDate?.toISOString() ?? null });
+  },
+};
+export const WhatsappContext = createContext(whatsapp);
+export function useWhatsappContext() {
+  return whatsapp;
+}
+export function useUsersContext() {
+  return {
+    sectors: [{ id: 2, name: "Atendimento" }],
+    closeModal: () => {
+      state.closed += 1;
+    },
+    loadUsers: () => {
+      state.saved += 1;
+    },
+  };
+}
 const copy = <T>(data: T): T => structuredClone(data);
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 function fail() {

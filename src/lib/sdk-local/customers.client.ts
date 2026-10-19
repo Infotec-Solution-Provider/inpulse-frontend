@@ -218,12 +218,22 @@ class CustomersClient extends ApiClient {
 	public async finishTelephonySchedule(
 		scheduleId: number,
 		data: FinishTelephonyScheduleDTO,
+		context: CrmRequestContext,
 	) {
 		const response = await this.ax.patch<MessageResponse>(
 			`/api/customers/schedules/telephony/${scheduleId}/finish`,
 			data,
+			crmMutationConfig(context),
 		);
 
+		return response.data;
+	}
+
+	public async getTelephonyFinishStatus(scheduleId: number, operationId: string, context: CrmRequestContext) {
+		const response = await this.ax.get<DataResponse<{ status: "applied" | "not_confirmed" }>>(
+			`/api/customers/schedules/telephony/${scheduleId}/finish/${encodeURIComponent(operationId)}`,
+			crmMutationConfig(context),
+		);
 		return response.data;
 	}
 
