@@ -1,6 +1,7 @@
 "use client";
 
 import customersService from "@/lib/services/customers.service";
+import NextLink from "next/link";
 import CustomerSegmentSelector from "@/lib/components/customer-segment-selector";
 import { hybridCache } from "@/lib/cache/hybrid-cache";
 import { createCacheScope } from "@/lib/cache/cache-scope";
@@ -27,6 +28,7 @@ import {
   Alert,
   Autocomplete,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Divider,
@@ -1254,7 +1256,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
             setDetail(current => current && current.customer.CODIGO === assignment.CODIGO ? {
               ...current,
               customer: { ...current.customer, SEGMENTO: assignment.SEGMENTO },
-              segment: { code: assignment.SEGMENTO, name: assignment.segment.NOME },
+              segment: { code: assignment.SEGMENTO, name: assignment.segment?.NOME ?? null },
             } : current);
             if (user) void hybridCache.invalidateResource(createCacheScope(instance, user.CODIGO), "customer-page");
             toast.success("Segmento do cliente atualizado.");
@@ -2070,6 +2072,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
         </div>
       ) : (
         <>
+          {user?.NIVEL === "ADMIN" && <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}><Button component={NextLink} href={`/${instance}/crm-customers/${customerId}`} size="small">Abrir cadastro completo</Button></Box>}
           <Tabs
             value={tab}
             onChange={(_, value) => setTab(value)}

@@ -1,4 +1,5 @@
 export * from "./ai.types";
+export * from "./customer-crm.types";
 export * from "./auth.types";
 export * from "./customers.types";
 export * from "./crm-catalogs.types";
@@ -12,3 +13,6 @@ export * from "./user.types";
 export * from "./whatsapp.types";
 export * from "./internal.types";
 export * from "./ready-messages.types"
+export * from "./customer-search.types";
+export * from "./crm-marketing.types";
+export * from "./crm-users.types";

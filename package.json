@@ -17,6 +17,9 @@
     "test:parameters:e2e": "playwright test --config tests/parameters.config.ts",
     "test:customer-segments:e2e": "playwright test --config tests/customer-segments.config.ts",
     "test:crm-catalogs:e2e": "playwright test --config tests/crm-catalogs.config.ts",
+    "test:crm-users:e2e": "playwright test --config tests/crm-users.config.ts",
+    "test:crm-registration:e2e": "playwright test --config tests/crm-registration.config.ts",
+    "test:crm-marketing:e2e": "playwright test --config tests/crm-marketing.config.ts",
     "check:performance-budgets": "node scripts/check-performance-budgets.mjs",
     "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
     "test:e2e": "playwright test --project=chromium"

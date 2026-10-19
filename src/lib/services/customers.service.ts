@@ -1,4 +1,5 @@
 import { CustomersClient } from "@/lib/sdk-local";
+import type { CrmRequestContext } from "@/lib/sdk-local/crm-request-context";
 
 import type { CustomerLookupOption } from "@/lib/types/sdk-local.types";
 
@@ -73,13 +74,8 @@ class FrontendCustomersService extends CustomersClient {
 		return response.data.data;
 	}
 
-	public async getSegments() {
-		const response = await this.ax.get<{
-			message: string;
-			data: CustomerLookupOption[];
-		}>(`/api/customers/segments`);
-
-		return response.data.data;
+	public async getSegments(context?: CrmRequestContext) {
+		return super.getSegments(context);
 	}
 
 	public async getOperators() {

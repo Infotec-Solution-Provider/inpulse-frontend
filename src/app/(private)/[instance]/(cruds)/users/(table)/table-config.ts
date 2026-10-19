@@ -25,9 +25,9 @@ export const USERS_TABLE_COLUMNS = {
     width: "12rem",
     options: [
       { value: "{{all}}", label: "Todos" },
-      { value: "ADMIN", label: "Supervisor" },
+      { value: "ADMIN", label: "Administrador" },
       { value: "ATIVO", label: "Ativo" },
-      { value: "RECEPTIVO", label: "Receptivo" },
+      { value: "RECEP", label: "Receptivo" },
       { value: "AMBOS", label: "Ambos" },
       { value: "EXTERNO", label: "Externo" },
     ],

@@ -1,3 +1,5 @@
+import { crmMutationConfig } from "./crm-request-context";
+const context = { instance: "local-test", token: "fixture-original-token" };
 import { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { describe, expect, it, vi } from "vitest";
 import CustomersClient from "./customers.client";
@@ -25,8 +27,9 @@ describe("CRM catalog transport", () => {
       .spyOn(client.ax, "delete")
       .mockResolvedValue({ data: { message: "Excluído" } });
     const expected = { NOME: null, ORDEM: 0, FUSOHORARIO: -3 };
-    await client.deleteCrmCatalog("states", "SP", expected);
+    await client.deleteCrmCatalog("states", "SP", expected, context);
     expect(remove).toHaveBeenCalledExactlyOnceWith("/api/crm-catalogs/states/SP", {
+      ...crmMutationConfig(context),
       data: { expected },
     });
   });
@@ -38,13 +41,13 @@ describe("CRM catalog transport", () => {
     client.ax.defaults.adapter = adapter;
     const pending =
       operation === "create"
-        ? client.createCrmCatalog("origins", { CODIGO: 3, DESCRICAO: "Origem" })
+        ? client.createCrmCatalog("origins", { CODIGO: 3, DESCRICAO: "Origem" }, context)
         : operation === "update"
           ? client.updateCrmCatalog("origins", 3, {
               changes: { DESCRICAO: "Outra" },
               expected: { DESCRICAO: null },
-            })
-          : client.deleteCrmCatalog("origins", 3, { DESCRICAO: null });
+            }, context)
+          : client.deleteCrmCatalog("origins", 3, { DESCRICAO: null }, context);
     await expect(pending).rejects.toBeInstanceOf(Error);
     expect(adapter).toHaveBeenCalledTimes(1);
   });

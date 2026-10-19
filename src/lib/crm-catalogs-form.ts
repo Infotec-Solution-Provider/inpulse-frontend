@@ -5,7 +5,10 @@ export type CatalogDraft = Record<string, string>;
 export interface CatalogField {
   key: string;
   label: string;
-  kind?: "integer" | "unit";
+  kind?: "integer" | "unit" | "enum" | "time" | "decimal";
+  options?: { value: string; label: string }[];
+  minimum?: number;
+  readOnly?: boolean;
   maxLength?: number;
   required?: boolean;
   help?: string;
@@ -14,7 +17,11 @@ export interface CatalogDefinition {
   title: string;
   singular: string;
   description: string;
-  identity: "CODIGO" | "UF";
+  identity: string;
+  identityKind?: "text";
+  identityMaxLength?: number;
+  expectedIncludesIdentity?: boolean;
+  sortable?: boolean;
   autoId?: boolean;
   fields: CatalogField[];
 }
@@ -122,7 +129,9 @@ export function isCrmCatalog(value: string): value is CrmCatalogName {
   return Object.hasOwn(CRM_CATALOGS, value);
 }
 export function catalogDraft(catalog: CrmCatalogName, record?: CatalogRecord): CatalogDraft {
-  const definition = CRM_CATALOGS[catalog];
+  return catalogDefinitionDraft(CRM_CATALOGS[catalog], record);
+}
+export function catalogDefinitionDraft(definition: CatalogDefinition, record?: CatalogRecord): CatalogDraft {
   return Object.fromEntries(
     [definition.identity, ...definition.fields.map((field) => field.key)].map((key) => [
       key,
@@ -131,22 +140,25 @@ export function catalogDraft(catalog: CrmCatalogName, record?: CatalogRecord): C
   );
 }
 export function catalogExpected(catalog: CrmCatalogName, record: CatalogRecord): CatalogRecord {
-  return Object.fromEntries(
-    CRM_CATALOGS[catalog].fields.map((field) => [field.key, record[field.key]]),
-  );
+  return catalogDefinitionExpected(CRM_CATALOGS[catalog], record);
+}
+export function catalogDefinitionExpected(definition: CatalogDefinition, record: CatalogRecord): CatalogRecord {
+  return Object.fromEntries([...(definition.expectedIncludesIdentity ? [{ key: definition.identity }] : []), ...definition.fields.filter(field => !field.readOnly)].map((field) => [field.key, record[field.key]]));
 }
 export function validateCatalogDraft(
   catalog: CrmCatalogName,
   draft: CatalogDraft,
   original?: CatalogRecord,
 ) {
-  const definition = CRM_CATALOGS[catalog];
+  return validateCatalogDefinition(CRM_CATALOGS[catalog], draft, original);
+}
+export function validateCatalogDefinition(definition: CatalogDefinition, draft: CatalogDraft, original?: CatalogRecord) {
   const errors: Record<string, string> = {};
   const changes: CatalogRecord = {};
   const compatible = (value: string) =>
     Array.from(value).every(
       (char) =>
-        char.charCodeAt(0) <= 255 && !(char.charCodeAt(0) >= 128 && char.charCodeAt(0) < 160),
+        char.charCodeAt(0) >= 32 && char.charCodeAt(0) <= 255 && char.charCodeAt(0) !== 127 && !(char.charCodeAt(0) >= 128 && char.charCodeAt(0) < 160),
     );
   const integer = (value: string) =>
     /^-?\d+$/.test(value) &&
@@ -155,7 +167,10 @@ export function validateCatalogDraft(
     Number(value) <= 2147483647;
   if (!original && !definition.autoId) {
     const value = (draft[definition.identity] ?? "").trim();
-    if (definition.identity === "UF") {
+    if (definition.identityKind === "text") {
+      if (!value || value.length > (definition.identityMaxLength ?? 50) || !compatible(value)) errors[definition.identity] = `Informe um código com até ${definition.identityMaxLength ?? 50} caracteres compatíveis com o CRM.`;
+      changes[definition.identity] = value;
+    } else if (definition.identity === "UF") {
       if (!/^[A-Z]{2}$/.test(value)) errors.UF = "Informe uma sigla com duas letras maiúsculas.";
       changes.UF = value;
     } else {
@@ -165,6 +180,7 @@ export function validateCatalogDraft(
     }
   }
   for (const field of definition.fields) {
+    if (field.readOnly) continue;
     const raw = draft[field.key] ?? "";
     // Preserve untouched historical NULL, whitespace and charset bytes in expected snapshots.
     if (original && raw === (original[field.key]?.toString() ?? "")) continue;
@@ -176,12 +192,21 @@ export function validateCatalogDraft(
             ? "Selecione uma unidade cadastrada."
             : "Informe um número inteiro entre -2147483648 e 2147483647.";
       if (!value && field.required) errors[field.key] = "Selecione uma unidade cadastrada.";
+      if (value && field.minimum !== undefined && Number(value) < field.minimum) errors[field.key] = `Informe um inteiro a partir de ${field.minimum}.`;
       if (value) changes[field.key] = Number(value);
       else if (original) {
         if (field.key === "FUSOHORARIO")
           errors[field.key] = "Informe o valor numérico de fuso do CRM.";
         else changes[field.key] = null;
       }
+    } else if (field.kind === "enum" || field.kind === "time" || field.kind === "decimal") {
+      if (!value && field.required) errors[field.key] = "Informe um valor.";
+      if (value && field.kind === "enum" && !field.options?.some(option => option.value === value)) errors[field.key] = "Selecione uma opção válida.";
+      if (value && field.kind === "time" && !/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(value)) errors[field.key] = "Informe o horário no formato HH:mm:ss.";
+      const normalized = field.kind === "decimal" ? value.replace(",", ".") : value;
+      if (normalized && field.kind === "decimal" && !/^-?(?:0|[1-9]\d?)(?:\.\d{1,2})?$/.test(normalized)) errors[field.key] = "Informe um decimal entre -99,99 e 99,99, com até duas casas.";
+      if (normalized) changes[field.key] = normalized;
+      else if (original) changes[field.key] = null;
     } else {
       if (
         (!value && field.required) ||
@@ -190,7 +215,7 @@ export function validateCatalogDraft(
       )
         errors[field.key] =
           `Informe ${field.required ? "um texto" : "texto"} com até ${field.maxLength} caracteres compatíveis com o CRM.`;
-      if (catalog === "cities" && field.key === "UF" && value && !/^[A-Z]{2}$/.test(value))
+      if (definition === CRM_CATALOGS.cities && field.key === "UF" && value && !/^[A-Z]{2}$/.test(value))
         errors.UF = "Selecione um estado cadastrado.";
       if (value || field.required) changes[field.key] = value;
       else if (original || field.key === "COD_ERPMARCA" || field.key === "UF")

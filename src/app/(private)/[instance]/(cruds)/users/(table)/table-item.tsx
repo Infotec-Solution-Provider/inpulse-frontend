@@ -6,6 +6,7 @@ import { USERS_TABLE_COLUMNS } from "./table-config";
 
 interface UsersTableItemProps {
   user: User;
+  canEdit: boolean;
   canUseSipConfig: boolean;
   openEditModalHandler: (user: User) => void;
   openSipConfigModalHandler: (user: User) => void;
@@ -13,6 +14,7 @@ interface UsersTableItemProps {
 
 export default function UsersTableItem({
   user,
+  canEdit,
   canUseSipConfig,
   openEditModalHandler,
   openSipConfigModalHandler,
@@ -39,7 +41,7 @@ export default function UsersTableItem({
 
   return (
     <TableRow
-      className="even:bg-indigo-700/5 transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      className="transition-colors even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
       sx={{
         "& .MuiTableCell-root": {
           borderBottom: "1px solid",
@@ -97,9 +99,9 @@ export default function UsersTableItem({
               ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
               : user.NIVEL === "EXTERNO"
                 ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
-              : user.NIVEL === "ATIVO" || user.NIVEL === "RECEP" || user.NIVEL === "AMBOS"
-                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                : user.NIVEL === "ATIVO" || user.NIVEL === "RECEP" || user.NIVEL === "AMBOS"
+                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                  : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
           }`}
         >
           {getNivelLabel(user.NIVEL)}
@@ -132,14 +134,16 @@ export default function UsersTableItem({
               <SettingsPhone fontSize="small" />
             </IconButton>
           )}
-          <IconButton
-            title="Editar Usuário"
-            onClick={() => openEditModalHandler(user)}
-            size="small"
-            className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
-          >
-            <Edit fontSize="small" />
-          </IconButton>
+          {canEdit && (
+            <IconButton
+              title="Editar Usuário"
+              onClick={() => openEditModalHandler(user)}
+              size="small"
+              className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+          )}
         </div>
       </TableCell>
     </TableRow>

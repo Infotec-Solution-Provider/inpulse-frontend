@@ -11,6 +11,15 @@ export interface CustomerBusinessFilters {
   registeredFrom: string;
   registeredTo: string;
   loyaltyOperatorIds: number[];
+  groupIds: number[];
+  originIds: number[];
+  mediaIds: number[];
+  unitIds: number[];
+  brandIds: number[];
+  positionIds: number[];
+  states: string[];
+  phone: string;
+  email: string;
 }
 
 export interface CustomerBusinessFilterOptions {
@@ -28,6 +37,15 @@ export interface CustomerBusinessQueryFilters {
   registeredFrom?: string;
   registeredTo?: string;
   loyaltyOperatorIds?: string;
+  groupIds?: string;
+  originIds?: string;
+  mediaIds?: string;
+  unitIds?: string;
+  brandIds?: string;
+  positionIds?: string;
+  states?: string;
+  phone?: string;
+  email?: string;
 }
 
 export function createEmptyCustomerBusinessFilters(): CustomerBusinessFilters {
@@ -40,6 +58,15 @@ export function createEmptyCustomerBusinessFilters(): CustomerBusinessFilters {
     registeredFrom: "",
     registeredTo: "",
     loyaltyOperatorIds: [],
+    groupIds: [],
+    originIds: [],
+    mediaIds: [],
+    unitIds: [],
+    brandIds: [],
+    positionIds: [],
+    states: [],
+    phone: "",
+    email: "",
   };
 }
 
@@ -50,6 +77,15 @@ export function countCustomerBusinessFilters(filters: CustomerBusinessFilters): 
     filters.segmentIds.length,
     filters.registeredFrom || filters.registeredTo,
     filters.loyaltyOperatorIds.length,
+    filters.groupIds.length,
+    filters.originIds.length,
+    filters.mediaIds.length,
+    filters.unitIds.length,
+    filters.brandIds.length,
+    filters.positionIds.length,
+    filters.states.length,
+    filters.phone,
+    filters.email,
   ].filter(Boolean).length;
 }
 
@@ -57,6 +93,9 @@ export function serializeCustomerBusinessFilters(
   filters: CustomerBusinessFilters,
 ): Record<string, string> {
   return {
+    ...Object.fromEntries((["groupIds", "originIds", "mediaIds", "unitIds", "brandIds", "positionIds", "states"] as const).filter(key => filters[key].length).map(key => [key, filters[key].join(",")])),
+    ...(filters.phone.trim() ? { phone: filters.phone.trim() } : {}),
+    ...(filters.email.trim() ? { email: filters.email.trim() } : {}),
     ...(filters.purchaseStatus ? { purchaseStatus: filters.purchaseStatus } : {}),
     ...(filters.purchaseStatus !== "without_purchases" && filters.purchaseFrom
       ? { purchaseFrom: filters.purchaseFrom }

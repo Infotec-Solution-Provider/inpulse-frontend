@@ -32,6 +32,8 @@ export default function AvatarInput({ onChange, initialImage }: AvatarInputProps
   return (
     <div>
       <button
+        type="button"
+        aria-label="Selecionar imagem"
         className="borde h-32 w-32 overflow-hidden rounded-md border border-white/20 hover:border-white hover:bg-indigo-500/10"
         onClick={() => {
           if (groupImageInputRef.current) {

@@ -1,4 +1,5 @@
 export * from "./types";
+export { default as CustomerCrmClient } from "./customer-crm.client";
 export { default as AiClient } from "./ai.client";
 export { default as AuthClient } from "./auth.client";
 export { default as CustomersClient } from "./customers.client";
@@ -11,4 +12,10 @@ export { default as UsersClient } from "./users.client";
 export { default as WhatsappClient } from "./whatsapp.client";
 export { default as WalletsClient } from "./wallets.client";
 export { default as InternalChatClient } from "./internal.client";
-export { default as ReadyMessageClient} from "./ready-message.client"
+export { default as ReadyMessageClient} from "./ready-message.client";
+export { default as CustomerSearchClient } from "./customer-search.client";
+export { default as CrmMarketingClient } from "./crm-marketing.client";
+export { default as CrmCampaignGenerationClient } from "./crm-campaign-generation.client";
+export type { CrmGenerationExpected, CrmGenerationInput, CrmGenerationPreview } from "./crm-campaign-generation.client";
+export { default as CrmUserCatalogsClient } from "./crm-user-catalogs.client";
+export type { CrmRequestContext } from "./crm-request-context";

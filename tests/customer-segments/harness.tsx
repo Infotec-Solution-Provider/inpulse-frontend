@@ -63,7 +63,7 @@ function SelectorHarness() {
           setCustomer({
             CODIGO: assignment.CODIGO,
             SEGMENTO: assignment.SEGMENTO,
-            NOME: assignment.segment.NOME,
+            NOME: assignment.segment?.NOME ?? null,
           });
         }}
         onReload={async () => {

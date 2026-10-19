@@ -56,6 +56,22 @@ describe("shared navigation authorization", () => {
     expect(visible).not.toContain("/contacts");
     expect(visible).not.toContain("/internal-groups");
   });
+  it("preserves existing goals destinations and their feature and role gates alongside CRM", () => {
+    const enabled = routes(UserRole.ADMIN, { feature_reports_advanced_enabled: "true" });
+    expect(enabled).toEqual(
+      expect.arrayContaining([
+        "/reports/goals-dashboard",
+        "/reports/team-goals",
+        "/user-catalogs",
+        "/crm-campaigns",
+      ]),
+    );
+    expect(routes(UserRole.ADMIN)).not.toContain("/reports/goals-dashboard");
+    expect(routes(UserRole.ACTIVE, { feature_reports_advanced_enabled: "true" })).not.toContain(
+      "/reports/team-goals",
+    );
+    expect(enabled.some((path) => /operadores_meta|crm-goals/.test(path))).toBe(false);
+  });
 });
 
 describe("pilot route and scoped navigation preferences", () => {

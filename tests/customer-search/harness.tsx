@@ -1,0 +1,4 @@
+import{useState}from'react';import{createRoot}from'react-dom/client';import{CssBaseline,ThemeProvider}from'@mui/material';import theme from'../../src/lib/themes/light';
+import Panel from'../../src/lib/components/customer-business-filters';import{createEmptyCustomerBusinessFilters,serializeCustomerBusinessFilters}from'../../src/lib/types/customer-business-filters';import{switchTenant}from'./doubles';
+function Harness(){const[filters,setFilters]=useState(createEmptyCustomerBusinessFilters);return<ThemeProvider theme={theme}><CssBaseline/><main style={{maxWidth:900,padding:20}}><button onClick={switchTenant}>Trocar tenant</button><Panel filters={filters} onChange={setFilters} options={{campaigns:[],segments:[],operators:[]}}/><output data-testid="filters">{JSON.stringify(serializeCustomerBusinessFilters(filters))}</output></main></ThemeProvider>}
+createRoot(document.getElementById('root')!).render(<Harness/>);
