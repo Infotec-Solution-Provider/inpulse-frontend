@@ -1,4 +1,5 @@
 export * from "./ai.types";
+export * from "./customer-crm.types";
 export * from "./auth.types";
 export * from "./customers.types";
 export * from "./crm-catalogs.types";
