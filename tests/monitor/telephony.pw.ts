@@ -228,9 +228,10 @@ test("telefonia tem layout desktop e móvel sem overflow de página", async ({ p
     "background-color",
     "rgb(25, 26, 31)",
   );
-  await expect(
-    page.locator("label").filter({ hasText: "Pesquisar cliente ou telefone" }),
-  ).toHaveCSS("color", "rgb(176, 176, 191)");
+  await expect(page.locator("label").filter({ hasText: /^Pesquisar$/ })).toHaveCSS(
+    "color",
+    "rgb(176, 176, 191)",
+  );
   await page.screenshot({ path: "test-results/monitor-telephony-dark.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
@@ -304,7 +305,7 @@ test("telefonia pausa eventos, atualiza manualmente e limpa listeners da aba ina
   await page.clock.install();
   const listenerCount = await page.evaluate(() => window.monitorHarness.listeners());
   const initialConversations = conversationQueries();
-  await page.getByRole("button", { name: "Pausar atualização automática da telefonia" }).click();
+  await page.getByRole("button", { name: "Pausar atualização automática", exact: true }).click();
   const pausedCount = queries.length;
   await page.evaluate(() => window.monitorHarness.emit());
   await page.clock.runFor(61_000);
@@ -381,7 +382,7 @@ test("telefonia oculta suspende consultas e preserva pedido manual para o retorn
     page.getByRole("button", { name: "Ver cliente Cliente telefonia 1", exact: true }),
   ).toBeVisible();
   await page.clock.install();
-  await page.getByRole("button", { name: "Pausar atualização automática da telefonia" }).click();
+  await page.getByRole("button", { name: "Pausar atualização automática", exact: true }).click();
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
     document.dispatchEvent(new Event("visibilitychange"));

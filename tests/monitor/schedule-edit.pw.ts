@@ -152,11 +152,18 @@ test("edita horário civil e operador da agenda, preservando carteira, paginaç�
   });
   expect(state.operatorQueries.some((query) => query.get("page") === "2")).toBe(true);
   await expect.poll(() => state.queries.at(-1)?.filters.searchText).toBe("Cliente");
-  const registeredOperator = page
-    .getByRole("table")
-    .getByRole("cell")
-    .filter({ hasText: "Cadastro do cliente" });
-  await expect(registeredOperator).toContainText("Ana");
+  const registeredOperatorColumn = (
+    await page.getByRole("columnheader").allTextContents()
+  ).findIndex((heading) => heading.trim() === "Operador do cliente");
+  expect(registeredOperatorColumn).toBeGreaterThanOrEqual(0);
+  await expect(
+    page
+      .getByRole("table")
+      .locator("tbody tr")
+      .first()
+      .getByRole("cell")
+      .nth(registeredOperatorColumn),
+  ).toHaveText("Ana");
   await expect(page.getByRole("table").getByText(/Operador 21/)).toBeVisible();
   await openEditor(page);
   await expect(dateField(page)).toHaveValue("2026-10-21T00:05");

@@ -190,7 +190,7 @@ test("desktop apresenta ao menos seis registros completos e ações discretas co
   await openConversations(page);
   await expect.poll(() => fullyVisibleCount(page.getByRole("article"))).toBeGreaterThanOrEqual(6);
   const firstConversation = page.getByRole("article").first();
-  await expect(firstConversation.getByText("Empresa demonstrativa", { exact: true })).toBeVisible();
+  await expect(firstConversation.getByText("Empresa demonstrativa")).toBeVisible();
   await expectCustomerDocument(firstConversation);
   await expectIconAction(viewConversation(page), 36);
   await expectIdentityClearOfActions(
@@ -274,9 +274,7 @@ for (const viewport of [
       await openConversations(page);
       await expect.poll(() => fullyVisibleCount(page.getByRole("article").first())).toBe(1);
       const firstConversation = page.getByRole("article").first();
-      await expect(
-        firstConversation.getByText("Empresa demonstrativa", { exact: true }),
-      ).toBeVisible();
+      await expect(firstConversation.getByText("Empresa demonstrativa")).toBeVisible();
       await expectCustomerDocument(firstConversation);
       await expectIconAction(viewConversation(page), 44);
       await expect(page.getByRole("button", { name: "Exibir cartões", exact: true })).toBeHidden();

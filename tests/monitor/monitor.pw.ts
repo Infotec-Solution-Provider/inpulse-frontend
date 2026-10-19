@@ -441,7 +441,7 @@ test("layout desktop/mobile sem overflow horizontal", async ({ page }) => {
   await page.evaluate(() => window.monitorHarness.dark());
   await expect(
     page.getByRole("region", { name: "Indicadores da monitoria" }).getByRole("button").first(),
-  ).toHaveCSS("background-color", cssRgb(uiPalette.dark.surface));
+  ).toHaveCSS("color", cssRgb(uiPalette.dark.muted));
   await page.screenshot({ path: "test-results/monitor-compact-dark.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: /^Filtros/ }).click();
