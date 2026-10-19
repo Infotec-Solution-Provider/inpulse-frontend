@@ -323,3 +323,25 @@ test("campaign advanced conditions apply explicitly and survive returning to the
   await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-campaigns"));
   await expect(page.getByRole("button", { name: "Código: 10", exact: true })).toBeVisible();
 });
+
+test("a membership read failure does not trap navigation when no write occurred", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => {
+    (window as any).crmHarness.fault("member-read");
+    window.crmUiTest.navigate("/tenant-a/crm-campaigns/10/configure");
+  });
+  await page.getByRole("tab", { name: "Usuários", exact: true }).click();
+  await expect(
+    page
+      .getByRole("region", { name: "Usuários vinculados à campanha", exact: true })
+      .getByRole("alert"),
+  ).toBeVisible();
+  await page
+    .locator("#navigation-customers")
+    .getByRole("link", { name: "Cadastro", exact: true })
+    .click();
+  await expect(page.getByRole("heading", { name: "Clientes", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+});

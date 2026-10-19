@@ -304,6 +304,10 @@ export class MarketingClient {
     return copy(data[this.instance].configuration);
   }
   async campaignMembers(_id: number) {
+    if (fault === "member-read") {
+      fault = "";
+      throw new Error("Simulated read failure");
+    }
     return { data: copy(data[this.instance].campaignMembers) };
   }
   async campaignMemberOptions(id: number, search = "", page = 1) {

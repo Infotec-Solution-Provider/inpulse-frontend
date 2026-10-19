@@ -61,7 +61,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
     epoch = useRef(0),
     sequence = useRef(0);
   current.current = client;
-  useCrmLeaveGuard(Boolean(code || selected), busy, blocked);
+  useCrmLeaveGuard(Boolean(code || selected), busy, blocked && epoch.current > 0);
   useEffect(() => {
     alive.current = true;
     return () => {
