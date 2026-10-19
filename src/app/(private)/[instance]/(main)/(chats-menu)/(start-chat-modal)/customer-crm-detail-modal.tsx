@@ -1254,7 +1254,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
             setDetail(current => current && current.customer.CODIGO === assignment.CODIGO ? {
               ...current,
               customer: { ...current.customer, SEGMENTO: assignment.SEGMENTO },
-              segment: { code: assignment.SEGMENTO, name: assignment.segment.NOME },
+              segment: { code: assignment.SEGMENTO, name: assignment.segment?.NOME ?? null },
             } : current);
             if (user) void hybridCache.invalidateResource(createCacheScope(instance, user.CODIGO), "customer-page");
             toast.success("Segmento do cliente atualizado.");

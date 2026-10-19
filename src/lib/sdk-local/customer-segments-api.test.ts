@@ -10,6 +10,19 @@ function response<T>(config: InternalAxiosRequestConfig, data: T): AxiosResponse
 }
 
 describe("customer segment API contract", () => {
+  it("explicitly clears the customer association without changing the original zero snapshot", async () => {
+    const client = new CustomersClient("http://localhost:8002");
+    const patch = vi.spyOn(client.ax, "patch").mockResolvedValue({ data: { data: { CODIGO: 12, SEGMENTO: null, segment: null } } });
+    await client.setCustomerSegment(12, { SEGMENTO: null, expected: { SEGMENTO: 0 } });
+    expect(patch).toHaveBeenCalledExactlyOnceWith("/api/customers/12/segment", { SEGMENTO: null, expected: { SEGMENTO: 0 } });
+  });
+  it("deletes with a complete original snapshot", async () => {
+    const client = new CustomersClient("http://localhost:8002");
+    const remove = vi.spyOn(client.ax, "delete").mockResolvedValue({ data: { message: "OK" } });
+    const expected = { NOME: segment.NOME, ordem: null, COD_UNIDADE: 4 };
+    await client.deleteSegment(37, expected);
+    expect(remove).toHaveBeenCalledExactlyOnceWith("/api/segments/37", { data: { expected } });
+  });
   it("encodes the supported filters and preserves zero, accents and pagination", async () => {
     const client = new CustomersClient("http://localhost:8002");
     const envelope = { message: "Segmentos encontrados.", data: [segment], page: { current: 2, totalRows: 31 } };

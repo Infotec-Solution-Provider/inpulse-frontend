@@ -71,6 +71,7 @@ interface SegmentTestState {
   reads: SegmentListParams[];
   creates: CreateSegmentRequest[];
   updates: { id: number; data: UpdateSegmentRequest }[];
+  deletes: number[];
   failLoad: boolean;
   saveError: string | null;
   listDelay: number;
@@ -113,6 +114,7 @@ window.segmentTest = {
   reads: [],
   creates: [],
   updates: [],
+  deletes: [],
   failLoad: params.has("load-error"),
   saveError: null,
   listDelay: 0,
@@ -178,9 +180,10 @@ export const customersService = {
     state.lookupReads += 1;
     return copy(state.rows.map(({ CODIGO, NOME }) => ({ CODIGO, NOME })));
   },
+  async getCrmCatalogUnits() { return { data: [{ CODIGO: 12, DESCRICAO: "Matriz" }, { CODIGO: 15, DESCRICAO: "Filial" }] }; },
   async setCustomerSegment(id: number, data: SetCustomerSegmentRequest) {
     state.assignments.push({ id, data: copy(data) });
-    const row = copy(state.rows.find((row) => row.CODIGO === data.SEGMENTO)!);
+    const row = data.SEGMENTO === null ? null : copy(state.rows.find((row) => row.CODIGO === data.SEGMENTO)!);
     if (state.assignmentDelay)
       await new Promise((resolve) => setTimeout(resolve, state.assignmentDelay));
     if (state.assignmentError) {
@@ -201,7 +204,7 @@ export const customersService = {
       data: {
         CODIGO: id,
         SEGMENTO: data.SEGMENTO,
-        segment: { CODIGO: row.CODIGO, NOME: row.NOME },
+        segment: row ? { CODIGO: row.CODIGO, NOME: row.NOME } : null,
       },
     };
   },
@@ -248,7 +251,7 @@ export const customersService = {
       CODIGO: Math.max(...state.rows.map((segment) => segment.CODIGO), 0) + 1,
       NOME: data.NOME,
       ordem: data.ordem ?? 99999999,
-      COD_UNIDADE: null,
+      COD_UNIDADE: data.COD_UNIDADE ?? null,
     };
     state.rows.push(row);
     return { message: "OK", data: copy(row) };
@@ -261,5 +264,11 @@ export const customersService = {
     if (!row) fail("SEGMENT_NOT_FOUND", 404);
     Object.assign(row!, data.changes);
     return { message: "OK", data: copy(row!) };
+  },
+  async deleteSegment(id: number) {
+    state.deletes.push(id);
+    if (state.saveError) fail(state.saveError, state.saveError === "SEGMENT_WRITE_UNKNOWN" ? 503 : 409);
+    state.rows.splice(state.rows.findIndex(row => row.CODIGO === id), 1);
+    return { message: "OK" };
   },
 };

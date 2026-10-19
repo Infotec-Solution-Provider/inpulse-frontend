@@ -8,6 +8,11 @@ import {
 const legacy = { CODIGO: 0, NOME: null, ordem: null, COD_UNIDADE: 0 };
 
 describe("segment form contracts", () => {
+  it("sets a real unit or explicitly clears an existing unit without rewriting other fields", () => {
+    expect(createSegmentPayload({ name: "Novo", order: "", unit: "12" })).toEqual({ NOME: "Novo", COD_UNIDADE: 12 });
+    expect(updateSegmentPayload({ name: "", order: "", unit: "" }, legacy)).toEqual({ changes: { COD_UNIDADE: null }, expected: { NOME: null, ordem: null, COD_UNIDADE: 0 } });
+    expect(segmentDraftValidation({ name: "Novo", order: "", unit: "0" }).unitError).toBeTruthy();
+  });
   it("omits order on create so the database default is preserved", () => {
     expect(createSegmentPayload({ name: "  Indústria  ", order: "" })).toEqual({
       NOME: "Indústria",

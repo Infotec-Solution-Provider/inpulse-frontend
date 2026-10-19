@@ -39,10 +39,7 @@ test("creates with database defaults and refreshes tenant consumers", async ({ p
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: "Salvar", exact: true })).toBeDisabled();
   await dialog.getByRole("textbox", { name: "Nome", exact: true }).fill("  Serviços  ");
-  await expect(dialog.getByRole("textbox", { name: "Unidade", exact: true })).toHaveAttribute(
-    "readonly",
-    "",
-  );
+  await expect(dialog.getByRole("combobox", { name: /^Unidade/ })).toBeEnabled();
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByRole("alert")).toContainText("cadastrado com sucesso");
@@ -51,13 +48,54 @@ test("creates with database defaults and refreshes tenant consumers", async ({ p
     await page.evaluate(() => [window.segmentTest.invalidations, window.segmentTest.published]),
   ).toEqual([1, 1]);
 });
+test("sets and clears a segment unit using real options", async ({ page }) => {
+  await page.getByRole("button", { name: "Editar segmento Atacado", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByRole("combobox", { name: /^Unidade/ }).click();
+  await page.getByRole("option", { name: "Filial (#15)", exact: true }).click();
+  await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => window.segmentTest.updates.at(-1)?.data.changes)).toEqual({
+    COD_UNIDADE: 15,
+  });
+  await page.getByRole("button", { name: "Editar segmento Atacado", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByRole("combobox", { name: /^Unidade/ }).click();
+  await page.getByRole("option", { name: "Sem unidade", exact: true }).click();
+  await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => window.segmentTest.updates.at(-1)?.data.changes)).toEqual({
+    COD_UNIDADE: null,
+  });
+});
+test("deletes only the selected segment and shows dependency refusal", async ({ page }) => {
+  await page.evaluate(() => {
+    window.segmentTest.saveError = "CATALOG_IN_USE";
+  });
+  await page.getByRole("button", { name: "Excluir segmento Atacado", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Excluir", exact: true }).click();
+  await expect(
+    dialog.getByText("Este segmento possui vínculos e não pode ser excluído."),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+  await page.evaluate(() => {
+    window.segmentTest.saveError = null;
+  });
+  await page.getByRole("button", { name: "Excluir segmento Atacado", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Excluir", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("alert")).toContainText("Segmento excluído com sucesso.");
+  expect(await page.evaluate(() => window.segmentTest.rows.some((row) => row.CODIGO === 1))).toBe(
+    false,
+  );
+});
 
 test("edits changed fields with full original precondition including unit", async ({ page }) => {
   await page.getByRole("button", { name: "Editar segmento Atacado", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("textbox", { name: "Unidade", exact: true })).toHaveValue(
-    "Código 12",
-  );
+  await expect(dialog.getByRole("combobox", { name: /^Unidade/ })).toContainText("Matriz (#12)");
   await dialog.getByRole("textbox", { name: "Ordem", exact: true }).fill("");
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(dialog).toHaveCount(0);

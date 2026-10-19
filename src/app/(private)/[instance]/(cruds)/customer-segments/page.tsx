@@ -12,9 +12,21 @@ import {
   updateSegmentPayload,
   type SegmentDraft,
 } from "@/lib/customer-segments-form";
-import { UserRole, type Segment, type SegmentListParams } from "@/lib/sdk-local";
+import {
+  UserRole,
+  type Segment,
+  type SegmentListParams,
+  type CrmUnitOption,
+} from "@/lib/sdk-local";
 import customersService from "@/lib/services/customers.service";
-import { Add, EditOutlined, Refresh, Search, Segment as SegmentIcon } from "@mui/icons-material";
+import {
+  Add,
+  DeleteOutline,
+  EditOutlined,
+  Refresh,
+  Search,
+  Segment as SegmentIcon,
+} from "@mui/icons-material";
 import {
   Alert,
   Breadcrumbs,
@@ -27,6 +39,7 @@ import {
   IconButton,
   LinearProgress,
   Link,
+  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -65,6 +78,9 @@ function SegmentManagement({
   userId: number;
 }) {
   const [segments, setSegments] = useState<Segment[]>([]);
+  const [units, setUnits] = useState<CrmUnitOption[]>([]);
+  const [unitsError, setUnitsError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Segment | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [perPage, setPerPage] = useState(20);
@@ -83,11 +99,15 @@ function SegmentManagement({
   const [conflict, setConflict] = useState(false);
   const [missing, setMissing] = useState(false);
   const [writeUnknown, setWriteUnknown] = useState(false);
+  const [reconcileRequired, setReconcileRequired] = useState(false);
   const [reloadingEditor, setReloadingEditor] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [success, setSuccess] = useState("");
   const requestSequence = useRef(0);
   const mounted = useRef(true);
+  const currentToken = useRef(token);
+  currentToken.current = token;
+  const pendingWrite = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -95,6 +115,34 @@ function SegmentManagement({
       mounted.current = false;
     };
   }, []);
+  useEffect(() => {
+    if (pendingWrite.current) {
+      setWriteUnknown(true);
+      setReconcileRequired(true);
+      setSaveError(
+        "Sua sessão mudou durante a gravação. Confira os dados antes de tentar novamente.",
+      );
+    }
+  }, [token]);
+  useEffect(() => {
+    let active = true;
+    customersService.setAuth(token);
+    setUnitsError("");
+    void customersService
+      .getCrmCatalogUnits()
+      .then((response) => {
+        if (active) setUnits(response.data);
+      })
+      .catch(() => {
+        if (active)
+          setUnitsError(
+            "Não foi possível carregar as unidades. Recarregue a lista para tentar novamente.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [token, reload]);
 
   useEffect(() => {
     const sequence = ++requestSequence.current;
@@ -148,7 +196,7 @@ function SegmentManagement({
     editor &&
     (editor.original
       ? validation?.hasChanges
-      : editor.draft.name !== "" || editor.draft.order !== "");
+      : editor.draft.name !== "" || editor.draft.order !== "" || Boolean(editor.draft.unit));
 
   const closeEditor = useCallback(() => {
     if (saving || reloadingEditor) return;
@@ -203,6 +251,7 @@ function SegmentManagement({
       !validation ||
       validation.nameError ||
       validation.orderError ||
+      validation.unitError ||
       !validation.hasChanges ||
       saving ||
       conflict ||
@@ -211,6 +260,8 @@ function SegmentManagement({
     )
       return;
     setSaving(true);
+    pendingWrite.current = true;
+    const requestToken = token;
     setSaveError("");
     try {
       customersService.setAuth(token);
@@ -220,7 +271,7 @@ function SegmentManagement({
             updateSegmentPayload(editor.draft, editor.original),
           )
         : await customersService.createSegment(createSegmentPayload(editor.draft));
-      if (!mounted.current) return;
+      if (!mounted.current || currentToken.current !== requestToken) return;
       void hybridCache.invalidateResource(createCacheScope(instance, userId), "customer-page");
       publishCustomerSegmentsChanged(instance);
       setEditor(null);
@@ -229,11 +280,17 @@ function SegmentManagement({
       );
       setReload((value) => value + 1);
     } catch (error) {
-      if (!mounted.current) return;
+      if (!mounted.current || currentToken.current !== requestToken) return;
       const status = errorStatus(error);
       const code = errorCode(error);
-      if (code === "SEGMENT_WRITE_UNKNOWN" || status === undefined || status >= 500) {
+      if (
+        getCustomerSegmentsError(error).outcome === "UNKNOWN" ||
+        code === "SEGMENT_WRITE_UNKNOWN" ||
+        status === undefined ||
+        status >= 500
+      ) {
         setWriteUnknown(true);
+        setReconcileRequired(true);
         setSaveError(
           "Não foi possível confirmar se a gravação foi concluída. Seu rascunho foi mantido. Confira os dados atuais antes de tentar uma nova alteração.",
         );
@@ -259,6 +316,7 @@ function SegmentManagement({
         );
       }
     } finally {
+      pendingWrite.current = false;
       if (mounted.current) setSaving(false);
     }
   };
@@ -266,18 +324,20 @@ function SegmentManagement({
   const reloadEditor = async () => {
     if (!editor?.original || saving || reloadingEditor) return;
     setReloadingEditor(true);
+    const requestToken = token;
     try {
       customersService.setAuth(token);
       const { data } = await customersService.getSegment(editor.original.CODIGO);
-      if (!mounted.current) return;
+      if (!mounted.current || currentToken.current !== requestToken) return;
       setEditor({ original: data, draft: segmentDraft(data) });
       setConflict(false);
       setMissing(false);
       setWriteUnknown(false);
+      setReconcileRequired(false);
       setSaveError("");
       setReload((value) => value + 1);
     } catch (error) {
-      if (mounted.current)
+      if (mounted.current && currentToken.current === requestToken)
         setSaveError(
           errorStatus(error) === 404
             ? "Este segmento não está mais disponível. Seu rascunho foi mantido."
@@ -285,6 +345,47 @@ function SegmentManagement({
         );
     } finally {
       if (mounted.current) setReloadingEditor(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!deleteTarget || saving || writeUnknown || conflict) return;
+    const requestToken = token;
+    pendingWrite.current = true;
+    setSaving(true);
+    setSaveError("");
+    customersService.setAuth(token);
+    try {
+      await customersService.deleteSegment(deleteTarget.CODIGO, {
+        NOME: deleteTarget.NOME,
+        ordem: deleteTarget.ordem,
+        COD_UNIDADE: deleteTarget.COD_UNIDADE,
+      });
+      if (!mounted.current || currentToken.current !== requestToken) return;
+      setDeleteTarget(null);
+      setSuccess("Segmento excluído com sucesso.");
+      publishCustomerSegmentsChanged(instance);
+      void hybridCache.invalidateResource(createCacheScope(instance, userId), "customer-page");
+      setReload((value) => value + 1);
+    } catch (error) {
+      if (!mounted.current || currentToken.current !== requestToken) return;
+      const details = getCustomerSegmentsError(error);
+      setWriteUnknown(
+        details.outcome === "UNKNOWN" || details.status === undefined || details.status >= 500,
+      );
+      if (details.outcome === "UNKNOWN" || details.status === undefined || details.status >= 500)
+        setReconcileRequired(true);
+      setConflict(details.code === "SEGMENT_CONFLICT" || details.code === "CATALOG_CHANGED");
+      setSaveError(
+        details.code === "CATALOG_IN_USE"
+          ? "Este segmento possui vínculos e não pode ser excluído."
+          : details.outcome === "UNKNOWN" || details.status === undefined || details.status >= 500
+            ? "Não foi possível confirmar a exclusão. Confira a lista antes de tentar novamente."
+            : "Não foi possível excluir o segmento. Ele pode estar em uso ou ter sido alterado. Recarregue os dados.",
+      );
+    } finally {
+      pendingWrite.current = false;
+      if (mounted.current) setSaving(false);
     }
   };
 
@@ -321,7 +422,12 @@ function SegmentManagement({
               Organize a classificação dos seus clientes.
             </p>
           </div>
-          <Button startIcon={<Add />} variant="contained" onClick={() => openEditor()}>
+          <Button
+            startIcon={<Add />}
+            variant="contained"
+            disabled={reconcileRequired}
+            onClick={() => openEditor()}
+          >
             Novo segmento
           </Button>
         </header>
@@ -329,6 +435,22 @@ function SegmentManagement({
         {success && (
           <Alert severity="success" onClose={() => setSuccess("")}>
             {success}
+          </Alert>
+        )}
+        {reconcileRequired && !editor && !deleteTarget && (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                disabled={loading || Boolean(loadError)}
+                onClick={() => setReconcileRequired(false)}
+              >
+                Conferi os dados
+              </Button>
+            }
+          >
+            Uma gravação teve resultado desconhecido. Confira a lista atual antes de iniciar outra
+            alteração.
           </Alert>
         )}
 
@@ -458,9 +580,26 @@ function SegmentManagement({
                               <IconButton
                                 aria-label={`Editar segmento ${segment.NOME ?? `#${segment.CODIGO}`}`}
                                 onClick={() => openEditor(segment)}
-                                disabled={loading}
+                                disabled={loading || reconcileRequired}
                               >
                                 <EditOutlined fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title="Excluir segmento">
+                            <span>
+                              <IconButton
+                                color="error"
+                                aria-label={`Excluir segmento ${segment.NOME ?? `#${segment.CODIGO}`}`}
+                                disabled={loading || reconcileRequired}
+                                onClick={() => {
+                                  setDeleteTarget(segment);
+                                  setSaveError("");
+                                  setWriteUnknown(false);
+                                  setConflict(false);
+                                }}
+                              >
+                                <DeleteOutline fontSize="small" />
                               </IconButton>
                             </span>
                           </Tooltip>
@@ -545,6 +684,18 @@ function SegmentManagement({
           <DialogContent>
             <Stack spacing={3} sx={{ pt: 1 }}>
               {saveError && <Alert severity={conflict ? "warning" : "error"}>{saveError}</Alert>}
+              {unitsError && (
+                <Alert
+                  severity="warning"
+                  action={
+                    <Button onClick={() => setReload((value) => value + 1)}>
+                      Recarregar opções
+                    </Button>
+                  }
+                >
+                  {unitsError}
+                </Alert>
+              )}
               {editor?.original && (
                 <Typography variant="body2" color="text.secondary">
                   Código: {editor.original.CODIGO}
@@ -602,15 +753,39 @@ function SegmentManagement({
                 <TextField
                   label="Unidade"
                   fullWidth
-                  value={
-                    editor?.original?.COD_UNIDADE === null ||
-                    editor?.original?.COD_UNIDADE === undefined
-                      ? "—"
-                      : `Código ${editor.original.COD_UNIDADE}`
+                  select
+                  value={editor?.draft.unit ?? ""}
+                  onChange={(event) =>
+                    setEditor(
+                      (current) =>
+                        current && {
+                          ...current,
+                          draft: { ...current.draft, unit: event.target.value },
+                        },
+                    )
                   }
-                  helperText="Unidade atual do cadastro."
-                  slotProps={{ input: { readOnly: true } }}
-                />
+                  disabled={saving || reloadingEditor}
+                  error={Boolean(validation?.unitError)}
+                  helperText={
+                    validation?.unitError ||
+                    "Selecione uma unidade cadastrada ou deixe sem unidade."
+                  }
+                >
+                  <MenuItem value="">Sem unidade</MenuItem>
+                  {editor?.draft.unit &&
+                    !units.some((unit) => String(unit.CODIGO) === editor.draft.unit) && (
+                      <MenuItem value={editor.draft.unit} disabled>
+                        Unidade #{editor.draft.unit} (referência histórica)
+                      </MenuItem>
+                    )}
+                  {units
+                    .filter((unit) => unit.CODIGO > 0)
+                    .map((unit) => (
+                      <MenuItem key={unit.CODIGO} value={String(unit.CODIGO)}>
+                        {unit.DESCRICAO ?? "Sem descrição"} (#{unit.CODIGO})
+                      </MenuItem>
+                    ))}
+                </TextField>
               </div>
               {(conflict || writeUnknown) && editor?.original && (
                 <Button
@@ -650,7 +825,7 @@ function SegmentManagement({
                 missing ||
                 writeUnknown ||
                 !validation?.hasChanges ||
-                Boolean(validation?.nameError || validation?.orderError)
+                Boolean(validation?.nameError || validation?.orderError || validation?.unitError)
               }
               startIcon={saving ? <CircularProgress size={16} color="inherit" /> : undefined}
             >
@@ -658,6 +833,52 @@ function SegmentManagement({
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => {
+          if (!saving) {
+            setDeleteTarget(null);
+            setReload((value) => value + 1);
+          }
+        }}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="segment-delete-title"
+      >
+        <DialogTitle id="segment-delete-title">Excluir segmento?</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <Typography>
+              {deleteTarget?.NOME ?? "Sem nome"} (#{deleteTarget?.CODIGO})
+            </Typography>
+            <Typography variant="body2">
+              A exclusão será recusada se houver vínculos ou se o cadastro tiver sido alterado.
+              Clientes e exceções serão preservados.
+            </Typography>
+            {saveError && <Alert severity="warning">{saveError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            disabled={saving}
+            onClick={() => {
+              setDeleteTarget(null);
+              setReload((value) => value + 1);
+            }}
+          >
+            Fechar
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={saving || writeUnknown || conflict}
+            onClick={() => void remove()}
+          >
+            {saving ? "Excluindo…" : "Excluir"}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog
@@ -690,6 +911,7 @@ function SegmentManagement({
             onClick={() => {
               setDiscardOpen(false);
               setEditor(null);
+              if (writeUnknown) setReload((value) => value + 1);
             }}
           >
             Descartar

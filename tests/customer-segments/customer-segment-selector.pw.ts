@@ -24,6 +24,16 @@ test("selects and saves an existing segment with the original customer assignmen
   await expect(page.getByRole("button", { name: "Salvar segmento", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Clear", exact: true })).toHaveCount(0);
 });
+test("clears an association only after explicit confirmation", async ({ page }) => {
+  await page.getByRole("button", { name: "Remover segmento", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(await page.evaluate(() => window.segmentTest.assignments)).toEqual([]);
+  await page.getByRole("button", { name: "Remover segmento", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Remover vínculo", exact: true }).click();
+  await expect(page.getByTestId("current-customer-segment")).toContainText("— · —");
+  expect(await page.evaluate(() => window.segmentTest.assignments)).toEqual([{ id: 40, data: { SEGMENTO: null, expected: { SEGMENTO: 1 } } }]);
+  await expect(page.getByRole("button", { name: "Remover segmento", exact: true })).toBeDisabled();
+});
 
 for (const code of ["CUSTOMER_SEGMENT_CONFLICT", "CUSTOMER_SEGMENT_WRITE_UNKNOWN"]) {
   test(`requires authoritative reload after ${code}`, async ({ page }) => {

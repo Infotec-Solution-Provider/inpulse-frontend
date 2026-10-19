@@ -103,12 +103,14 @@ export interface SegmentListParams {
 export interface CreateSegmentRequest {
 	NOME: string;
 	ordem?: number | null;
+	COD_UNIDADE?: number | null;
 }
 
 export interface UpdateSegmentRequest {
 	changes: {
 		NOME?: string;
 		ordem?: number | null;
+		COD_UNIDADE?: number | null;
 	};
 	expected: {
 		NOME: string | null;
@@ -118,7 +120,7 @@ export interface UpdateSegmentRequest {
 }
 
 export interface SetCustomerSegmentRequest {
-	SEGMENTO: number;
+	SEGMENTO: number | null;
 	expected: {
 		SEGMENTO: number | null;
 	};
@@ -126,8 +128,8 @@ export interface SetCustomerSegmentRequest {
 
 export interface CustomerSegmentAssignment {
 	CODIGO: number;
-	SEGMENTO: number;
-	segment: CustomerLookupOption;
+	SEGMENTO: number | null;
+	segment: CustomerLookupOption | null;
 }
 
 export interface CustomerContactDetail {

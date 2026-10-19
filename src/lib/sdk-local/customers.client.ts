@@ -170,6 +170,11 @@ class CustomersClient extends ApiClient {
 		return response.data;
 	}
 
+	public async deleteSegment(segmentId: number, expected: UpdateSegmentRequest["expected"]): Promise<MessageResponse> {
+		const response = await this.ax.delete<MessageResponse>(`/api/segments/${segmentId}`, { data: { expected } });
+		return response.data;
+	}
+
 	public async setCustomerSegment(
 		customerId: number,
 		data: SetCustomerSegmentRequest,
