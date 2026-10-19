@@ -1,0 +1,28 @@
+import ApiClient from "./api-client";
+import { crmMutationConfig, type CrmRequestContext } from "./crm-request-context";
+import type { DataResponse, PaginatedResponse } from "./types/response.types";
+import type { CrmUserCatalogName, CrmUserCatalogRecords, CrmUserCatalogExpected, CreateCrmUserCatalogRequest, CrmUserCatalogListParams, CrmUserGroupMember, CrmUserShiftAssignment, CrmUserRegistrationField, CrmUserRegistrationDetail, CrmUserOption } from "./types/crm-users.types";
+
+/** Tenant and privileges are derived by the service from the authenticated session. */
+export default class CrmUserCatalogsClient extends ApiClient {
+  public setAuth(token: string) { this.ax.defaults.headers.common.Authorization = `Bearer ${token.replace(/^Bearer\s+/i, "").trim()}`; }
+  public async list<K extends CrmUserCatalogName>(catalog: K, params?: CrmUserCatalogListParams, context?: CrmRequestContext): Promise<PaginatedResponse<CrmUserCatalogRecords[K]>> {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params ?? {})) if (value !== undefined) query.set(key, String(value));
+    return (await this.ax.get<PaginatedResponse<CrmUserCatalogRecords[K]>>(`/api/crm/${catalog}${query.size ? `?${query}` : ""}`, context ? crmMutationConfig(context) : undefined)).data;
+  }
+  public async get<K extends CrmUserCatalogName>(catalog: K, id: string | number, context?: CrmRequestContext): Promise<DataResponse<CrmUserCatalogRecords[K]>> { return (await this.ax.get<DataResponse<CrmUserCatalogRecords[K]>>(`/api/crm/${catalog}/${encodeURIComponent(id)}`, context ? crmMutationConfig(context) : undefined)).data; }
+  public async create<K extends CrmUserCatalogName>(catalog: K, data: CreateCrmUserCatalogRequest<K>, context: CrmRequestContext): Promise<DataResponse<CrmUserCatalogRecords[K]>> { return (await this.ax.post<DataResponse<CrmUserCatalogRecords[K]>>(`/api/crm/${catalog}`, data, crmMutationConfig(context))).data; }
+  public async update<K extends CrmUserCatalogName>(catalog: K, id: string | number, changes: Partial<CrmUserCatalogExpected<K>>, expected: CrmUserCatalogExpected<K>, context: CrmRequestContext): Promise<DataResponse<CrmUserCatalogRecords[K]>> { return (await this.ax.patch<DataResponse<CrmUserCatalogRecords[K]>>(`/api/crm/${catalog}/${encodeURIComponent(id)}`, { changes, expected }, crmMutationConfig(context))).data; }
+  public async remove<K extends CrmUserCatalogName>(catalog: K, id: string | number, expected: CrmUserCatalogExpected<K>, context: CrmRequestContext): Promise<void> { await this.ax.delete(`/api/crm/${catalog}/${encodeURIComponent(id)}`, { ...crmMutationConfig(context), data: { expected } }); }
+  public async listMembers(groupId: number, context?: CrmRequestContext): Promise<DataResponse<CrmUserGroupMember[]>> { return (await this.ax.get<DataResponse<CrmUserGroupMember[]>>(`/api/crm/user-groups/${groupId}/members`, context ? crmMutationConfig(context) : undefined)).data; }
+  public async addMember(groupId: number, data: { CODIGO: number; OPERADOR: number }, context: CrmRequestContext): Promise<DataResponse<CrmUserGroupMember>> { return (await this.ax.post<DataResponse<CrmUserGroupMember>>(`/api/crm/user-groups/${groupId}/members`, data, crmMutationConfig(context))).data; }
+  public async removeMember(groupId: number, memberId: number, expected: { OPERADOR: number | null }, context: CrmRequestContext): Promise<void> { await this.ax.delete(`/api/crm/user-groups/${groupId}/members/${memberId}`, { ...crmMutationConfig(context), data: { expected } }); }
+  public async setShift(userId: number, shiftId: number | null, expected: { HORARIO: number | null }, context: CrmRequestContext): Promise<DataResponse<CrmUserShiftAssignment>> { return (await this.ax.patch<DataResponse<CrmUserShiftAssignment>>(`/api/crm/users/${userId}/shift`, { HORARIO: shiftId, expected }, crmMutationConfig(context))).data; }
+  public async registrationSchema(context?: CrmRequestContext): Promise<DataResponse<{ fields: CrmUserRegistrationField[] }>> { return (await this.ax.get<DataResponse<{ fields: CrmUserRegistrationField[] }>>("/api/crm/user-registration/schema", context ? crmMutationConfig(context) : undefined)).data; }
+  public async getRegistration(userId: number, context?: CrmRequestContext): Promise<DataResponse<CrmUserRegistrationDetail>> { return (await this.ax.get<DataResponse<CrmUserRegistrationDetail>>(`/api/crm/user-registration/${userId}`, context ? crmMutationConfig(context) : undefined)).data; }
+  public async createRegistration(record: Record<string, string | number | null>, context: CrmRequestContext): Promise<DataResponse<CrmUserRegistrationDetail>> { return (await this.ax.post<DataResponse<CrmUserRegistrationDetail>>("/api/crm/user-registration", record, crmMutationConfig(context))).data; }
+  public async updateRegistration(userId: number, changes: Record<string, string | number | null>, version: string, context: CrmRequestContext): Promise<DataResponse<CrmUserRegistrationDetail>> { return (await this.ax.patch<DataResponse<CrmUserRegistrationDetail>>(`/api/crm/user-registration/${userId}`, { changes, version }, crmMutationConfig(context))).data; }
+  public async lookupUsers(name: string, context: CrmRequestContext): Promise<PaginatedResponse<CrmUserOption>> { return (await this.ax.get<PaginatedResponse<CrmUserOption>>("/api/users", { ...crmMutationConfig(context), params: { page: 1, perPage: 100, NOME: name, sortBy: "NOME" } })).data; }
+  public async getUserShift(userId: number, context: CrmRequestContext): Promise<DataResponse<CrmUserShiftAssignment>> { return (await this.ax.get<DataResponse<CrmUserShiftAssignment>>(`/api/users/${userId}`, crmMutationConfig(context))).data; }
+}

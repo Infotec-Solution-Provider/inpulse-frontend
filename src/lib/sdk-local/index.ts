@@ -17,3 +17,5 @@ export { default as CustomerSearchClient } from "./customer-search.client";
 export { default as CrmMarketingClient } from "./crm-marketing.client";
 export { default as CrmCampaignGenerationClient } from "./crm-campaign-generation.client";
 export type { CrmGenerationExpected, CrmGenerationInput, CrmGenerationPreview } from "./crm-campaign-generation.client";
+export { default as CrmUserCatalogsClient } from "./crm-user-catalogs.client";
+export type { CrmRequestContext } from "./crm-request-context";

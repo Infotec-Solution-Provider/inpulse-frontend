@@ -262,7 +262,7 @@ export function GenericCatalogManagement({
     const uncertain = details.outcome === "UNKNOWN" || status === undefined || status >= 500;
     setUnknown(uncertain);
     if (uncertain) setReconcileRequired(true);
-    setConflict(code?.endsWith("_CHANGED") || code?.endsWith("_CONFLICT") || status === 404 || Boolean(api.conflictOn409 && status === 409));
+    setConflict(code?.endsWith("_CHANGED") || code?.endsWith("_CONFLICT") || status === 401 || status === 404 || Boolean(api.conflictOn409 && status === 409));
     setMutationError(
       uncertain
         ? "Não foi possível confirmar a gravação. Ela pode ter sido concluída. Confira os dados antes de tentar novamente."
@@ -594,7 +594,7 @@ export function GenericCatalogManagement({
         maxWidth="sm"
         aria-labelledby="catalog-editor-title"
       >
-        <Box component="form" onSubmit={save}>
+        <Box component="form" onSubmit={save} sx={{ display: "flex", flexDirection: "column", minHeight: 0, maxHeight: "calc(100dvh - 64px)" }}>
           <DialogTitle id="catalog-editor-title">
             {editor?.original
               ? `Editar ${definition.singular}`

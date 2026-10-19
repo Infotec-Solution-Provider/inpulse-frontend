@@ -15,3 +15,4 @@ export * from "./internal.types";
 export * from "./ready-messages.types"
 export * from "./customer-search.types";
 export * from "./crm-marketing.types";
+export * from "./crm-users.types";

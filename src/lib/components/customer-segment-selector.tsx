@@ -34,7 +34,7 @@ function errorDetails(error: unknown): { message: string; needsReload: boolean }
   const { status } = getCustomerSegmentsError(error);
   return {
     message: candidate?.message || "Não foi possível atualizar o segmento.",
-    needsReload: status === 409 || status === 503 || !status,
+    needsReload: status === 401 || status === 409 || (status !== undefined && status >= 500) || !status,
   };
 }
 

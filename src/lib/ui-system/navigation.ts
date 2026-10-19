@@ -40,6 +40,7 @@ export const crudsRoutes = (
     arr.push({ title: "Clientes · Segmentos", href: "/customer-segments" });
     arr.push({ title: "Parâmetros", href: "/parameters" });
     arr.push({ title: "Usuários", href: "/users" });
+    arr.push({ title: "Usuários · Cadastros auxiliares", href: "/user-catalogs" });
     if (isFeatureEnabled(params, FEATURE_FLAGS.sipConfig)) {
       arr.push({ title: "Configuração SIP", href: "/sip-config" });
     }
@@ -138,6 +139,7 @@ export function getNavigationItems(
     items.push({ title: "Canais WhatsApp", href: "/channels", icon: "channels" });
   }
   if (crud.length) items.push({ title: "Cadastros", routes: crud, icon: "records" });
+  if (isAdmin) items.push({ title: "Campanhas CRM", icon: "campaign", routes: [{ title: "Campanhas", href: "/crm-campaigns" }, { title: "Resultados", href: "/crm-results" }, { title: "Exceções", href: "/crm-exceptions" }, { title: "Ordenar", href: "/crm-ordering" }] });
   if (isAdmin && !isExternalOperator(role) && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels)) {
     items.push({ title: "Pipelines", href: "/funnel", icon: "pipelines" });
   }
