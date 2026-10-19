@@ -15,6 +15,9 @@ import type {
   CrmOrderingSnapshot,
   CrmOrderCriterion,
   CrmMarketingValue,
+  CrmCampaignMember,
+  CrmCampaignMemberOption,
+  CrmCampaignMemberExpected,
 } from "./types/crm-marketing.types";
 /** Administrative writes deliberately have no authentication retry interceptor. */
 export default class CrmMarketingClient {
@@ -160,6 +163,18 @@ export default class CrmMarketingClient {
         `${this.root}/campaigns/${encodeURIComponent(id)}/configuration`,
       )
     ).data.data;
+  }
+  async campaignMembers(id: number) {
+    return (await this.ax.get<{ data: CrmCampaignMember[] }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members`, this.pinned())).data;
+  }
+  async campaignMemberOptions(id: number, search = "", page = 1) {
+    return (await this.ax.get<{ data: CrmCampaignMemberOption[]; page: { current: number; hasNext: boolean } }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members/options`, { ...this.pinned(), params: { search, page, perPage: 20 } })).data;
+  }
+  async addCampaignMember(id: number, data: { CODIGO: number; OPERADOR: number }) {
+    return (await this.ax.post<{ data: CrmCampaignMember }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members`, data, this.pinned())).data;
+  }
+  async removeCampaignMember(id: number, linkId: number, expected: CrmCampaignMemberExpected) {
+    await this.ax.delete(`${this.root}/campaigns/${encodeURIComponent(id)}/members/${encodeURIComponent(linkId)}`, { ...this.pinned(), data: { expected } });
   }
   async preview(criteria: CrmSelectionCriteria) {
     return (

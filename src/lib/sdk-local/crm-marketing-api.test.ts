@@ -7,6 +7,66 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("pinned CRM marketing SDK", () => {
+  it("preserves campaign membership identity, active lookup paging and complete removal snapshot", async () => {
+    const client = new CrmMarketingClient("http://crm.test", "member-token-a", "tenant-a");
+    const member = {
+      CODIGO: 81,
+      CAMPANHA: 10,
+      OPERADOR: 25,
+      OPERADOR_NOME: "Ana",
+      OPERADOR_ATIVO: "SIM",
+      writable: true,
+      occurrences: 1,
+    };
+    const adapter = vi.fn(async (config: any) => ({
+      status: config.method === "delete" ? 204 : 200,
+      statusText: "OK",
+      headers: {},
+      config,
+      data: config.url.endsWith("/options")
+        ? {
+            data: [{ CODIGO: 25, NOME: "Ana", ATIVO: "SIM" }],
+            page: { current: 2, hasNext: false },
+          }
+        : { data: config.method === "post" ? member : [member] },
+    }));
+    client.ax.defaults.adapter = adapter;
+    client.ax.defaults.headers.common.Authorization = "Bearer changed-token-b";
+    client.ax.defaults.headers.common["x-crm-instance"] = "tenant-b";
+    expect((await client.campaignMembers(10)).data).toEqual([member]);
+    expect((await client.campaignMemberOptions(10, "Ana", 2)).page.current).toBe(2);
+    expect((await client.addCampaignMember(10, { CODIGO: 81, OPERADOR: 25 })).data).toEqual(member);
+    await client.removeCampaignMember(10, 81, { CAMPANHA: 10, OPERADOR: 25 });
+    expect(adapter.mock.calls[1][0].params).toEqual({ search: "Ana", page: 2, perPage: 20 });
+    expect(JSON.parse(adapter.mock.calls[2][0].data)).toEqual({ CODIGO: 81, OPERADOR: 25 });
+    expect(adapter.mock.calls[3][0].url).toBe("/api/marketing/crm/campaigns/10/members/81");
+    expect(JSON.parse(adapter.mock.calls[3][0].data)).toEqual({
+      expected: { CAMPANHA: 10, OPERADOR: 25 },
+    });
+    for (const [request] of adapter.mock.calls) {
+      expect(request.headers.get("Authorization")).toBe("Bearer member-token-a");
+      expect(request.headers.get("x-crm-instance")).toBe("tenant-a");
+      expect(request.skipAuthInjection).toBe(true);
+      expect(request.skipAuthRefresh).toBe(true);
+    }
+  });
+  it("does not repeat an uncertain membership deletion", async () => {
+    const client = new CrmMarketingClient("http://crm.test", "token-a", "tenant-a");
+    const adapter = vi.fn(async (config: any) => {
+      throw new AxiosError("Unknown", "ERR_BAD_RESPONSE", config, undefined, {
+        status: 503,
+        statusText: "Unknown",
+        config,
+        headers: {},
+        data: { outcome: "UNKNOWN" },
+      });
+    });
+    client.ax.defaults.adapter = adapter;
+    await expect(
+      client.removeCampaignMember(10, 81, { CAMPANHA: 10, OPERADOR: null }),
+    ).rejects.toBeInstanceOf(AxiosError);
+    expect(adapter).toHaveBeenCalledTimes(1);
+  });
   it("pins the form token and tenant even if global and client defaults later change", async () => {
     const client = new CrmMarketingClient("http://crm.test", "token-a", "tenant-a"),
       adapter = vi.fn(async (config) => ({
