@@ -1,6 +1,6 @@
 "use client";
 import { useAuthContext } from "@/app/auth-context";
-import { User } from "@/lib/sdk-local";
+import { User, UserRole } from "@/lib/sdk-local";
 import {
   Button,
   CircularProgress,
@@ -20,11 +20,12 @@ import UsersTableHeader from "./table-header";
 import UsersTableItem from "./table-item";
 
 export default function UsersTable() {
-  const { token } = useAuthContext();
+  const { token, user: actor } = useAuthContext();
   const { state, dispatch, openUserModal } = useUsersContext();
   const { parameters } = useWhatsappContext();
   const [sipConfigUser, setSipConfigUser] = useState<User | null>(null);
-  const canUseSipConfig = isFeatureEnabled(parameters, FEATURE_FLAGS.sipConfig);
+  const canEdit = actor?.NIVEL === UserRole.ADMIN;
+  const canUseSipConfig = canEdit && isFeatureEnabled(parameters, FEATURE_FLAGS.sipConfig);
 
   function openEditUserModal(user: User) {
     openUserModal(user);
@@ -102,6 +103,7 @@ export default function UsersTable() {
                 <UsersTableItem
                   key={`${user.NOME}_${user.CODIGO}`}
                   user={user}
+                  canEdit={canEdit}
                   canUseSipConfig={canUseSipConfig}
                   openEditModalHandler={openEditUserModal}
                   openSipConfigModalHandler={openSipConfigModal}
@@ -111,15 +113,17 @@ export default function UsersTable() {
         </Table>
       </TableContainer>
       <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
-        <Button
-          onClick={() => openUserModal()}
-          variant="contained"
-          color="primary"
-          size="medium"
-          className="w-full sm:w-auto"
-        >
-          + Cadastrar Usuário
-        </Button>
+        {canEdit && (
+          <Button
+            onClick={() => openUserModal()}
+            variant="contained"
+            color="primary"
+            size="medium"
+            className="w-full sm:w-auto"
+          >
+            + Cadastrar Usuário
+          </Button>
+        )}
         <TablePagination
           component="div"
           count={Number(state.totalRows || 0)}
@@ -140,7 +144,7 @@ export default function UsersTable() {
         />
       </div>
 
-      {sipConfigUser ? (
+      {canUseSipConfig && sipConfigUser ? (
         <UserSipConfigModal
           open={Boolean(sipConfigUser)}
           userId={sipConfigUser.CODIGO}
