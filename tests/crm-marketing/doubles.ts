@@ -72,6 +72,35 @@ const data: Record<string, any> = Object.fromEntries(
     tenant,
     {
       campaigns: [makeCampaign(index ? "Campanha B" : "Campanha A")],
+      campaignMembers: [
+        {
+          CODIGO: 30,
+          CAMPANHA: 10,
+          OPERADOR: 8,
+          OPERADOR_NOME: index ? "Bruno B" : "Bruno A",
+          OPERADOR_ATIVO: "SIM",
+          writable: true,
+          occurrences: 1,
+        },
+        {
+          CODIGO: 31,
+          CAMPANHA: 10,
+          OPERADOR: null,
+          OPERADOR_NOME: null,
+          OPERADOR_ATIVO: null,
+          writable: false,
+          occurrences: 1,
+        },
+        {
+          CODIGO: 32,
+          CAMPANHA: 10,
+          OPERADOR: 9,
+          OPERADOR_NOME: "Carla inativa",
+          OPERADOR_ATIVO: "NAO",
+          writable: true,
+          occurrences: 1,
+        },
+      ],
       results: [
         {
           CODIGO: 1,
@@ -120,6 +149,7 @@ const data: Record<string, any> = Object.fromEntries(
   ]),
 );
 const calls: any[] = [];
+const memberLookups: any[] = [];
 let fault = "",
   release: (() => void) | null = null;
 function copy<T>(value: T): T {
@@ -271,6 +301,52 @@ export class MarketingClient {
   async configuration(_id: number) {
     return copy(data[this.instance].configuration);
   }
+  async campaignMembers(_id: number) {
+    return { data: copy(data[this.instance].campaignMembers) };
+  }
+  async campaignMemberOptions(id: number, search = "", page = 1) {
+    memberLookups.push({ id, search, page, instance: this.instance, token: this.token });
+    const options = Array.from({ length: 25 }, (_, index) => ({
+      CODIGO: index + 1,
+      NOME: `Usuário ${index + 1}`,
+      ATIVO: "SIM",
+    }));
+    const rows = options.filter(
+      (row) => !search || row.NOME.toLowerCase().includes(search.toLowerCase()),
+    );
+    return {
+      data: rows.slice((page - 1) * 20, page * 20),
+      page: { current: page, hasNext: page * 20 < rows.length },
+    };
+  }
+  async addCampaignMember(id: number, payload: any) {
+    return mutate("addCampaignMember", this.instance, this.token, { id, ...payload }, () => {
+      const row = {
+        ...payload,
+        CAMPANHA: id,
+        OPERADOR_NOME: `Usuário ${payload.OPERADOR}`,
+        OPERADOR_ATIVO: "SIM",
+        writable: true,
+        occurrences: 1,
+      };
+      data[this.instance].campaignMembers.push(row);
+      return { data: row };
+    });
+  }
+  async removeCampaignMember(id: number, linkId: number, expected: any) {
+    return mutate(
+      "removeCampaignMember",
+      this.instance,
+      this.token,
+      { id, linkId, expected },
+      () => {
+        data[this.instance].campaignMembers = data[this.instance].campaignMembers.filter(
+          (row: any) => row.CODIGO !== linkId,
+        );
+        return null;
+      },
+    );
+  }
   async preview(criteria: any) {
     calls.push({
       name: "preview",
@@ -358,6 +434,7 @@ export class GenerationClient {
     fault = mode;
   },
   calls: () => copy(calls),
+  memberLookups: () => copy(memberLookups),
   setGenerationRemaining: (value: number) => {
     data["tenant-a"].generationRemaining = value;
   },

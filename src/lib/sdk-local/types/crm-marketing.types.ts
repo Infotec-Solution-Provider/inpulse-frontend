@@ -75,3 +75,21 @@ export interface CrmOrdering {
   supportedCriteria: CrmOrderCriterion[];
   managed: boolean;
 }
+export interface CrmCampaignMember {
+  CODIGO: number;
+  CAMPANHA: number | null;
+  OPERADOR: number | null;
+  OPERADOR_NOME: string | null;
+  OPERADOR_ATIVO: string | null;
+  writable: boolean;
+  occurrences: number;
+}
+export interface CrmCampaignMemberOption {
+  CODIGO: number;
+  NOME: string | null;
+  ATIVO: string | null;
+}
+export interface CrmCampaignMemberExpected {
+  CAMPANHA: number;
+  OPERADOR: number | null;
+}

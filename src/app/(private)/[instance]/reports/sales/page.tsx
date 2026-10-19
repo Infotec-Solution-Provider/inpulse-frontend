@@ -6,6 +6,7 @@ import BreakdownCharts from "./breakdown-charts";
 import ByOperatorTable from "./by-operator-table";
 import GoalsModal from "./goals-modal";
 import OperatorCharts from "./operator-charts";
+import CrmPurchasesReportLink from "@/lib/components/crm-purchases-report-link";
 
 export default function FinancialDashboardPage() {
 	return (
@@ -21,6 +22,7 @@ export default function FinancialDashboardPage() {
 						</p>
 					</div>
 
+					<CrmPurchasesReportLink />
 					<FinancialFilters />
 					<SummaryCards />
 					<ByPeriodChart />

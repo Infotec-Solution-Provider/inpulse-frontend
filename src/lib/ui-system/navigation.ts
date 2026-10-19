@@ -41,6 +41,7 @@ export const crudsRoutes = (
     arr.push({ title: "Parâmetros", href: "/parameters" });
     arr.push({ title: "Usuários", href: "/users" });
     arr.push({ title: "Usuários · Cadastros auxiliares", href: "/user-catalogs" });
+    arr.push({ title: "Usuários · Lançamentos de vendas", href: "/crm-purchases" });
     if (isFeatureEnabled(params, FEATURE_FLAGS.sipConfig)) {
       arr.push({ title: "Configuração SIP", href: "/sip-config" });
     }

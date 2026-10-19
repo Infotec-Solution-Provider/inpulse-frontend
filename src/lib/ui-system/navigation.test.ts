@@ -31,6 +31,7 @@ describe("shared navigation authorization", () => {
         "/customers",
         "/parameters",
         "/users",
+        "/crm-purchases",
         "/reports/dashboard",
         "/changelog",
       ]),

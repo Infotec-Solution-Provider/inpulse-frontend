@@ -29,6 +29,7 @@ import {
   type LookupKind,
 } from "./shared";
 import GenerationPanel from "./generation";
+import CampaignMembers from "./campaign-members";
 
 export default function CrmConfigurationPage({ campaignId }: { campaignId: number }) {
   return (
@@ -279,6 +280,7 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
           </Typography>
         </Alert>
       )}
+      <CampaignMembers campaignId={campaignId} />
       <GenerationPanel
         campaignId={campaignId}
         configuration={original}
