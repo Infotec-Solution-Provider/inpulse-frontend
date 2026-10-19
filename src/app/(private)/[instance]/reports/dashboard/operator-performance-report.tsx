@@ -907,7 +907,7 @@ export default function OperatorPerformanceReport({
                   </th>
                   <th className="px-3 py-3">
                     <button type="button" onClick={() => applySort("averageFirstResponseSeconds")} className="font-semibold">
-                      <DashboardLabelWithTooltip label="1ª devolutiva" tooltip="Tempo médio até a primeira resposta da operação após a primeira mensagem do cliente. Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, ficam fora desse cálculo." />
+                      <DashboardLabelWithTooltip label="1ª devolutiva" tooltip="Média por conversa do tempo corrido entre a primeira mensagem do cliente e a primeira resposta da operação. Respostas em outro dia e cortesias até 1 hora após um encerramento ficam fora. Bots não contam; templates podem contar." />
                     </button>
                   </th>
                   <th className="px-3 py-3">
