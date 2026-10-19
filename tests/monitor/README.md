@@ -57,3 +57,7 @@ consulta lateral. Não é uma auditoria manual com leitor de tela.
 As regressões de Conversas cobrem chips3+N, remoção independente do rascunho e
 pausa durante filtros/menu de ações. As seleções da Telefonia usam subvisões no
 mesmo painel ou editor, preservando um único diálogo e o foco ao retornar.
+
+`density.pw.ts` usa nomes fictícios longos para conferir registros completos no
+desktop e no celular, ações somente com ícone e alvos de toque, tooltips por mouse
+e teclado, retorno de foco e preferências desktop ao ocultar alternadores no mobile.
