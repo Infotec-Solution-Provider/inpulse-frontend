@@ -59,6 +59,10 @@
 .ip-ui .ip-muted {
   color: var(--ip-muted);
 }
+.ip-ui .ip-icon {
+  flex-shrink: 0;
+  vertical-align: middle;
+}
 .ip-ui .ip-icon-action-host,
 .ip-ui .ip-refresh-actions {
   display: inline-flex;
@@ -83,10 +87,31 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
+  transition:
+    color 120ms ease,
+    background-color 120ms ease;
 }
 .ip-ui .ip-icon-action.MuiIconButton-root:hover {
   color: var(--ip-text);
   background: var(--ip-surface-muted);
+}
+.ip-ui .ip-icon-action.MuiIconButton-root:active {
+  color: var(--ip-text);
+  background: var(--ip-pressed);
+}
+.ip-ui .ip-icon-action:is([aria-pressed="true"], [aria-expanded="true"]) {
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+}
+.ip-ui .ip-icon-action:is([aria-pressed="true"], [aria-expanded="true"])::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: calc(50% - 6px);
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
 }
 .ip-ui .ip-icon-action.Mui-disabled {
   opacity: 0.45;
@@ -172,7 +197,7 @@
   overflow: hidden;
 }
 .ip-ui .ip-result-card {
-  border: 1px solid var(--ip-border);
+  border: 1px solid var(--ip-border-subtle);
   border-radius: 8px;
   background: var(--ip-surface);
   color: var(--ip-text);
@@ -195,7 +220,7 @@
 .ip-ui .ip-table :where(th, td) {
   text-align: left;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--ip-border);
+  border-bottom: 1px solid var(--ip-border-subtle);
 }
 .ip-ui .ip-table tbody tr:last-child td {
   border-bottom: 0;
@@ -275,7 +300,7 @@
   max-height: 100dvh;
   min-height: 0;
   color: var(--ip-text);
-  background: var(--ip-surface);
+  background: var(--ip-surface-raised);
 }
 .ip-ui .ip-panel-embedded {
   position: fixed;
@@ -283,7 +308,7 @@
   right: 0;
   width: min(var(--ip-panel-width), 100vw);
   border-left: 1px solid var(--ip-border);
-  box-shadow: -16px 0 64px rgb(0 0 0 / 16%);
+  box-shadow: var(--ip-shadow-overlay);
   outline: 0;
 }
 .ip-ui .ip-panel-header {
@@ -301,7 +326,7 @@
   margin: 0;
 }
 .ip-ui .ip-panel-description {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ip-muted);
   margin: 4px 0 0;
 }
@@ -323,7 +348,7 @@
   gap: 8px;
   padding: 12px 24px max(12px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--ip-border);
-  background: var(--ip-surface);
+  background: var(--ip-surface-raised);
 }
 .ip-ui .ip-panel-section {
   display: flex;
@@ -338,7 +363,7 @@
 }
 .ip-ui .ip-panel-section h3 {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--ip-muted);
 }

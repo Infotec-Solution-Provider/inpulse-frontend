@@ -4,6 +4,9 @@ export const uiPalette = {
     bg: "#f6f6f8",
     surface: "#ffffff",
     surfaceMuted: "#f0f0f3",
+    surfaceRaised: "#ffffff",
+    pressed: "#e6e6ed",
+    borderSubtle: "#e8e8ed",
     border: "#d9d9e1",
     text: "#202027",
     muted: "#62626f",
@@ -22,6 +25,9 @@ export const uiPalette = {
     bg: "#101114",
     surface: "#191a1f",
     surfaceMuted: "#22232a",
+    surfaceRaised: "#22232a",
+    pressed: "#2c2d35",
+    borderSubtle: "#2c2d35",
     border: "#393a45",
     text: "#f4f4f6",
     muted: "#b0b0bf",
@@ -39,6 +45,16 @@ export const uiPalette = {
 } as const;
 
 export type UiMode = keyof typeof uiPalette;
+export const uiShadows = {
+  light: {
+    menu: "0 8px 28px rgb(20 20 30 / 12%)",
+    overlay: "0 20px 64px rgb(20 20 30 / 18%)",
+  },
+  dark: {
+    menu: "0 8px 28px rgb(0 0 0 / 32%)",
+    overlay: "0 20px 64px rgb(0 0 0 / 44%)",
+  },
+} as const;
 export const uiFontFamily =
   '"Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 export const uiMetrics = {
@@ -56,7 +72,11 @@ export const uiMetrics = {
 
 export function uiCssVariables(mode: UiMode): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(uiPalette[mode]).map(([key, value]) => [
+    Object.entries({
+      ...uiPalette[mode],
+      shadowMenu: uiShadows[mode].menu,
+      shadowOverlay: uiShadows[mode].overlay,
+    }).map(([key, value]) => [
       `--ip-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`,
       value,
     ]),
