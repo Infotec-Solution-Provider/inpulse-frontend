@@ -1,4 +1,8 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { CrmToolbar, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import CrmCampaignGenerationClient, {
   type CrmGenerationPreview,
 } from "@/lib/sdk-local/crm-campaign-generation.client";
@@ -6,6 +10,9 @@ import type { CrmCampaignConfiguration } from "@/lib/sdk-local/types/crm-marketi
 import { crmError } from "@/lib/crm-marketing-form";
 import {
   Alert,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Box,
   Button,
   LinearProgress,
@@ -43,6 +50,7 @@ export default function GenerationPanel({
       [token, instance],
     ),
     mutation = useCrmMutation();
+  const [confirm, setConfirm] = useState(false);
   const [operator, setOperator] = useState<string | null>(null),
     [date, setDate] = useState(localCivil),
     [preview, setPreview] = useState<CrmGenerationPreview | null>(null),
@@ -52,6 +60,12 @@ export default function GenerationPanel({
     alive = useRef(true),
     current = useRef(api);
   current.current = api;
+  const initialDate = useRef(date);
+  useCrmLeaveGuard(
+    !knownGenerated && Boolean(operator || date !== initialDate.current),
+    mutation.busy,
+    mutation.gate,
+  );
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -224,7 +238,7 @@ export default function GenerationPanel({
               preview.batchCount < 1 ||
               preview.batchCount > preview.limit
             }
-            onClick={() => void generate()}
+            onClick={() => setConfirm(true)}
           >
             {mutation.busy
               ? "Gerando…"
@@ -234,6 +248,40 @@ export default function GenerationPanel({
           </Button>
         </Stack>
       </Stack>
+      <Dialog
+        open={confirm}
+        onClose={() => {
+          if (!mutation.busy) setConfirm(false);
+        }}
+        aria-labelledby="generation-confirm-title"
+      >
+        <DialogTitle id="generation-confirm-title">Confirmar geração do lote?</DialogTitle>
+        <DialogContent>
+          {preview?.batchCount.toLocaleString("pt-BR")} novos agendamentos serão gerados para o
+          usuário selecionado em {date.replace("T", " ")}. Confira a prévia antes de confirmar.
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={mutation.busy} onClick={() => setConfirm(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            disabled={
+              blocked ||
+              reading ||
+              !preview ||
+              preview.batchCount < 1 ||
+              preview.batchCount > preview.limit
+            }
+            onClick={() => {
+              setConfirm(false);
+              void generate();
+            }}
+          >
+            Confirmar lote
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

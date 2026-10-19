@@ -70,7 +70,12 @@ export function CrmLeaveGuardProvider({
       {children}
       {target?.scope === scope && (
         <PilotDesignProvider style={{ display: "contents" }}>
-          <Dialog open onClose={() => setTarget(null)} aria-labelledby="crm-leave-title">
+          <Dialog
+            sx={{ zIndex: 1500 }}
+            open
+            onClose={() => setTarget(null)}
+            aria-labelledby="crm-leave-title"
+          >
             <DialogTitle id="crm-leave-title">
               {blocked ? "Confira a gravação antes de sair" : "Descartar alterações?"}
             </DialogTitle>

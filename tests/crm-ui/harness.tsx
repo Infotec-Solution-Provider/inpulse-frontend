@@ -12,6 +12,11 @@ import UsersProvider from "../../src/app/(private)/[instance]/(cruds)/users/user
 import UsersPage from "../../src/app/(private)/[instance]/(cruds)/users/page";
 import CustomerManagement from "../../src/lib/components/crm-customer-management";
 import { CrmLeaveGuardProvider } from "../../src/lib/ui-system/leave-guard";
+import CampaignCatalog from "../../src/lib/components/crm-marketing/catalogs";
+import CampaignConfiguration from "../../src/lib/components/crm-marketing/configuration";
+import Exceptions from "../../src/lib/components/crm-marketing/exceptions";
+import Ordering from "../../src/lib/components/crm-marketing/ordering";
+import Purchases from "../../src/lib/components/crm-purchases";
 import Catalog from "../../src/lib/components/crm-catalog-management";
 import { isCrmCatalog } from "../../src/lib/crm-catalogs-form";
 import { navigate, usePathname } from "../monitor/navigation-doubles";
@@ -41,6 +46,16 @@ function Harness() {
     <UsersProvider key={`${tenant}:${actor}`}>
       <UsersPage />
     </UsersProvider>
+  ) : path.endsWith("/crm-campaigns") || path.endsWith("/crm-results") ? (
+    <CampaignCatalog catalog={path.endsWith("/crm-results") ? "results" : "campaigns"} />
+  ) : path.includes("/crm-campaigns/") ? (
+    <CampaignConfiguration campaignId={10} />
+  ) : path.endsWith("/crm-exceptions") ? (
+    <Exceptions />
+  ) : path.endsWith("/crm-ordering") ? (
+    <Ordering />
+  ) : path.endsWith("/crm-purchases") ? (
+    <Purchases />
   ) : path.includes("/crm-customers/") ? (
     <CustomerManagement customerId={path.endsWith("/new") ? undefined : Number(catalog)} />
   ) : path.includes("/user-catalogs/") ? (

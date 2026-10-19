@@ -18,7 +18,7 @@ export default function ReguaCarteiraSinteticoWhatsappPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-1px)] w-full bg-white dark:bg-slate-950">
+    <div className="h-full min-h-0 w-full bg-white dark:bg-slate-950">
       <iframe
         title="Regua por Carteira Sintetico"
         src={src}

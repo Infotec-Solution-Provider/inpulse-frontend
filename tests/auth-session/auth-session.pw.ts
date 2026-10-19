@@ -30,6 +30,7 @@ test.beforeEach(async ({ page }) => {
   });
   await page.clock.install();
   await page.goto("/tests/auth-session/index.html");
+  await expect.poll(() => page.evaluate(() => Boolean(window.authHarness))).toBe(true);
 });
 
 test("initial cookie refresh displays loading until the session is known", async ({ page }) => {
@@ -40,7 +41,9 @@ test("initial cookie refresh displays loading until the session is known", async
   await authenticate(page);
 });
 
-test("refresh keeps authentication and the mounted screen while replacing the token", async ({ page }) => {
+test("refresh keeps authentication and the mounted screen while replacing the token", async ({
+  page,
+}) => {
   await authenticate(page);
   const previousToken = await page.getByTestId("token").textContent();
   await page.evaluate(() => window.authHarness.startRefresh());
@@ -66,7 +69,9 @@ test("the timer renews the token before expiry without disturbing the screen", a
   await expectPrivateScreenPreserved(page);
 });
 
-test("transient refresh failures and the later recovery retry preserve the screen", async ({ page }) => {
+test("transient refresh failures and the later recovery retry preserve the screen", async ({
+  page,
+}) => {
   await authenticate(page);
   await page.evaluate(() => window.authHarness.startRefresh());
   await waitForRefresh(page, 2);
@@ -78,7 +83,9 @@ test("transient refresh failures and the later recovery retry preserve the scree
   await page.clock.runFor(2_000);
   await waitForRefresh(page, 4);
   await page.evaluate(() => window.authHarness.rejectRefresh(503));
-  await expect.poll(() => page.evaluate(() => window.authHarness.lastRefreshResult)).toBe("rejected");
+  await expect
+    .poll(() => page.evaluate(() => window.authHarness.lastRefreshResult))
+    .toBe("rejected");
   await expectPrivateScreenPreserved(page);
   await page.clock.runFor(5_000);
   await waitForRefresh(page, 5);
@@ -91,7 +98,9 @@ test("a definitive 401 clears the local session and redirects to login", async (
   await page.evaluate(() => window.authHarness.startRefresh());
   await waitForRefresh(page, 2);
   await page.evaluate(() => window.authHarness.rejectRefresh(401));
-  await expect.poll(() => page.evaluate(() => window.authHarness.state.redirects)).toContain("/test-tenant/login");
+  await expect
+    .poll(() => page.evaluate(() => window.authHarness.state.redirects))
+    .toContain("/test-tenant/login");
   await expect(page.getByTestId("status")).toHaveText("anonymous");
   await expect(page.getByTestId("authenticated")).toHaveText("false");
   await expect(page.getByTestId("token")).toHaveText("none");
@@ -104,7 +113,9 @@ test("navigation in the same tenant does not invalidate a refresh in flight", as
   await page.evaluate(() => window.authHarness.navigate("/test-tenant/chats"));
   await expect(page.getByTestId("pathname")).toHaveText("/test-tenant/chats");
   await page.evaluate(() => window.authHarness.resolveRefresh());
-  await expect.poll(() => page.evaluate(() => window.authHarness.lastRefreshResult)).toBe("resolved");
+  await expect
+    .poll(() => page.evaluate(() => window.authHarness.lastRefreshResult))
+    .toBe("resolved");
   await expectPrivateScreenPreserved(page);
 });
 
@@ -113,9 +124,13 @@ test("logout during refresh cannot restore the previous session", async ({ page 
   await page.evaluate(() => window.authHarness.startRefresh());
   await waitForRefresh(page, 2);
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect.poll(() => page.evaluate(() => window.authHarness.state.redirects)).toContain("/test-tenant/login");
+  await expect
+    .poll(() => page.evaluate(() => window.authHarness.state.redirects))
+    .toContain("/test-tenant/login");
   await page.evaluate(() => window.authHarness.resolveRefresh());
-  await expect.poll(() => page.evaluate(() => window.authHarness.lastRefreshResult)).toBe("rejected");
+  await expect
+    .poll(() => page.evaluate(() => window.authHarness.lastRefreshResult))
+    .toBe("rejected");
   await expect(page.getByTestId("status")).toHaveText("anonymous");
   await expect(page.getByTestId("token")).toHaveText("none");
 });

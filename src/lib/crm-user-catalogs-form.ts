@@ -75,9 +75,10 @@ export const CRM_USER_CATALOGS: Record<CrmUserCatalogName, CatalogDefinition> = 
     ],
   },
   "sales-types": {
-    title: "Vendas · Cadastro legado",
-    singular: "cadastro de venda",
-    description: "Mantenha os códigos e valores do cadastro de vendas do CRM local.",
+    title: "Catálogo de vendas",
+    singular: "tipo de venda",
+    description:
+      "Defina os tipos e códigos do CRM. As compras individuais ficam em Vendas → Lançamentos.",
     identity: "ID",
     identityKind: "text",
     identityMaxLength: 4,

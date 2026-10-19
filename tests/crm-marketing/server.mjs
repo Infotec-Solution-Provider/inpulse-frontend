@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url),
   root = fileURLToPath(new URL("../../", import.meta.url)),
   doubles = "/tests/crm-marketing/doubles.ts";
 const stubs = {
+  navigation: `export {usePathname,useSearchParams} from '/tests/monitor/navigation-doubles.tsx';import {navigate} from '/tests/monitor/navigation-doubles.tsx';export function useRouter(){return {push:navigate,replace:navigate}};`,
   auth: `export { useAuthContext } from '${doubles}'`,
   client: `export { MarketingClient as default } from '${doubles}'`,
   generation: `export { GenerationClient as default } from '${doubles}'`,
@@ -28,6 +29,7 @@ const server = await createServer({
         if (source.endsWith("/auth-context")) return "\0crm:auth";
         if (source.endsWith("/crm-marketing.client")) return "\0crm:client";
         if (source.endsWith("/crm-campaign-generation.client")) return "\0crm:generation";
+        if (source === "next/navigation") return "\0crm:navigation";
         if (source === "next/link") return "\0crm:link";
       },
       load(id) {

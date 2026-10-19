@@ -1,4 +1,8 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { CrmToolbar, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import { crmError } from "@/lib/crm-marketing-form";
 import type {
   CrmExceptionKind,
@@ -9,7 +13,6 @@ import {
   Alert,
   Box,
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -65,8 +68,12 @@ const definitions: Record<
   },
 };
 export default function CrmExceptionsPage() {
+  const requested = useSearchParams()?.get("kind") ?? "cities";
+  const selected = Object.hasOwn(definitions, requested)
+    ? definitions[requested as CrmExceptionKind]
+    : definitions.cities;
   return (
-    <CrmMarketingFrame title="Exceções">
+    <CrmMarketingFrame title="Exceções" section={selected.title}>
       <ExceptionsWorkspace />
     </CrmMarketingFrame>
   );
@@ -111,10 +118,10 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
   current.current = client;
   const [rows, setRows] = useState<CrmExceptionRecord[]>([]),
     [total, setTotal] = useState(0),
-    [page, setPage] = useState(0),
-    [perPage, setPerPage] = useState(20),
+    [page, setPage] = useCrmQueryState(`exceptions:${kind}` + ":page", 0),
+    [perPage, setPerPage] = useCrmQueryState(`exceptions:${kind}` + ":perPage", 20),
     [search, setSearch] = useState(""),
-    [filter, setFilter] = useState(""),
+    [filter, setFilter] = useCrmQueryState(`exceptions:${kind}` + ":filter", ""),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(""),
     [reload, setReload] = useState(0),
@@ -124,6 +131,9 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
     [deleting, setDeleting] = useState<CrmExceptionRecord | null>(null),
     [reading, setReading] = useState(false),
     [discard, setDiscard] = useState(false);
+  useEffect(() => {
+    setSearch(filter);
+  }, [filter]);
   const lastTarget = useRef<CrmExceptionRecord | null>(null),
     alive = useRef(true),
     sequence = useRef(0);
@@ -246,6 +256,15 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
     if (editor.value !== original) setDiscard(true);
     else setEditor(null);
   }
+  useCrmLeaveGuard(
+    Boolean(
+      editor &&
+        editor.value !==
+          (editor.original?.[spec.field] == null ? "" : String(editor.original[spec.field])),
+    ),
+    mutation.busy,
+    mutation.gate,
+  );
   const disabled = mutation.busy || mutation.gate || reading;
   return (
     <Stack gap={2}>
@@ -270,7 +289,9 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
       {mutation.success && <Alert severity="success">{mutation.success}</Alert>}
       <Stack
         component="form"
-        direction={{ xs: "column", sm: "row" }}
+        direction="row"
+        useFlexGap
+        flexWrap="wrap"
         gap={1}
         onSubmit={(event) => {
           event.preventDefault();
@@ -284,18 +305,18 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <Button type="submit" startIcon={<Search />}>
-          Buscar
-        </Button>
-        <Button
-          startIcon={<Refresh />}
+        <OperationalIconButton type="submit" label="Buscar">
+          <UiIcon name="search" />
+        </OperationalIconButton>
+        <OperationalIconButton
+          label="Atualizar lista"
           disabled={mutation.busy}
           onClick={() => (mutation.gate ? void reconcile() : setReload((value) => value + 1))}
         >
-          Recarregar
-        </Button>
+          <UiIcon name="refresh" />
+        </OperationalIconButton>
         <Button
-          startIcon={<Add />}
+          startIcon={<UiIcon name="add" scale="row" />}
           variant="contained"
           disabled={disabled}
           onClick={() => {
@@ -306,8 +327,16 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
           Nova exceção
         </Button>
       </Stack>
+      {!loading && !loadError && (
+        <Typography variant="caption" color="text.secondary">
+          {total.toLocaleString("pt-BR")} {total === 1 ? "registro" : "registros"}
+        </Typography>
+      )}
       {loading && <LinearProgress aria-label={`Carregando ${spec.title}`} />}
-      <TableContainer sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}>
+      <TableContainer
+        className="ip-crud-table"
+        sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}
+      >
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -320,18 +349,20 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
           <TableBody>
             {rows.map((row, index) => (
               <TableRow key={`${row[spec.field]}:${row["CODIGO"] ?? index}`}>
-                <TableCell>
+                <TableCell data-label={spec.label}>
                   {row[spec.field] === null ? "Sem valor (histórico)" : String(row[spec.field])}
                 </TableCell>
                 {kind === "segments" && (
-                  <TableCell>{row["SEGMENTO_NOME"] ?? "Não localizado"}</TableCell>
+                  <TableCell data-label="Nome do segmento">
+                    {row["SEGMENTO_NOME"] ?? "Não localizado"}
+                  </TableCell>
                 )}
-                <TableCell>
+                <TableCell data-label="Situação">
                   {Number(row["occurrences"]) > 1 ? "Duplicidade histórica" : "Ativa"}
                 </TableCell>
-                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                  <IconButton
-                    aria-label={`Editar exceção ${row[spec.field] ?? "sem valor"}`}
+                <TableCell data-label="Ações" align="right" sx={{ whiteSpace: "nowrap" }}>
+                  <OperationalIconButton
+                    label={`Editar exceção ${row[spec.field] ?? "sem valor"}`}
                     disabled={disabled || Number(row["occurrences"]) > 1}
                     onClick={() => {
                       mutation.setError("");
@@ -341,18 +372,18 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
                       });
                     }}
                   >
-                    <EditOutlined />
-                  </IconButton>
-                  <IconButton
-                    aria-label={`Excluir exceção ${row[spec.field] ?? "sem valor"}`}
+                    <UiIcon name="edit" scale="row" />
+                  </OperationalIconButton>
+                  <OperationalIconButton
+                    label={`Excluir exceção ${row[spec.field] ?? "sem valor"}`}
                     disabled={disabled || Number(row["occurrences"]) > 1}
                     onClick={() => {
                       mutation.setError("");
                       setDeleting(row);
                     }}
                   >
-                    <DeleteOutline />
-                  </IconButton>
+                    <UiIcon name="delete" scale="row" />
+                  </OperationalIconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -379,7 +410,7 @@ export function ExceptionPanel({ kind }: { kind: CrmExceptionKind }) {
         }}
         labelRowsPerPage="Por página"
       />
-      <Dialog fullWidth maxWidth="sm" open={!!editor} onClose={close}>
+      <Dialog className="ip-crud-editor" fullWidth maxWidth="sm" open={!!editor} onClose={close}>
         <Box
           component="form"
           onSubmit={save}

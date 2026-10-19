@@ -79,7 +79,7 @@
 .ip-ui .ip-crud-table .MuiTableRow-hover:hover {
   background: var(--ip-surface-muted);
 }
-.ip-ui .ip-crud-table .MuiTablePagination-root {
+.ip-ui .ip-crud-page .MuiTablePagination-root {
   border-top: 1px solid var(--ip-border-subtle);
 }
 .ip-ui .ip-crud-page .MuiDialogActions-root {
@@ -195,19 +195,19 @@
   .ip-ui .ip-crud-table tbody td[data-label="Ações"]:before {
     margin-right: auto;
   }
-  .ip-ui .ip-crud-table .MuiTablePagination-toolbar {
+  .ip-ui .ip-crud-page .MuiTablePagination-toolbar {
     padding-left: 0;
     flex-wrap: wrap;
     justify-content: flex-end;
     min-height: 52px;
   }
-  .ip-ui .ip-crud-table .MuiTablePagination-spacer {
+  .ip-ui .ip-crud-page .MuiTablePagination-spacer {
     display: none;
   }
-  .ip-ui .ip-crud-table .MuiTablePagination-selectLabel {
+  .ip-ui .ip-crud-page .MuiTablePagination-selectLabel {
     font-size: 12px;
   }
-  .ip-ui .ip-crud-table .MuiTablePagination-actions {
+  .ip-ui .ip-crud-page .MuiTablePagination-actions {
     margin-left: 8px;
   }
 }

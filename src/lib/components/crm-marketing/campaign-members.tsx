@@ -1,4 +1,8 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { CrmToolbar, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import { crmError } from "@/lib/crm-marketing-form";
 import type {
   CrmCampaignMember,
@@ -12,7 +16,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -58,6 +61,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
     epoch = useRef(0),
     sequence = useRef(0);
   current.current = client;
+  useCrmLeaveGuard(Boolean(code || selected), busy, blocked);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -227,7 +231,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
             </Typography>
           </Box>
           <Button
-            startIcon={<Refresh />}
+            startIcon={<UiIcon name="refresh" scale="row" />}
             disabled={busy || loading}
             onClick={() => void load(true)}
           >
@@ -347,7 +351,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
           <Button
             type="submit"
             variant="outlined"
-            startIcon={<Add />}
+            startIcon={<UiIcon name="add" scale="row" />}
             disabled={disabled || !selected || !code || invalidCode || duplicate}
           >
             Vincular usuário
@@ -356,8 +360,8 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
         {duplicate && (
           <Alert severity="info">Este código ou usuário já aparece nos vínculos da campanha.</Alert>
         )}
-        <TableContainer sx={{ maxHeight: 360 }}>
-          <Table size="small" sx={{ minWidth: 520 }}>
+        <TableContainer className="ip-crud-table" sx={{ maxHeight: 360 }}>
+          <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Código do vínculo</TableCell>
@@ -369,14 +373,14 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
             <TableBody>
               {members.map((item) => (
                 <TableRow key={item.CODIGO}>
-                  <TableCell>{item.CODIGO}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Código do vínculo">{item.CODIGO}</TableCell>
+                  <TableCell data-label="Usuário">
                     {item.OPERADOR_NOME ??
                       (item.OPERADOR == null
                         ? "Sem usuário (histórico)"
                         : `Usuário #${item.OPERADOR} (histórico)`)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Situação">
                     <Chip
                       size="small"
                       label={
@@ -389,7 +393,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
                       color={item.OPERADOR_ATIVO === "SIM" ? "success" : "default"}
                     />
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Ações">
                     <Tooltip
                       title={
                         item.writable
@@ -403,7 +407,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
                           disabled={disabled || !item.writable}
                           onClick={() => setRemoving(item)}
                         >
-                          <DeleteOutline />
+                          <UiIcon name="delete" scale="row" />
                         </IconButton>
                       </span>
                     </Tooltip>

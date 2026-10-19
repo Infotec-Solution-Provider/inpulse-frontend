@@ -1,4 +1,8 @@
 "use client";
+import { CrmToolbar, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import { crmError } from "@/lib/crm-marketing-form";
 import type { CrmOrderCriterion, CrmOrdering } from "@/lib/sdk-local/types/crm-marketing.types";
 import {
@@ -113,6 +117,11 @@ export function OrderingPanel() {
     setExplicitReload(true);
     setReload((value) => value + 1);
   }
+  useCrmLeaveGuard(
+    Boolean(original && JSON.stringify(criteria) !== JSON.stringify(original.criteria)),
+    mutation.busy,
+    mutation.gate,
+  );
   const disabled = mutation.busy || mutation.gate || loading,
     available = (original?.supportedCriteria ?? []).filter((key) => !criteria.includes(key));
   return (
@@ -135,33 +144,41 @@ export function OrderingPanel() {
           <Paper
             variant="outlined"
             key={key}
-            sx={{ p: 1.5, display: "flex", alignItems: "center", gap: 1 }}
+            sx={{
+              p: { xs: 1, md: 1.5 },
+              display: "flex",
+              alignItems: "center",
+              gap: { xs: 0, md: 1 },
+              minWidth: 0,
+            }}
           >
             <Typography color="text.secondary" sx={{ minWidth: 24 }}>
               {index + 1}.
             </Typography>
-            <Typography sx={{ flex: 1 }}>{orderLabels[key]}</Typography>
-            <IconButton
-              aria-label={`Subir ${orderLabels[key]}`}
+            <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13, overflowWrap: "anywhere" }}>
+              {orderLabels[key]}
+            </Typography>
+            <OperationalIconButton
+              label={`Subir ${orderLabels[key]}`}
               disabled={disabled || index === 0}
               onClick={() => move(index, -1)}
             >
-              <ArrowUpward />
-            </IconButton>
-            <IconButton
-              aria-label={`Descer ${orderLabels[key]}`}
+              <UiIcon icon={ArrowUp} scale="row" />
+            </OperationalIconButton>
+            <OperationalIconButton
+              label={`Descer ${orderLabels[key]}`}
               disabled={disabled || index === criteria.length - 1}
               onClick={() => move(index, 1)}
             >
-              <ArrowDownward />
-            </IconButton>
-            <IconButton
-              aria-label={`Remover ${orderLabels[key]}`}
+              <UiIcon icon={ArrowDown} scale="row" />
+            </OperationalIconButton>
+            <OperationalIconButton
+              label={`Remover ${orderLabels[key]}`}
               disabled={disabled}
               onClick={() => setCriteria(criteria.filter((value) => value !== key))}
             >
-              <DeleteOutline />
-            </IconButton>
+              <UiIcon name="delete" scale="row" />
+            </OperationalIconButton>
           </Paper>
         ))}
       </Stack>
@@ -179,11 +196,15 @@ export function OrderingPanel() {
         ))}
       </TextField>
       <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
-        <Button startIcon={<Refresh />} disabled={mutation.busy || loading} onClick={reloadOrder}>
+        <Button
+          startIcon={<UiIcon name="refresh" scale="row" />}
+          disabled={mutation.busy || loading}
+          onClick={reloadOrder}
+        >
           {mutation.gate ? "Conferir ordenação" : "Recarregar"}
         </Button>
         <Button
-          startIcon={<SaveOutlined />}
+          startIcon={<UiIcon name="finish" scale="row" />}
           variant="contained"
           disabled={
             disabled ||

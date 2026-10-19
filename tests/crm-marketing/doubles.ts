@@ -178,6 +178,7 @@ async function mutate<T>(
     throw error(503, "Não foi possível confirmar a gravação. Confira os dados.", "UNKNOWN");
   return copy(result);
 }
+const listQueries: any[] = [];
 export class MarketingClient {
   constructor(
     _url: string,
@@ -188,6 +189,7 @@ export class MarketingClient {
     return { fields: copy(schemas[catalog]) };
   }
   async list(catalog: string, params: any) {
+    listQueries.push({ catalog, instance: this.instance, ...copy(params) });
     const rows = data[this.instance][catalog].filter(
       (row: any) => !params.NOME || row.NOME.includes(params.NOME),
     );
@@ -429,6 +431,7 @@ export class GenerationClient {
   }
 }
 (window as any).crmHarness = {
+  queries: () => copy(listQueries),
   switchAuth,
   fault: (mode: string) => {
     fault = mode;

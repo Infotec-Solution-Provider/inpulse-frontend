@@ -43,7 +43,11 @@ const initialForm: GlobalSipConfigDTO = {
   GRAVAR_LIGACAO: "N",
 };
 
-const stringFields: Array<{ key: keyof UpsertGlobalSipConfigPayload; label: string; type?: string }> = [
+const stringFields: Array<{
+  key: keyof UpsertGlobalSipConfigPayload;
+  label: string;
+  type?: string;
+}> = [
   { key: "ASTERISK_SERVER", label: "Servidor Asterisk" },
   { key: "ASTERISK_PORTA", label: "Porta do Asterisk", type: "number" },
   { key: "ASTERISK_PROXY", label: "Proxy SIP" },
@@ -146,7 +150,7 @@ export default function SipConfigPage() {
     key: keyof GlobalSipConfigDTO,
     checked: boolean,
     trueValue: string,
-    falseValue: string
+    falseValue: string,
   ) => {
     setForm((prev) => ({ ...prev, [key]: checked ? trueValue : falseValue }));
   };
@@ -204,7 +208,9 @@ export default function SipConfigPage() {
             label={field.label}
             type={field.type || "text"}
             value={String(form[field.key] ?? "")}
-            onChange={(event) => handleChangeField(field.key as keyof GlobalSipConfigDTO, event.target.value)}
+            onChange={(event) =>
+              handleChangeField(field.key as keyof GlobalSipConfigDTO, event.target.value)
+            }
             disabled={isLoading || isSaving}
             fullWidth
             className="bg-white dark:bg-slate-700"
@@ -229,7 +235,7 @@ export default function SipConfigPage() {
                     field.key as keyof GlobalSipConfigDTO,
                     event.target.checked,
                     field.trueValue,
-                    field.falseValue
+                    field.falseValue,
                   )
                 }
               />
@@ -241,20 +247,27 @@ export default function SipConfigPage() {
   );
 
   return (
-    <div className="flex min-h-screen w-full flex-col gap-6 bg-slate-50 px-4 py-5 md:px-8 dark:bg-slate-900/40">
+    <div className="flex min-h-full w-full flex-col gap-6 bg-slate-50 px-4 py-5 md:px-8 dark:bg-slate-900/40">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
             <SettingsPhoneIcon sx={{ fontSize: 16 }} />
             SIP global
           </div>
-          <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Configuração global de SIP</h1>
+          <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
+            Configuração global de SIP
+          </h1>
           <p className="text-sm text-slate-500 dark:text-slate-300">
-            Configure a central telefônica da empresa. As credenciais por operador ficam na tela de usuários.
+            Configure a central telefônica da empresa. As credenciais por operador ficam na tela de
+            usuários.
           </p>
         </div>
         <div className="flex items-center gap-2 self-start md:self-auto">
-          <Button variant="outlined" onClick={() => void loadData()} disabled={isLoading || isSaving}>
+          <Button
+            variant="outlined"
+            onClick={() => void loadData()}
+            disabled={isLoading || isSaving}
+          >
             Atualizar
           </Button>
           <Button
@@ -280,40 +293,71 @@ export default function SipConfigPage() {
         <div className="grid gap-5 xl:grid-cols-2">
           <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Conectividade SIP / Asterisk</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">Dados principais de conexão e autenticação com a infraestrutura de telefonia.</p>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                Conectividade SIP / Asterisk
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                Dados principais de conexão e autenticação com a infraestrutura de telefonia.
+              </p>
             </div>
-            {renderTextFields(["ASTERISK_SERVER", "ASTERISK_PORTA", "ASTERISK_PROXY", "SIP_ID", "SIP_KEY"])}
+            {renderTextFields([
+              "ASTERISK_SERVER",
+              "ASTERISK_PORTA",
+              "ASTERISK_PROXY",
+              "SIP_ID",
+              "SIP_KEY",
+            ])}
           </Paper>
 
           <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Dispositivos e roteamento</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">Defina os devices usados para entrada, saída e toque das chamadas.</p>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                Dispositivos e roteamento
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                Defina os devices usados para entrada, saída e toque das chamadas.
+              </p>
             </div>
             {renderTextFields(["CALL_IN_DEVICE", "CALL_OUT_DEVICE", "RING_DEVICE"])}
           </Paper>
 
           <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Comportamento da chamada</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">Controle flags globais de experiência, discagem imediata e gravação.</p>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                Comportamento da chamada
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                Controle flags globais de experiência, discagem imediata e gravação.
+              </p>
             </div>
-            {renderSwitchFields(["SIP_EMITE_BIP", "SIP_VOLUME_AUTOMATICO", "LIGACAO_IMEDIATA", "GRAVAR_LIGACAO"])}
+            {renderSwitchFields([
+              "SIP_EMITE_BIP",
+              "SIP_VOLUME_AUTOMATICO",
+              "LIGACAO_IMEDIATA",
+              "GRAVAR_LIGACAO",
+            ])}
           </Paper>
 
           <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Integração Telnet</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">Parâmetros auxiliares usados em integrações legadas de telefonia.</p>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                Integração Telnet
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                Parâmetros auxiliares usados em integrações legadas de telefonia.
+              </p>
             </div>
             {renderTextFields(["IP_TELNET", "PORTA_TELNET", "USUARIO_TELNET", "SENHA_TELNET"])}
           </Paper>
 
           <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800 xl:col-span-2">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Pausa de ramal</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">Configura a pausa automática de ramal e os códigos usados para pausa e retorno.</p>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                Pausa de ramal
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-300">
+                Configura a pausa automática de ramal e os códigos usados para pausa e retorno.
+              </p>
             </div>
             <div className="mb-4">{renderSwitchFields(["PAUSARRAMAL"])}</div>
             {renderTextFields(["RAMALPAUSA", "RAMALDESPAUSA"])}

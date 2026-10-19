@@ -6,6 +6,9 @@ const require = createRequire(import.meta.url),
 const root = fileURLToPath(new URL("../../", import.meta.url)),
   doubles = "/tests/crm-ui/doubles.tsx";
 const stubs = {
+  "crm-marketing.client": `export {MarketingClient as default} from "/tests/crm-marketing/doubles.ts"`,
+  "crm-campaign-generation.client": `export {GenerationClient as default} from "/tests/crm-marketing/doubles.ts"`,
+  "crm-purchases.client": `export {CrmPurchasesClient as default} from "/tests/crm-purchases/doubles.ts"`,
   "customer-crm.client": `export {FakeCrmClient as default} from "/tests/crm-registration/doubles.ts"`,
   "crm-users.service": `export {crmUsersService as default} from "/tests/crm-users/doubles.ts"`,
   "files.service": `export {filesService as default} from "/tests/crm-users/doubles.ts"`,

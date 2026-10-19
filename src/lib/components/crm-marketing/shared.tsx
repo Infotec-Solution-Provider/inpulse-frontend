@@ -1,4 +1,6 @@
 "use client";
+import { CrmPage } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { useAuthContext } from "@/app/auth-context";
 import CrmMarketingClient from "@/lib/sdk-local/crm-marketing.client";
 import { crmError } from "@/lib/crm-marketing-form";
@@ -32,7 +34,15 @@ const SessionContext = createContext<{
   token: string;
 }>(null!);
 export const useCrmSession = () => useContext(SessionContext);
-export function CrmMarketingFrame({ title, children }: { title: string; children: ReactNode }) {
+export function CrmMarketingFrame({
+  title,
+  section,
+  children,
+}: {
+  title: string;
+  section?: string;
+  children: ReactNode;
+}) {
   const { user, instance, token, status } = useAuthContext();
   const client = useMemo(
     () =>
@@ -57,42 +67,16 @@ export function CrmMarketingFrame({ title, children }: { title: string; children
     );
   return (
     <SessionContext.Provider key={`${instance}:${user.CODIGO}`} value={{ client, instance, token }}>
-      <Box
-        sx={{
-          p: { xs: 2, md: 3 },
-          minWidth: 0,
-          height: "100%",
-          overflow: "auto",
-          maxWidth: 1440,
-          mx: "auto",
-        }}
+      <CrmPage
+        title={title}
+        breadcrumbs={[
+          { label: "Campanhas CRM" },
+          { label: title },
+          ...(section ? [{ label: section }] : []),
+        ]}
       >
-        <Typography variant="overline" color="text.secondary">
-          Campanhas CRM
-        </Typography>
-        <Typography variant="h5" fontWeight={700} mb={2}>
-          {title}
-        </Typography>
-        <Stack direction="row" useFlexGap flexWrap="wrap" gap={1} mb={3}>
-          {[
-            ["Campanhas", "/crm-campaigns"],
-            ["Resultados", "/crm-results"],
-            ["Exceções", "/crm-exceptions"],
-            ["Ordenar", "/crm-ordering"],
-          ].map(([label, href]) => (
-            <Button
-              key={href}
-              size="small"
-              variant="outlined"
-              component={Link}
-              href={`/${instance}${href}`}
-            >
-              {label}
-            </Button>
-          ))}
-        </Stack>
         {children}
-      </Box>
+      </CrmPage>
     </SessionContext.Provider>
   );
 }
@@ -106,6 +90,7 @@ export function useCrmMutation() {
     [error, setError] = useState(""),
     [success, setSuccess] = useState("");
   current.current = client;
+  useCrmLeaveGuard(false, busy, gate);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -277,12 +262,16 @@ export function NullableCrmField({
   onChange,
   disabled,
   label,
+  error,
+  required = false,
 }: {
   field: CrmMarketingField;
   value: string | null;
   onChange: (value: string | null) => void;
   disabled: boolean;
   label: string;
+  error?: string;
+  required?: boolean;
 }) {
   const choices = field.values ?? [],
     historical = value !== null && field.type === "enum" && !choices.includes(value);
@@ -299,6 +288,8 @@ export function NullableCrmField({
         />
       ) : (
         <TextField
+          required={required}
+          error={Boolean(error)}
           label={label}
           fullWidth
           disabled={disabled || value === null}
@@ -309,7 +300,7 @@ export function NullableCrmField({
           minRows={field.type === "text" && (field.maxLength ?? 0) > 255 ? 3 : undefined}
           onChange={(event) => onChange(event.target.value)}
           inputProps={{ maxLength: field.maxLength, min: field.min, max: field.max }}
-          helperText={field.type === "datetime" ? "YYYY-MM-DD HH:mm:ss" : undefined}
+          helperText={error || (field.type === "datetime" ? "AAAA-MM-DD HH:mm:ss" : undefined)}
         >
           {field.type === "enum"
             ? [

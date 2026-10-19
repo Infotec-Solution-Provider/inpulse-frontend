@@ -1,4 +1,8 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { CrmToolbar, OperationalPanel, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import {
   crmDraft,
   crmError,
@@ -28,10 +32,11 @@ import {
   Alert,
   Box,
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Chip,
+  MenuItem,
   IconButton,
   LinearProgress,
   Stack,
@@ -69,15 +74,23 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
     currentClient = useRef(client),
     mutation = useCrmMutation();
   currentClient.current = client;
+  const [idFilter, setIdFilter] = useCrmQueryState(`marketing:${catalog}:code`, ""),
+    [typeFilter, setTypeFilter] = useCrmQueryState(`marketing:${catalog}:type`, ""),
+    [filterPanel, setFilterPanel] = useState(false),
+    [draftCode, setDraftCode] = useState(""),
+    [draftType, setDraftType] = useState("");
   const [fields, setFields] = useState<CrmMarketingField[]>([]),
     [rows, setRows] = useState<CrmMarketingRecord[]>([]),
     [total, setTotal] = useState(0),
-    [page, setPage] = useState(0),
-    [perPage, setPerPage] = useState(20),
+    [page, setPage] = useCrmQueryState(`marketing:${catalog}` + ":page", 0),
+    [perPage, setPerPage] = useCrmQueryState(`marketing:${catalog}` + ":perPage", 20),
     [search, setSearch] = useState(""),
-    [filter, setFilter] = useState(""),
-    [sortBy, setSortBy] = useState("NOME"),
-    [direction, setDirection] = useState<"asc" | "desc">("asc"),
+    [filter, setFilter] = useCrmQueryState(`marketing:${catalog}` + ":filter", ""),
+    [sortBy, setSortBy] = useCrmQueryState(`marketing:${catalog}` + ":sortBy", "NOME"),
+    [direction, setDirection] = useCrmQueryState<"asc" | "desc">(
+      `marketing:${catalog}` + ":direction",
+      "asc",
+    ),
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(""),
     [reload, setReload] = useState(0),
@@ -85,6 +98,15 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
     [deleting, setDeleting] = useState<CrmMarketingRecord | null>(null),
     [discard, setDiscard] = useState(false),
     [reading, setReading] = useState(false);
+  useEffect(() => {
+    setSearch(filter);
+  }, [filter]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  useEffect(() => {
+    setFieldErrors({});
+    setAdvancedOpen(false);
+  }, [editor?.original?.CODIGO, Boolean(editor)]);
   const lastCode = useRef<number | null>(null),
     sequence = useRef(0),
     alive = useRef(true);
@@ -105,6 +127,8 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
         page: page + 1,
         perPage,
         NOME: filter,
+        ...(idFilter ? { CODIGO: idFilter } : {}),
+        ...(typeFilter ? { TIPO: typeFilter } : {}),
         sortBy,
         sortDirection: direction,
       }),
@@ -130,7 +154,7 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
     return () => {
       active = false;
     };
-  }, [client, catalog, page, perPage, filter, sortBy, direction, reload]);
+  }, [client, catalog, page, perPage, filter, idFilter, typeFilter, sortBy, direction, reload]);
   async function edit(row: CrmMarketingRecord) {
     const version = ++sequence.current,
       started = client;
@@ -179,6 +203,25 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!editor) return;
+    const errors: Record<string, string> = {};
+    try {
+      crmPayload([], editor.draft, editor.original);
+    } catch (error) {
+      errors.CODIGO = (error as Error).message;
+    }
+    for (const field of fields.filter((value) => !value.readOnly)) {
+      try {
+        crmPayload([field], { ...editor.draft, CODIGO: "1" }, editor.original);
+      } catch (error) {
+        errors[field.key] = (error as Error).message;
+      }
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      setAdvancedOpen(true);
+      mutation.setError("Confira os campos indicados.");
+      return;
+    }
     let payload;
     try {
       payload = crmPayload(fields, editor.draft, editor.original);
@@ -226,6 +269,13 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
       sequence.current++;
     }
   }
+  useCrmLeaveGuard(
+    Boolean(
+      editor && JSON.stringify(editor.draft) !== JSON.stringify(crmDraft(fields, editor.original)),
+    ),
+    mutation.busy,
+    mutation.gate,
+  );
   const locked = mutation.busy || mutation.gate || reading,
     displayFields =
       catalog === "campaigns"
@@ -263,6 +313,8 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
             onChange={change}
             disabled={locked}
             label={crmLabels[field.key] ?? field.key}
+            error={fieldErrors[field.key]}
+            required={!editor.original && field.key === "NOME"}
           />
         )}
       </Box>
@@ -301,7 +353,9 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
       {mutation.success && <Alert severity="success">{mutation.success}</Alert>}
       <Stack
         component="form"
-        direction={{ xs: "column", sm: "row" }}
+        direction="row"
+        useFlexGap
+        flexWrap="wrap"
         gap={1}
         onSubmit={(event) => {
           event.preventDefault();
@@ -311,36 +365,126 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
       >
         <TextField
           label="Buscar por nome"
+          sx={{ flex: "1 1 140px", maxWidth: 480, minWidth: 0 }}
           size="small"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           inputProps={{ maxLength: catalog === "campaigns" ? 150 : 50 }}
         />
-        <Button startIcon={<Search />} type="submit">
-          Buscar
-        </Button>
-        <Button
-          startIcon={<Refresh />}
+        <OperationalIconButton type="submit" label="Buscar">
+          <UiIcon name="search" />
+        </OperationalIconButton>
+        <OperationalIconButton
+          label="Filtros de campanhas e resultados"
+          onClick={() => {
+            setDraftCode(idFilter);
+            setDraftType(typeFilter);
+            setFilterPanel(true);
+          }}
+        >
+          <UiIcon name="filter" />
+        </OperationalIconButton>
+        <OperationalIconButton
+          label="Atualizar lista"
           disabled={mutation.busy}
           onClick={() => (mutation.gate ? void reconcile() : setReload((value) => value + 1))}
         >
-          Recarregar
-        </Button>
+          <UiIcon name="refresh" />
+        </OperationalIconButton>
         <Button
           variant="contained"
-          startIcon={<Add />}
+          startIcon={<UiIcon name="add" scale="row" />}
           disabled={locked || !fields.length}
           onClick={() => {
             mutation.setError("");
             setEditor({ draft: crmDraft(fields) });
           }}
         >
-          Novo {catalog === "campaigns" ? "cadastro" : "resultado"}
+          {catalog === "campaigns" ? "Nova campanha" : "Novo resultado"}
         </Button>
       </Stack>
+      <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+        {filter && (
+          <Chip
+            label={`Nome: ${filter}`}
+            onDelete={() => {
+              setFilter("");
+              setPage(0);
+            }}
+          />
+        )}
+        {idFilter && (
+          <Chip
+            label={`Código: ${idFilter}`}
+            onDelete={() => {
+              setIdFilter("");
+              setPage(0);
+            }}
+          />
+        )}
+        {typeFilter && (
+          <Chip
+            label={`Tipo: ${typeFilter}`}
+            onDelete={() => {
+              setTypeFilter("");
+              setPage(0);
+            }}
+          />
+        )}
+      </Stack>
+      <OperationalPanel
+        open={filterPanel}
+        title="Filtros de campanhas e resultados"
+        onClose={() => setFilterPanel(false)}
+        footer={
+          <>
+            <Button onClick={() => setFilterPanel(false)}>Cancelar</Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setIdFilter(draftCode.trim());
+                setTypeFilter(draftType);
+                setPage(0);
+                setFilterPanel(false);
+              }}
+            >
+              Aplicar filtros
+            </Button>
+          </>
+        }
+      >
+        <Stack gap={2}>
+          <TextField
+            label="Código exato"
+            value={draftCode}
+            onChange={(event) => setDraftCode(event.target.value)}
+          />
+          <TextField
+            select
+            label="Tipo"
+            value={draftType}
+            onChange={(event) => setDraftType(event.target.value)}
+          >
+            <MenuItem value="">Todos</MenuItem>
+            {(fields.find((field) => field.key === "TIPO")?.values ?? []).map((value) => (
+              <MenuItem key={value} value={value}>
+                {value}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </OperationalPanel>
+      {!loading && !loadError && (
+        <Typography variant="caption" color="text.secondary">
+          {total.toLocaleString("pt-BR")} {total === 1 ? "registro" : "registros"}
+        </Typography>
+      )}
       {loading && <LinearProgress aria-label="Carregando cadastros" />}
-      <TableContainer sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}>
-        <Table size="small" sx={{ minWidth: 650 }}>
+      <TableContainer
+        className="ip-crud-table"
+        sx={{ border: 1, borderColor: "divider", borderRadius: 2 }}
+      >
+        <Table size="small">
           <TableHead>
             <TableRow>
               {["CODIGO", ...displayFields].map((key) => (
@@ -364,13 +508,13 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.CODIGO} hover>
-                <TableCell>{row.CODIGO}</TableCell>
+                <TableCell data-label="Código">{row.CODIGO}</TableCell>
                 {displayFields.map((key) => (
-                  <TableCell key={key}>
+                  <TableCell key={key} data-label={crmLabels[key]}>
                     {row[key] === null || row[key] === undefined ? "—" : String(row[key])}
                   </TableCell>
                 ))}
-                <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                <TableCell data-label="Ações" align="right" sx={{ whiteSpace: "nowrap" }}>
                   {catalog === "campaigns" && (
                     <Tooltip title="Configurar público">
                       <IconButton
@@ -379,27 +523,27 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
                         aria-label={`Configurar ${row.NOME ?? row.CODIGO}`}
                         disabled={locked}
                       >
-                        <SettingsOutlined />
+                        <UiIcon name="filter" scale="row" />
                       </IconButton>
                     </Tooltip>
                   )}
-                  <IconButton
-                    aria-label={`Editar ${row.NOME ?? row.CODIGO}`}
+                  <OperationalIconButton
+                    label={`Editar ${row.NOME ?? row.CODIGO}`}
                     disabled={locked}
                     onClick={() => void edit(row)}
                   >
-                    <EditOutlined />
-                  </IconButton>
-                  <IconButton
-                    aria-label={`Excluir ${row.NOME ?? row.CODIGO}`}
+                    <UiIcon name="edit" scale="row" />
+                  </OperationalIconButton>
+                  <OperationalIconButton
+                    label={`Excluir ${row.NOME ?? row.CODIGO}`}
                     disabled={locked}
                     onClick={() => {
                       mutation.setError("");
                       setDeleting(row);
                     }}
                   >
-                    <DeleteOutline />
-                  </IconButton>
+                    <UiIcon name="delete" scale="row" />
+                  </OperationalIconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -426,8 +570,17 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
         }}
         labelRowsPerPage="Por página"
       />
-      <Dialog open={!!editor} onClose={close} fullWidth maxWidth="md">
-        <Box component="form" onSubmit={save} sx={{ display: "flex", flexDirection: "column", minHeight: 0, maxHeight: "calc(100dvh - 64px)" }}>
+      <Dialog className="ip-crud-editor" open={!!editor} onClose={close} fullWidth maxWidth="md">
+        <Box
+          component="form"
+          onSubmit={save}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
+            maxHeight: "calc(100dvh - 64px)",
+          }}
+        >
           <DialogTitle>{editor?.original ? "Editar cadastro" : "Novo cadastro"}</DialogTitle>
           <DialogContent dividers>
             {mutation.error && (
@@ -439,15 +592,18 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
               <Stack gap={2}>
                 <TextField
                   label="Código"
+                  required={!editor?.original}
+                  error={Boolean(fieldErrors.CODIGO)}
                   value={editor.draft["CODIGO"]}
                   disabled={!!editor.original || locked}
                   onChange={(event) =>
                     setEditor({ ...editor, draft: { ...editor.draft, CODIGO: event.target.value } })
                   }
                   helperText={
-                    editor.original
+                    fieldErrors.CODIGO ||
+                    (editor.original
                       ? "Identificação do cadastro"
-                      : "Informe um código livre do CRM."
+                      : "Informe um código livre do CRM.")
                   }
                 />
                 <Box
@@ -462,7 +618,10 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
                     .map(fieldInput)}
                 </Box>
                 {fields.some((field) => !field.readOnly && !basic.includes(field.key)) && (
-                  <Accordion defaultExpanded>
+                  <Accordion
+                    expanded={advancedOpen}
+                    onChange={(_, value) => setAdvancedOpen(value)}
+                  >
                     <AccordionSummary expandIcon={<ExpandMore />}>
                       <Typography>Efeitos e opções do resultado</Typography>
                     </AccordionSummary>

@@ -197,9 +197,10 @@ test("filtering and ordering are requested from the server and a new search rese
 }) => {
   await page.goto(url);
   await page.getByLabel("Buscar descrição", { exact: true }).fill("Compra inicial");
+  await page.getByRole("button", { name: "Filtros de lançamentos", exact: true }).click();
   await page.getByLabel("Data inicial", { exact: true }).fill("2026-10-01");
   await page.getByLabel("Data final", { exact: true }).fill("2026-10-31");
-  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
   await expect
     .poll(() => page.evaluate(() => window.purchaseTest.reads.at(-1)))
     .toMatchObject({
@@ -211,7 +212,7 @@ test("filtering and ordering are requested from the server and a new search rese
       sortBy: "DATA",
       sortDirection: "desc",
     });
-  await page.getByRole("button", { name: "Limpar filtros", exact: true }).click();
+  await page.getByRole("button", { name: /Descrição: Compra inicial/ }).press("Delete");
   await expect
     .poll(() => page.evaluate(() => window.purchaseTest.reads.at(-1)?.search))
     .toBeUndefined();
@@ -227,7 +228,7 @@ test("deleting the last item on a later page returns to the previous valid page"
       record: { ...structuredClone(first.record), CODIGO: index + 1 },
     }));
   });
-  await page.getByRole("button", { name: "Recarregar", exact: true }).click();
+  await page.getByRole("button", { name: "Atualizar lista", exact: true }).click();
   await page.getByRole("button", { name: "Próxima página", exact: true }).click();
   await page.getByRole("button", { name: "Excluir lançamento 11", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Excluir", exact: true }).click();
@@ -254,7 +255,7 @@ test("dark mobile form keeps actions inside the viewport", async ({ page }) => {
   expect(save).not.toBeNull();
   expect(save!.y + save!.height).toBeLessThanOrEqual(844);
   await page.screenshot({
-    path: "C:/Workspace/infotec/planejamento/cross-service/INF-20261019-001-crm-web-paridade/artifacts/crm-purchases-dark-mobile.png",
+    path: "C:/Workspace/infotec/planejamento/cross-service/INF-20261019-004-crm-ui-navigation/artifacts/crm-purchases-dark-mobile.png",
     animations: "disabled",
     caret: "hide",
   });
@@ -263,4 +264,22 @@ test("dark mobile form keeps actions inside the viewport", async ({ page }) => {
     .getByRole("button", { name: "Salvar lançamento", exact: true })
     .boundingBox();
   expect(landscape!.y + landscape!.height).toBeLessThanOrEqual(390);
+});
+
+test("cancelled advanced filters do not leak into a simple search", async ({ page }) => {
+  await page.goto(url);
+  await expect(page.getByRole("table")).toContainText("Compra inicial");
+  const before = await page.evaluate(() => window.purchaseTest.reads.length);
+  await page.getByRole("button", { name: "Filtros de lançamentos", exact: true }).click();
+  await page.getByLabel("Data inicial", { exact: true }).fill("2026-10-01");
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(await page.evaluate(() => window.purchaseTest.reads.length)).toBe(before);
+  await page.getByLabel("Buscar descrição", { exact: true }).fill("Compra");
+  await page.getByRole("button", { name: "Buscar lançamentos", exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.purchaseTest.reads.at(-1)?.search))
+    .toBe("Compra");
+  expect(await page.evaluate(() => window.purchaseTest.reads.at(-1)?.dateFrom)).toBeUndefined();
+  await page.getByRole("button", { name: "Filtros de lançamentos", exact: true }).click();
+  await expect(page.getByLabel("Data inicial", { exact: true })).toHaveValue("");
 });

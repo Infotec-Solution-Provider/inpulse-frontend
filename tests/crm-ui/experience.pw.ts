@@ -184,3 +184,142 @@ test("users, grouped expedients and full registration fit desktop and narrow scr
     }
   }
 });
+
+test("campaign sections preserve drafts and exception tabs track their menu destination", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-campaigns/10/configure"));
+  await page.getByRole("tab", { name: "Geração", exact: true }).click();
+  await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:30");
+  await page.getByRole("tab", { name: "Público", exact: true }).click();
+  await page.getByLabel("Situação dos clientes", { exact: true }).click();
+  await page.getByRole("option", { name: "Inativos", exact: true }).click();
+  await page.getByRole("tab", { name: "Usuários", exact: true }).click();
+  await page.getByLabel("Código do vínculo", { exact: true }).fill("88");
+  await page.getByRole("tab", { name: "Público", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: /Situação dos clientes/ })).toHaveText(
+    "Inativos",
+  );
+  await page.getByRole("tab", { name: "Usuários", exact: true }).click();
+  await expect(page.getByLabel("Código do vínculo", { exact: true })).toHaveValue("88");
+  await page.getByRole("tab", { name: "Geração", exact: true }).click();
+  await expect(page.getByLabel("Data e hora no CRM", { exact: true })).toHaveValue(
+    "2026-10-20T09:30",
+  );
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-exceptions?kind=states"));
+  await expect(page.getByRole("tab", { name: "Estados", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.locator('[aria-current="page"]')).toHaveText("Estados");
+  await page.getByRole("tab", { name: "Clientes", exact: true }).click();
+  await expect(page.locator('[aria-current="page"]')).toHaveText("Clientes");
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-exceptions?kind=invalid"));
+  await expect(page.getByRole("tab", { name: "Cidades", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
+test("campaigns, results, exceptions, ordering and purchases fit six sizes and both themes", async ({
+  page,
+}) => {
+  await open(page);
+  const folder = resolve(
+    "C:/Workspace/infotec/planejamento/cross-service/INF-20261019-004-crm-ui-navigation/artifacts",
+  );
+  for (const dark of [false, true]) {
+    if (dark) {
+      await page.getByRole("button", { name: "Preferência de tema", exact: true }).click();
+      await page.getByRole("menuitem", { name: "Escuro", exact: true }).click();
+    }
+    for (const width of [1440, 1280, 1024, 390, 320, 844]) {
+      await page.setViewportSize({ width, height: width === 844 ? 390 : 900 });
+      for (const route of [
+        "crm-campaigns",
+        "crm-results",
+        "crm-exceptions",
+        "crm-ordering",
+        "crm-purchases",
+        "crm-campaigns/10/configure",
+      ]) {
+        await page.evaluate((route) => window.crmUiTest.navigate(`/tenant-a/${route}`), route);
+        await expect(page.locator("h1")).toBeVisible();
+        await expect(page.getByRole("progressbar")).toHaveCount(0);
+        if (route === "crm-campaigns")
+          await expect(
+            page.getByRole("button", { name: "Nova campanha", exact: true }),
+          ).toBeEnabled();
+        if (route === "crm-purchases")
+          await expect(
+            page.getByRole("button", { name: "Novo lançamento", exact: true }),
+          ).toBeEnabled();
+        await expect
+          .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+          .toBe(true);
+        if ([1440, 320].includes(width))
+          await page.screenshot({
+            path: `${folder}/wave3-${route.replaceAll("/", "-")}-${width}-${dark ? "dark" : "light"}.png`,
+          });
+      }
+    }
+  }
+});
+
+test("the discard confirmation works over the compact menu and mobile drawer", async ({ page }) => {
+  await open(page);
+  for (const mobile of [false, true]) {
+    await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-customers/new"));
+    await page.getByLabel("Nome fantasia", { exact: true }).fill("Menu draft");
+    if (mobile) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole("button", { name: "Abrir navegação", exact: true }).click();
+    } else {
+      await page.getByRole("button", { name: "Recolher navegação", exact: true }).click();
+      await page.getByRole("button", { name: "Clientes", exact: true }).click();
+    }
+    const segments = mobile
+      ? page.getByRole("link", { name: "Segmentos", exact: true })
+      : page.getByRole("menuitem", { name: "Segmentos", exact: true });
+    await segments.click();
+    await page
+      .getByRole("dialog", { name: /Descartar altera/ })
+      .getByRole("button", { name: "Continuar editando", exact: true })
+      .click();
+    await expect(page.getByLabel("Nome fantasia", { exact: true })).toHaveValue("Menu draft");
+    await segments.click();
+    await page
+      .getByRole("dialog", { name: /Descartar altera/ })
+      .getByRole("button", { name: "Descartar e sair", exact: true })
+      .click();
+    await expect(page.getByRole("heading", { name: "Segmentos", exact: true })).toBeVisible();
+  }
+});
+
+test("campaign advanced conditions apply explicitly and survive returning to the list", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-campaigns"));
+  await expect(page.getByRole("table")).toContainText("Campanha A");
+  const before = await page.evaluate(() => (window as any).crmHarness.queries().length);
+  await page
+    .getByRole("button", { name: "Filtros de campanhas e resultados", exact: true })
+    .click();
+  await page.getByLabel("Código exato", { exact: true }).fill("10");
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(await page.evaluate(() => (window as any).crmHarness.queries().length)).toBe(before);
+  await page
+    .getByRole("button", { name: "Filtros de campanhas e resultados", exact: true })
+    .click();
+  await expect(page.getByLabel("Código exato", { exact: true })).toHaveValue("");
+  await page.getByLabel("Código exato", { exact: true }).fill("10");
+  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as any).crmHarness.queries().at(-1)?.CODIGO))
+    .toBe("10");
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-results"));
+  await page.evaluate(() => window.crmUiTest.navigate("/tenant-a/crm-campaigns"));
+  await expect(page.getByRole("button", { name: "Código: 10", exact: true })).toBeVisible();
+});

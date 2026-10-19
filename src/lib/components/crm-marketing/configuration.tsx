@@ -1,4 +1,7 @@
 "use client";
+import { CrmToolbar, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import { crmError, initialSelection } from "@/lib/crm-marketing-form";
 import type {
   CrmCampaignConfiguration,
@@ -17,6 +20,8 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Tabs,
+  Tab,
   TextField,
   Typography,
 } from "@mui/material";
@@ -43,6 +48,7 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
     current = useRef(client),
     mutation = useCrmMutation();
   current.current = client;
+  const [section, setSection] = useState(0);
   const [original, setOriginal] = useState<CrmCampaignConfiguration | null>(null),
     [criteria, setCriteria] = useState<CrmSelectionCriteria>(initialSelection),
     [preview, setPreview] = useState<CrmSelectionPreview | null>(null),
@@ -150,6 +156,14 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
     explicitReload.current = true;
     setReload((value) => value + 1);
   }
+  useCrmLeaveGuard(
+    Boolean(
+      original &&
+        JSON.stringify(criteria) !== JSON.stringify(original.criteria ?? initialSelection),
+    ),
+    mutation.busy,
+    mutation.gate,
+  );
   const disabled = loading || mutation.busy || mutation.gate,
     multi: {
       key: "segmentIds" | "groupIds" | "originIds" | "operatorIds";
@@ -175,139 +189,180 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
           salvar. Confira a prévia do público.
         </Alert>
       )}
-      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-        <Typography variant="h6" mb={2}>
-          Quem participa da campanha
-        </Typography>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
-          <TextField
-            select
-            label="Situação dos clientes"
-            value={criteria.active}
-            disabled={disabled}
-            onChange={(event) =>
-              change({ active: event.target.value as CrmSelectionCriteria["active"] })
-            }
-          >
-            <MenuItem value="SIM">Ativos</MenuItem>
-            <MenuItem value="NAO">Inativos</MenuItem>
-            <MenuItem value="all">Todos</MenuItem>
-          </TextField>
-          <CrmLookup
-            kind="units"
-            label="Unidade"
-            value={criteria.unitId === null ? null : String(criteria.unitId)}
-            disabled={disabled}
-            onChange={(value) =>
-              change({ unitId: typeof value === "string" ? Number(value) : null })
-            }
+      <Tabs
+        value={section}
+        onChange={(_, value) => setSection(value)}
+        variant="scrollable"
+        allowScrollButtonsMobile
+        aria-label="Configuração da campanha"
+      >
+        {["Público", "Usuários", "Geração"].map((label, index) => (
+          <Tab
+            key={label}
+            label={label}
+            id={`campaign-section-${index}`}
+            aria-controls={`campaign-panel-${index}`}
           />
-          {multi.map((field) => (
-            <CrmLookup
-              key={field.key}
-              kind={field.kind}
-              label={field.label}
-              multiple
-              value={criteria[field.key].map(String)}
-              disabled={disabled}
-              onChange={(values) =>
-                change({
-                  [field.key]: Array.isArray(values)
-                    ? values.map(Number).sort((a, b) => a - b)
-                    : [],
-                })
+        ))}
+      </Tabs>
+      <Box
+        role="tabpanel"
+        id="campaign-panel-0"
+        aria-labelledby="campaign-section-0"
+        hidden={section !== 0}
+      >
+        <Stack gap={2}>
+          <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography variant="h6" mb={2}>
+              Quem participa da campanha
+            </Typography>
+            <Box
+              sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}
+            >
+              <TextField
+                select
+                label="Situação dos clientes"
+                value={criteria.active}
+                disabled={disabled}
+                onChange={(event) =>
+                  change({ active: event.target.value as CrmSelectionCriteria["active"] })
+                }
+              >
+                <MenuItem value="SIM">Ativos</MenuItem>
+                <MenuItem value="NAO">Inativos</MenuItem>
+                <MenuItem value="all">Todos</MenuItem>
+              </TextField>
+              <CrmLookup
+                kind="units"
+                label="Unidade"
+                value={criteria.unitId === null ? null : String(criteria.unitId)}
+                disabled={disabled}
+                onChange={(value) =>
+                  change({ unitId: typeof value === "string" ? Number(value) : null })
+                }
+              />
+              {multi.map((field) => (
+                <CrmLookup
+                  key={field.key}
+                  kind={field.kind}
+                  label={field.label}
+                  multiple
+                  value={criteria[field.key].map(String)}
+                  disabled={disabled}
+                  onChange={(values) =>
+                    change({
+                      [field.key]: Array.isArray(values)
+                        ? values.map(Number).sort((a, b) => a - b)
+                        : [],
+                    })
+                  }
+                />
+              ))}
+              <CrmLookup
+                kind="cities"
+                label="Cidade"
+                value={criteria.city}
+                disabled={disabled}
+                onChange={(value) => change({ city: typeof value === "string" ? value : null })}
+              />
+              <CrmLookup
+                kind="states"
+                label="Estado"
+                value={criteria.state}
+                disabled={disabled}
+                onChange={(value) => change({ state: typeof value === "string" ? value : null })}
+              />
+            </Box>
+            <Typography color="text.secondary" variant="body2" mt={2}>
+              Campos vazios incluem todas as opções. As exceções globais de cidades, estados,
+              clientes e segmentos são aplicadas ao público.
+            </Typography>
+          </Paper>
+          <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
+            <Button
+              startIcon={<UiIcon name="refresh" scale="row" />}
+              disabled={mutation.busy || loading}
+              onClick={reloadConfiguration}
+            >
+              {mutation.gate ? "Conferir configuração" : "Recarregar configuração"}
+            </Button>
+            <Button
+              startIcon={<UiIcon name="view" scale="row" />}
+              disabled={disabled || previewing || !original}
+              onClick={() => void showPreview()}
+              variant="outlined"
+            >
+              {previewing ? "Consultando público…" : "Prévia do público"}
+            </Button>
+            <Button
+              startIcon={<UiIcon name="finish" scale="row" />}
+              disabled={
+                disabled ||
+                !original ||
+                !preview ||
+                JSON.stringify(preview.criteria) !== JSON.stringify(criteria)
               }
-            />
-          ))}
-          <CrmLookup
-            kind="cities"
-            label="Cidade"
-            value={criteria.city}
-            disabled={disabled}
-            onChange={(value) => change({ city: typeof value === "string" ? value : null })}
-          />
-          <CrmLookup
-            kind="states"
-            label="Estado"
-            value={criteria.state}
-            disabled={disabled}
-            onChange={(value) => change({ state: typeof value === "string" ? value : null })}
-          />
-        </Box>
-        <Typography color="text.secondary" variant="body2" mt={2}>
-          Campos vazios incluem todas as opções. As exceções globais de cidades, estados, clientes e
-          segmentos são aplicadas ao público.
-        </Typography>
-      </Paper>
-      <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
-        <Button
-          startIcon={<Refresh />}
-          disabled={mutation.busy || loading}
-          onClick={reloadConfiguration}
-        >
-          {mutation.gate ? "Conferir configuração" : "Recarregar configuração"}
-        </Button>
-        <Button
-          startIcon={<PreviewOutlined />}
-          disabled={disabled || previewing || !original}
-          onClick={() => void showPreview()}
-          variant="outlined"
-        >
-          {previewing ? "Consultando público…" : "Prévia do público"}
-        </Button>
-        <Button
-          startIcon={<SaveOutlined />}
+              variant="contained"
+              onClick={() => void save()}
+            >
+              {mutation.busy ? "Salvando…" : "Salvar critérios"}
+            </Button>
+          </Stack>
+          {preview && (
+            <Alert severity="info">
+              <Typography fontWeight={700}>
+                {preview.totalRows.toLocaleString("pt-BR")} clientes na prévia
+              </Typography>
+              <Typography variant="body2">
+                O público considera os dados atuais. Salvar os critérios prepara a configuração da
+                campanha.
+              </Typography>
+            </Alert>
+          )}
+          {original?.SQL_CAMPANHA && (
+            <Accordion>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography>Consultar seleção salva</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  maxRows={8}
+                  value={original.SQL_CAMPANHA}
+                  slotProps={{ input: { readOnly: true } }}
+                  label="Consulta de seleção (somente leitura)"
+                />
+              </AccordionDetails>
+            </Accordion>
+          )}
+        </Stack>
+      </Box>
+      <Box
+        role="tabpanel"
+        id="campaign-panel-1"
+        aria-labelledby="campaign-section-1"
+        hidden={section !== 1}
+      >
+        <CampaignMembers campaignId={campaignId} />
+      </Box>
+      <Box
+        role="tabpanel"
+        id="campaign-panel-2"
+        aria-labelledby="campaign-section-2"
+        hidden={section !== 2}
+      >
+        <GenerationPanel
+          campaignId={campaignId}
+          configuration={original}
           disabled={
             disabled ||
-            !original ||
-            !preview ||
-            JSON.stringify(preview.criteria) !== JSON.stringify(criteria)
+            JSON.stringify(criteria) !== JSON.stringify(original?.criteria ?? initialSelection)
           }
-          variant="contained"
-          onClick={() => void save()}
-        >
-          {mutation.busy ? "Salvando…" : "Salvar critérios"}
-        </Button>
-      </Stack>
-      {preview && (
-        <Alert severity="info">
-          <Typography fontWeight={700}>
-            {preview.totalRows.toLocaleString("pt-BR")} clientes na prévia
-          </Typography>
-          <Typography variant="body2">
-            O público considera os dados atuais. Salvar os critérios prepara a configuração da
-            campanha.
-          </Typography>
-        </Alert>
-      )}
-      <CampaignMembers campaignId={campaignId} />
-      <GenerationPanel
-        campaignId={campaignId}
-        configuration={original}
-        disabled={
-          disabled ||
-          JSON.stringify(criteria) !== JSON.stringify(original?.criteria ?? initialSelection)
-        }
-        onReload={() => setReload((value) => value + 1)}
-      />
-      {original?.SQL_CAMPANHA && (
-        <Accordion>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography>Consultar seleção salva</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
-              maxRows={8}
-              value={original.SQL_CAMPANHA}
-              slotProps={{ input: { readOnly: true } }}
-              label="Consulta de seleção (somente leitura)"
-            />
-          </AccordionDetails>
-        </Accordion>
-      )}
+          onReload={() => setReload((value) => value + 1)}
+        />
+      </Box>
     </Stack>
   );
 }

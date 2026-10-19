@@ -29,6 +29,6 @@ const server = await createServer({
       },
     },
   ],
-  server: { host: "127.0.0.1", port: 4198, strictPort: true, hmr: false },
+  server: { host: "127.0.0.1", port: 4201, strictPort: true, hmr: false },
 });
 await server.listen();

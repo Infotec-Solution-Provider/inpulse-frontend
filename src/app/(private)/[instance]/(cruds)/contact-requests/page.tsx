@@ -91,7 +91,7 @@ export default function ContactRequestsPage() {
   const pendingRequests = requests.filter((request) => request.status === "PENDING");
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6 dark:bg-slate-950">
+    <div className="min-h-full bg-slate-50 p-6 dark:bg-slate-950">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">

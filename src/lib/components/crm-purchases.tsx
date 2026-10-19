@@ -1,4 +1,14 @@
 "use client";
+import {
+  CrmPage,
+  CrmToolbar,
+  OperationalIconButton,
+  OperationalPanel,
+  UiIcon,
+} from "@/lib/ui-system";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { useCrmQueryState } from "@/lib/ui-system/query-state";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { useAuthContext } from "@/app/auth-context";
 import CrmPurchasesClient from "@/lib/sdk-local/crm-purchases.client";
 import type {
@@ -20,8 +30,8 @@ import { Add, DeleteOutline, EditOutlined, Refresh } from "@mui/icons-material";
 import {
   Alert,
   Box,
+  Chip,
   Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -100,13 +110,16 @@ export default function CrmPurchasesPage() {
   return <PurchasesPanel key={`${instance}:${user.CODIGO}`} api={api} instance={instance} />;
 }
 function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: string }) {
-  const [filters, setFilters] = useState<CrmPurchasesFilters>({
+  const [filters, setFilters] = useCrmQueryState<CrmPurchasesFilters>("purchases:list", {
     page: 1,
     perPage: 10,
     sortBy: "DATA",
     sortDirection: "desc",
   });
-  const [search, setSearch] = useState(""),
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draftSort, setDraftSort] = useState(filters.sortBy),
+    [draftDirection, setDraftDirection] = useState(filters.sortDirection);
+  const [search, setSearch] = useState(filters.search ?? ""),
     [customerId, setCustomerId] = useState(""),
     [operatorId, setOperatorId] = useState(""),
     [dateFrom, setDateFrom] = useState(""),
@@ -177,11 +190,13 @@ function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: 
       setError("A data inicial deve ser anterior ou igual à data final.");
       return;
     }
+    setFiltersOpen(false);
+    setError("");
     setFilters((old) => ({
       page: 1,
       perPage: old.perPage,
-      sortBy: old.sortBy,
-      sortDirection: old.sortDirection,
+      sortBy: draftSort,
+      sortDirection: draftDirection,
       ...(search ? { search } : {}),
       ...(customerId ? { customerId: Number(customerId) } : {}),
       ...(operatorId ? { operatorId: Number(operatorId) } : {}),
@@ -226,173 +241,204 @@ function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: 
   useEffect(() => {
     if (write.current) setDeleteBlocked(true);
   }, [api]);
+  useCrmLeaveGuard(false, deletingBusy, needsReconcile || deleteBlocked);
+  function openFilters() {
+    setCustomerId(filters.customerId == null ? "" : String(filters.customerId));
+    setOperatorId(filters.operatorId == null ? "" : String(filters.operatorId));
+    setDateFrom(filters.dateFrom ?? "");
+    setDateTo(filters.dateTo ?? "");
+    setSituation(filters.situation ?? "");
+    setInvoiced(filters.invoiced ?? "");
+    setDraftSort(filters.sortBy);
+    setDraftDirection(filters.sortDirection);
+    setFiltersOpen(true);
+  }
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, height: "100%", overflow: "auto" }}>
+    <CrmPage
+      title="Lançamentos de vendas"
+      count={loading ? undefined : totalRows}
+      description="Registros de vendas do CRM. O catálogo define os tipos de venda; os lançamentos registram cada compra."
+      breadcrumbs={[{ label: "Usuários" }, { label: "Vendas" }, { label: "Lançamentos" }]}
+      actions={
+        <Button
+          variant="contained"
+          startIcon={<UiIcon name="add" />}
+          onClick={() => setEditing({})}
+          disabled={deletingBusy || loading || needsReconcile}
+        >
+          Novo lançamento
+        </Button>
+      }
+    >
       <Stack gap={2}>
-        <Stack direction={{ xs: "column", sm: "row" }} gap={1} justifyContent="space-between">
-          <Box>
-            <Typography component="h1" variant="h5">
-              Lançamentos de vendas
-            </Typography>
-            <Typography color="text.secondary">
-              Consulte e mantenha as compras registradas no CRM.
-            </Typography>
-          </Box>
-          <Stack direction="row" gap={1} flexWrap="wrap">
-            <Button component={Link} href={`/${instance}/reports/sales`}>
-              Relatório de vendas e metas
-            </Button>
-            <Button startIcon={<Refresh />} onClick={reloadList} disabled={loading || deletingBusy}>
-              Recarregar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setEditing({})}
-              disabled={deletingBusy || loading || needsReconcile}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            setFilters((old) => ({ ...old, page: 1, search: search || undefined }));
+          }}
+        >
+          <CrmToolbar>
+            <TextField
+              size="small"
+              label="Buscar descrição"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              sx={{ flex: "1 1 140px", maxWidth: 480, minWidth: 0 }}
+            />
+            <OperationalIconButton type="submit" label="Buscar lançamentos">
+              <UiIcon name="search" />
+            </OperationalIconButton>
+            <OperationalIconButton label="Filtros de lançamentos" onClick={openFilters}>
+              <UiIcon name="filter" />
+            </OperationalIconButton>
+            <OperationalIconButton
+              label="Atualizar lista"
+              onClick={reloadList}
+              disabled={loading || deletingBusy}
             >
-              Novo lançamento
-            </Button>
-          </Stack>
+              <UiIcon name="refresh" />
+            </OperationalIconButton>
+          </CrmToolbar>
+        </form>
+        <Stack direction="row" gap={1} useFlexGap flexWrap="wrap">
+          {(
+            [
+              "search",
+              "customerId",
+              "operatorId",
+              "dateFrom",
+              "dateTo",
+              "situation",
+              "invoiced",
+            ] as const
+          )
+            .filter((key) => filters[key] != null && filters[key] !== "")
+            .map((key) => (
+              <Chip
+                key={key}
+                label={`${{ search: "Descrição", customerId: "Código interno do cliente", operatorId: "Usuário", dateFrom: "Desde", dateTo: "Até", situation: "Situação", invoiced: "Faturado" }[key]}: ${filters[key]}`}
+                onDelete={() => {
+                  setFilters((old) => ({ ...old, [key]: undefined, page: 1 }));
+                  if (key === "search") setSearch("");
+                }}
+              />
+            ))}
         </Stack>
-        <Paper variant="outlined" component="form" onSubmit={applyFilters} sx={{ p: 2 }}>
-          <Stack gap={2}>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" },
-                gap: 2,
-              }}
-            >
-              <TextField
-                label="Buscar descrição"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <CrmPurchaseLookup
-                api={api}
-                kind="customers"
-                label="Filtrar por cliente"
-                value={customerId}
-                onChange={setCustomerId}
-              />
-              <CrmPurchaseLookup
-                api={api}
-                kind="operators"
-                label="Filtrar por usuário"
-                value={operatorId}
-                onChange={setOperatorId}
-              />
-              <TextField
-                label="Data inicial"
-                type="date"
-                value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-              <TextField
-                label="Data final"
-                type="date"
-                value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-              <Stack direction="row" gap={1}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Situação"
-                  value={situation}
-                  onChange={(event) => setSituation(event.target.value)}
-                >
-                  <MenuItem value="">Todas</MenuItem>
-                  <MenuItem value="F">Fechada</MenuItem>
-                  <MenuItem value="C">Cancelada</MenuItem>
-                </TextField>
-                <TextField
-                  select
-                  fullWidth
-                  label="Faturado"
-                  value={invoiced}
-                  onChange={(event) => setInvoiced(event.target.value)}
-                >
-                  <MenuItem value="">Todos</MenuItem>
-                  <MenuItem value="S">Sim</MenuItem>
-                  <MenuItem value="N">Não</MenuItem>
-                </TextField>
-              </Stack>
-            </Box>
-            <Stack direction="row" gap={1} flexWrap="wrap">
-              <Button type="submit" variant="outlined" disabled={loading}>
-                Buscar
+        <OperationalPanel
+          open={filtersOpen}
+          title="Filtros de lançamentos"
+          onClose={() => setFiltersOpen(false)}
+          footer={
+            <>
+              <Button onClick={() => setFiltersOpen(false)}>Cancelar</Button>
+              <Button variant="contained" onClick={applyFilters}>
+                Aplicar filtros
               </Button>
-              <Button
-                onClick={() => {
-                  setSearch("");
-                  setCustomerId("");
-                  setOperatorId("");
-                  setDateFrom("");
-                  setDateTo("");
-                  setSituation("");
-                  setInvoiced("");
-                  setFilters({
-                    page: 1,
-                    perPage: filters.perPage,
-                    sortBy: "DATA",
-                    sortDirection: "desc",
-                  });
+            </>
+          }
+        >
+          <Box component="form" onSubmit={applyFilters}>
+            <Stack gap={2}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" },
+                  gap: 2,
                 }}
               >
-                Limpar filtros
-              </Button>
-              <TextField
-                select
-                size="small"
-                label="Ordenar por"
-                value={filters.sortBy}
-                onChange={(event) =>
-                  setFilters((old) => ({
-                    ...old,
-                    page: 1,
-                    sortBy: event.target.value as CrmPurchasesFilters["sortBy"],
-                  }))
-                }
-              >
-                {[
-                  ["DATA", "Data"],
-                  ["CODIGO", "Código"],
-                  ["VALOR", "Valor"],
-                  ["DESCRICAO", "Descrição"],
-                ].map(([value, label]) => (
-                  <MenuItem key={value} value={value}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                size="small"
-                label="Direção"
-                value={filters.sortDirection}
-                onChange={(event) =>
-                  setFilters((old) => ({
-                    ...old,
-                    page: 1,
-                    sortDirection: event.target.value as "asc" | "desc",
-                  }))
-                }
-              >
-                <MenuItem value="asc">Crescente</MenuItem>
-                <MenuItem value="desc">Decrescente</MenuItem>
-              </TextField>
+                <CrmPurchaseLookup
+                  api={api}
+                  kind="customers"
+                  label="Filtrar por cliente"
+                  value={customerId}
+                  onChange={setCustomerId}
+                />
+                <CrmPurchaseLookup
+                  api={api}
+                  kind="operators"
+                  label="Filtrar por usuário"
+                  value={operatorId}
+                  onChange={setOperatorId}
+                />
+                <TextField
+                  label="Data inicial"
+                  type="date"
+                  value={dateFrom}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+                <TextField
+                  label="Data final"
+                  type="date"
+                  value={dateTo}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                />
+                <Stack direction="row" gap={1}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Situação"
+                    value={situation}
+                    onChange={(event) => setSituation(event.target.value)}
+                  >
+                    <MenuItem value="">Todas</MenuItem>
+                    <MenuItem value="F">Fechada</MenuItem>
+                    <MenuItem value="C">Cancelada</MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Faturado"
+                    value={invoiced}
+                    onChange={(event) => setInvoiced(event.target.value)}
+                  >
+                    <MenuItem value="">Todos</MenuItem>
+                    <MenuItem value="S">Sim</MenuItem>
+                    <MenuItem value="N">Não</MenuItem>
+                  </TextField>
+                </Stack>
+              </Box>
+              <Stack direction="row" gap={1} flexWrap="wrap">
+                <TextField
+                  select
+                  size="small"
+                  label="Ordenar por"
+                  value={draftSort}
+                  onChange={(event) =>
+                    setDraftSort(event.target.value as CrmPurchasesFilters["sortBy"])
+                  }
+                >
+                  {[
+                    ["DATA", "Data"],
+                    ["CODIGO", "Código"],
+                    ["VALOR", "Valor"],
+                    ["DESCRICAO", "Descrição"],
+                  ].map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  size="small"
+                  label="Direção"
+                  value={draftDirection}
+                  onChange={(event) => setDraftDirection(event.target.value as "asc" | "desc")}
+                >
+                  <MenuItem value="asc">Crescente</MenuItem>
+                  <MenuItem value="desc">Decrescente</MenuItem>
+                </TextField>
+              </Stack>
             </Stack>
-          </Stack>
-        </Paper>
+          </Box>
+        </OperationalPanel>
         {error && <Alert severity="error">{error}</Alert>}
         {success && <Alert severity="success">{success}</Alert>}
         {loading && <LinearProgress aria-label="Carregando lançamentos" />}
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small" sx={{ minWidth: 800 }}>
+        <TableContainer className="ip-crud-table" component={Paper} variant="outlined">
+          <Table size="small">
             <TableHead>
               <TableRow>
                 {[
@@ -412,21 +458,23 @@ function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: 
             <TableBody>
               {rows.map((item) => (
                 <TableRow key={item.record.CODIGO}>
-                  <TableCell>{item.record.CODIGO}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Código interno">{item.record.CODIGO}</TableCell>
+                  <TableCell data-label="Cliente">
                     {item.customerName ?? `Cliente #${item.record.CLIENTE ?? "—"}`}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Usuário">
                     {item.operatorName ??
                       (item.record.OPERADOR == null ? "—" : `Usuário #${item.record.OPERADOR}`)}
                   </TableCell>
-                  <TableCell sx={{ whiteSpace: "nowrap" }}>{dateLabel(item.record.DATA)}</TableCell>
-                  <TableCell>{item.record.DESCRICAO ?? "—"}</TableCell>
-                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                  <TableCell data-label="Data" sx={{ whiteSpace: "nowrap" }}>
+                    {dateLabel(item.record.DATA)}
+                  </TableCell>
+                  <TableCell data-label="Descrição">{item.record.DESCRICAO ?? "—"}</TableCell>
+                  <TableCell data-label="Valor" sx={{ whiteSpace: "nowrap" }}>
                     {displayPurchaseAmount(item.record.VALOR)}
                   </TableCell>
-                  <TableCell>{item.record.FORMA_PGTO ?? "—"}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Pagamento">{item.record.FORMA_PGTO ?? "—"}</TableCell>
+                  <TableCell data-label="Ações">
                     <Tooltip
                       title={
                         item.writable
@@ -435,17 +483,17 @@ function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: 
                       }
                     >
                       <span>
-                        <IconButton
-                          aria-label={`Editar lançamento ${item.record.CODIGO}`}
+                        <OperationalIconButton
+                          label={`Editar lançamento ${item.record.CODIGO}`}
                           disabled={!item.writable || deletingBusy || loading || needsReconcile}
                           onClick={() => setEditing({ id: item.record.CODIGO })}
                         >
-                          <EditOutlined />
-                        </IconButton>
+                          <UiIcon name="edit" scale="row" />
+                        </OperationalIconButton>
                       </span>
                     </Tooltip>
-                    <IconButton
-                      aria-label={`Excluir lançamento ${item.record.CODIGO}`}
+                    <OperationalIconButton
+                      label={`Excluir lançamento ${item.record.CODIGO}`}
                       disabled={!item.writable || deletingBusy || loading || needsReconcile}
                       onClick={() => {
                         setDeleting(item);
@@ -453,8 +501,8 @@ function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: 
                         setError("");
                       }}
                     >
-                      <DeleteOutline />
-                    </IconButton>
+                      <UiIcon name="delete" scale="row" />
+                    </OperationalIconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -556,8 +604,11 @@ function PurchasesPanel({ api, instance }: { api: CrmPurchasesClient; instance: 
             )}
           </DialogActions>
         </Dialog>
+        <Button component={Link} href={`/${instance}/reports/sales`}>
+          Relatório de vendas e metas
+        </Button>
       </Stack>
-    </Box>
+    </CrmPage>
   );
 }
 function PurchaseEditor({
@@ -629,6 +680,7 @@ function PurchaseEditor({
     ? validatePurchaseDraft(draft, schema.fields, original?.record, schema.amountMax)
     : null;
   const dirty = original ? Boolean(validation?.hasChanges) : Object.values(draft).some(Boolean);
+  useCrmLeaveGuard(dirty, saving, blocked);
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -692,6 +744,7 @@ function PurchaseEditor({
   return (
     <>
       <Dialog
+        className="ip-crud-editor"
         open
         onClose={requestClose}
         fullWidth
@@ -732,57 +785,87 @@ function PurchaseEditor({
                 }}
               >
                 {schema &&
-                  purchaseFields.map((name) => {
-                    const field = schema.fields.find((field) => field.name === name);
-                    if (!field) return null;
-                    const disabled =
-                      saving ||
-                      loading ||
-                      blocked ||
-                      Boolean(original && field.immutable) ||
-                      field.readOnly;
-                    if (name === "CLIENTE" || name === "OPERADOR")
-                      return (
-                        <CrmPurchaseLookup
-                          key={name}
-                          api={api}
-                          kind={name === "CLIENTE" ? "customers" : "operators"}
-                          label={field.label}
-                          value={draft[name]}
-                          currentLabel={
-                            name === "CLIENTE" ? original?.customerName : original?.operatorName
-                          }
-                          onChange={(value) => change(name, value)}
-                          disabled={disabled}
-                          error={validation?.errors[name]}
-                        />
-                      );
-                    return (
-                      <TextField
-                        key={name}
-                        fullWidth
-                        label={name === "VALOR" ? "Valor (R$)" : field.label}
-                        type={name === "DATA" ? "date" : "text"}
-                        value={draft[name]}
-                        onChange={(event) => change(name, event.target.value)}
-                        disabled={disabled}
-                        error={Boolean(validation?.errors[name])}
-                        helperText={
-                          validation?.errors[name] ??
-                          (name === "VALOR"
-                            ? "Até duas casas decimais. Valores históricos ficam preservados se você não os alterar."
-                            : undefined)
-                        }
-                        slotProps={{
-                          inputLabel: name === "DATA" ? { shrink: true } : undefined,
-                          htmlInput: {
-                            maxLength: field.maxLength,
-                            inputMode: name === "VALOR" ? "decimal" : undefined,
-                          },
+                  [
+                    {
+                      title: "Participantes",
+                      fields: purchaseFields.filter(
+                        (name) => name === "CLIENTE" || name === "OPERADOR",
+                      ),
+                    },
+                    {
+                      title: "Dados da venda",
+                      fields: purchaseFields.filter(
+                        (name) => name !== "CLIENTE" && name !== "OPERADOR",
+                      ),
+                    },
+                  ].map((group) => (
+                    <Box key={group.title} sx={{ gridColumn: "1/-1" }}>
+                      <Typography component="h3" fontSize={14} fontWeight={600} mb={2}>
+                        {group.title}
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))" },
+                          gap: 2,
                         }}
-                      />
-                    );
-                  })}
+                      >
+                        {group.fields.map((name) => {
+                          const field = schema.fields.find((field) => field.name === name);
+                          if (!field) return null;
+                          const disabled =
+                            saving ||
+                            loading ||
+                            blocked ||
+                            Boolean(original && field.immutable) ||
+                            field.readOnly;
+                          if (name === "CLIENTE" || name === "OPERADOR")
+                            return (
+                              <CrmPurchaseLookup
+                                key={name}
+                                api={api}
+                                kind={name === "CLIENTE" ? "customers" : "operators"}
+                                label={field.label}
+                                value={draft[name]}
+                                currentLabel={
+                                  name === "CLIENTE"
+                                    ? original?.customerName
+                                    : original?.operatorName
+                                }
+                                onChange={(value) => change(name, value)}
+                                disabled={disabled}
+                                error={validation?.errors[name]}
+                              />
+                            );
+                          return (
+                            <TextField
+                              key={name}
+                              fullWidth
+                              label={name === "VALOR" ? "Valor (R$)" : field.label}
+                              type={name === "DATA" ? "date" : "text"}
+                              value={draft[name]}
+                              onChange={(event) => change(name, event.target.value)}
+                              disabled={disabled}
+                              error={Boolean(validation?.errors[name])}
+                              helperText={
+                                validation?.errors[name] ??
+                                (name === "VALOR"
+                                  ? "Até duas casas decimais. Valores históricos ficam preservados se você não os alterar."
+                                  : undefined)
+                              }
+                              slotProps={{
+                                inputLabel: name === "DATA" ? { shrink: true } : undefined,
+                                htmlInput: {
+                                  maxLength: field.maxLength,
+                                  inputMode: name === "VALOR" ? "decimal" : undefined,
+                                },
+                              }}
+                            />
+                          );
+                        })}
+                      </Box>
+                    </Box>
+                  ))}
               </Box>
               {!original && (
                 <Typography variant="body2" color="text.secondary">

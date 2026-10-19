@@ -5,10 +5,10 @@ test("creates a campaign with explicit identity, preserved nullable defaults and
 }) => {
   await page.goto(base);
   await expect(page.getByText("Campanha A", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Novo cadastro", exact: true }).click();
+  await page.getByRole("button", { name: "Nova campanha", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Código", { exact: true }).fill("12");
-  await dialog.getByLabel("Nome", { exact: true }).fill("Campanha nova");
+  await dialog.getByLabel("Código", { exact: false }).fill("12");
+  await dialog.getByLabel("Nome", { exact: false }).first().fill("Campanha nova");
   await expect(dialog.getByLabel("Seleção da campanha")).toHaveCount(0);
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.getByText("Cadastro salvo.")).toBeVisible();
@@ -29,13 +29,13 @@ test("conflict keeps the draft and requires explicit authoritative reload", asyn
   await page.goto(base);
   await page.getByRole("button", { name: "Editar Campanha A", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Nome", { exact: true }).fill("Rascunho");
+  await dialog.getByLabel("Nome", { exact: false }).first().fill("Rascunho");
   await page.evaluate(() => (window as any).crmHarness.fault("conflict"));
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
-  await expect(dialog.getByLabel("Nome", { exact: true })).toHaveValue("Rascunho");
+  await expect(dialog.getByLabel("Nome", { exact: false }).first()).toHaveValue("Rascunho");
   await expect(dialog.getByRole("button", { name: "Salvar", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "Conferir dados", exact: true }).click();
-  await expect(dialog.getByLabel("Nome", { exact: true })).toHaveValue("Campanha A");
+  await expect(dialog.getByLabel("Nome", { exact: false }).first()).toHaveValue("Campanha A");
   await expect(dialog.getByRole("button", { name: "Salvar", exact: true })).toBeEnabled();
 });
 test("ambiguous applied write survives closing and reopening until read confirmation", async ({
@@ -44,15 +44,15 @@ test("ambiguous applied write survives closing and reopening until read confirma
   await page.goto(base);
   await page.getByRole("button", { name: "Editar Campanha A", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Nome", { exact: true }).fill("Aplicada");
+  await dialog.getByLabel("Nome", { exact: false }).first().fill("Aplicada");
   await page.evaluate(() => (window as any).crmHarness.fault("unknown"));
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(dialog.getByRole("button", { name: "Salvar", exact: true })).toBeDisabled();
   await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
   await page.getByRole("button", { name: "Descartar", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Novo cadastro", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Nova campanha", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Conferir dados", exact: true }).click();
-  await expect(page.getByRole("dialog").getByLabel("Nome", { exact: true })).toHaveValue(
+  await expect(page.getByRole("dialog").getByLabel("Nome", { exact: false }).first()).toHaveValue(
     "Aplicada",
   );
 });
@@ -62,7 +62,7 @@ test("a token change during a pending write keeps the original token and blocks 
   await page.goto(base);
   await page.getByRole("button", { name: "Editar Campanha A", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Nome", { exact: true }).fill("Atualizada");
+  await dialog.getByLabel("Nome", { exact: false }).first().fill("Atualizada");
   await page.evaluate(() => (window as any).crmHarness.fault("delay"));
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await page.evaluate(() => (window as any).crmHarness.switchAuth("tenant-a", "refreshed-token"));
@@ -80,7 +80,7 @@ test("changing tenant discards the old editor and cannot apply a late old write"
   await page.goto(base);
   await page.getByRole("button", { name: "Editar Campanha A", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Nome", { exact: true }).fill("Antiga");
+  await dialog.getByLabel("Nome", { exact: false }).first().fill("Antiga");
   await page.evaluate(() => (window as any).crmHarness.fault("delay"));
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await page.evaluate(() => (window as any).crmHarness.switchAuth("tenant-b", "token-b"));
@@ -145,7 +145,9 @@ test("configuration requires a preview before persisting structured criteria", a
   await page.getByRole("option", { name: "Inativos", exact: true }).click();
   await page.getByRole("button", { name: "Prévia do público", exact: true }).click();
   await expect(page.getByText("3 clientes na prévia", { exact: true })).toBeVisible();
-  await page.getByText("Configurar campanha 10", { exact: true }).scrollIntoViewIfNeeded();
+  await page
+    .getByRole("heading", { name: "Configurar campanha 10", exact: true })
+    .scrollIntoViewIfNeeded();
   await page.screenshot({
     path: "test-results-crm-marketing/crm-marketing-configuration.png",
     fullPage: true,
@@ -173,12 +175,17 @@ test("generation previews a responsible user and sends only the guarded eligible
   page,
 }) => {
   await page.goto(`${base}?panel=configuration`);
+  await page.getByRole("tab", { name: "Geração", exact: true }).click();
   await page.getByLabel("Usuário dos agendamentos", { exact: true }).fill("Ana");
   await page.getByRole("option", { name: "Ana (7)", exact: true }).click();
   await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:00");
   await page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }).click();
   await expect(page.getByText(/3 novos agendamentos elegíveis/)).toBeVisible();
   await page.getByRole("button", { name: "Gerar próximos 3 de 3", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Confirmar lote", exact: true })
+    .click();
   await expect(page.getByText("3 agendamentos gerados.", { exact: true })).toBeVisible();
   expect(
     (await page.evaluate(() => (window as any).crmHarness.calls())).find(
@@ -212,11 +219,16 @@ test("generation handles larger audiences as explicit batches and never replays 
 }) => {
   await page.goto(`${base}?panel=configuration`);
   await page.evaluate(() => (window as any).crmHarness.setGenerationRemaining(4001));
+  await page.getByRole("tab", { name: "Geração", exact: true }).click();
   await page.getByLabel("Usuário dos agendamentos", { exact: true }).fill("Ana");
   await page.getByRole("option", { name: "Ana (7)", exact: true }).click();
   await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:00");
   await page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }).click();
   await page.getByRole("button", { name: "Gerar próximos 2.000 de 4.001", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Confirmar lote", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Gerar próximos 2.000 de 2.001", exact: true }),
   ).toBeEnabled();
@@ -229,11 +241,19 @@ test("generation handles larger audiences as explicit batches and never replays 
     expected: { alreadyLinkedCount: 2, eligibleCount: 4001 },
   });
   await page.getByRole("button", { name: "Gerar próximos 2.000 de 2.001", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Confirmar lote", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Gerar próximos 1 de 1", exact: true }),
   ).toBeEnabled();
   await page.evaluate(() => (window as any).crmHarness.fault("unknown"));
   await page.getByRole("button", { name: "Gerar próximos 1 de 1", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Confirmar lote", exact: true })
+    .click();
   await expect(page.getByRole("button", { name: "Conferir geração", exact: true })).toBeVisible();
   expect(
     (await page.evaluate(() => (window as any).crmHarness.calls())).filter(
@@ -271,7 +291,11 @@ test("landscape keeps the result form footer reachable without covering the edit
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Salvar", exact: true }),
   ).toBeInViewport();
-  await page.getByRole("dialog").getByLabel("Nome", { exact: true }).fill("Contato paisagem");
+  await page
+    .getByRole("dialog")
+    .getByLabel("Nome", { exact: false })
+    .first()
+    .fill("Contato paisagem");
   await page.getByRole("dialog").getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.getByText("Cadastro salvo.")).toBeVisible();
 });
