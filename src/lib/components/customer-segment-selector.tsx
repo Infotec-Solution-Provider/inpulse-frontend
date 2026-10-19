@@ -97,7 +97,7 @@ export default function CustomerSegmentSelector({
     setLoading(true);
     customersService.setAuth(token);
     customersService
-      .getSegments()
+      .getSegments({ token, instance })
       .then((rows) => {
         if (active) {
           setOptions(rows.filter((row) => Number.isInteger(row.CODIGO) && row.CODIGO > 0));
@@ -136,7 +136,7 @@ export default function CustomerSegmentSelector({
       const response = await customersService.setCustomerSegment(customerId, {
         SEGMENTO: target,
         expected: { SEGMENTO: segmentId },
-      });
+      }, { token, instance });
       if (requestEpoch !== epoch.current) return;
       if (
         response.data.CODIGO !== customerId ||

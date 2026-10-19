@@ -1,4 +1,5 @@
 import ApiClient from "./api-client";
+import { crmMutationConfig, type CrmRequestContext } from "./crm-request-context";
 import type { CrmCatalogName, CrmCatalogRecords, CrmCatalogExpected, CrmCatalogListParams, CreateCrmCatalogRequest, UpdateCrmCatalogRequest, CrmUnitOption, CrmStateOption } from "./types/crm-catalogs.types";
 import { DataResponse, MessageResponse, PaginatedResponse, RequestFilters } from "./types";
 import {
@@ -18,42 +19,42 @@ import {
 } from "./types/customers.types";
 
 class CustomersClient extends ApiClient {
-	public async listCrmCatalog<K extends CrmCatalogName>(catalog: K, params?: CrmCatalogListParams): Promise<PaginatedResponse<CrmCatalogRecords[K]>> {
+	public async listCrmCatalog<K extends CrmCatalogName>(catalog: K, params?: CrmCatalogListParams, context?: CrmRequestContext): Promise<PaginatedResponse<CrmCatalogRecords[K]>> {
 		const query = new URLSearchParams();
 		for (const [key, value] of Object.entries(params ?? {})) {
 			if (value !== undefined) query.set(key, String(value));
 		}
-		const response = await this.ax.get<PaginatedResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}${query.size ? `?${query}` : ""}`);
+		const response = await this.ax.get<PaginatedResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}${query.size ? `?${query}` : ""}`, context ? crmMutationConfig(context) : undefined);
 		return response.data;
 	}
 
-	public async getCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string): Promise<DataResponse<CrmCatalogRecords[K]>> {
-		const response = await this.ax.get<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`);
+	public async getCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, context?: CrmRequestContext): Promise<DataResponse<CrmCatalogRecords[K]>> {
+		const response = await this.ax.get<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, context ? crmMutationConfig(context) : undefined);
 		return response.data;
 	}
 
-	public async createCrmCatalog<K extends CrmCatalogName>(catalog: K, data: CreateCrmCatalogRequest<K>): Promise<DataResponse<CrmCatalogRecords[K]>> {
-		const response = await this.ax.post<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}`, data);
+	public async createCrmCatalog<K extends CrmCatalogName>(catalog: K, data: CreateCrmCatalogRequest<K>, context: CrmRequestContext): Promise<DataResponse<CrmCatalogRecords[K]>> {
+		const response = await this.ax.post<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}`, data, crmMutationConfig(context));
 		return response.data;
 	}
 
-	public async updateCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, data: UpdateCrmCatalogRequest<K>): Promise<DataResponse<CrmCatalogRecords[K]>> {
-		const response = await this.ax.patch<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, data);
+	public async updateCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, data: UpdateCrmCatalogRequest<K>, context: CrmRequestContext): Promise<DataResponse<CrmCatalogRecords[K]>> {
+		const response = await this.ax.patch<DataResponse<CrmCatalogRecords[K]>>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, data, crmMutationConfig(context));
 		return response.data;
 	}
 
-	public async deleteCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, expected: CrmCatalogExpected<K>): Promise<MessageResponse> {
-		const response = await this.ax.delete<MessageResponse>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, { data: { expected } });
+	public async deleteCrmCatalog<K extends CrmCatalogName>(catalog: K, id: number | string, expected: CrmCatalogExpected<K>, context: CrmRequestContext): Promise<MessageResponse> {
+		const response = await this.ax.delete<MessageResponse>(`/api/crm-catalogs/${catalog}/${encodeURIComponent(id)}`, { ...crmMutationConfig(context), data: { expected } });
 		return response.data;
 	}
 
-	public async getCrmCatalogUnits(): Promise<DataResponse<CrmUnitOption[]>> {
-		const response = await this.ax.get<DataResponse<CrmUnitOption[]>>("/api/crm-catalogs/options/units");
+	public async getCrmCatalogUnits(context?: CrmRequestContext): Promise<DataResponse<CrmUnitOption[]>> {
+		const response = await this.ax.get<DataResponse<CrmUnitOption[]>>("/api/crm-catalogs/options/units", context ? crmMutationConfig(context) : undefined);
 		return response.data;
 	}
 
-	public async getCrmCatalogStates(): Promise<DataResponse<CrmStateOption[]>> {
-		const response = await this.ax.get<DataResponse<CrmStateOption[]>>("/api/crm-catalogs/options/states");
+	public async getCrmCatalogStates(context?: CrmRequestContext): Promise<DataResponse<CrmStateOption[]>> {
+		const response = await this.ax.get<DataResponse<CrmStateOption[]>>("/api/crm-catalogs/options/states", context ? crmMutationConfig(context) : undefined);
 		return response.data;
 	}
 	/**
@@ -135,15 +136,16 @@ class CustomersClient extends ApiClient {
 		return response.data.data;
 	}
 
-	public async getSegments() {
+	public async getSegments(context?: CrmRequestContext) {
 		const response = await this.ax.get<DataResponse<CustomerLookupOption[]>>(
 			`/api/customers/segments`,
+			context ? crmMutationConfig(context) : undefined,
 		);
 
 		return response.data.data;
 	}
 
-	public async listSegments(params?: SegmentListParams): Promise<PaginatedResponse<Segment>> {
+	public async listSegments(params?: SegmentListParams, context?: CrmRequestContext): Promise<PaginatedResponse<Segment>> {
 		const query = new URLSearchParams();
 		for (const [key, value] of Object.entries(params ?? {})) {
 			if (value !== undefined) query.set(key, String(value));
@@ -151,37 +153,40 @@ class CustomersClient extends ApiClient {
 		const queryString = query.toString();
 		const response = await this.ax.get<PaginatedResponse<Segment>>(
 			`/api/segments${queryString ? `?${queryString}` : ""}`,
+			context ? crmMutationConfig(context) : undefined,
 		);
 		return response.data;
 	}
 
-	public async getSegment(segmentId: number): Promise<DataResponse<Segment>> {
-		const response = await this.ax.get<DataResponse<Segment>>(`/api/segments/${segmentId}`);
+	public async getSegment(segmentId: number, context?: CrmRequestContext): Promise<DataResponse<Segment>> {
+		const response = await this.ax.get<DataResponse<Segment>>(`/api/segments/${segmentId}`, context ? crmMutationConfig(context) : undefined);
 		return response.data;
 	}
 
-	public async createSegment(data: CreateSegmentRequest): Promise<DataResponse<Segment>> {
-		const response = await this.ax.post<DataResponse<Segment>>(`/api/segments`, data);
+	public async createSegment(data: CreateSegmentRequest, context: CrmRequestContext): Promise<DataResponse<Segment>> {
+		const response = await this.ax.post<DataResponse<Segment>>(`/api/segments`, data, crmMutationConfig(context));
 		return response.data;
 	}
 
-	public async updateSegment(segmentId: number, data: UpdateSegmentRequest): Promise<DataResponse<Segment>> {
-		const response = await this.ax.patch<DataResponse<Segment>>(`/api/segments/${segmentId}`, data);
+	public async updateSegment(segmentId: number, data: UpdateSegmentRequest, context: CrmRequestContext): Promise<DataResponse<Segment>> {
+		const response = await this.ax.patch<DataResponse<Segment>>(`/api/segments/${segmentId}`, data, crmMutationConfig(context));
 		return response.data;
 	}
 
-	public async deleteSegment(segmentId: number, expected: UpdateSegmentRequest["expected"]): Promise<MessageResponse> {
-		const response = await this.ax.delete<MessageResponse>(`/api/segments/${segmentId}`, { data: { expected } });
+	public async deleteSegment(segmentId: number, expected: UpdateSegmentRequest["expected"], context: CrmRequestContext): Promise<MessageResponse> {
+		const response = await this.ax.delete<MessageResponse>(`/api/segments/${segmentId}`, { ...crmMutationConfig(context), data: { expected } });
 		return response.data;
 	}
 
 	public async setCustomerSegment(
 		customerId: number,
 		data: SetCustomerSegmentRequest,
+		context: CrmRequestContext,
 	): Promise<DataResponse<CustomerSegmentAssignment>> {
 		const response = await this.ax.patch<DataResponse<CustomerSegmentAssignment>>(
 			`/api/customers/${customerId}/segment`,
 			data,
+			crmMutationConfig(context),
 		);
 		return response.data;
 	}

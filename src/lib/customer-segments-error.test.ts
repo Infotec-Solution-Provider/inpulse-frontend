@@ -1,3 +1,5 @@
+import { crmMutationConfig } from "./sdk-local/crm-request-context";
+const context = { instance: "local-test", token: "fixture-original-token" };
 import { describe, expect, it } from "vitest";
 import { AxiosError } from "axios";
 import CustomersClient from "@/lib/sdk-local/customers.client";
@@ -19,7 +21,7 @@ describe("segment HTTP error metadata", () => {
       .updateSegment(1, {
         changes: { NOME: "Nome" },
         expected: { NOME: null, ordem: null, COD_UNIDADE: null },
-      })
+      }, context)
       .catch((error) => error);
     expect(getCustomerSegmentsError(error)).toEqual({ status: 409, code: "SEGMENT_CHANGED" });
   });

@@ -129,7 +129,7 @@ function SegmentManagement({
     customersService.setAuth(token);
     setUnitsError("");
     void customersService
-      .getCrmCatalogUnits()
+      .getCrmCatalogUnits({ token, instance })
       .then((response) => {
         if (active) setUnits(response.data);
       })
@@ -157,7 +157,7 @@ function SegmentManagement({
       ...filters,
     };
     void customersService
-      .listSegments(params)
+      .listSegments(params, { token, instance })
       .then((response) => {
         if (!mounted.current || sequence !== requestSequence.current) return;
         const totalRows = response.page.totalRows ?? 0;
@@ -269,8 +269,9 @@ function SegmentManagement({
         ? await customersService.updateSegment(
             editor.original.CODIGO,
             updateSegmentPayload(editor.draft, editor.original),
+            { token: requestToken, instance },
           )
-        : await customersService.createSegment(createSegmentPayload(editor.draft));
+        : await customersService.createSegment(createSegmentPayload(editor.draft), { token: requestToken, instance });
       if (!mounted.current || currentToken.current !== requestToken) return;
       void hybridCache.invalidateResource(createCacheScope(instance, userId), "customer-page");
       publishCustomerSegmentsChanged(instance);
@@ -327,7 +328,7 @@ function SegmentManagement({
     const requestToken = token;
     try {
       customersService.setAuth(token);
-      const { data } = await customersService.getSegment(editor.original.CODIGO);
+      const { data } = await customersService.getSegment(editor.original.CODIGO, { token: requestToken, instance });
       if (!mounted.current || currentToken.current !== requestToken) return;
       setEditor({ original: data, draft: segmentDraft(data) });
       setConflict(false);
@@ -360,7 +361,7 @@ function SegmentManagement({
         NOME: deleteTarget.NOME,
         ordem: deleteTarget.ordem,
         COD_UNIDADE: deleteTarget.COD_UNIDADE,
-      });
+      }, { token: requestToken, instance });
       if (!mounted.current || currentToken.current !== requestToken) return;
       setDeleteTarget(null);
       setSuccess("Segmento excluído com sucesso.");

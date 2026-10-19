@@ -1,3 +1,5 @@
+import { crmMutationConfig } from "./crm-request-context";
+const context = { instance: "local-test", token: "fixture-original-token" };
 import { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import { describe, expect, it, vi } from "vitest";
 import CustomersClient from "./customers.client";
@@ -13,15 +15,15 @@ describe("customer segment API contract", () => {
   it("explicitly clears the customer association without changing the original zero snapshot", async () => {
     const client = new CustomersClient("http://localhost:8002");
     const patch = vi.spyOn(client.ax, "patch").mockResolvedValue({ data: { data: { CODIGO: 12, SEGMENTO: null, segment: null } } });
-    await client.setCustomerSegment(12, { SEGMENTO: null, expected: { SEGMENTO: 0 } });
-    expect(patch).toHaveBeenCalledExactlyOnceWith("/api/customers/12/segment", { SEGMENTO: null, expected: { SEGMENTO: 0 } });
+    await client.setCustomerSegment(12, { SEGMENTO: null, expected: { SEGMENTO: 0 } }, context);
+    expect(patch).toHaveBeenCalledExactlyOnceWith("/api/customers/12/segment", { SEGMENTO: null, expected: { SEGMENTO: 0 } }, crmMutationConfig(context));
   });
   it("deletes with a complete original snapshot", async () => {
     const client = new CustomersClient("http://localhost:8002");
     const remove = vi.spyOn(client.ax, "delete").mockResolvedValue({ data: { message: "OK" } });
     const expected = { NOME: segment.NOME, ordem: null, COD_UNIDADE: 4 };
-    await client.deleteSegment(37, expected);
-    expect(remove).toHaveBeenCalledExactlyOnceWith("/api/segments/37", { data: { expected } });
+    await client.deleteSegment(37, expected, context);
+    expect(remove).toHaveBeenCalledExactlyOnceWith("/api/segments/37", { ...crmMutationConfig(context), data: { expected } });
   });
   it("encodes the supported filters and preserves zero, accents and pagination", async () => {
     const client = new CustomersClient("http://localhost:8002");
@@ -55,7 +57,7 @@ describe("customer segment API contract", () => {
     const options = [{ CODIGO: 37, NOME: "Indústria" }, { CODIGO: 38, NOME: null }];
     const get = vi.spyOn(client.ax, "get").mockResolvedValue({ data: { message: "OK", data: options } });
     expect(await client.getSegments()).toEqual(options);
-    expect(get).toHaveBeenCalledExactlyOnceWith("/api/customers/segments");
+    expect(get).toHaveBeenCalledExactlyOnceWith("/api/customers/segments", undefined);
   });
 
   it("reads a segment and retains the response envelope", async () => {
@@ -63,7 +65,7 @@ describe("customer segment API contract", () => {
     const envelope = { message: "Segmento encontrado.", data: segment };
     const get = vi.spyOn(client.ax, "get").mockResolvedValue({ data: envelope });
     expect(await client.getSegment(37)).toEqual(envelope);
-    expect(get).toHaveBeenCalledExactlyOnceWith("/api/segments/37");
+    expect(get).toHaveBeenCalledExactlyOnceWith("/api/segments/37", undefined);
   });
 
   it("creates a segment without sending an invented ID or unit", async () => {
@@ -71,7 +73,7 @@ describe("customer segment API contract", () => {
     const envelope = { message: "Segmento criado.", data: segment };
     const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => response(config, envelope));
     client.ax.defaults.adapter = adapter;
-    expect(await client.createSegment({ NOME: "Indústria & comércio", ordem: null })).toEqual(envelope);
+    expect(await client.createSegment({ NOME: "Indústria & comércio", ordem: null }, context)).toEqual(envelope);
     expect(adapter.mock.calls[0][0].method).toBe("post");
     expect(adapter.mock.calls[0][0].url).toBe("/api/segments");
     expect(JSON.parse(adapter.mock.calls[0][0].data)).toEqual({ NOME: "Indústria & comércio", ordem: null });
@@ -86,7 +88,7 @@ describe("customer segment API contract", () => {
     const envelope = { message: "Segmento atualizado.", data: { ...segment, NOME: "Varejo", ordem: 0 } };
     const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => response(config, envelope));
     client.ax.defaults.adapter = adapter;
-    expect(await client.updateSegment(37, data)).toEqual(envelope);
+    expect(await client.updateSegment(37, data, context)).toEqual(envelope);
     expect(adapter.mock.calls[0][0].method).toBe("patch");
     expect(adapter.mock.calls[0][0].url).toBe("/api/segments/37");
     expect(JSON.parse(adapter.mock.calls[0][0].data)).toEqual(data);
@@ -97,8 +99,8 @@ describe("customer segment API contract", () => {
     const data = { SEGMENTO: 37, expected: { SEGMENTO: null } };
     const envelope = { message: "Cliente atualizado.", data: { CODIGO: 12, SEGMENTO: 37, segment: { CODIGO: 37, NOME: segment.NOME } } };
     const patch = vi.spyOn(client.ax, "patch").mockResolvedValue({ data: envelope });
-    expect(await client.setCustomerSegment(12, data)).toEqual(envelope);
-    expect(patch).toHaveBeenCalledExactlyOnceWith("/api/customers/12/segment", data);
+    expect(await client.setCustomerSegment(12, data, context)).toEqual(envelope);
+    expect(patch).toHaveBeenCalledExactlyOnceWith("/api/customers/12/segment", data, crmMutationConfig(context));
   });
 
   it.each([
@@ -116,7 +118,7 @@ describe("customer segment API contract", () => {
     client.ax.defaults.adapter = adapter;
     const failure = await client.updateSegment(37, {
       changes: { NOME: "Varejo" }, expected: { NOME: segment.NOME, ordem: null, COD_UNIDADE: 4 },
-    }).catch((error: unknown) => error);
+    }, context).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(Error);
     expect((failure as Error).message).toBe(message);
     expect((failure as Error).cause).toBe(original);
@@ -131,10 +133,10 @@ describe("customer segment API contract", () => {
     });
     client.ax.defaults.adapter = adapter;
     const pending = operation === "create"
-      ? client.createSegment({ NOME: "Varejo" })
+      ? client.createSegment({ NOME: "Varejo" }, context)
       : operation === "update"
-        ? client.updateSegment(37, { changes: { ordem: null }, expected: { NOME: segment.NOME, ordem: 0, COD_UNIDADE: 4 } })
-        : client.setCustomerSegment(12, { SEGMENTO: 37, expected: { SEGMENTO: 0 } });
+        ? client.updateSegment(37, { changes: { ordem: null }, expected: { NOME: segment.NOME, ordem: 0, COD_UNIDADE: 4 } }, context)
+        : client.setCustomerSegment(12, { SEGMENTO: 37, expected: { SEGMENTO: 0 } }, context);
     const failure = await pending.catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(Error);
     expect(((failure as Error).cause as AxiosError).code).toBe(AxiosError.ECONNABORTED);

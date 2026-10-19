@@ -3,9 +3,10 @@
 import { useAuthContext } from "@/app/auth-context";
 import {
   CRM_CATALOGS,
-  catalogDraft,
-  catalogExpected,
-  validateCatalogDraft,
+  catalogDefinitionDraft,
+  catalogDefinitionExpected,
+  validateCatalogDefinition,
+  type CatalogDefinition,
   type CatalogDraft,
   type CatalogRecord,
 } from "@/lib/crm-catalogs-form";
@@ -18,6 +19,7 @@ import {
   type CreateCrmCatalogRequest,
 } from "@/lib/sdk-local";
 import customersService from "@/lib/services/customers.service";
+import type { CrmRequestContext } from "@/lib/sdk-local/crm-request-context";
 import { Add, DeleteOutline, EditOutlined, Refresh, Search } from "@mui/icons-material";
 import {
   Alert,
@@ -47,7 +49,7 @@ import {
   Typography,
 } from "@mui/material";
 import NextLink from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 type Editor = { original?: CatalogRecord; draft: CatalogDraft };
 function errorDetails(error: unknown): { message?: string; outcome?: string } {
@@ -71,16 +73,42 @@ function errorDetails(error: unknown): { message?: string; outcome?: string } {
   return {};
 }
 
-export function CatalogManagement({
+export interface CatalogManagementApi {
+  setAuth(token: string): void;
+  list(params: { page: number; perPage: number; sortBy: string; sortDirection: "asc" | "desc"; search?: string; id?: string }, context: CrmRequestContext): Promise<{ data: CatalogRecord[]; page: { totalRows?: number } }>;
+  get(id: string | number, context: CrmRequestContext): Promise<{ data: CatalogRecord }>;
+  create(data: CatalogRecord, context: CrmRequestContext): Promise<unknown>;
+  update(id: string | number, changes: CatalogRecord, expected: CatalogRecord, context: CrmRequestContext): Promise<unknown>;
+  remove(id: string | number, expected: CatalogRecord, context: CrmRequestContext): Promise<unknown>;
+  getUnits?(context: CrmRequestContext): Promise<{ data: CrmUnitOption[] }>;
+  getStates?(context: CrmRequestContext): Promise<{ data: CrmStateOption[] }>;
+  conflictOn409?: boolean;
+}
+export function GenericCatalogManagement({
   catalog,
   token,
   instance,
+  definition,
+  api,
+  sectionHref = "/crm-catalogs",
+  sectionTitle = "Cadastros auxiliares",
+  parentHref = "/customers",
+  parentTitle = "Clientes",
+  extraRowActions,
+  extraContent,
 }: {
-  catalog: CrmCatalogName;
+  catalog: string;
   token: string;
   instance: string;
+  definition: CatalogDefinition;
+  api: CatalogManagementApi;
+  sectionHref?: string;
+  sectionTitle?: string;
+  parentHref?: string;
+  parentTitle?: string;
+  extraRowActions?: (row: CatalogRecord) => ReactNode;
+  extraContent?: ReactNode;
 }) {
-  const definition = CRM_CATALOGS[catalog];
   const columns = [
     { key: definition.identity, label: definition.identity === "UF" ? "UF" : "Código" },
     ...definition.fields,
@@ -135,11 +163,11 @@ export function CatalogManagement({
   }, [token]);
   useEffect(() => {
     const sequence = ++requestSequence.current;
-    customersService.setAuth(token);
+    api.setAuth(token);
     setLoading(true);
     setLoadError("");
-    void customersService
-      .listCrmCatalog(catalog, { page: page + 1, perPage, sortBy, sortDirection, ...filters })
+    void api
+      .list({ page: page + 1, perPage, sortBy, sortDirection, ...filters }, { token, instance })
       .then((response) => {
         if (!alive.current || sequence !== requestSequence.current) return;
         const totalRows = response.page.totalRows ?? 0;
@@ -162,14 +190,14 @@ export function CatalogManagement({
       .finally(() => {
         if (alive.current && sequence === requestSequence.current) setLoading(false);
       });
-  }, [catalog, token, page, perPage, sortBy, sortDirection, filters, reload]);
+  }, [api, catalog, token, page, perPage, sortBy, sortDirection, filters, reload]);
   useEffect(() => {
-    if (!definition.fields.some((field) => field.kind === "unit")) return;
+    if (!definition.fields.some((field) => field.kind === "unit") || !api.getUnits) return;
     let active = true;
-    customersService.setAuth(token);
+    api.setAuth(token);
     setUnitsError("");
-    void customersService
-      .getCrmCatalogUnits()
+    void api
+      .getUnits({ token, instance })
       .then((response) => {
         if (active) setUnits(response.data);
       })
@@ -184,14 +212,14 @@ export function CatalogManagement({
     return () => {
       active = false;
     };
-  }, [definition, token, reload]);
+  }, [api, definition, token, reload]);
   useEffect(() => {
-    if (catalog !== "cities") return;
+    if (catalog !== "cities" || !api.getStates) return;
     let active = true;
-    customersService.setAuth(token);
+    api.setAuth(token);
     setStatesError("");
-    void customersService
-      .getCrmCatalogStates()
+    void api
+      .getStates({ token, instance })
       .then((response) => {
         if (active) setStates(response.data);
       })
@@ -204,14 +232,14 @@ export function CatalogManagement({
     return () => {
       active = false;
     };
-  }, [catalog, token, reload]);
+  }, [api, catalog, token, reload]);
 
-  const validation = editor ? validateCatalogDraft(catalog, editor.draft, editor.original) : null;
+  const validation = editor ? validateCatalogDefinition(definition, editor.draft, editor.original) : null;
   const dirty =
     editor &&
     (editor.original ? validation?.hasChanges : Object.values(editor.draft).some(Boolean));
   const openEditor = (original?: CatalogRecord) => {
-    setEditor({ original, draft: catalogDraft(catalog, original) });
+    setEditor({ original, draft: catalogDefinitionDraft(definition, original) });
     setMutationError("");
     setConflict(false);
     setUnknown(false);
@@ -234,7 +262,7 @@ export function CatalogManagement({
     const uncertain = details.outcome === "UNKNOWN" || status === undefined || status >= 500;
     setUnknown(uncertain);
     if (uncertain) setReconcileRequired(true);
-    setConflict(code === "CATALOG_CHANGED" || status === 404);
+    setConflict(code?.endsWith("_CHANGED") || code?.endsWith("_CONFLICT") || status === 404 || Boolean(api.conflictOn409 && status === 409));
     setMutationError(
       uncertain
         ? "Não foi possível confirmar a gravação. Ela pode ter sido concluída. Confira os dados antes de tentar novamente."
@@ -250,12 +278,9 @@ export function CatalogManagement({
     if (!editor?.original || saving || reloadingEditor) return;
     const auth = token;
     setReloadingEditor(true);
-    customersService.setAuth(auth);
+    api.setAuth(auth);
     try {
-      const response = await customersService.getCrmCatalog(
-        catalog,
-        editor.original[definition.identity] as string | number,
-      );
+      const response = await api.get(editor.original[definition.identity] as string | number, { token: auth, instance });
       if (!alive.current || currentToken.current !== auth) return;
       openEditor(response.data as unknown as CatalogRecord);
       setReconcileRequired(false);
@@ -278,19 +303,12 @@ export function CatalogManagement({
     writing.current = true;
     setSaving(true);
     setMutationError("");
-    customersService.setAuth(auth);
+    api.setAuth(auth);
     try {
       if (editor.original) {
-        await customersService.updateCrmCatalog(
-          catalog,
-          editor.original[definition.identity] as number | string,
-          { changes: validation.changes, expected: catalogExpected(catalog, editor.original) },
-        );
+        await api.update(editor.original[definition.identity] as number | string, validation.changes, catalogDefinitionExpected(definition, editor.original), { token: auth, instance });
       } else {
-        await customersService.createCrmCatalog(
-          catalog,
-          validation.changes as CreateCrmCatalogRequest<CrmCatalogName>,
-        );
+        await api.create(validation.changes, { token: auth, instance });
       }
       if (!alive.current || currentToken.current !== auth) return;
       setEditor(null);
@@ -309,13 +327,9 @@ export function CatalogManagement({
     writing.current = true;
     setSaving(true);
     setMutationError("");
-    customersService.setAuth(auth);
+    api.setAuth(auth);
     try {
-      await customersService.deleteCrmCatalog(
-        catalog,
-        deleteTarget[definition.identity] as number | string,
-        catalogExpected(catalog, deleteTarget),
-      );
+      await api.remove(deleteTarget[definition.identity] as number | string, catalogDefinitionExpected(definition, deleteTarget), { token: auth, instance });
       if (!alive.current || currentToken.current !== auth) return;
       setDeleteTarget(null);
       setSuccess("Registro excluído com sucesso.");
@@ -352,6 +366,8 @@ export function CatalogManagement({
   const display = (record: CatalogRecord, key: string) => {
     const value = record[key];
     if (value === null || value === undefined) return "—";
+    const field = definition.fields.find(field => field.key === key);
+    if (field?.kind === "enum") return field.options?.find(option => option.value === value)?.label ?? String(value);
     if (key === "UNIDADE" || key === "COD_UNIDADE") {
       const unit = units.find((unit) => unit.CODIGO === value);
       return unit ? `${unit.DESCRICAO ?? "Sem descrição"} (#${value})` : `#${value}`;
@@ -363,11 +379,11 @@ export function CatalogManagement({
     <Box sx={{ p: { xs: 2, md: 3 }, height: "100%", overflow: "auto" }}>
       <Stack spacing={2}>
         <Breadcrumbs>
-          <Link component={NextLink} href={`/${instance}/customers`}>
-            Clientes
+          <Link component={NextLink} href={`/${instance}${parentHref}`}>
+            {parentTitle}
           </Link>
-          <Link component={NextLink} href={`/${instance}/crm-catalogs`}>
-            Cadastros auxiliares
+          <Link component={NextLink} href={`/${instance}${sectionHref}`}>
+            {sectionTitle}
           </Link>
           <Typography color="text.primary">{definition.title}</Typography>
         </Breadcrumbs>
@@ -444,6 +460,8 @@ export function CatalogManagement({
         </Stack>
         {unitsError && <Alert severity="warning">{unitsError}</Alert>}
         {statesError && <Alert severity="warning">{statesError}</Alert>}
+        {rows.some(row => Number(row.ID_COUNT ?? 1) > 1) && <Alert severity="warning">Há códigos compartilhados por mais de um cadastro legado. A edição e a exclusão desses códigos ficam bloqueadas até a identificação ser resolvida no CRM.</Alert>}
+        {extraContent}
         {loadError && (
           <Alert
             severity="error"
@@ -474,6 +492,7 @@ export function CatalogManagement({
                       sortDirection={sortBy === column.key ? sortDirection : false}
                     >
                       <TableSortLabel
+                        disabled={definition.sortable === false}
                         active={sortBy === column.key}
                         direction={sortBy === column.key ? sortDirection : "asc"}
                         onClick={() => {
@@ -493,8 +512,8 @@ export function CatalogManagement({
               </TableHead>
               <TableBody>
                 {!loadError &&
-                  rows.map((row) => (
-                    <TableRow key={String(row[definition.identity])} hover>
+                rows.map((row, rowIndex) => (
+                  <TableRow key={`${String(row[definition.identity])}:${rowIndex}`} hover>
                       {columns.map((column) => (
                         <TableCell
                           key={column.key}
@@ -509,7 +528,7 @@ export function CatalogManagement({
                         <Tooltip title="Editar">
                           <span>
                             <IconButton
-                              disabled={reconcileRequired}
+                              disabled={reconcileRequired || Number(row.ID_COUNT ?? 1) > 1}
                               aria-label={`Editar ${row[definition.identity]}`}
                               onClick={() => openEditor(row)}
                             >
@@ -520,7 +539,7 @@ export function CatalogManagement({
                         <Tooltip title="Excluir">
                           <span>
                             <IconButton
-                              disabled={reconcileRequired}
+                              disabled={reconcileRequired || Number(row.ID_COUNT ?? 1) > 1}
                               aria-label={`Excluir ${row[definition.identity]}`}
                               color="error"
                               onClick={() => {
@@ -534,6 +553,7 @@ export function CatalogManagement({
                             </IconButton>
                           </span>
                         </Tooltip>
+                          {extraRowActions?.(row)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -606,7 +626,7 @@ export function CatalogManagement({
                   )
                 }
               />
-              {definition.fields.map((field) => {
+            {definition.fields.filter(field => !field.readOnly).map((field) => {
                 const value = editor?.draft[field.key] ?? "";
                 const currentUnit =
                   field.kind === "unit" &&
@@ -615,16 +635,17 @@ export function CatalogManagement({
                 const stateField = catalog === "cities" && field.key === "UF";
                 const historicState =
                   stateField && value !== "" && !states.some((state) => state.UF === value);
+              const fieldError = editor?.original || value ? validation?.errors[field.key] : undefined;
                 return (
                   <TextField
                     key={field.key}
                     label={field.label}
                     required={field.required}
                     value={value}
-                    select={field.kind === "unit" || stateField}
+                  select={field.kind === "unit" || field.kind === "enum" || stateField}
                     disabled={saving || reloadingEditor}
-                    error={Boolean(validation?.errors[field.key])}
-                    helperText={validation?.errors[field.key] ?? field.help}
+                  error={Boolean(fieldError)}
+                  helperText={fieldError ?? field.help}
                     slotProps={{
                       htmlInput: field.kind === "integer" ? { inputMode: "numeric" } : undefined,
                     }}
@@ -657,6 +678,7 @@ export function CatalogManagement({
                           </MenuItem>
                         )),
                     ]}
+                  {field.kind === "enum" && [<MenuItem key="empty" value="">Não definido</MenuItem>, ...(value && !field.options?.some(option => option.value === value) ? [<MenuItem key="historic" value={value} disabled>{value} (histórico)</MenuItem>] : []), ...(field.options ?? []).map(option => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)]}
                     {stateField && [
                       <MenuItem key="empty" value="">
                         Sem estado
@@ -800,6 +822,20 @@ export function CatalogManagement({
       </Dialog>
     </Box>
   );
+}
+
+export function CatalogManagement({ catalog, token, instance }: { catalog: CrmCatalogName; token: string; instance: string }) {
+  const api = useMemo<CatalogManagementApi>(() => ({
+    setAuth: value => customersService.setAuth(value),
+    list: (params, context) => customersService.listCrmCatalog(catalog, params, context).then(response => ({ ...response, data: response.data.map(row => ({ ...row })) })),
+    get: (id, context) => customersService.getCrmCatalog(catalog, id, context).then(response => ({ ...response, data: { ...response.data } })),
+    create: (data, context) => customersService.createCrmCatalog(catalog, data as CreateCrmCatalogRequest<CrmCatalogName>, context),
+    update: (id, changes, expected, context) => customersService.updateCrmCatalog(catalog, id, { changes, expected }, context),
+    remove: (id, expected, context) => customersService.deleteCrmCatalog(catalog, id, expected, context),
+    getUnits: context => customersService.getCrmCatalogUnits(context),
+    getStates: context => customersService.getCrmCatalogStates(context),
+  }), [catalog]);
+  return <GenericCatalogManagement catalog={catalog} token={token} instance={instance} definition={CRM_CATALOGS[catalog]} api={api} />;
 }
 
 export default function CrmCatalogManagement({ catalog }: { catalog: CrmCatalogName }) {
