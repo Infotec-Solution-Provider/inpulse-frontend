@@ -6,7 +6,9 @@ const { createServer } = await import(pathToFileURL(vitestRequire.resolve("vite"
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const doubles = "/tests/crm-users/doubles.ts";
 const stubs = {
-  "@/app/auth-context": `export { useAuthContext } from '${doubles}'`,
+  "@/app/auth-context": `export { AuthContext, useAuthContext } from '${doubles}'`,
+  "app-context": `export { AppContext, useAppContext } from '${doubles}'`,
+  "whatsapp-context": `export { WhatsappContext, useWhatsappContext } from '${doubles}'`,
   "@/lib/sdk-local":
     "export const UserRole = { ADMIN: 'ADMIN' }; export const FileDirType = { PUBLIC: 'PUBLIC' }",
   "@/lib/services/customers.service": `export { customersService as default } from '${doubles}'`,
@@ -28,6 +30,8 @@ const server = await createServer({
       resolveId(source) {
         if (source in stubs) return `\0catalogs:${source}`;
         if (source.endsWith("/auth-context")) return "\0catalogs:@/app/auth-context";
+        if (source.endsWith("/app-context")) return "\0catalogs:app-context";
+        if (source.endsWith("/whatsapp-context")) return "\0catalogs:whatsapp-context";
         if (source.endsWith("/users-context")) return "\0catalogs:users-context";
         if (source.endsWith("/sdk-local")) return "\0catalogs:@/lib/sdk-local";
         if (source.endsWith("/customers.service"))

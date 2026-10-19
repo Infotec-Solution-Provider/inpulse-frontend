@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { createContext, useSyncExternalStore } from "react";
 import type { CatalogRecord } from "../../src/lib/crm-catalogs-form";
 import type {
   CrmUserCatalogName,
@@ -135,6 +135,11 @@ interface State {
   saved: number;
   uploads: number;
   closed: number;
+  finishes: { resultId: number; scheduleDate: string | null }[];
+  finishRequests: { operationId: string; finishedAt: string }[];
+  finishFailure: number;
+  finishStatus: "applied" | "not_confirmed";
+  finishChecks: string[];
 }
 declare global {
   interface Window {
@@ -167,8 +172,45 @@ window.userTest = {
   saved: 0,
   uploads: 0,
   closed: 0,
+  finishes: [],
+  finishRequests: [],
+  finishFailure: 0,
+  finishStatus: "not_confirmed",
+  finishChecks: [],
 };
 const state = window.userTest;
+export const AuthContext = createContext(auth);
+const app = {
+  closeModal: () => {
+    state.closed += 1;
+  },
+};
+export const AppContext = createContext(app);
+export function useAppContext() {
+  return app;
+}
+const whatsapp = {
+  currentChat: { id: 42 },
+  wppApi: {
+    current: {
+      setAuth() {},
+      async getResults() {
+        return [
+          { id: 1, name: "Finalizado", COD_ACAO: 1 },
+          { id: 2, name: "Reagendar", COD_ACAO: 2 },
+          { id: 3, name: "Outro reagendamento", COD_ACAO: 2 },
+        ];
+      },
+    },
+  },
+  async finishChat(_chatId: number, resultId: number, scheduleDate: Date | null) {
+    state.finishes.push({ resultId, scheduleDate: scheduleDate?.toISOString() ?? null });
+  },
+};
+export const WhatsappContext = createContext(whatsapp);
+export function useWhatsappContext() {
+  return whatsapp;
+}
 export function useUsersContext() {
   return {
     sectors: [{ id: 2, name: "Atendimento" }],

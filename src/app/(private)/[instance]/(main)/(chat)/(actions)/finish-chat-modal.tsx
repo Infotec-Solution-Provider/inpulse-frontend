@@ -44,7 +44,7 @@ export default function FinishChatModal({ chatId, onSuccess }: FinishChatModalPr
       setIsSubmitting(true);
       setError(null);
       try {
-        await finishChat(targetId, resultId, scheduleDate ? new Date(scheduleDate) : null);
+        await finishChat(targetId, resultId, needsScheduleDate ? new Date(scheduleDate) : null);
         if (!scope.isActive()) return;
         closeModal();
         onSuccess?.();
@@ -63,6 +63,8 @@ export default function FinishChatModal({ chatId, onSuccess }: FinishChatModalPr
   const onChangeResult = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setResultId(value ? parseInt(value) : null);
+    setScheduleDate("");
+    setError(null);
   };
 
   useEffect(() => {

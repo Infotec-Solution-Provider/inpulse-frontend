@@ -5,14 +5,6 @@ import type { CustomerLookupOption } from "@/lib/types/sdk-local.types";
 
 const NEXT_PUBLIC_CUSTOMERS_URL = process.env.NEXT_PUBLIC_CUSTOMERS_URL || "http://localhost:8002";
 
-interface FinishTelephonySchedulePayload {
-	resultId: number;
-	scheduleDate?: string;
-	startedAt?: string;
-	finishedAt?: string;
-	dialedPhone?: string;
-}
-
 interface StartTelephonyScheduleCallPayload {
 	dialedPhone?: string;
 }
@@ -30,18 +22,6 @@ interface TelephonyScheduleCallStatus {
 class FrontendCustomersService extends CustomersClient {
 	public async reportTelephonyCall(scheduleId: number, callId: string, state: "answered" | "ended" | "failed") {
 		await this.ax.post(`/api/customers/schedules/telephony/${scheduleId}/call/end`, { callId, state });
-	}
-
-	public async finishTelephonySchedule(
-		scheduleId: number,
-		data: FinishTelephonySchedulePayload,
-	) {
-		const response = await this.ax.patch(
-			`/api/customers/schedules/telephony/${scheduleId}/finish`,
-			data,
-		);
-
-		return response.data;
 	}
 
 	public async startTelephonyScheduleCall(
