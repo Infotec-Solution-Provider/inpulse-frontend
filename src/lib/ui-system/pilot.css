@@ -1,0 +1,381 @@
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/inter/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.ip-ui {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+  color: var(--ip-text);
+  background: var(--ip-bg);
+  font-family:
+    "Inter",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  color-scheme: light;
+}
+.ip-ui[data-ui-theme="dark"] {
+  color-scheme: dark;
+}
+.ip-ui *,
+.ip-ui *::before,
+.ip-ui *::after {
+  box-sizing: border-box;
+}
+.ip-ui :where(button, input, select, textarea) {
+  font-family: inherit;
+}
+.ip-ui :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--ip-focus);
+  outline-offset: 3px;
+  scroll-margin-block: 16px;
+}
+.ip-ui :where(button, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+.ip-ui ::selection {
+  background: var(--ip-accent-soft);
+  color: var(--ip-accent);
+}
+.ip-ui ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.ip-ui ::-webkit-scrollbar-thumb {
+  background: var(--ip-border);
+  border-radius: 6px;
+}
+.ip-ui .ip-muted {
+  color: var(--ip-muted);
+}
+.ip-ui .ip-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  gap: 12px;
+  padding: 16px;
+}
+.ip-ui .ip-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.ip-ui .ip-page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.3;
+}
+.ip-ui .ip-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.ip-ui .ip-summary {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ip-ui .ip-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--ip-border);
+  border-radius: 8px;
+  background: var(--ip-surface);
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+.ip-ui .ip-stat strong {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ip-text);
+  font-variant-numeric: tabular-nums;
+}
+.ip-ui .ip-results {
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--ip-border);
+  border-radius: 12px;
+  background: var(--ip-surface);
+  overflow: hidden;
+}
+.ip-ui .ip-result-card {
+  border: 1px solid var(--ip-border);
+  border-radius: 8px;
+  background: var(--ip-surface);
+  color: var(--ip-text);
+  transition: background-color 120ms ease;
+}
+.ip-ui .ip-result-card:hover {
+  background: var(--ip-surface-muted);
+}
+.ip-ui .ip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.ip-ui .ip-table th {
+  color: var(--ip-muted);
+  background: var(--ip-surface-muted);
+  font-weight: 500;
+  font-size: 12px;
+}
+.ip-ui .ip-table :where(th, td) {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--ip-border);
+}
+.ip-ui .ip-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ip-ui .ip-table tbody tr:hover {
+  background: var(--ip-surface-muted);
+}
+.ip-ui .ip-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ip-muted);
+  background: var(--ip-surface-muted);
+}
+.ip-ui .ip-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ip-ui .ip-results-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 12px 0 0;
+  font-size: 12px;
+  color: var(--ip-muted);
+}
+.ip-ui .ip-filter-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.ip-ui .ip-filter-chips .MuiChip-root {
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  max-width: 250px;
+}
+.ip-ui .ip-channel-tabs {
+  padding: 0 16px;
+  background: var(--ip-bg);
+  border-bottom: 1px solid var(--ip-border);
+  flex-shrink: 0;
+}
+.ip-ui .ip-channel-tabs .MuiTab-root {
+  min-height: 44px;
+  padding-inline: 16px;
+}
+.ip-ui .ip-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  color: var(--ip-text);
+  background: var(--ip-surface);
+}
+.ip-ui .ip-panel-embedded {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(var(--ip-panel-width), 100vw);
+  border-left: 1px solid var(--ip-border);
+  box-shadow: -16px 0 64px rgb(0 0 0 / 16%);
+  outline: 0;
+}
+.ip-ui .ip-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--ip-border);
+}
+.ip-ui .ip-panel-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.ip-ui .ip-panel-description {
+  font-size: 12px;
+  color: var(--ip-muted);
+  margin: 4px 0 0;
+}
+.ip-ui .ip-panel-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px;
+}
+.ip-ui .ip-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 12px 24px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ip-border);
+  background: var(--ip-surface);
+}
+.ip-ui .ip-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-block: 0 20px;
+  border-bottom: 1px solid var(--ip-border);
+}
+.ip-ui .ip-panel-section:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.ip-ui .ip-panel-section h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ip-muted);
+}
+.ip-ui .ip-empty-state {
+  display: flex;
+  min-height: 250px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 32px 16px;
+}
+.ip-ui .ip-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  color: var(--ip-muted);
+  background: var(--ip-surface-muted);
+}
+.ip-ui .ip-empty-state h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.ip-ui .ip-empty-state p {
+  font-size: 13px;
+  color: var(--ip-muted);
+  margin: 0;
+  max-width: 380px;
+}
+.ip-ui input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.8;
+}
+@media (min-width: 1024px) {
+  .ip-ui .ip-page {
+    height: 100%;
+    overflow: hidden;
+    padding: 16px 24px 20px;
+  }
+  .ip-ui .ip-channel-tabs {
+    padding-inline: 24px;
+  }
+}
+@media (max-width: 1023px) {
+  .ip-ui .ip-panel-embedded {
+    width: 100vw;
+  }
+  .ip-ui .ip-page {
+    min-height: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .ip-ui .ip-summary {
+    display: flex !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 3px;
+    margin-inline: -3px;
+  }
+  .ip-ui .ip-summary .ip-stat {
+    flex: 0 0 176px;
+  }
+  .ip-ui :where(input, textarea, select) {
+    font-size: 16px;
+  }
+  .ip-ui .ip-page-header h1 {
+    font-size: 22px;
+  }
+  .ip-ui .ip-panel-header {
+    padding: 16px;
+  }
+  .ip-ui .ip-panel-body {
+    padding: 16px;
+  }
+  .ip-ui .ip-panel-footer {
+    padding-inline: 16px;
+  }
+  .ip-ui .ip-filter-chips .MuiChip-root {
+    max-width: 210px;
+  }
+}
+@media (pointer: coarse) {
+  .ip-ui :where(button, [role="button"]) {
+    min-height: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ip-ui *,
+  .ip-ui *::before,
+  .ip-ui *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -5,7 +5,8 @@ import NotificationPreferencesModal from "@/lib/components/notification-preferen
 import LazyNotificationsDropdown from "@/lib/components/lazy-notifications-dropdown";
 import ThemeToggleButton from "@/lib/components/theme-toggle-button";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
-import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
+import { isExternalOperator } from "@/lib/permissions/operator-access";
+import { aiRoutes, crudsRoutes, reportsRoutes } from "@/lib/ui-system/navigation";
 import { UserRole } from "@/lib/sdk-local";
 import AppRegistrationIcon from "@mui/icons-material/AppRegistration";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
@@ -37,106 +38,6 @@ import { usePathname } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import HeaderNavItem from "./header-nav-item";
 import { useWhatsappContext, WhatsappContext } from "./whatsapp-context";
-
-const crudsRoutes = (
-  params: Record<string, string>,
-  isAdmin: boolean,
-  role: UserRole | null | undefined,
-) => {
-  const isExternal = isExternalOperator(role);
-  const arr: { title: string; href: string }[] = [];
-
-  if (!isExternal) {
-    arr.push({ title: "Clientes", href: "/customers" });
-  }
-
-  if (isAdmin) {
-    arr.push({ title: "Parâmetros", href: "/parameters" });
-    arr.push({ title: "Usuários", href: "/users" });
-    if (isFeatureEnabled(params, FEATURE_FLAGS.sipConfig)) {
-      arr.push({ title: "Configuração SIP", href: "/sip-config" });
-    }
-    arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
-    arr.push({ title: "Resposta automática", href: "/auto-response" });
-    arr.push({ title: "Identificar remetentes", href: "/whatsapp-senders" });
-    arr.push({ title: "Solicitações de contatos", href: "/contact-requests" });
-  }
-
-  if (canAccessInternalGroups(params, role)) {
-    arr.push({ title: "Grupos Internos", href: "/internal-groups" });
-  }
-
-  if (!isExternal && params["disable_contacts_crud"] !== "true") {
-    arr.push({ title: "Contatos", href: "/contacts" });
-  }
-
-  return arr;
-};
-
-const aiRoutes = (params: Record<string, string>) => {
-  if (!isFeatureEnabled(params, FEATURE_FLAGS.ai)) {
-    return [];
-  }
-
-  return [
-    ...(isFeatureEnabled(params, FEATURE_FLAGS.aiSupervisor)
-      ? [{ title: "Assistente", href: "/ai-supervisor" }]
-      : []),
-    ...(isFeatureEnabled(params, FEATURE_FLAGS.aiAgents)
-      ? [{ title: "Agentes", href: "/ai-agents" }]
-      : []),
-    ...(isFeatureEnabled(params, FEATURE_FLAGS.aiSettings)
-      ? [{ title: "Configurações IA", href: "/ai-settings" }]
-      : []),
-  ];
-};
-
-const reportsRoutes = (params: Record<string, string>, instance: string) => {
-  const routes = [
-    { title: "Relatórios", href: "/reports/dashboard" },
-  ];
-  if (isFeatureEnabled(params, FEATURE_FLAGS.chatExport)) {
-    routes.push({ title: "Conversas", href: "/reports/chats" });
-  }
-
-  if (isFeatureEnabled(params, FEATURE_FLAGS.reportsAdvanced)) {
-    routes.push(
-      { title: "Dashboard de Operadores", href: "/reports/operators" },
-      { title: "Metas e Indicadores", href: "/reports/goals-dashboard" },
-      { title: "Equipe x Metas", href: "/reports/team-goals" },
-      { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
-      { title: "Motivos de Perda", href: "/reports/lost-reasons" },
-      { title: "Performance Operadores", href: "/reports/operator-performance" },
-
-      //{ title: "Análise de Mailing", href: "/reports/mailing-analysis" },
-      //{ title: "Régua por Carteira (Sintético) + WhatsApp", href: "/reports/regua-carteira-sintetico-whatsapp" },
-    );
-  }
-
-  if (instance === "exatron") {
-    routes.push({
-      title: "Pesquisa de Satisfação",
-      href: "/reports/dashboard?report=satisfactionSurvey",
-    });
-  }
-
-  if (isFeatureEnabled(params, FEATURE_FLAGS.salesReports)) {
-    routes.push(
-      { title: "Dashboard: Vendas", href: "/reports/sales" },
-      { title: "Dashboard: WhatsApp", href: "/reports/operator-performance" },
-    );
-  }
-
-  /*   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
-    routes.push(
-      //{ title: "Gerador de Relatório", href: "/reports/report-generator" },
-      //{ title: "Dashboards", href: "/reports/dashboards" },
-      //{ title: "Métricas", href: "/reports/metrics" },
-    );
-  } */
-
-  return routes;
-};
 
 /*
 const toolsRoutes = [
@@ -285,7 +186,9 @@ const MobileMenu = ({
               <ListItem>
                 <Link href={`/${instance}/changelog`} className="w-full">
                   <ListItemButton>
-                    <ListItemIcon><NewReleasesIcon /></ListItemIcon>
+                    <ListItemIcon>
+                      <NewReleasesIcon />
+                    </ListItemIcon>
                     <ListItemText primary="Novidades" />
                   </ListItemButton>
                 </Link>

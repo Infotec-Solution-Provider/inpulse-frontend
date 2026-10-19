@@ -19,17 +19,30 @@ import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-co
 import { AuthContext } from "@/app/auth-context";
 import { TelephonyProvider } from "@/lib/telephony/telephony-provider";
 import CacheWarmup from "./cache-warmup";
+import { PilotDesignProvider } from "@/lib/ui-system";
+import MonitorShell from "@/lib/ui-system/monitor-shell";
+import { isMonitorPath } from "@/lib/ui-system/navigation";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
-function AppModal({ modal, setModal }: { modal: ReactNode; setModal: (value: ReactNode | null) => void }) {
+function AppModal({
+  modal,
+  setModal,
+}: {
+  modal: ReactNode;
+  setModal: (value: ReactNode | null) => void;
+}) {
   if (!modal) return null;
   return (
-    <Modal open onClose={(_, reason) => {
-      if (reason !== "backdropClick") setModal(null);
-    }} className="flex items-center justify-center">
+    <Modal
+      open
+      onClose={(_, reason) => {
+        if (reason !== "backdropClick") setModal(null);
+      }}
+      className="flex items-center justify-center"
+    >
       <div>{modal as ReactElement}</div>
     </Modal>
   );
@@ -64,7 +77,8 @@ function RouteFeatureGate({ children }: { children: ReactNode }) {
   const { loaded, parameters } = useWhatsappContext();
   const routeConfig = ROUTE_FEATURE_FLAGS.find(({ segment }) => pathname.includes(segment));
 
-  const hasRoleAccess = routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
+  const hasRoleAccess =
+    routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
 
   if (!hasRoleAccess) {
     return (
@@ -99,6 +113,33 @@ function RouteFeatureGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function AppFrame({
+  children,
+  modal,
+  setModal,
+}: AppLayoutProps & { modal: ReactNode; setModal: (value: ReactNode | null) => void }) {
+  const pathname = usePathname();
+  if (isMonitorPath(pathname)) {
+    return (
+      <PilotDesignProvider style={{ height: "100%", minWidth: 0 }}>
+        <MonitorShell>
+          <RouteFeatureGate>{children}</RouteFeatureGate>
+        </MonitorShell>
+        <AppModal modal={modal} setModal={setModal} />
+      </PilotDesignProvider>
+    );
+  }
+  return (
+    <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
+      <Header />
+      <main className="min-h-0 overflow-y-auto">
+        <RouteFeatureGate>{children}</RouteFeatureGate>
+      </main>
+      <AppModal modal={modal} setModal={setModal} />
+    </div>
+  );
+}
+
 export default function AppLayout({ children }: AppLayoutProps) {
   const [modal, setModal] = useState<ReactNode>(null);
 
@@ -114,16 +155,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <ReadyMessagesProvider>
                     <CustomersProvider>
                       <ThemeProvider>
-                        {/* Accepted sends must outlive pages and monitor dialogs. */}
+                        {/* Accepted sends and active calls outlive either page chrome. */}
                         <ChatProvider>
                           <TelephonyProvider>
-                          <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
-                            <Header />
-                            <main className="min-h-0 overflow-y-auto">
-                              <RouteFeatureGate>{children}</RouteFeatureGate>
-                            </main>
-                            <AppModal modal={modal} setModal={setModal} />
-                          </div>
+                            <AppFrame modal={modal} setModal={setModal}>
+                              {children}
+                            </AppFrame>
                           </TelephonyProvider>
                         </ChatProvider>
                       </ThemeProvider>

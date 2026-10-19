@@ -1,12 +1,28 @@
 "use client";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material/styles";
 import darkTheme from "@/lib/themes/dark";
 import lightTheme from "@/lib/themes/light";
+import {
+  readThemePreference,
+  resolveTheme,
+  THEME_PREFERENCE_KEY,
+  type ResolvedTheme,
+  type ThemePreference,
+} from "@/lib/ui-system/theme-preference";
 
-const ThemeContext = createContext({
+interface ThemeContextValue {
+  theme: ResolvedTheme;
+  toggleTheme: () => void;
+  preference: ThemePreference;
+  setPreference: (preference: ThemePreference) => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
   theme: "dark",
+  preference: "system",
   toggleTheme: () => {},
+  setPreference: () => {},
 });
 
 export function useThemeContext() {
@@ -14,33 +30,65 @@ export function useThemeContext() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeMode] = useState<"light" | "dark">("dark");
+  const [preference, setPreference] = useState<ThemePreference>("system");
+  const [systemDark, setSystemDark] = useState(true);
+  const [ready, setReady] = useState(false);
+  const themeMode = resolveTheme(preference, systemDark);
 
-  // Recupera o tema salvo no localStorage no carregamento inicial
   useEffect(() => {
-    const savedTheme = localStorage.getItem("themeMode") as "light" | "dark" | null;
-    if (savedTheme === "light" || savedTheme === "dark") {
-      setThemeMode(savedTheme);
-    }
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const syncSystem = () => setSystemDark(media.matches);
+    const syncPreference = () => {
+      try {
+        setPreference(
+          readThemePreference(
+            localStorage.getItem(THEME_PREFERENCE_KEY),
+            localStorage.getItem("themeMode"),
+          ),
+        );
+      } catch {
+        setPreference("system");
+      }
+    };
+    syncSystem();
+    syncPreference();
+    setReady(true);
+    media.addEventListener("change", syncSystem);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === THEME_PREFERENCE_KEY || event.key === "themeMode" || event.key === null)
+        syncPreference();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      media.removeEventListener("change", syncSystem);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
-  // Atualiza o <html> class e salva no localStorage sempre que o tema mudar
   useEffect(() => {
+    if (!ready) return;
     document.documentElement.classList.toggle("dark", themeMode === "dark");
-    localStorage.setItem("themeMode", themeMode);
-  }, [themeMode]);
+    try {
+      localStorage.setItem(THEME_PREFERENCE_KEY, preference);
+      // Retain the resolved value for older application controls and tabs.
+      localStorage.setItem("themeMode", themeMode);
+    } catch {
+      // A browser that blocks storage must still be able to switch themes.
+    }
+  }, [preference, ready, themeMode]);
 
-  const theme = useMemo(() => {
-    return themeMode === "dark" ? darkTheme : lightTheme;
+  const muiTheme = useMemo(() => (themeMode === "dark" ? darkTheme : lightTheme), [themeMode]);
+  const toggleTheme = useCallback(() => {
+    setPreference(themeMode === "dark" ? "light" : "dark");
   }, [themeMode]);
-
-  const toggleTheme = () => {
-    setThemeMode((prev) => (prev === "dark" ? "light" : "dark"));
-  };
+  const value = useMemo(
+    () => ({ theme: themeMode, toggleTheme, preference, setPreference }),
+    [themeMode, toggleTheme, preference],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme: themeMode, toggleTheme }}>
-      <MuiThemeProvider theme={theme}>{children}</MuiThemeProvider>
+    <ThemeContext.Provider value={value}>
+      <MuiThemeProvider theme={muiTheme}>{children}</MuiThemeProvider>
     </ThemeContext.Provider>
   );
 }
