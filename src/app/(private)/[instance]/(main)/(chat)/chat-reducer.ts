@@ -70,17 +70,21 @@ export default function ChatReducer(
       isDocument = !["video", "image"].some((value) => action.file.type.includes(value));
 
       return {
+        ...state,
         sendAsAudio: isAudio,
         sendAsDocument: isDocument,
         text: state.text,
         file: action.file,
+        fileId: undefined,
         isEmojiMenuOpen: false,
       };
     case "attach-file-id":
       return {
+        ...state,
         sendAsAudio: isAudio,
         sendAsDocument: isDocument,
         text: state.text,
+        file: undefined,
         fileId: action.fileId,
         isEmojiMenuOpen: false,
       };
@@ -88,17 +92,22 @@ export default function ChatReducer(
       isAudio = true;
 
       return {
+        ...state,
         sendAsAudio: isAudio,
         sendAsDocument: isDocument,
         text: state.text,
         file: action.file,
+        fileId: undefined,
         isEmojiMenuOpen: false,
       };
     case "remove-file":
       return {
+        ...state,
         sendAsAudio: isAudio,
         sendAsDocument: isDocument,
         text: state.text,
+        file: undefined,
+        fileId: undefined,
         isEmojiMenuOpen: false,
       };
     case "toggle-emoji-menu":
