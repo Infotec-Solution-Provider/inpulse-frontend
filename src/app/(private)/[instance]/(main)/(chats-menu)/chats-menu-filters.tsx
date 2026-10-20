@@ -21,6 +21,7 @@ import { OperationalIconButton } from "@/lib/ui-system/actions";
 import { OperationalPanel } from "@/lib/ui-system/components";
 import { UiIcon } from "@/lib/ui-system/icons";
 import dynamic from "next/dynamic";
+import ChatTypeCarousel from "./chat-type-carousel";
 
 const SchedulesModal = dynamic(() => import("./(schedules-modal)/schedules-modal"), { ssr: false });
 const StartChatModal = dynamic(() => import("./(start-chat-modal)/start-chat-modal"), {
@@ -150,20 +151,11 @@ export default function ChatsMenuFilters() {
         }}
       />
 
-      <div className="attendance-conversation-types" role="group" aria-label="Tipos de conversa">
-        {availableTypes.map((type) => (
-          <button
-            key={type.value}
-            type="button"
-            aria-pressed={chatFilters.showingType === type.value}
-            onClick={() =>
-              changeChatFilters({ type: "change-showing-type", showingType: type.value })
-            }
-          >
-            {type.label}
-          </button>
-        ))}
-      </div>
+      <ChatTypeCarousel
+        options={availableTypes}
+        value={chatFilters.showingType}
+        onChange={(showingType) => changeChatFilters({ type: "change-showing-type", showingType })}
+      />
       <div className="attendance-conversation-order">
         <UiIcon name="sort" scale="metadata" />
         <span>

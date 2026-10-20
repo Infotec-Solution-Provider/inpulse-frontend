@@ -60,13 +60,38 @@
   align-items: center;
   gap: 2px;
 }
+.ip-ui .attendance-type-carousel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  min-width: 0;
+  margin: -6px;
+}
+.ip-ui .attendance-type-carousel[data-overflow="false"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.ip-ui .attendance-type-carousel-viewport {
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.ip-ui .attendance-type-carousel-viewport::-webkit-scrollbar {
+  display: none;
+}
+.ip-ui .attendance-type-carousel-arrow[aria-disabled="true"] {
+  color: var(--ip-muted);
+  opacity: 0.4;
+  cursor: default;
+}
+.ip-ui .attendance-type-carousel-arrow[aria-disabled="true"]:hover {
+  background: transparent;
+}
 .ip-ui .attendance-conversation-types {
   display: flex;
   gap: 4px;
-  overflow-x: auto;
-  margin: -4px;
-  padding: 4px;
-  scrollbar-width: thin;
+  width: max-content;
+  padding: 6px;
 }
 .ip-ui .attendance-conversation-types button {
   min-height: 32px;

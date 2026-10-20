@@ -3,38 +3,17 @@
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { useAuthContext } from "@/app/auth-context";
 import customersService from "@/lib/services/customers.service";
-import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import ScheduleIcon from "@mui/icons-material/Schedule";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { ChevronRight } from "lucide-react";
 import { UiIcon } from "@/lib/ui-system/icons";
-import { Button, Chip } from "@mui/material";
-import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@mui/material";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useTelephony } from "@/lib/telephony/telephony-provider";
 import { callPhaseLabels } from "@/lib/telephony/types";
 import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
 import TelephoneFinishModal from "./telephone-finish-modal";
 import { mapTelephonyScheduleToQueueItem, TelephoneQueueItem } from "./telephone-dialer.types";
-
-const formatPhone = (phone: string) => {
-  try {
-    return Formatter.phone(phone);
-  } catch {
-    return phone;
-  }
-};
-
-const formatSchedule = (scheduledAt: string) => {
-  const date = new Date(scheduledAt);
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-};
 
 export default function TelephoneDialerCard() {
   const { token, instance, user } = useAuthContext();
@@ -236,25 +215,15 @@ export default function TelephoneDialerCard() {
     setIsDrawerOpen(true);
   };
 
-  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Enter" && event.key !== " ") {
-      return;
-    }
-
-    event.preventDefault();
-    handleOpenDrawer();
-  };
-
   if (isLoadingQueue) {
     return (
-      <section className="ip-attendance-next-call mx-3 mb-3 rounded-md border border-slate-300 bg-white/70 px-3 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-200">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100">Discagem</h2>
-            <p className="mt-1 text-xs">Carregando fila telefônica…</p>
-          </div>
-          <Chip size="small" label="Sincronizando" color="info" />
-        </div>
+      <section
+        aria-label="Próxima ligação"
+        className="ip-attendance-next-call attendance-next-call attendance-next-call-summary"
+        role="status"
+      >
+        <h2>Próxima ligação</h2>
+        <span>Carregando…</span>
       </section>
     );
   }
@@ -263,78 +232,57 @@ export default function TelephoneDialerCard() {
     return (
       <section
         data-queue-state="error"
-        className="ip-attendance-next-call mx-3 mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200"
+        aria-label="Próxima ligação"
+        className="ip-attendance-next-call attendance-next-call attendance-next-call-error"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Discagem</h2>
-            <p className="mt-1 text-xs leading-5">{queueError}</p>
-          </div>
-          <Button size="small" variant="outlined" color="error" onClick={() => void reloadQueue()}>
-            Tentar novamente
-          </Button>
+        <div>
+          <h2>Próxima ligação</h2>
+          <p role="status">{queueError}</p>
         </div>
+        <Button size="small" color="error" onClick={() => void reloadQueue()}>
+          Tentar novamente
+        </Button>
       </section>
     );
   }
 
   if (!nextAppointment) {
     return (
-      <section className="ip-attendance-next-call mx-3 mb-3 rounded-md border border-dashed border-slate-400/70 bg-slate-300/60 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700/40 dark:text-slate-200">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold text-slate-900 dark:text-slate-100">Discagem</h2>
-          <Chip size="small" label="Fila vazia" color="default" />
-        </div>
-        <p className="mt-1 text-xs leading-5">
-          Nenhuma ligação pendente. O próximo agendamento aparecerá aqui.
-        </p>
+      <section
+        aria-label="Próxima ligação"
+        className="ip-attendance-next-call attendance-next-call attendance-next-call-summary"
+      >
+        <h2>Próxima ligação</h2>
+        <span>Sem pendências</span>
       </section>
     );
   }
 
   return (
     <>
-      <section
-        className="ip-attendance-next-call mx-3 mb-3 cursor-pointer rounded-md border border-slate-300 bg-white/70 px-3 py-2.5 text-slate-800 shadow-sm backdrop-blur transition hover:border-slate-400 hover:shadow-md dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:hover:border-slate-500"
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        className="ip-attendance-next-call attendance-next-call attendance-next-call-open"
+        aria-label={`Abrir próxima ligação: ${nextAppointment.contactName}`}
         onClick={handleOpenDrawer}
-        onKeyDown={handleCardKeyDown}
       >
-        <header className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
-                Próxima ligação
-              </p>
-              <Chip
-                size="small"
-                color={isDialing ? "success" : "warning"}
-                label={callStatusLabel}
-                className="!h-5"
-              />
-            </div>
-            <h2 className="mt-1 truncate text-sm font-semibold sm:text-base">
-              {nextAppointment.contactName}
-            </h2>
-            <p className="truncate text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
-              {nextAppointment.customerName || "Cliente não vinculado"}
-            </p>
-          </div>
-          <UiIcon icon={ChevronRight} className="mt-1" />
-        </header>
-
-        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
-          <p className="truncate rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700 dark:bg-slate-800/80 dark:text-slate-200 sm:text-xs">
-            {nextAppointment.campaignName}
-          </p>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-          <span>#{nextAppointment.campaignClientId}</span>
-          <span>Clique para abrir atendimento</span>
-        </div>
-      </section>
+        <span className="attendance-next-call-copy">
+          <span className="attendance-next-call-label">
+            Próxima ligação{matchesCall ? ` · ${callStatusLabel}` : ""}
+          </span>
+          <strong title={nextAppointment.contactName}>{nextAppointment.contactName}</strong>
+          {nextAppointment.customerName &&
+            nextAppointment.customerName !== nextAppointment.contactName && (
+              <span className="attendance-next-call-customer" title={nextAppointment.customerName}>
+                {nextAppointment.customerName}
+              </span>
+            )}
+          <span className="attendance-next-call-meta" title={nextAppointment.campaignName}>
+            {nextAppointment.campaignName} · #{nextAppointment.campaignClientId}
+          </span>
+        </span>
+        <UiIcon icon={ChevronRight} scale="row" />
+      </button>
 
       <TelephoneAttendanceDrawer
         open={isDrawerOpen}

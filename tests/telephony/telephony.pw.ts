@@ -5,7 +5,7 @@ test("microphone lifecycle, SIP state controls, navigation and logout", async ({
   await page.goto("/tests/telephony/index.html");
   await page.getByRole("button", { name: "Abrir telefone" }).click();
   await page.getByRole("button", { name: "Conectar telefonia" }).click();
-  await expect(page.getByText("Ramal conectado")).toBeVisible();
+  await expect(page.getByLabel("Telefone web", { exact: true }).getByText("Ramal conectado", { exact: true })).toBeVisible();
   await page.getByLabel("Telefone ou ramal").fill("102");
   await page.getByRole("button", { name: "Ligar", exact: true }).click();
   await expect(page.getByRole("button", { name: "Desligar" })).toBeVisible();
@@ -33,14 +33,14 @@ test("second tab cannot register the same operator until the first disconnects",
   await page.goto("/tests/telephony/index.html");
   await page.getByRole("button", { name: "Abrir telefone" }).click();
   await page.getByRole("button", { name: "Conectar telefonia" }).click();
-  await expect(page.getByText("Ramal conectado")).toBeVisible();
+  await expect(page.getByLabel("Telefone web", { exact: true }).getByText("Ramal conectado", { exact: true })).toBeVisible();
   const second = await context.newPage(); await second.goto("/tests/telephony/index.html");
   await second.getByRole("button", { name: "Abrir telefone" }).click();
   await second.getByRole("button", { name: "Conectar telefonia" }).click();
   await expect(second.getByText(/outra aba/)).toBeVisible();
   await page.getByRole("button", { name: "Desconectar", exact: true }).click();
   await second.getByRole("button", { name: "Conectar telefonia" }).click();
-  await expect(second.getByText("Ramal conectado")).toBeVisible();
+  await expect(second.getByLabel("Telefone web", { exact: true }).getByText("Ramal conectado", { exact: true })).toBeVisible();
 });
 
 test("phone stays in the attendance area and appears elsewhere only during a call", async ({ page }) => {
@@ -53,7 +53,7 @@ test("phone stays in the attendance area and appears elsewhere only during a cal
   await page.getByRole("button", { name: "Voltar ao atendimento" }).click();
   await page.getByRole("button", { name: "Abrir telefone" }).click();
   await page.getByRole("button", { name: "Conectar telefonia" }).click();
-  await expect(page.getByText("Ramal conectado")).toBeVisible();
+  await expect(page.getByLabel("Telefone web", { exact: true }).getByText("Ramal conectado", { exact: true })).toBeVisible();
   await page.getByLabel("Telefone ou ramal").fill("102");
   await page.getByRole("button", { name: "Ligar", exact: true }).click();
   await page.evaluate(() => window.phoneHarness.session?.emit("confirmed"));
@@ -64,6 +64,6 @@ test("phone stays in the attendance area and appears elsewhere only during a cal
   await expect(page.getByLabel("Telefone web")).toHaveCount(0);
   await page.getByRole("button", { name: "Voltar ao atendimento" }).click();
   await expect(page.getByLabel("Telefone web")).toHaveCount(1);
-  await expect(page.getByText("Ramal conectado")).toBeVisible();
+  await expect(page.getByLabel("Telefone web", { exact: true }).getByText("Ramal conectado", { exact: true })).toBeVisible();
   expect(await page.getByLabel("Telefone web").evaluate(element => getComputedStyle(element).position)).not.toBe("fixed");
 });

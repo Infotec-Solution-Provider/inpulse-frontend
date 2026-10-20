@@ -69,7 +69,10 @@ test("incoming calls expand the sidebar and preserve answer, mute, DTMF, end and
   await connect(page);
   await visiblePhone(page).getByRole("button", { name: "Recolher telefone" }).click();
   await expect(visiblePhone(page).getByLabel("Telefone ou ramal")).toHaveCount(0);
+  await page.getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true }).click();
+  await expect(visiblePhone(page)).toHaveCount(0);
   await page.evaluate(() => window.phoneLayoutHarness.incoming());
+  await expect(page.getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(visiblePhone(page).getByRole("button", { name: "Atender", exact: true })).toBeVisible();
   await expect(visiblePhone(page).getByRole("button", { name: "Recusar", exact: true })).toBeVisible();
   await visiblePhone(page).getByRole("button", { name: "Atender", exact: true }).click();

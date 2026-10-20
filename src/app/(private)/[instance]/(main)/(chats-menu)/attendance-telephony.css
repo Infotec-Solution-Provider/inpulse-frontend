@@ -1,0 +1,219 @@
+.ip-ui .attendance-sidebar-telephony.attendance-telephony-section {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  background: var(--ip-surface);
+}
+.ip-ui .attendance-sidebar-telephony.attendance-telephony-section > * + * {
+  margin-top: 0;
+}
+.ip-ui .attendance-telephony-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ip-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.ip-ui .attendance-telephony-toggle:hover {
+  background: var(--ip-surface-muted);
+}
+.ip-ui .attendance-telephony-toggle:focus-visible {
+  outline-offset: -4px;
+}
+.ip-ui .attendance-telephony-title {
+  color: var(--ip-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.ip-ui .attendance-telephony-status {
+  overflow: hidden;
+  min-width: 0;
+  margin-left: auto;
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui .attendance-telephony-chevron-open {
+  transform: rotate(180deg);
+}
+.ip-ui .attendance-telephony-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+}
+.ip-ui .attendance-telephony-content[hidden] {
+  display: none;
+}
+.ip-ui .attendance-telephony-content > * {
+  flex-shrink: 0;
+}
+.ip-ui .attendance-telephony-phone-slot {
+  margin: 0;
+}
+.ip-ui .ip-attendance-phone.ip-attendance-phone--sidebar {
+  padding: 4px 8px;
+}
+.ip-ui .ip-attendance-phone.ip-attendance-phone--sidebar > .ip-attendance-phone-heading {
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.ip-ui
+  .ip-attendance-phone.ip-attendance-phone--sidebar
+  .ip-attendance-phone-heading
+  > button:first-child {
+  min-width: 0;
+  min-height: 36px;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui
+  .ip-attendance-phone.ip-attendance-phone--sidebar
+  .ip-attendance-phone-heading
+  .MuiChip-root {
+  height: 22px;
+  max-width: 52%;
+  font-size: 12px;
+  background: var(--ip-surface-muted);
+  color: var(--ip-muted);
+}
+.ip-ui
+  .ip-attendance-phone.ip-attendance-phone--sidebar
+  .ip-attendance-phone-heading
+  .MuiChip-label {
+  padding-inline: 6px;
+}
+.ip-ui
+  .ip-attendance-phone.ip-attendance-phone--sidebar
+  .ip-attendance-phone-heading
+  > .MuiIconButton-root {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.ip-ui .ip-attendance-phone.ip-attendance-phone--sidebar .ip-attendance-phone-controls {
+  margin-top: 4px;
+  padding-bottom: 4px;
+}
+.ip-ui .ip-attendance-phone.ip-attendance-phone--sidebar .ip-attendance-phone-controls > * + * {
+  margin-top: 8px;
+}
+.ip-ui .attendance-next-call.ip-attendance-next-call {
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--ip-border-subtle);
+  border-radius: 8px;
+  color: var(--ip-text);
+  background: var(--ip-surface);
+  box-shadow: none;
+}
+.ip-ui .attendance-next-call-summary {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ip-ui .attendance-next-call h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.ip-ui .attendance-next-call-summary > span {
+  color: var(--ip-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.ip-ui .attendance-next-call-open {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.ip-ui .attendance-next-call-open:hover {
+  background: var(--ip-surface-muted);
+}
+.ip-ui .attendance-next-call-open:focus-visible {
+  outline-offset: -4px;
+}
+.ip-ui .attendance-next-call-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.ip-ui .attendance-next-call-copy > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui .attendance-next-call-copy > strong {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+.ip-ui .attendance-next-call-copy .attendance-next-call-label,
+.ip-ui .attendance-next-call-copy .attendance-next-call-customer,
+.ip-ui .attendance-next-call-copy .attendance-next-call-meta {
+  color: var(--ip-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ip-ui .attendance-next-call-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ip-ui .attendance-next-call-error > div {
+  min-width: 0;
+  flex: 1;
+}
+.ip-ui .attendance-next-call-error p {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.ip-ui .attendance-next-call-error .MuiButton-root {
+  min-height: 44px;
+  flex-shrink: 0;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .ip-ui
+    .ip-attendance-phone.ip-attendance-phone--sidebar
+    .ip-attendance-phone-heading
+    > button:first-child,
+  .ip-ui
+    .ip-attendance-phone.ip-attendance-phone--sidebar
+    .ip-attendance-phone-heading
+    > .MuiIconButton-root {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ip-ui .attendance-telephony-toggle,
+  .ip-ui .attendance-next-call-open {
+    transition: none;
+  }
+}

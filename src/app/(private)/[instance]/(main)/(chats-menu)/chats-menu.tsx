@@ -17,7 +17,7 @@ export default function ChatsMenu() {
       telephony={
         showTelephonyDialer ? (
           <>
-            <TelephonyPanelSlot className="mx-3" />
+            <TelephonyPanelSlot className="attendance-telephony-phone-slot" />
             <TelephoneDialerCard />
           </>
         ) : undefined

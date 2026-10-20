@@ -40,6 +40,137 @@ async function noOverflow(page: Page) {
     .toBe(true);
 }
 
+test("conversation type carousel navigates without applying filters and keeps keyboard focus visible", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const errors = await open(page, 320, 844);
+  const carousel = page.getByRole("group", { name: "Tipos de conversa", exact: true });
+  const viewport = carousel.locator(".attendance-type-carousel-viewport");
+  const previous = carousel.getByRole("button", {
+    name: "Tipos de conversa anteriores",
+    exact: true,
+  });
+  const next = carousel.getByRole("button", { name: "Próximos tipos de conversa", exact: true });
+  await expect(previous).toHaveAttribute("aria-disabled", "true");
+  await expect(next).toHaveAttribute("aria-disabled", "false");
+  expect(await viewport.evaluate((element) => getComputedStyle(element).scrollbarWidth)).toBe(
+    "none",
+  );
+  await next.click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await expect(carousel.getByRole("button", { name: "Todas", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(rows(page)).toHaveCount(4);
+
+  const all = carousel.getByRole("button", { name: "Todas", exact: true });
+  await all.focus();
+  await page.keyboard.press("End");
+  const scheduled = carousel.getByRole("button", { name: "Agendadas", exact: true });
+  await expect(scheduled).toBeFocused();
+  const inset = await scheduled.evaluate((button) => {
+    const option = button.getBoundingClientRect();
+    const bounds = button.closest(".attendance-type-carousel-viewport")!.getBoundingClientRect();
+    return { left: option.left - bounds.left, right: bounds.right - option.right };
+  });
+  expect(inset.left).toBeGreaterThanOrEqual(5);
+  expect(inset.right).toBeGreaterThanOrEqual(5);
+  await expect(carousel.getByRole("button", { name: "Todas", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("Enter");
+  await expect(scheduled).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Home");
+  await expect(all).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(rows(page)).toHaveCount(4);
+  await expect(previous).toHaveAttribute("aria-disabled", "true");
+  await noOverflow(page);
+  expect(errors).toEqual([]);
+});
+
+test("applying a type in the filter panel reveals it and resizing hides unnecessary carousel arrows", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const errors = await open(page);
+  await page.getByRole("button", { name: "Filtrar e ordenar conversas", exact: true }).click();
+  await choose(page, "Tipo de conversa", "Agendadas");
+  await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+  const carousel = page.getByRole("group", { name: "Tipos de conversa", exact: true });
+  const scheduled = carousel.getByRole("button", { name: "Agendadas", exact: true });
+  await expect(scheduled).toHaveAttribute("aria-pressed", "true");
+  const fullyVisible = () =>
+    scheduled.evaluate((button) => {
+      const option = button.getBoundingClientRect();
+      const bounds = button.closest(".attendance-type-carousel-viewport")!.getBoundingClientRect();
+      return option.left >= bounds.left + 5 && option.right <= bounds.right - 5;
+    });
+  await expect.poll(fullyVisible).toBe(true);
+  await carousel.evaluate((element) => {
+    element.style.width = "600px";
+  });
+  await expect(
+    carousel.getByRole("button", { name: "Próximos tipos de conversa", exact: true }),
+  ).toHaveCount(0);
+  await carousel.evaluate((element) => {
+    element.style.removeProperty("width");
+  });
+  await expect(
+    carousel.getByRole("button", { name: "Próximos tipos de conversa", exact: true }),
+  ).toBeVisible();
+  await expect.poll(fullyVisible).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("compact telephony can hide without unmounting and reopens when the call becomes active", async ({
+  page,
+}) => {
+  const errors = await open(page, 1280, 540);
+  const section = page.getByRole("region", { name: "Telefonia e próximas ligações", exact: true });
+  const phone = page.locator('section[aria-label="Telefone web"]');
+  const expanded = (await section.boundingBox())!.height;
+  await phone.getByRole("button", { name: "Abrir telefone", exact: true }).click();
+  await phone.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
+  await phone.getByLabel("Telefone ou ramal", { exact: true }).fill("102");
+  await page
+    .getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true })
+    .click();
+  await expect(phone).toHaveCount(1);
+  await expect(phone).toBeHidden();
+  expect((await section.boundingBox())!.height).toBeLessThan(expanded);
+  expect((await section.boundingBox())!.height).toBeLessThanOrEqual(48);
+  await expect(page.getByRole("heading", { name: "Conversas", exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Mostrar telefonia e próxima ligação", exact: true })
+    .click();
+  await expect(phone.getByText("Ramal conectado", { exact: true })).toBeVisible();
+  await expect(phone.getByLabel("Telefone ou ramal", { exact: true })).toHaveValue("102");
+  await phone.getByRole("button", { name: "Ligar", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.phoneHarness.session !== null)).toBe(true);
+  await page.evaluate(() => {
+    (window as any).originalCollapseSession = window.phoneHarness.session;
+  });
+  await page
+    .getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true })
+    .click();
+  await expect(phone).toBeHidden();
+  await page.evaluate(() => window.phoneHarness.session?.emit("confirmed"));
+  await expect(phone.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => window.phoneHarness.session === (window as any).originalCollapseSession,
+    ),
+  ).toBe(true);
+  expect(await page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
+  await phone.getByRole("button", { name: "Desligar", exact: true }).click();
+  await noOverflow(page);
+  expect(errors).toEqual([]);
+});
+
 test("search, immediate unread filter and an empty result preserve the selected chat", async ({
   page,
 }) => {

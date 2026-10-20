@@ -27,7 +27,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
   const open = expanded;
   useEffect(() => {
     if (busy) setExpanded(true);
-  }, [busy]);
+  }, [busy, state.phase, state.number, state.startedAt]);
   const labels = {
     disconnected: "Desconectado",
     connecting: "Conectando",
@@ -49,9 +49,9 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
   return (
     <section
       aria-label="Telefone web"
-      className={`ip-attendance-phone ${position} flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white p-3 text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100`}
+      className={`ip-attendance-phone ip-attendance-phone--${placement} ${position} flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white p-3 text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100`}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2">
+      <div className="ip-attendance-phone-heading flex shrink-0 items-center justify-between gap-2">
         <button
           type="button"
           className="flex flex-1 items-center gap-2 text-left text-sm font-semibold"
@@ -74,7 +74,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
         </IconButton>
       </div>
       {open && (
-        <div className="mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
+        <div className="ip-attendance-phone-controls mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
           {(state.error || error) && <Alert severity="error">{error || state.error}</Alert>}
           {phone.syncError && <Alert severity="warning">{phone.syncError}</Alert>}
           {phone.audioBlocked && (
