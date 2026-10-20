@@ -98,6 +98,25 @@ const senderPage = {
 };
 const internalApi = {
   current: {
+    async getInternalGroups() {
+      return [];
+    },
+    async createInternalChat() {
+      record("real-group-create", null);
+      throw new Error("Falha de gravação simulada");
+    },
+    async updateInternalGroup() {
+      record("real-group-update", null);
+      throw new Error("Falha de gravação simulada");
+    },
+    async updateInternalGroupImage() {
+      record("real-group-image", null);
+      throw new Error("Falha de gravação simulada");
+    },
+    async deleteInternalChat() {
+      record("real-group-delete", null);
+      throw new Error("Falha de gravação simulada");
+    },
     setAuth() {},
     async getUnidentifiedWhatsappSenders() {
       return senderPage;
@@ -113,6 +132,10 @@ const wppApi = {
       async get() {
         return { data: { templates: [] } };
       },
+    },
+    async deleteContact() {
+      record("real-contact-delete", null);
+      throw new Error("Falha de gravação simulada");
     },
     setAuth() {},
     async getSectors() {

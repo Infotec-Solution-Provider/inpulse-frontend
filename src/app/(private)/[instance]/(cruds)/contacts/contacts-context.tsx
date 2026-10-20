@@ -175,6 +175,8 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       } catch (err) {
         Logger.error("Error deleting contact", err as Error);
         toast.error("Falha ao deletar cliente!");
+
+        throw err;
       }
     },
     [token, wppApi],
@@ -274,12 +276,20 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
       dispatch({ type: "change-loading", isLoading: true });
       const params = buildContactsQuery(state.filters);
       // The shared SDK omits sectorIds; preserve every active filter in this list.
-      const searchParams = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)]));
-      const { data: response } = await wppApi.current.ax.get(`/api/whatsapp/contacts/customer?${searchParams}`);
+      const searchParams = new URLSearchParams(
+        Object.entries(params).map(([key, value]) => [key, String(value)]),
+      );
+      const { data: response } = await wppApi.current.ax.get(
+        `/api/whatsapp/contacts/customer?${searchParams}`,
+      );
       if (sequence !== loadSequence.current) return;
       const totalRows = Number(response?.pagination?.total ?? response?.data?.length ?? 0);
       const page = Number(state.filters.page || 1);
-      const availablePage = contactPageAfterLoad(page, Number(state.filters.perPage || 10), totalRows);
+      const availablePage = contactPageAfterLoad(
+        page,
+        Number(state.filters.perPage || 10),
+        totalRows,
+      );
       if (availablePage !== page) {
         dispatch({ type: "change-page", page: availablePage - 1 });
         return;
@@ -299,9 +309,12 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     }
   }, [state.filters, wppApi]);
 
-  const openLinkCustomerModal = useCallback((contact: WppContact) => {
-    openModal(<LinkCustomerModal contact={contact} onLinked={loadContacts} />);
-  }, [openModal, loadContacts]);
+  const openLinkCustomerModal = useCallback(
+    (contact: WppContact) => {
+      openModal(<LinkCustomerModal contact={contact} onLinked={loadContacts} />);
+    },
+    [openModal, loadContacts],
+  );
 
   useEffect(() => {
     if (!token || !wppApi.current) return;
@@ -312,7 +325,9 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
     if (token && pathname.endsWith("/contacts")) {
       loadContacts();
     }
-    return () => { loadSequence.current++; };
+    return () => {
+      loadSequence.current++;
+    };
   }, [token, pathname, state.filters.page, state.filters.perPage, loadContacts]);
 
   return (

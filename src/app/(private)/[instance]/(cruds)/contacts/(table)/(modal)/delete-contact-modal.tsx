@@ -14,9 +14,13 @@ export default function DeleteContactModal({ contact }: DeleteContactModalProps)
   const { deleteContact } = useContactsContext();
   const { closeModal } = useAppContext();
 
-  const onClickDelete = () => {
-    deleteContact(contact.id);
-    closeModal();
+  const onClickDelete = async () => {
+    try {
+      await deleteContact(contact.id);
+      closeModal();
+    } catch {
+      /* Keep confirmation visible after a failed write. */
+    }
   };
 
   return (

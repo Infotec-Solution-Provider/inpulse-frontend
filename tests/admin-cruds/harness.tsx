@@ -14,6 +14,7 @@ import Dashboards from "../../src/app/(private)/[instance]/reports/dashboards/pa
 import DashboardDetail from "../../src/app/(private)/[instance]/reports/dashboards/[id]/page";
 import Generated from "../../src/app/(private)/[instance]/reports/generated/page";
 import Generator from "../../src/app/(private)/[instance]/reports/report-generator/page";
+import ProviderContracts from "./provider-contracts";
 import Contacts from "../../src/app/(private)/[instance]/(cruds)/contacts/page";
 import ReadyMessages from "../../src/app/(private)/[instance]/(cruds)/ready-messages/page";
 import InternalGroups from "../../src/app/(private)/[instance]/(cruds)/internal-groups/page";
@@ -29,6 +30,7 @@ import Configuration from "../../src/app/(private)/[instance]/(cruds)/funnel/[fu
 import { PreviewProviders, AppContext, AuthContext, state } from "./doubles";
 navigate("/tenant-a/ready-messages");
 const screens = {
+  "provider-contracts": ProviderContracts,
   "mass-messages": Mass,
   metrics: Metrics,
   new: MetricNew,

@@ -212,3 +212,35 @@ test("a delayed dispatch query cannot replace a newer applied filter", async ({ 
   await expect(page.getByText("Disparo COMPLETED", { exact: true })).toBeVisible();
   await expect(page.getByText("Disparo DRAFT", { exact: true })).toHaveCount(0);
 });
+
+test("real providers reject failed writes so editors cannot report false success", async ({
+  page,
+}) => {
+  let failedRequests = 0;
+  await page.route("**/api/ready-messages**", (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ json: { data: [] } });
+    failedRequests++;
+    return route.fulfill({ status: 500, json: { message: "Falha simulada" } });
+  });
+  await open(page);
+  await page.evaluate(() => (window as any).adminCrudTest.navigate("provider-contracts"));
+  for (const name of [
+    "ready-create",
+    "ready-delete",
+    "group-create",
+    "group-update",
+    "group-image",
+    "group-delete",
+    "contact-delete",
+  ]) {
+    await page.getByRole("button", { name, exact: true }).click();
+    await expect(page.getByTestId(name)).toHaveText("rejected");
+  }
+  expect(failedRequests).toBe(2);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as any).adminCrudTest.calls().filter((x: any) => x.kind.startsWith("real-")).length,
+    ),
+  ).toBe(5);
+});

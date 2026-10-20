@@ -15,8 +15,12 @@ export default function DeleteInternalGroupModal({
   const { closeModal } = useAppContext();
 
   const handleSubmit = async () => {
-    deleteGroup(readyMessageId);
-    closeModal();
+    try {
+      await deleteGroup(readyMessageId);
+      closeModal();
+    } catch {
+      /* Keep confirmation visible after a failed write. */
+    }
   };
 
   return (

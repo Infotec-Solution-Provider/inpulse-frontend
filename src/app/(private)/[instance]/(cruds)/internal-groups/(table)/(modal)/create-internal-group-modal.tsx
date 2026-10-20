@@ -65,14 +65,18 @@ export default function CreateInternalGroupModal() {
       return;
     }
 
-    await createInternalGroup({
-      name,
-      participants: participants.map((p) => p.userId ?? 0),
-      groupId: selectedGroup?.id ?? null,
-      groupImage: groupImageRef.current,
-    });
+    try {
+      await createInternalGroup({
+        name,
+        participants: participants.map((p) => p.userId ?? 0),
+        groupId: selectedGroup?.id ?? null,
+        groupImage: groupImageRef.current,
+      });
 
-    closeModal();
+      closeModal();
+    } catch {
+      // The provider reports the failure; keep all draft fields mounted.
+    }
   };
 
   const handleAddUser = () => {

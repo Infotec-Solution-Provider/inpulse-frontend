@@ -165,6 +165,8 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       } catch (error) {
         console.error("Error creating readyMessage", error);
         toast.error("Erro ao criar Mensagem pronta");
+
+        throw error;
       }
     },
     [cacheScope, token],
@@ -183,6 +185,8 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       } catch (error) {
         console.error("Error deleting readyMessage", error);
         toast.error("Erro ao deletar Mensagem pronta");
+
+        throw error;
       }
     },
     [cacheScope, token],

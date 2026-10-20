@@ -98,6 +98,8 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       } catch (err) {
         Logger.error("Error creating internal group", err as Error);
         toast.error("Falha ao criar grupo!");
+
+        throw err;
       } finally {
         loadInternalGroups({});
       }
@@ -120,6 +122,8 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       } catch (err) {
         Logger.error("Error updating internal group", err as Error);
         toast.error("Falha ao atualizar grupo!");
+
+        throw err;
       }
     },
     [cacheScope, token, internalApi],
@@ -141,6 +145,8 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       } catch (err) {
         Logger.error("Error updating internal group image", err as Error);
         toast.error("Falha ao atualizar imagem do grupo!");
+
+        throw err;
       }
     },
     [cacheScope, token, internalApi],
@@ -158,6 +164,8 @@ export default function InternalGroupsProvider({ children }: IInternalGroupsProv
       } catch (err) {
         Logger.error("Error deleting internal group", err as Error);
         toast.error("Falha ao deletar grupo!");
+
+        throw err;
       }
     },
     [cacheScope, token, internalApi],

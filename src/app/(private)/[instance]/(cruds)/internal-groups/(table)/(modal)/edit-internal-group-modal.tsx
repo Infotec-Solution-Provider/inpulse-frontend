@@ -137,17 +137,21 @@ export default function EditInternalGroupModal({ group }: EditInternalGroupModal
       .map((participant) => ensureNumericId(participant.userId ?? participant.phone))
       .filter((id): id is number => typeof id === "number");
 
-    await updateInternalGroup(group.id, {
-      name,
-      participants: participantIds,
-      wppGroupId: selectedGroup?.id ?? null,
-    });
+    try {
+      await updateInternalGroup(group.id, {
+        name,
+        participants: participantIds,
+        wppGroupId: selectedGroup?.id ?? null,
+      });
 
-    if (groupImageRef.current) {
-      await updateInternalGroupImage(group.id, groupImageRef.current);
+      if (groupImageRef.current) {
+        await updateInternalGroupImage(group.id, groupImageRef.current);
+      }
+
+      closeModal();
+    } catch {
+      // The provider reports the failure; keep all draft fields mounted.
     }
-
-    closeModal();
   };
 
   const handleAddUser = () => {

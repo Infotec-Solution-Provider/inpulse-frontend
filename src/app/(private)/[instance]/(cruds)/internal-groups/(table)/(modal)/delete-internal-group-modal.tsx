@@ -13,8 +13,12 @@ export default function DeleteInternalGroupModal({ group }: DeleteInternalGroupM
   const { deleteInternalGroup } = useInternalGroupsContext();
 
   const handleDelete = async () => {
-    await deleteInternalGroup(group.id);
-    closeModal();
+    try {
+      await deleteInternalGroup(group.id);
+      closeModal();
+    } catch {
+      /* Keep confirmation visible after a failed write. */
+    }
   };
 
   return (
