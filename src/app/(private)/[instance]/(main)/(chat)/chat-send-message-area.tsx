@@ -1,16 +1,12 @@
 import SendTemplateModal from "@/lib/components/send-template-modal";
 import { WppMessage } from "@/lib/sdk-local";
-import { Logger } from "@in.pulse-crm/utils";
-import { Close } from "@mui/icons-material";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import ChatBubbleIcon from "@mui/icons-material/ChatBubble";
-import EmojiEmotionsOutlinedIcon from "@mui/icons-material/EmojiEmotionsOutlined";
-import SendIcon from "@mui/icons-material/Send";
-import TryIcon from "@mui/icons-material/Try";
-import { IconButton, Modal, TextField } from "@mui/material";
+import { Button, CircularProgress, Modal, Popover, TextField } from "@mui/material";
+import { FileText, Paperclip, Send, Smile } from "lucide-react";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { UiIcon } from "@/lib/ui-system/icons";
 import type { EmojiClickData, EmojiStyle, SuggestionMode, Theme } from "emoji-picker-react";
 import dynamic from "next/dynamic";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { QuickMessage } from "../../(cruds)/ready-messages/QuickMessage";
@@ -22,6 +18,7 @@ import AudioRecorder from "./audio-recorder";
 import ChannelSelect from "./channels-select";
 import { ChatContext } from "./chat-context";
 import { useMentions } from "./mentions/useMentions";
+import "./attendance-composer.css";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -73,10 +70,21 @@ export default function ChatSendMessageArea() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const isDisabled = !currentChat || isReadOnlyMode;
 
   const [quickMessageOpen, setQuickMessageOpen] = useState(false);
   const [quickTemplateOpen, setQuickTemplateOpen] = useState(false);
+  const recordedAudioUrl = useMemo(
+    () => (state.sendAsAudio && state.file ? URL.createObjectURL(state.file) : undefined),
+    [state.sendAsAudio, state.file],
+  );
+  useEffect(
+    () => () => {
+      if (recordedAudioUrl) URL.revokeObjectURL(recordedAudioUrl);
+    },
+    [recordedAudioUrl],
+  );
 
   useEffect(() => {
     if (currentChat && currentChat.chatType === "wpp" && channels.length > 0) {
@@ -236,15 +244,16 @@ export default function ChatSendMessageArea() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target !== textareaRef.current || e.isComposing) return;
       const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;
       if (e.key !== "Enter") return;
+      e.preventDefault();
 
       if (isAuxKeyPressed) {
         dispatch({ type: "change-text", text: state?.text + "\n" });
         return;
       }
 
-      e.preventDefault();
       if (!isDisabled) sendMessages();
     };
 
@@ -265,94 +274,53 @@ export default function ChatSendMessageArea() {
   }, [editingMessage]);
 
   return (
-    <div
-      className="flex w-full flex-col gap-2 bg-slate-200 px-2 py-2 text-indigo-300 dark:bg-slate-800 dark:text-indigo-400"
-      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
-    >
-      <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+    <section className="ip-attendance-composer" aria-label="Responder conversa">
+      <input
+        type="file"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        aria-label="Selecionar anexo"
+      />
 
       {refMessage && (
-        <div className="flex w-full items-center justify-between gap-2 rounded-md bg-indigo-500/10 p-2 dark:bg-indigo-600/20">
-          <div className="min-w-0 text-sm text-black dark:text-slate-300">
-            <MessageMentionText
-              text={refMessage.body}
-              mentionEntities={refMessage.mentionEntities}
-            />
-            {refMessage.fileId && (
-              <span className="text-xs text-slate-400 dark:text-slate-500">
-                {refMessage.fileName || "Arquivo anexado"}
-              </span>
-            )}
+        <div className="ip-composer-reference">
+          <div className="ip-composer-reference-copy">
+            <strong>{editingMessage ? "Editando mensagem" : "Respondendo à mensagem"}</strong>
+            <div className="ip-composer-reference-body">
+              <MessageMentionText
+                text={refMessage.body}
+                mentionEntities={refMessage.mentionEntities}
+              />
+            </div>
+            {refMessage.fileId && <span>{refMessage.fileName || "Arquivo anexado"}</span>}
           </div>
-          {quotedMessage && (
-            <IconButton
-              size="small"
-              className="bg-white/20 dark:text-indigo-400"
-              onClick={handleQuoteMessageRemove}
-            >
-              <Close />
-            </IconButton>
-          )}
+          <OperationalIconButton
+            label={editingMessage ? "Cancelar edição" : "Remover citação"}
+            onClick={editingMessage ? handleStopEditMessage : handleQuoteMessageRemove}
+          >
+            <UiIcon name="close" scale="toolbar" />
+          </OperationalIconButton>
         </div>
       )}
 
       {currentChat?.chatType === "internal" && mentionCount > 0 && (
-        <div className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="ip-composer-help">
           Menções ativas: {mentionCount}. Usuários mencionados receberão notificação via WhatsApp.
-        </div>
+        </p>
       )}
 
-      <div className="flex w-full items-end gap-1">
-        <div className="flex shrink-0 items-center">
-          {parameters["is_official"] === "true" && (
-            <IconButton
-              size="small"
-              onClick={openQuickTemplate}
-              color="success"
-              title="Enviar template"
-              disabled={isDisabled}
-            >
-              <TryIcon />
-            </IconButton>
-          )}
-          <IconButton
-            size="small"
-            onClick={openQuickMessages}
-            color="info"
-            title="Enviar mensagem rápida"
-            disabled={isDisabled}
-          >
-            <ChatBubbleIcon />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={openAttachFile}
-            color="secondary"
-            title="Anexar arquivo"
-            disabled={isDisabled}
-          >
-            <AttachFileIcon />
-          </IconButton>
-          {currentChat && currentChat.chatType === "wpp" && channels.length > 0 && (
-            <ChannelSelect
-              channels={channels}
-              selectedChannel={selectedChannel!}
-              onChange={onChangeChannel}
-            />
-          )}
-        </div>
-
-        <div className="relative min-w-0 flex-1">
+      <div className="ip-composer-input-row">
+        <div className="ip-composer-field">
           {state.sendAsAudio && state.file ? (
-            <div className="flex w-full items-center gap-2">
-              <audio
-                controls
-                src={URL.createObjectURL(state.file)}
-                className="h-8 min-w-0 flex-grow"
-              />
-              <IconButton color="inherit" onClick={() => dispatch({ type: "remove-file" })}>
-                <Close />
-              </IconButton>
+            <div className="ip-composer-audio-preview">
+              <audio controls src={recordedAudioUrl} aria-label="Prévia do áudio gravado" />
+              <OperationalIconButton
+                label="Remover áudio"
+                onClick={() => dispatch({ type: "remove-file" })}
+              >
+                <UiIcon name="close" scale="toolbar" />
+              </OperationalIconButton>
             </div>
           ) : (
             <>
@@ -361,24 +329,25 @@ export default function ChatSendMessageArea() {
                 fullWidth
                 maxRows={5}
                 size="small"
-                placeholder="Mensagem"
+                placeholder={editingMessage ? "Edite a mensagem" : "Escreva uma mensagem…"}
                 value={textWithNames}
                 onChange={(e) => handleTextChange(e.target.value)}
                 disabled={isDisabled}
+                inputProps={{ "aria-label": editingMessage ? "Editar mensagem" : "Mensagem" }}
                 inputRef={(ref) => {
                   textareaRef.current = ref;
                 }}
               />
-
               {showMentionList && (
-                <div className="absolute bottom-full left-0 z-50 mb-2 max-h-40 w-full max-w-[20rem] overflow-auto rounded-md bg-white shadow-md">
+                <div className="ip-composer-mentions" aria-label="Pessoas para mencionar">
                   {mentionCandidates.length === 0 ? (
-                    <div className="p-2 text-sm text-gray-500">Nenhum contato</div>
+                    <p className="ip-composer-help">Nenhum contato</p>
                   ) : (
-                    mentionCandidates.map((user: any) => (
-                      <div
+                    mentionCandidates.map((user) => (
+                      <button
+                        type="button"
                         key={user.userId}
-                        className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-blue-100"
+                        className="ip-composer-mention"
                         onClick={() => {
                           const result = selectMention(
                             user,
@@ -394,11 +363,11 @@ export default function ChatSendMessageArea() {
                           }, 0);
                         }}
                       >
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-300 text-xs font-semibold text-white">
+                        <span className="ip-composer-mention-avatar" aria-hidden="true">
                           {user.name[0]}
-                        </div>
-                        <span className="text-sm text-gray-800">{user.name}</span>
-                      </div>
+                        </span>
+                        <span>{user.name}</span>
+                      </button>
                     ))
                   )}
                 </div>
@@ -406,63 +375,118 @@ export default function ChatSendMessageArea() {
             </>
           )}
         </div>
+        <Button
+          className="ip-composer-send"
+          variant="contained"
+          disableElevation
+          disabled={
+            isDisabled || isSending || (!state.text?.trim() && !state.file && !state.fileId)
+          }
+          aria-label={
+            isSending
+              ? "Registrando mensagem"
+              : editingMessage
+                ? "Salvar edição da mensagem"
+                : "Enviar mensagem"
+          }
+          onClick={sendMessages}
+          startIcon={
+            isSending ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <UiIcon icon={Send} scale="row" />
+            )
+          }
+        >
+          {isSending ? "Registrando…" : editingMessage ? "Salvar" : "Enviar"}
+        </Button>
+      </div>
 
-        <div className="flex shrink-0 items-center">
-          <div className="relative">
-            <IconButton
-              size="small"
-              className="bg-white/20 dark:text-indigo-400"
-              onClick={toggleEmojiPicker}
+      <div className="ip-composer-toolbar">
+        <div className="ip-composer-tools" role="group" aria-label="Recursos da mensagem">
+          {parameters["is_official"] === "true" && (
+            <OperationalIconButton
+              label="Enviar template"
+              onClick={openQuickTemplate}
               disabled={isDisabled}
-              title="Emojis"
             >
-              <EmojiEmotionsOutlinedIcon />
-            </IconButton>
-            <div className="fixed bottom-20 right-2 z-[9999] sm:absolute sm:bottom-full sm:right-0 sm:z-50">
-              <EmojiPicker
-                onEmojiClick={handleEmojiClick}
-                theme={EMOJI_THEME}
-                emojiStyle={EMOJI_STYLE}
-                lazyLoadEmojis
-                suggestedEmojisMode={EMOJI_SUGGESTION_MODE}
-                open={state.isEmojiMenuOpen}
-                reactionsDefaultOpen={false}
-              />
-            </div>
-          </div>
-          {editingMessage && (
-            <IconButton
-              size="small"
-              className="bg-white/20 dark:text-indigo-400"
-              onClick={handleStopEditMessage}
-              title="Cancelar edição"
-            >
-              <Close />
-            </IconButton>
+              <UiIcon icon={FileText} scale="toolbar" />
+            </OperationalIconButton>
           )}
-
-          <IconButton
-            size="small"
-            aria-hidden={textWithNames.length === 0 && !state.file && !state.fileId}
-            className="bg-white/20 aria-hidden:hidden dark:text-indigo-400"
-            disabled={isDisabled || isSending}
-            aria-label={isSending ? "Registrando mensagem" : "Enviar mensagem"}
-            onClick={sendMessages}
+          <OperationalIconButton
+            label="Enviar mensagem rápida"
+            onClick={openQuickMessages}
+            disabled={isDisabled}
           >
-            <SendIcon />
-          </IconButton>
-
+            <UiIcon name="conversations" scale="toolbar" />
+          </OperationalIconButton>
+          <OperationalIconButton
+            label="Anexar arquivo"
+            onClick={openAttachFile}
+            disabled={isDisabled}
+          >
+            <UiIcon icon={Paperclip} scale="toolbar" />
+          </OperationalIconButton>
+          <OperationalIconButton
+            ref={emojiButtonRef}
+            label="Emojis"
+            aria-expanded={state.isEmojiMenuOpen}
+            aria-haspopup="dialog"
+            onClick={toggleEmojiPicker}
+            disabled={isDisabled}
+          >
+            <UiIcon icon={Smile} scale="toolbar" />
+          </OperationalIconButton>
           <div
-            className="aria-hidden:hidden"
-            aria-hidden={
-              isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage
-            }
+            hidden={isDisabled || textWithNames.length > 0 || state.sendAsAudio || !!editingMessage}
           >
             <AudioRecorder onAudioRecorded={handleAudioRecord} />
           </div>
         </div>
+        {currentChat?.chatType === "wpp" && channels.length > 0 && (
+          <ChannelSelect
+            channels={channels}
+            selectedChannel={selectedChannel}
+            onChange={onChangeChannel}
+            disabled={isDisabled}
+          />
+        )}
       </div>
+      <p
+        className="ip-composer-help ip-composer-keyboard-hint"
+        aria-live="polite"
+        role={isSending ? "status" : undefined}
+      >
+        {isSending ? "Registrando mensagem…" : "Enter para enviar · Shift + Enter para nova linha"}
+      </p>
 
+      <Popover
+        open={state.isEmojiMenuOpen && !isDisabled}
+        anchorEl={emojiButtonRef.current}
+        onClose={() => {
+          if (state.isEmojiMenuOpen) toggleEmojiPicker();
+        }}
+        anchorOrigin={{ vertical: "top", horizontal: "left" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+        slotProps={{
+          paper: {
+            className: "ip-composer-emoji-picker",
+            role: "dialog",
+            "aria-label": "Escolher emoji",
+          },
+        }}
+      >
+        <EmojiPicker
+          onEmojiClick={handleEmojiClick}
+          theme={EMOJI_THEME}
+          emojiStyle={EMOJI_STYLE}
+          lazyLoadEmojis
+          suggestedEmojisMode={EMOJI_SUGGESTION_MODE}
+          reactionsDefaultOpen={false}
+          width="100%"
+          height="min(360px, 55dvh)"
+        />
+      </Popover>
       {quickMessageOpen && !isDisabled && (
         <Modal open onClose={() => setQuickMessageOpen(false)}>
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -477,6 +501,6 @@ export default function ChatSendMessageArea() {
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" />
         </Modal>
       )}
-    </div>
+    </section>
   );
 }

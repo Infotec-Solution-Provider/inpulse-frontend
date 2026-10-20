@@ -53,10 +53,6 @@ body {
   .chat-open .chat-panel-container {
     width: 100% !important;
   }
-  /* Hide header when chat open */
-  .chat-open header {
-    display: none !important;
-  }
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -125,7 +121,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 
 @keyframes pulse-slow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {

@@ -57,7 +57,7 @@ function StatusAction({
             event.stopPropagation();
             onClick();
           }}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-default dark:hover:bg-white/10"
+          className="ip-send-status-action inline-flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-black/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-default dark:hover:bg-white/10"
         >
           {children}
         </button>
@@ -84,16 +84,19 @@ export default function PendingSendStatus({
   const checkState = pendingSendChecks[attempt.id];
   const checking = checkState === "checking";
   const copyDiagnostic = (
-    <StatusAction label="Copiar diagnóstico do envio" onClick={() => {
-      void (async () => {
-        try {
-          await navigator.clipboard.writeText(formatSendDiagnostic(attempt));
-          toast.success("Diagnóstico copiado.");
-        } catch {
-          toast.error("Não foi possível copiar o diagnóstico.");
-        }
-      })();
-    }}>
+    <StatusAction
+      label="Copiar diagnóstico do envio"
+      onClick={() => {
+        void (async () => {
+          try {
+            await navigator.clipboard.writeText(formatSendDiagnostic(attempt));
+            toast.success("Diagnóstico copiado.");
+          } catch {
+            toast.error("Não foi possível copiar o diagnóstico.");
+          }
+        })();
+      }}
+    >
       <ContentCopyIcon sx={{ fontSize: 16 }} />
     </StatusAction>
   );
@@ -157,12 +160,20 @@ export default function PendingSendStatus({
         <StatusIcon label={label}>
           <ErrorOutlineIcon sx={{ fontSize: 16 }} />
         </StatusIcon>
-        <StatusAction label="Verificar novamente" tooltip="Consultar o envio sem reenviar" onClick={() => void checkPendingSend(attempt.id)}>
+        <StatusAction
+          label="Verificar novamente"
+          tooltip="Consultar o envio sem reenviar"
+          onClick={() => void checkPendingSend(attempt.id)}
+        >
           <RefreshIcon sx={{ fontSize: 16 }} />
         </StatusAction>
         {copyDiagnostic}
         {canResumePendingSend(attempt) && !readOnly && (
-          <StatusAction label="Retomar envio" tooltip="Retomar a tentativa original" onClick={() => resumePendingSend(attempt.id)}>
+          <StatusAction
+            label="Retomar envio"
+            tooltip="Retomar a tentativa original"
+            onClick={() => resumePendingSend(attempt.id)}
+          >
             <SendOutlinedIcon sx={{ fontSize: 16 }} />
           </StatusAction>
         )}
@@ -201,8 +212,12 @@ export default function PendingSendStatus({
         </StatusAction>
         {attempt.status === "unconfirmed" && copyDiagnostic}
         {canResumePendingSend(attempt) && (
-          <StatusAction label="Retomar envio" tooltip="Retomar a tentativa original" disabled={checking}
-            onClick={() => resumePendingSend(attempt.id)}>
+          <StatusAction
+            label="Retomar envio"
+            tooltip="Retomar a tentativa original"
+            disabled={checking}
+            onClick={() => resumePendingSend(attempt.id)}
+          >
             <SendOutlinedIcon sx={{ fontSize: 16 }} />
           </StatusAction>
         )}

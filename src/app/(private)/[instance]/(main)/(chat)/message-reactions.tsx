@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, CircularProgress, IconButton, Popover, Tooltip } from "@mui/material";
-import AddReactionOutlinedIcon from "@mui/icons-material/AddReactionOutlined";
+import { Button, CircularProgress, Popover, Tooltip } from "@mui/material";
+import { SmilePlus } from "lucide-react";
+import { UiIcon } from "@/lib/ui-system/icons";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
 import EmojiPicker, { EmojiStyle, Theme } from "emoji-picker-react";
 import { toast } from "react-toastify";
 import type { MessageReaction } from "@/lib/sdk-local";
@@ -127,20 +129,15 @@ export default function MessageReactions({
       )}
       {onChange && (
         <>
-          <IconButton
-            className="invisible group-hover:visible"
+          <OperationalIconButton
             size="small"
-            aria-label={ownReaction ? "Alterar reação desta conta WhatsApp" : "Reagir à mensagem"}
+            label={ownReaction ? "Alterar reação desta conta WhatsApp" : "Reagir à mensagem"}
             title={ownReaction ? "Alterar reação desta conta WhatsApp" : "Reagir à mensagem"}
             disabled={pending}
             onClick={(event) => setAnchor(event.currentTarget)}
           >
-            {pending ? (
-              <CircularProgress size={16} />
-            ) : (
-              <AddReactionOutlinedIcon sx={{ fontSize: 18 }} />
-            )}
-          </IconButton>
+            {pending ? <CircularProgress size={16} /> : <UiIcon icon={SmilePlus} />}
+          </OperationalIconButton>
           <Popover
             open={!!anchor}
             anchorEl={anchor}

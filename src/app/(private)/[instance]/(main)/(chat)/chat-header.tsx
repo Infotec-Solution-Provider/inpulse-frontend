@@ -4,21 +4,18 @@ import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import reportsService from "@/lib/services/reports.service";
 import { UserRole } from "@/lib/sdk-local";
-import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import CloseIcon from "@mui/icons-material/Close";
-import DownloadIcon from "@mui/icons-material/Download";
-import EditIcon from "@mui/icons-material/Edit";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import InsightsIcon from "@mui/icons-material/Insights";
-import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import SummarizeIcon from "@mui/icons-material/Summarize";
-import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import { Avatar, IconButton, Menu, MenuItem, Tooltip } from "@mui/material";
+import { Avatar, Button, Menu, MenuItem } from "@mui/material";
+import {
+  Bot,
+  ChartNoAxesCombined,
+  Download,
+  FileText,
+  ShieldCheck,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { UiIcon, type UiIconName } from "@/lib/ui-system/icons";
 import { useContext, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -34,6 +31,7 @@ import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-
 import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
 import { useAuthContext } from "@/app/auth-context";
 import { chatHasAgentMessages } from "@/lib/utils/ai-agent-labels";
+import "./attendance-composer.css";
 
 const safeFormatPhone = (phone: string | null): string => {
   try {
@@ -67,8 +65,8 @@ export default function ChatHeader({
   customerId,
   onClose,
 }: ChatContactInfoProps) {
-	const { instance, user, token } = useAuthContext();
-	const router = useRouter();
+  const { instance, user, token } = useAuthContext();
+  const router = useRouter();
   const { openModal, closeModal } = useContext(AppContext);
   const { currentChat, currentChatMessages, parameters } = useWhatsappContext();
   const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
@@ -100,7 +98,13 @@ export default function ChatHeader({
     (!!(currentChat as { agentId?: number | null }).agentId || hasAgentMessages) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
-  const hasMobileActions = canOpenCustomerDetail || canOpenAIActions || canOpenSupervisorAssistant || hasAiAgent || canInteract || canExportChat;
+  const hasMobileActions =
+    canOpenCustomerDetail ||
+    canOpenAIActions ||
+    canOpenSupervisorAssistant ||
+    hasAiAgent ||
+    canInteract ||
+    canExportChat;
 
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
   const [mobileActionsAnchor, setMobileActionsAnchor] = useState<null | HTMLElement>(null);
@@ -179,236 +183,235 @@ export default function ChatHeader({
           messageCount: currentChatMessages.length,
           lastMessage: lastMessageBody,
         }}
-      />
+      />,
     );
   };
 
+  type HeaderAction = {
+    key: string;
+    label: string;
+    run: () => void;
+    name?: UiIconName;
+    icon?: LucideIcon;
+  };
+  const primaryActions: HeaderAction[] = [];
+  const extraActions: HeaderAction[] = [];
+  if (canOpenCustomerDetail)
+    primaryActions.push({
+      key: "details",
+      label: "Consultar cliente",
+      name: "info",
+      run: openCustomerDetailModal,
+    });
+  if (currentChat?.chatType === "wpp" && canInteract) {
+    primaryActions.push({
+      key: "edit",
+      label: "Editar contato",
+      name: "edit",
+      run: openEditContactModal,
+    });
+    primaryActions.push({
+      key: "schedule",
+      label: "Agendar retorno",
+      name: "calendar",
+      run: openScheduleChatModal,
+    });
+  }
+  if (canOpenSupervisorAssistant)
+    extraActions.push({
+      key: "assistant",
+      label: "Abrir no Assistente",
+      icon: Bot,
+      run: openSupervisorAssistant,
+    });
+  if (hasAiAgent)
+    extraActions.push({
+      key: "agent",
+      label: "Logs do agente de IA",
+      icon: ShieldCheck,
+      run: () => setAuditDrawerOpen(true),
+    });
+  if (canOpenAIActions) {
+    extraActions.push({
+      key: "suggest",
+      label: "Sugerir resposta",
+      icon: Sparkles,
+      run: () => openAIPrototypeModal("suggest-response"),
+    });
+    extraActions.push({
+      key: "summary",
+      label: "Resumir conversa",
+      icon: FileText,
+      run: () => openAIPrototypeModal("summarize-chat"),
+    });
+    extraActions.push({
+      key: "analyze",
+      label: "Analisar cliente",
+      icon: ChartNoAxesCombined,
+      run: () => openAIPrototypeModal("analyze-customer"),
+    });
+  }
+  if (canExportChat)
+    extraActions.push({
+      key: "export",
+      label: "Exportar conversa",
+      icon: Download,
+      run: () => void exportChat(),
+    });
+  const canTransfer = currentChat?.chatType === "wpp" && canInteract;
+  const canFinish =
+    canInteract &&
+    (currentChat?.chatType === "wpp" ||
+      (currentChat?.chatType === "internal" && !currentChat.isGroup));
+  const finishConversation =
+    currentChat?.chatType === "internal" ? openFinishInternalChatModal : openFinishChatModal;
+  const menuActions: HeaderAction[] = [
+    ...primaryActions,
+    ...(canTransfer
+      ? [
+          {
+            key: "transfer",
+            label: "Transferir conversa",
+            name: "transfer" as const,
+            run: openTransferChatModal,
+          },
+        ]
+      : []),
+    ...(canFinish
+      ? [
+          {
+            key: "finish",
+            label: "Finalizar conversa",
+            name: "finish" as const,
+            run: finishConversation,
+          },
+        ]
+      : []),
+    ...extraActions,
+  ];
+  const distinctCustomerName =
+    customerName?.trim() &&
+    customerName.trim().toLocaleLowerCase() !== name.trim().toLocaleLowerCase();
+  const actionIcon = (action: HeaderAction) =>
+    action.icon ? (
+      <UiIcon icon={action.icon} scale="toolbar" />
+    ) : (
+      <UiIcon name={action.name!} scale="toolbar" />
+    );
+
   return (
     <>
-    <div className="flex items-center justify-between gap-2 border-b bg-slate-200 px-2 py-2 dark:border-slate-700 dark:bg-slate-800 sm:px-4">
-      {onClose && (
-        <IconButton
-          onClick={onClose}
-          className="shrink-0 md:hidden"
-          aria-label="Voltar para conversas"
-          sx={{ color: "inherit" }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
-      )}
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md bg-slate-300 px-2 py-1 dark:bg-slate-700">
-          <Avatar
-            variant="rounded"
-            alt={name}
-            src={avatarUrl || ""}
-            sx={{ width: { xs: 44, sm: 52, md: 60 }, height: { xs: 44, sm: 52, md: 60 } }}
-          />
-          <div className="min-w-0">
-            <h2 className="truncate font-semibold text-slate-800 dark:text-slate-200">{name}</h2>
-            <h2 className="truncate text-sm text-slate-700 dark:text-slate-200">
-              {customerName || "Contato Não Atribuído"}
-            </h2>
-            <h2 className="truncate text-sm text-slate-400 dark:text-slate-300">{safeFormatPhone(phone)}</h2>
+      <header className="ip-attendance-header" aria-label="Conversa em atendimento">
+        <div className="ip-attendance-header-row">
+          {onClose && (
+            <span className="ip-attendance-header-back">
+              <OperationalIconButton label="Voltar para conversas" onClick={onClose}>
+                <UiIcon name="back" scale="toolbar" />
+              </OperationalIconButton>
+            </span>
+          )}
+          <Avatar variant="rounded" alt="" src={avatarUrl || ""} className="ip-attendance-avatar">
+            {name.trim().charAt(0).toLocaleUpperCase()}
+          </Avatar>
+          <div className="ip-attendance-identity">
+            <h2 title={name}>{name}</h2>
+            {distinctCustomerName && (
+              <p className="ip-attendance-customer" title={customerName || undefined}>
+                {customerName}
+              </p>
+            )}
+            <div className="ip-attendance-contact-meta">
+              {phone && <span>{safeFormatPhone(phone)}</span>}
+              {cpfCnpj && <span>CPF/CNPJ: {cpfCnpj}</span>}
+              {customerId && (
+                <span className="ip-attendance-customer-codes">
+                  Cliente {customerId}
+                  {codErp ? ` · ERP ${codErp}` : ""}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        {customerId && (
-          <div className="hidden flex-col rounded-md bg-slate-300 px-2 py-1 text-sm dark:bg-slate-700 md:flex">
-            <span className="text-slate-800 dark:text-slate-200">
-              <b>CPF/CNPJ: </b>
-              {cpfCnpj || "N/D"}
-            </span>
-            <span className="text-slate-800 dark:text-slate-200">
-              <b>Código Cliente: </b>
-              {customerId || "N/D"}
-            </span>
-            <span className="text-slate-800 dark:text-slate-200">
-              <b>Código ERP: </b>
-              {codErp || "N/D"}
-            </span>
+          <div className="ip-attendance-header-actions">
+            {primaryActions.map((action) => (
+              <OperationalIconButton
+                key={action.key}
+                label={`${action.label}: ${name}`}
+                tooltip={action.label}
+                onClick={action.run}
+              >
+                {actionIcon(action)}
+              </OperationalIconButton>
+            ))}
+            {canTransfer && (
+              <Button
+                className="ip-attendance-header-commit"
+                variant="outlined"
+                onClick={openTransferChatModal}
+                startIcon={<UiIcon name="transfer" scale="row" />}
+              >
+                Transferir
+              </Button>
+            )}
+            {canFinish && (
+              <Button
+                className="ip-attendance-header-commit"
+                variant="outlined"
+                onClick={finishConversation}
+                startIcon={<UiIcon name="finish" scale="row" />}
+              >
+                Finalizar
+              </Button>
+            )}
           </div>
-        )}
-      </div>
-      <div className="hidden items-center md:flex">
-		{canOpenSupervisorAssistant && (
-			<Tooltip title={<h3 className="text-base dark:text-white">Abrir no Assistente</h3>}>
-				<IconButton onClick={openSupervisorAssistant}>
-					<SmartToyOutlinedIcon sx={{ color: "#0ea5e9" }} />
-				</IconButton>
-			</Tooltip>
-		)}
-        {hasAiAgent && (
-          <Tooltip title={<h3 className="text-base dark:text-white">Logs do Agente de IA</h3>}>
-            <IconButton onClick={() => setAuditDrawerOpen(true)}>
-              <ManageAccountsIcon sx={{ color: "#8b5cf6" }} />
-            </IconButton>
-          </Tooltip>
-        )}
-        {canOpenAIActions && (
-          <>
-            <Tooltip title={<h3 className="text-base dark:text-white">Sugerir resposta</h3>}>
-              <IconButton onClick={() => openAIPrototypeModal("suggest-response")}>
-                <AutoAwesomeIcon sx={{ color: "#06b6d4" }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={<h3 className="text-base dark:text-white">Resumir conversa</h3>}>
-              <IconButton onClick={() => openAIPrototypeModal("summarize-chat")}>
-                <SummarizeIcon sx={{ color: "#8b5cf6" }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={<h3 className="text-base dark:text-white">Analisar cliente</h3>}>
-              <IconButton onClick={() => openAIPrototypeModal("analyze-customer")}>
-                <InsightsIcon sx={{ color: "#f59e0b" }} />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-        {canExportChat && (
-          <Tooltip title={<h3 className="text-base dark:text-white">Exportar conversa</h3>}>
-            <IconButton onClick={exportChat}>
-              <DownloadIcon color="primary" />
-            </IconButton>
-          </Tooltip>
-        )}
-        {canOpenCustomerDetail && (
-          <Tooltip title={<h3 className="text-base dark:text-white">Detalhes do cliente</h3>}>
-            <IconButton
-              onClick={openCustomerDetailModal}
-              sx={{
-                background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                color: "white",
-                transition: "all 0.3s",
-                "&:hover": {
-                  background: "linear-gradient(135deg, #047857 0%, #065f46 100%)",
-                  transform: "scale(1.08)",
-                },
-              }}
+          {hasMobileActions && (
+            <div
+              className={`ip-attendance-header-menu ${extraActions.length === 0 ? "ip-attendance-header-menu-compact" : ""}`}
             >
-              <InfoOutlinedIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-        {currentChat?.chatType === "wpp" && canInteract && (
-          <>
-            <Tooltip title={<h3 className="text-base dark:text-white">Editar contato</h3>}>
-              <IconButton onClick={openEditContactModal}>
-                <EditIcon color="info" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={<h3 className="text-base dark:text-white">Transferir conversa</h3>}>
-              <IconButton onClick={openTransferChatModal}>
-                <SyncAltIcon color="secondary" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={<h3 className="text-base dark:text-white">Agendar retorno</h3>}>
-              <IconButton onClick={openScheduleChatModal}>
-                <ScheduleIcon color="warning" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
-              <IconButton onClick={openFinishChatModal}>
-                <AssignmentTurnedInIcon color="success" />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-        {currentChat?.chatType === "internal" &&
-          canInteract &&
-          !currentChat?.isGroup && (
-          <>
-            <Tooltip title={<h3 className="text-base dark:text-white">Finalizar conversa</h3>}>
-              <IconButton onClick={openFinishInternalChatModal}>
-                <AssignmentTurnedInIcon color="success" />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-        {onClose && (
-          <IconButton
-            onClick={onClose}
-            sx={{
-              color: "inherit",
-              "&:hover": { backgroundColor: "rgba(99, 102, 241, 0.1)" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        )}
-      </div>
-      {hasMobileActions && <div className="md:hidden">
-        <IconButton
-          onClick={(event) => setMobileActionsAnchor(event.currentTarget)}
-          aria-label="Ações da conversa"
-          sx={{ color: "inherit" }}
-        >
-          <MoreVertIcon />
-        </IconButton>
-        <Menu
-          anchorEl={mobileActionsAnchor}
-          open={Boolean(mobileActionsAnchor)}
-          onClose={() => setMobileActionsAnchor(null)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-        >
-          {canExportChat && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); void exportChat(); }}>
-              <DownloadIcon className="mr-3" color="primary" /> Exportar conversa
-            </MenuItem>
+              <OperationalIconButton
+                label={`Ações da conversa com ${name}`}
+                tooltip="Ações da conversa"
+                aria-haspopup="menu"
+                aria-expanded={Boolean(mobileActionsAnchor)}
+                onClick={(event) => setMobileActionsAnchor(event.currentTarget)}
+              >
+                <UiIcon name="more" scale="toolbar" />
+              </OperationalIconButton>
+              <Menu
+                anchorEl={mobileActionsAnchor}
+                open={Boolean(mobileActionsAnchor)}
+                onClose={() => setMobileActionsAnchor(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                transformOrigin={{ vertical: "top", horizontal: "right" }}
+                slotProps={{ list: { "aria-label": "Ações da conversa" } }}
+              >
+                {menuActions.map((action) => (
+                  <MenuItem
+                    key={action.key}
+                    className="ip-attendance-menu-item"
+                    onClick={() => {
+                      setMobileActionsAnchor(null);
+                      action.run();
+                    }}
+                  >
+                    {actionIcon(action)}
+                    <span>{action.label}</span>
+                  </MenuItem>
+                ))}
+              </Menu>
+            </div>
           )}
-          {canOpenCustomerDetail && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openCustomerDetailModal(); }}>
-              <InfoOutlinedIcon className="mr-3" color="success" /> Detalhes do cliente
-            </MenuItem>
+          {onClose && (
+            <span className="ip-attendance-header-close">
+              <OperationalIconButton label="Fechar conversa" onClick={onClose}>
+                <UiIcon name="close" scale="toolbar" />
+              </OperationalIconButton>
+            </span>
           )}
-          {canOpenAIActions && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openAIPrototypeModal("suggest-response"); }}>
-              <AutoAwesomeIcon className="mr-3" color="info" /> Sugerir resposta
-            </MenuItem>
-          )}
-		  {canOpenSupervisorAssistant && (
-			<MenuItem onClick={() => { setMobileActionsAnchor(null); openSupervisorAssistant(); }}>
-				<SmartToyOutlinedIcon className="mr-3" color="primary" /> Abrir no Assistente
-			</MenuItem>
-		  )}
-          {hasAiAgent && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); setAuditDrawerOpen(true); }}>
-              <ManageAccountsIcon className="mr-3" color="secondary" /> Logs do agente
-            </MenuItem>
-          )}
-          {currentChat?.chatType === "wpp" && canInteract && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openEditContactModal(); }}>
-              <EditIcon className="mr-3" color="info" /> Editar contato
-            </MenuItem>
-          )}
-          {currentChat?.chatType === "wpp" && canInteract && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openTransferChatModal(); }}>
-              <SyncAltIcon className="mr-3" color="secondary" /> Transferir conversa
-            </MenuItem>
-          )}
-          {currentChat?.chatType === "wpp" && canInteract && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openScheduleChatModal(); }}>
-              <ScheduleIcon className="mr-3" color="warning" /> Agendar retorno
-            </MenuItem>
-          )}
-          {currentChat?.chatType === "wpp" && canInteract && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openFinishChatModal(); }}>
-              <AssignmentTurnedInIcon className="mr-3" color="success" /> Finalizar conversa
-            </MenuItem>
-          )}
-          {currentChat?.chatType === "internal" && canInteract && !currentChat.isGroup && (
-            <MenuItem onClick={() => { setMobileActionsAnchor(null); openFinishInternalChatModal(); }}>
-              <AssignmentTurnedInIcon className="mr-3" color="success" /> Finalizar conversa
-            </MenuItem>
-          )}
-        </Menu>
-      </div>}
-    </div>
-    {auditDrawerOpen && currentChat?.id && (
-      <AgentAuditDrawer
-        chatId={currentChat.id}
-        onClose={() => setAuditDrawerOpen(false)}
-      />
-    )}
+        </div>
+      </header>
+      {auditDrawerOpen && currentChat?.id && (
+        <AgentAuditDrawer chatId={currentChat.id} onClose={() => setAuditDrawerOpen(false)} />
+      )}
     </>
   );
 }

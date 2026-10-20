@@ -1,18 +1,14 @@
 import { MessageMentionEntity, MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
 import MessageMentionText from "@/lib/components/message-mention-text";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import EditIcon from "@mui/icons-material/Edit";
-import ForwardIcon from "@mui/icons-material/Forward";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import ReplayIcon from "@mui/icons-material/Replay";
-import ReplyIcon from "@mui/icons-material/Reply";
-import { Checkbox, IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import { Checkbox, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
 import React, { ReactNode, useMemo, useState } from "react";
 import { liStyleVariants, msgStyleVariants, QuotedMessageProps, statusComponents } from "./message";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
 import MessageReactions from "./message-reactions";
+import { UiIcon } from "@/lib/ui-system/icons";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { Copy, CornerUpLeft, Forward, Pencil, Square, RotateCcw } from "lucide-react";
 
 interface MessageProps {
   mentionEntities?: MessageMentionEntity[];
@@ -132,13 +128,13 @@ export default function GroupMessage({
   };
 
   const dateText = useMemo(() => {
-    return date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+    return date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   }, [date]);
 
   return (
     <li
       id={String(id)}
-      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? "bg-blue-500/10" : ""}`}
+      className={`ip-message-row w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? "is-selected bg-blue-500/10" : ""}`}
       onClick={isForwardMode ? () => onSelect?.(id) : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -155,17 +151,17 @@ export default function GroupMessage({
       )}
 
       <div
-        className={`flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
+        className={`ip-message-bubble ip-message-bubble--${style} flex flex-col items-center gap-2 p-2 ${msgStyleVariants[style]} w-max max-w-[66%] rounded-md`}
       >
         <div className="flex w-full flex-col gap-1">
           {quotedMessage && (
             <div
-              className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/20 p-2 dark:bg-slate-300/40 ${
+              className={`ip-message-quote mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/20 p-2 dark:bg-slate-300/40 ${
                 quotedMessage.style === "sent" ? "border-indigo-600" : "border-orange-600"
               }`}
             >
               <h2>{quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}</h2>
-              <div className="h-full w-full rounded-md p-4 text-black dark:text-slate-200">
+              <div className="ip-message-text h-full w-full rounded-md p-4 text-black dark:text-slate-200">
                 <MessageMentionText
                   text={quotedMessage.text}
                   mentionEntities={quotedMessage.mentionEntities}
@@ -184,10 +180,10 @@ export default function GroupMessage({
             </div>
           )}
 
-          {groupFirst && <h2 className="text-xs font-bold text-indigo-300">{sentBy}</h2>}
+          {groupFirst && <h2 className="ip-message-sender text-xs font-semibold">{sentBy}</h2>}
           {isForwarded && (
             <div className="flex items-center gap-1.5 opacity-75">
-              <ForwardIcon sx={{ fontSize: "1rem" }} />
+              <UiIcon icon={Forward} scale="metadata" />
               <span className="text-xs font-semibold">Encaminhada</span>
             </div>
           )}
@@ -200,7 +196,7 @@ export default function GroupMessage({
               showMediaByDefault={showMediaByDefault}
             />
           )}
-          <div className="w-full text-slate-900 dark:text-slate-200">
+          <div className="ip-message-text w-full text-slate-900 dark:text-slate-200">
             {type === "vcard" ? (
               <VCardMessage vCardString={text} /> // vCard mantém o texto original
             ) : (
@@ -213,7 +209,7 @@ export default function GroupMessage({
             legacyReaction={reaction}
             actorNames={mentionNameMap}
           />
-          <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
+          <div className="ip-message-metadata flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
             {style !== "system" && (sendStatus ?? (status && statusComponents[status]))}
@@ -228,7 +224,7 @@ export default function GroupMessage({
                   onRetry?.();
                 }}
               >
-                <ReplayIcon sx={{ fontSize: 16 }} />
+                <UiIcon icon={RotateCcw} scale="metadata" />
                 Reenviar
               </button>
             )}
@@ -238,14 +234,17 @@ export default function GroupMessage({
 
       {style !== "system" && !isForwardMode && !isReadOnly && (
         <div className="flex shrink-0 flex-col items-center">
-          <IconButton
-            className="invisible group-hover:visible"
+          <OperationalIconButton
+            label={`Mais opções da mensagem de ${sentBy} em ${dateText}`}
+            tooltip="Mais opções"
+            aria-haspopup="menu"
+            aria-expanded={open}
             size="small"
             title="Mais opções"
             onClick={handleMenuClick}
           >
-            <MoreVertIcon />
-          </IconButton>
+            <UiIcon name="more" />
+          </OperationalIconButton>
           <MessageReactions
             identity={`internal:${id}`}
             reactions={reactions}
@@ -256,7 +255,7 @@ export default function GroupMessage({
             {canRetry && (
               <MenuItem onClick={handleRetry}>
                 <ListItemIcon>
-                  <ReplayIcon fontSize="small" />
+                  <UiIcon icon={RotateCcw} />
                 </ListItemIcon>
                 <ListItemText>Reenviar</ListItemText>
               </MenuItem>
@@ -264,7 +263,7 @@ export default function GroupMessage({
             {onSelect && (
               <MenuItem onClick={handleSelect}>
                 <ListItemIcon>
-                  <CheckBoxOutlineBlankIcon fontSize="small" />
+                  <UiIcon icon={Square} />
                 </ListItemIcon>
                 <ListItemText>Selecionar</ListItemText>
               </MenuItem>
@@ -272,7 +271,7 @@ export default function GroupMessage({
             {onQuote && (
               <MenuItem onClick={handleQuote}>
                 <ListItemIcon>
-                  <ReplyIcon fontSize="small" />
+                  <UiIcon icon={CornerUpLeft} />
                 </ListItemIcon>
                 <ListItemText>Responder</ListItemText>
               </MenuItem>
@@ -280,7 +279,7 @@ export default function GroupMessage({
             {onForward && (
               <MenuItem onClick={handleForward}>
                 <ListItemIcon>
-                  <ForwardIcon fontSize="small" />
+                  <UiIcon icon={Forward} />
                 </ListItemIcon>
                 <ListItemText>Encaminhar</ListItemText>
               </MenuItem>
@@ -288,14 +287,14 @@ export default function GroupMessage({
             {onEdit && (
               <MenuItem onClick={handleEdit}>
                 <ListItemIcon>
-                  <EditIcon fontSize="small" />
+                  <UiIcon icon={Pencil} />
                 </ListItemIcon>
                 <ListItemText>Editar</ListItemText>
               </MenuItem>
             )}
             <MenuItem onClick={handleCopy}>
               <ListItemIcon>
-                <ContentCopyIcon fontSize="small" />
+                <UiIcon icon={Copy} />
               </ListItemIcon>
               <ListItemText>Copiar texto original</ListItemText>
             </MenuItem>

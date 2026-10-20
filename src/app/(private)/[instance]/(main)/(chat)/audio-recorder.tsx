@@ -1,6 +1,6 @@
-import MicIcon from "@mui/icons-material/Mic";
-import StopIcon from "@mui/icons-material/Stop";
-import { IconButton } from "@mui/material";
+import { Mic, Square } from "lucide-react";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { UiIcon } from "@/lib/ui-system/icons";
 import { useEffect, useRef, useState } from "react";
 
 interface AudioRecorderProps {
@@ -84,18 +84,26 @@ export default function AudioRecorder({ onAudioRecorded }: AudioRecorderProps) {
   };
 
   return (
-    <div className="flex items-center gap-2 pr-2">
+    <div className="ip-composer-recorder">
       {!isRecording ? (
-        <IconButton color="primary" onClick={startRecording} size="small">
-          <MicIcon />
-        </IconButton>
+        <OperationalIconButton label="Gravar áudio" onClick={startRecording}>
+          <UiIcon icon={Mic} scale="toolbar" />
+        </OperationalIconButton>
       ) : (
-        <IconButton color="error" onClick={stopRecording} size="small">
-          <StopIcon />
-        </IconButton>
+        <OperationalIconButton
+          label="Parar gravação"
+          className="ip-composer-recording-stop"
+          onClick={stopRecording}
+        >
+          <UiIcon icon={Square} scale="toolbar" />
+        </OperationalIconButton>
       )}
 
-      {isRecording && <span className="text-sm text-slate-400">{formatTime(recordingTime)}</span>}
+      {isRecording && (
+        <span className="ip-composer-recording-time" role="status">
+          Gravando {formatTime(recordingTime)}
+        </span>
+      )}
     </div>
   );
 }

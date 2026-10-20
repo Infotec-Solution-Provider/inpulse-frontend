@@ -107,7 +107,7 @@ export default function RenderWhatsappChatMessages({
   return (
     <div
       ref={messagesContainerRef}
-      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+      className="ip-message-history scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
     >
       {visibleCount < messagesToRender.length && (
         <div className="mb-2 flex justify-center">

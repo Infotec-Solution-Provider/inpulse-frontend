@@ -133,7 +133,7 @@ export default function ChatMessagesList() {
   return (
     <div className="flex h-full w-full flex-col">
       {isSelectionMode && (
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-white p-2 shadow-lg dark:bg-slate-900">
+        <div className="ip-message-selection">
           <Typography variant="subtitle1" component="div" className="min-w-0 font-semibold">
             {selectedMessageIds.size} mensagem(s) selecionada(s)
           </Typography>

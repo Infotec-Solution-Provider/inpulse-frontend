@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { TelephonyProvider, useTelephony } from "../../src/lib/telephony/telephony-provider";
 import { TelephonyPanelSlot } from "../../src/lib/telephony/telephony-panel";
 import ConversationSidebar from "../../src/app/(private)/[instance]/(main)/(chats-menu)/conversation-sidebar";
+import { PilotDesignProvider } from "../../src/lib/ui-system/provider";
 import { UA, harness } from "./doubles";
 import "./harness.css";
 
@@ -87,4 +88,4 @@ function App() {
   const [screen, setScreen] = useState<"attendance" | "other">("attendance");
   return screen === "attendance" ? <Attendance onLeave={() => setScreen("other")} /> : <OtherScreen onBack={() => setScreen("attendance")} />;
 }
-createRoot(document.getElementById("root")!).render(<TelephonyProvider><App /></TelephonyProvider>);
+createRoot(document.getElementById("root")!).render(<TelephonyProvider><PilotDesignProvider><App /></PilotDesignProvider></TelephonyProvider>);

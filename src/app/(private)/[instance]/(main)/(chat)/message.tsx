@@ -1,33 +1,27 @@
 import { MessageMentionEntity, MessageReaction, WppMessageStatus } from "@/lib/sdk-local";
 import MessageMentionText from "@/lib/components/message-mention-text";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import DeleteIcon from "@mui/icons-material/Delete";
-import DoneIcon from "@mui/icons-material/Done";
-import DoneAllIcon from "@mui/icons-material/DoneAll";
-import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
-import EditIcon from "@mui/icons-material/Edit";
-import ErrorIcon from "@mui/icons-material/Error";
-import ForwardIcon from "@mui/icons-material/Forward";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import ReplyIcon from "@mui/icons-material/Reply";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
-import {
-  Checkbox,
-  IconButton,
-  ListItemIcon,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Tooltip,
-} from "@mui/material";
+import { Checkbox, ListItemIcon, ListItemText, Menu, MenuItem, Tooltip } from "@mui/material";
 import React, { ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useWhatsappSession } from "../../whatsapp-session-context";
-import { getChannelColor } from "./channels-select";
 import MessageFile from "./message-file";
 import VCardMessage from "./vcard-message";
 import MessageReactions from "./message-reactions";
+import { UiIcon } from "@/lib/ui-system/icons";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import {
+  CheckCheck,
+  Check,
+  Clock3,
+  CircleAlert,
+  Download,
+  Trash2,
+  Copy,
+  CornerUpLeft,
+  Forward,
+  Pencil,
+  Square,
+  Bot,
+} from "lucide-react";
 
 export interface QuotedMessageProps {
   mentionEntities?: MessageMentionEntity[];
@@ -92,24 +86,53 @@ export const liStyleVariants = {
 export const statusComponents: Record<WppMessageStatus, ReactNode> = {
   PENDING: (
     <Tooltip title="Enviando…">
-      <AccessTimeIcon className="text-slate-300" aria-label="Enviando…" />
+      <UiIcon
+        icon={Clock3}
+        scale="metadata"
+        aria-label="Enviando…"
+        style={{ color: "var(--ip-muted)" }}
+      />
     </Tooltip>
   ),
   UNKNOWN: (
     <Tooltip title="Ainda sem confirmação de envio">
-      <AccessTimeIcon className="text-amber-500" aria-label="Ainda sem confirmação de envio" />
+      <UiIcon
+        icon={Clock3}
+        scale="metadata"
+        aria-label="Ainda sem confirmação de envio"
+        style={{ color: "var(--ip-warning)" }}
+      />
     </Tooltip>
   ),
-  SENT: <DoneIcon className="text-slate-300" />,
-  RECEIVED: <DoneAllIcon className="text-slate-300" />,
-  READ: <DoneAllIcon className="text-blue-300" />,
-  DOWNLOADED: <DownloadDoneIcon className="text-blue-300" />,
+  SENT: <UiIcon icon={Check} scale="metadata" aria-label="Enviada" />,
+  RECEIVED: <UiIcon icon={CheckCheck} scale="metadata" aria-label="Entregue" />,
+  READ: (
+    <UiIcon
+      icon={CheckCheck}
+      scale="metadata"
+      aria-label="Lida"
+      style={{ color: "var(--ip-accent)" }}
+    />
+  ),
+  DOWNLOADED: (
+    <UiIcon
+      icon={Download}
+      scale="metadata"
+      aria-label="Baixada"
+      style={{ color: "var(--ip-accent)" }}
+    />
+  ),
   ERROR: (
     <Tooltip title="Falha no envio">
-      <ErrorIcon className="text-red-300" aria-label="Falha no envio" />
+      <UiIcon
+        icon={CircleAlert}
+        scale="metadata"
+        aria-label="Falha no envio"
+        style={{ color: "var(--ip-danger)" }}
+      />
     </Tooltip>
   ),
-  REVOKED: <DeleteIcon className="text-slate-300" />,
+  REVOKED: <UiIcon icon={Trash2} scale="metadata" aria-label="Removida" />,
 };
 
 function Message({
@@ -155,13 +178,6 @@ function Message({
     return channel?.name || null;
   }, [channelId, channels]);
 
-  const channelColor = useMemo(() => {
-    if (!channelId || channels.length <= 1) return null;
-    const channel = channels.find((c) => c.id === channelId);
-    if (!channel) return null;
-    return getChannelColor(channel, channels);
-  }, [channelId, channels]);
-
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -194,7 +210,7 @@ function Message({
   };
 
   const dateText = useMemo(() => {
-    return date.toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+    return date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   }, [date]);
 
   const isMessageFromToday = useMemo(() => {
@@ -213,7 +229,7 @@ function Message({
   return (
     <li
       id={String(id)}
-      className={`w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? "bg-blue-500/10" : ""}`}
+      className={`ip-message-row w-full ${liStyleVariants[style]} group flex items-center gap-2 transition-colors duration-200 ${isSelected ? "is-selected bg-blue-500/10" : ""}`}
       onClick={isForwardMode ? () => onSelect?.(id) : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -229,13 +245,13 @@ function Message({
       )}
 
       <div
-        className={`flex w-max max-w-[86%] flex-col items-center gap-2 rounded-md p-2 sm:max-w-[76%] lg:max-w-[66%] ${msgStyleVariants[bubbleVariant]}`}
+        className={`ip-message-bubble ip-message-bubble--${bubbleVariant} flex w-max max-w-[86%] flex-col items-center gap-2 rounded-md p-2 sm:max-w-[76%] lg:max-w-[66%] ${msgStyleVariants[bubbleVariant]}`}
       >
         {isAgentMessage && (
           <div className="flex w-full">
             <Tooltip title="Mensagem enviada automaticamente pelo agente de IA">
-              <span className="inline-flex items-center gap-1 text-[0.7rem] font-semibold text-violet-700 dark:text-violet-300">
-                <SmartToyIcon sx={{ fontSize: "0.9rem" }} />
+              <span className="ip-message-sender inline-flex items-center gap-1">
+                <UiIcon icon={Bot} scale="metadata" />
                 Agente virtual
               </span>
             </Tooltip>
@@ -244,7 +260,7 @@ function Message({
 
         {quotedMessage && (
           <div
-            className={`mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/50 p-2 dark:bg-slate-300/40 ${
+            className={`ip-message-quote mt-2 flex w-full flex-col gap-1 rounded-lg border-l-2 bg-white/50 p-2 dark:bg-slate-300/40 ${
               quotedMessage.style === "sent"
                 ? "border-indigo-600 dark:border-indigo-400"
                 : "border-orange-600 dark:border-orange-400"
@@ -266,7 +282,7 @@ function Message({
             >
               {quotedMessage.style === "sent" ? "Você" : quotedMessage.author || ""}
             </h2>
-            <div className="h-full w-full rounded-md px-3 py-1 text-black dark:text-slate-200">
+            <div className="ip-message-text h-full w-full rounded-md px-3 py-1 text-black dark:text-slate-200">
               <MessageMentionText
                 text={quotedMessage.text}
                 mentionEntities={quotedMessage.mentionEntities}
@@ -287,7 +303,7 @@ function Message({
         <div className="flex w-full flex-col gap-0.5">
           {isForwarded && (
             <div className="flex items-center gap-1.5 opacity-75">
-              <ForwardIcon sx={{ fontSize: "1rem" }} />
+              <UiIcon icon={Forward} scale="metadata" />
               <span className="text-xs font-semibold">Encaminhada</span>
             </div>
           )}
@@ -301,7 +317,7 @@ function Message({
               showMediaByDefault={showMediaByDefault ?? isMessageFromToday}
             />
           )}
-          <div className="w-full text-slate-900 dark:text-slate-200">
+          <div className="ip-message-text w-full text-slate-900 dark:text-slate-200">
             {type === "vcard" ? (
               <VCardMessage vCardString={text} />
             ) : (
@@ -313,12 +329,8 @@ function Message({
             reactions={reactions}
             legacyReaction={reaction}
           />
-          <div className="flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
-            {channelName && channelColor && (
-              <span className="font-semibold" style={{ color: channelColor }}>
-                {channelName}
-              </span>
-            )}
+          <div className="ip-message-metadata flex items-center gap-2 text-[0.65rem] text-slate-600 dark:text-slate-400">
+            {channelName && <span>{channelName}</span>}
             {isEdited && <span>Editada</span>}
             <p>{dateText}</p>
             {style !== "system" &&
@@ -328,9 +340,17 @@ function Message({
                     <Tooltip title={sendError} arrow>
                       <span tabIndex={0} role="img" aria-label={sendError} className="inline-flex">
                         {status === "ERROR" ? (
-                          <ErrorIcon className="text-red-300" />
+                          <UiIcon
+                            icon={CircleAlert}
+                            scale="metadata"
+                            style={{ color: "var(--ip-danger)" }}
+                          />
                         ) : (
-                          <AccessTimeIcon className="text-amber-500" />
+                          <UiIcon
+                            icon={Clock3}
+                            scale="metadata"
+                            style={{ color: "var(--ip-warning)" }}
+                          />
                         )}
                       </span>
                     </Tooltip>
@@ -343,14 +363,17 @@ function Message({
 
       {style !== "system" && !isForwardMode && !isReadOnly && (
         <div className="flex shrink-0 flex-col items-center">
-          <IconButton
-            className="visible shrink-0 md:invisible md:group-hover:visible"
+          <OperationalIconButton
+            label={`Mais opções da mensagem de ${dateText}`}
+            tooltip="Mais opções"
+            aria-haspopup="menu"
+            aria-expanded={open}
             size="small"
             title="Mais opções"
             onClick={handleMenuClick}
           >
-            <MoreVertIcon />
-          </IconButton>
+            <UiIcon name="more" />
+          </OperationalIconButton>
           <MessageReactions
             identity={`wpp:${channelId}:${id}`}
             reactions={reactions}
@@ -361,7 +384,7 @@ function Message({
             {onSelect && (
               <MenuItem onClick={handleSelect}>
                 <ListItemIcon>
-                  <CheckBoxOutlineBlankIcon fontSize="small" />
+                  <UiIcon icon={Square} />
                 </ListItemIcon>
                 <ListItemText>Selecionar</ListItemText>
               </MenuItem>
@@ -369,7 +392,7 @@ function Message({
             {onQuote && (
               <MenuItem onClick={handleQuote}>
                 <ListItemIcon>
-                  <ReplyIcon fontSize="small" />
+                  <UiIcon icon={CornerUpLeft} />
                 </ListItemIcon>
                 <ListItemText>Responder</ListItemText>
               </MenuItem>
@@ -377,7 +400,7 @@ function Message({
             {!isOfficial && onForward && (
               <MenuItem onClick={handleForward}>
                 <ListItemIcon>
-                  <ForwardIcon fontSize="small" />
+                  <UiIcon icon={Forward} />
                 </ListItemIcon>
                 <ListItemText>Encaminhar</ListItemText>
               </MenuItem>
@@ -385,7 +408,7 @@ function Message({
             {!isOfficial && onEdit && (
               <MenuItem onClick={handleEdit}>
                 <ListItemIcon>
-                  <EditIcon fontSize="small" />
+                  <UiIcon icon={Pencil} />
                 </ListItemIcon>
                 <ListItemText>Editar</ListItemText>
               </MenuItem>
@@ -393,7 +416,7 @@ function Message({
             {onCopy && (
               <MenuItem onClick={handleCopy}>
                 <ListItemIcon>
-                  <ContentCopyIcon fontSize="small" />
+                  <UiIcon icon={Copy} />
                 </ListItemIcon>
                 <ListItemText>Copiar texto original</ListItemText>
               </MenuItem>
