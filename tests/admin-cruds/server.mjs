@@ -24,6 +24,7 @@ const stubs = {
   "files.service": `export {filesService as default} from '${d}'`,
   "customers.service": `export {customersService as default} from '${d}'`,
   "marketing.service": `export {marketingService as default} from '${d}'`,
+  "mass-audience.client": `export {MassAudienceClient as default} from '${d}'`,
   "sql-reports-context": `export {SqlReportsContext,SqlReportsProvider as default} from '${d}'`,
   "users.service": `export {usersService as default} from '${d}'`,
   "customer-crm-detail-modal": `export {Empty as default} from '${d}'`,

@@ -11,6 +11,7 @@ interface CustomerBusinessFiltersProps {
   filters: CustomerBusinessFilters;
   options: CustomerBusinessFilterOptions;
   onChange: (filters: CustomerBusinessFilters) => void;
+  phoneLabel?: string;
 }
 
 function getSelectedOptions(options: CustomerLookupOption[], ids: number[]) {
@@ -22,6 +23,7 @@ export default function CustomerBusinessFiltersPanel({
   filters,
   options,
   onChange,
+  phoneLabel = "Telefone contém",
 }: CustomerBusinessFiltersProps) {
   const update = <K extends keyof CustomerBusinessFilters>(
     key: K,
@@ -119,14 +121,43 @@ export default function CustomerBusinessFiltersPanel({
       <div className="sm:col-span-2">
         {renderLookup("Usuários fidelizados", options.operators, "loyaltyOperatorIds")}
       </div>
-      {([
-        ["Grupos de clientes", "groups", "groupIds"], ["Origens", "origins", "originIds"],
-        ["Mídias CRM", "medias", "mediaIds"], ["Marcas", "brands", "brandIds"],
-        ["Unidades", "units", "unitIds"], ["Cargos dos contatos", "positions", "positionIds"],
-      ] as const).map(([label, kind, key]) => <CustomerSearchLookup key={key} label={label} kind={kind} value={filters[key]} onChange={ids => update(key, ids.map(Number))} />)}
-      <CustomerSearchLookup label="Estados" kind="states" value={filters.states} onChange={ids => update("states", ids)} />
-      <TextField size="small" label="Telefone contém" value={filters.phone} onChange={event => update("phone", event.target.value)} helperText="Pelo menos três dígitos" />
-      <TextField size="small" label="E-mail contém" value={filters.email} onChange={event => update("email", event.target.value)} />
+      {(
+        [
+          ["Grupos de clientes", "groups", "groupIds"],
+          ["Origens", "origins", "originIds"],
+          ["Mídias CRM", "medias", "mediaIds"],
+          ["Marcas", "brands", "brandIds"],
+          ["Unidades", "units", "unitIds"],
+          ["Cargos dos contatos", "positions", "positionIds"],
+        ] as const
+      ).map(([label, kind, key]) => (
+        <CustomerSearchLookup
+          key={key}
+          label={label}
+          kind={kind}
+          value={filters[key]}
+          onChange={(ids) => update(key, ids.map(Number))}
+        />
+      ))}
+      <CustomerSearchLookup
+        label="Estados"
+        kind="states"
+        value={filters.states}
+        onChange={(ids) => update("states", ids)}
+      />
+      <TextField
+        size="small"
+        label={phoneLabel}
+        value={filters.phone}
+        onChange={(event) => update("phone", event.target.value)}
+        helperText="Pelo menos três dígitos"
+      />
+      <TextField
+        size="small"
+        label="E-mail contém"
+        value={filters.email}
+        onChange={(event) => update("email", event.target.value)}
+      />
     </div>
   );
 }

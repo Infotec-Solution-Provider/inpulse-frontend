@@ -4,33 +4,21 @@ import { crmError } from "@/lib/crm-marketing-form";
 import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 
 import { useAuthContext } from "@/app/auth-context";
-import customersService from "@/lib/services/customers.service";
 import marketingService, {
   CampaignDispatchRow,
   MarketingCampaign,
   MonitoringSummary,
 } from "@/lib/services/marketing.service";
-import {
-  AttachFile,
-  Cancel,
-  EmojiEmotions,
-  FilterAlt,
-  PeopleAlt,
-  Search,
-  Send,
-  Visibility,
-} from "@/lib/ui-system/crm-icons";
+import { AttachFile, Cancel, EmojiEmotions, Send, Visibility } from "@/lib/ui-system/crm-icons";
 import {
   Alert,
   Autocomplete,
   Button,
-  Checkbox,
   Chip,
   CircularProgress,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -50,13 +38,11 @@ import dayjs from "dayjs";
 import EmojiPicker from "emoji-picker-react";
 import { startTransition, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import type {
-  CustomerAgeLevel,
-  CustomerInteractionLevel,
-  CustomerProfileSummaryLevel,
-  CustomerPurchaseInterestLevel,
-  CustomerPurchaseLevel,
-} from "@/lib/types/customer-profile-summary";
+import MassAudienceSelector from "@/lib/components/mass-audience-selector";
+import MassAudienceClient, {
+  type AudienceCreationSummary,
+} from "@/lib/services/mass-audience.client";
+import { emptyMassAudienceValue } from "@/lib/mass-audience";
 import { WhatsappContext } from "../../whatsapp-context";
 
 type DraftForm = {
@@ -87,92 +73,7 @@ type RowSummary = MonitoringSummary & {
   dispatchesLabel: string;
 };
 
-type ContactRow = {
-  id: number;
-  name: string;
-  phone: string;
-  customerId: number | null;
-  customerName: string | null;
-  customerCampaignId: number | null;
-  customerCampaignName: string | null;
-  isBlocked: boolean;
-  conversationExpiration: string | null;
-  profileLabel: string | null;
-  purchaseInterestLabel: string | null;
-  interactionTagLabel: string | null;
-  purchaseTagLabel: string | null;
-  ageTagLabel: string | null;
-};
-
-type SummaryFilterValue<T extends string> = T | "all";
-
-type ContactFilters = {
-  search: string;
-  page: number;
-  perPage: number;
-  profileLevel: SummaryFilterValue<CustomerProfileSummaryLevel>;
-  interactionLevel: SummaryFilterValue<CustomerInteractionLevel>;
-  purchaseLevel: SummaryFilterValue<CustomerPurchaseLevel>;
-  ageLevel: SummaryFilterValue<CustomerAgeLevel>;
-  purchaseInterestLevel: SummaryFilterValue<CustomerPurchaseInterestLevel>;
-  campaignIds: string[];
-};
-
 type TemplateVariableMap = Record<string, string>;
-
-const PROFILE_FILTER_OPTIONS: Array<{
-  value: SummaryFilterValue<CustomerProfileSummaryLevel>;
-  label: string;
-}> = [
-  { value: "all", label: "Todos os perfis" },
-  { value: "potencial_de_compra", label: "Potencial de compra" },
-  { value: "consolidado", label: "Consolidado" },
-  { value: "precisa_mais_interacao", label: "Precisa mais interação" },
-  { value: "em_observacao", label: "Em observação" },
-];
-
-const INTERACTION_FILTER_OPTIONS: Array<{
-  value: SummaryFilterValue<CustomerInteractionLevel>;
-  label: string;
-}> = [
-  { value: "all", label: "Toda interação" },
-  { value: "sem_interacao", label: "Sem interação" },
-  { value: "pouca_interacao", label: "Pouca interação" },
-  { value: "interacao_media", label: "Interação média" },
-  { value: "interacao_alta", label: "Interação alta" },
-];
-
-const PURCHASE_FILTER_OPTIONS: Array<{
-  value: SummaryFilterValue<CustomerPurchaseLevel>;
-  label: string;
-}> = [
-  { value: "all", label: "Toda compra" },
-  { value: "sem_compras", label: "Sem compras" },
-  { value: "poucas_compras", label: "Poucas compras" },
-  { value: "compras_medias", label: "Compras médias" },
-  { value: "muitas_compras", label: "Muitas compras" },
-];
-
-const AGE_FILTER_OPTIONS: Array<{ value: SummaryFilterValue<CustomerAgeLevel>; label: string }> = [
-  { value: "all", label: "Toda idade" },
-  { value: "sem_data_cadastro", label: "Sem data cadastro" },
-  { value: "cliente_novo", label: "Cliente novo" },
-  { value: "ate_6_meses", label: "Até 6 meses" },
-  { value: "ate_12_meses", label: "Até 12 meses" },
-  { value: "mais_de_12_meses", label: "Mais de 12 meses" },
-];
-
-const PURCHASE_INTEREST_FILTER_OPTIONS: Array<{
-  value: SummaryFilterValue<CustomerPurchaseInterestLevel>;
-  label: string;
-}> = [
-  { value: "all", label: "Todo interesse" },
-  { value: "nao_analisado", label: "Não analisado" },
-  { value: "baixo_interesse", label: "Baixo interesse" },
-  { value: "interesse_moderado", label: "Interesse moderado" },
-  { value: "alto_interesse", label: "Alto interesse" },
-  { value: "pronto_para_compra", label: "Pronto para compra" },
-];
 
 const statusOptions = [
   { label: "Todos", value: "" },
@@ -350,7 +251,7 @@ export default function MassMessagesPage() {
 
 function MassMessagesScreen() {
   const { token, user } = useAuthContext();
-  const { channels, templates, wppApi } = useContext(WhatsappContext);
+  const { channels, templates, sectors } = useContext(WhatsappContext);
   const [filters, setFilters] = useCrmQueryState<ListFilters>("mass-messages-list", {
     campaignId: "",
     status: "",
@@ -361,7 +262,6 @@ function MassMessagesScreen() {
   });
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState(false);
-  const [contactsError, setContactsError] = useState(false);
   const [writeUnknown, setWriteUnknown] = useState(false);
   const [writeBusy, setWriteBusy] = useState(false);
   const writeLock = useRef(false);
@@ -370,9 +270,6 @@ function MassMessagesScreen() {
   const [campaignFilterOptions, setCampaignFilterOptions] = useState<
     Array<{ id: number; name: string }>
   >([]);
-  const [crmCampaignOptions, setCrmCampaignOptions] = useState<Array<{ id: number; name: string }>>(
-    [],
-  );
   const [totalRows, setTotalRows] = useState(0);
   const [summaryMap, setSummaryMap] = useState<Record<number, RowSummary>>({});
   const [createOpen, setCreateOpen] = useState(false);
@@ -381,21 +278,10 @@ function MassMessagesScreen() {
   const [selectedDispatches, setSelectedDispatches] = useState<CampaignDispatchRow[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(false);
-  const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
-  const [contacts, setContacts] = useState<ContactRow[]>([]);
-  const [contactsLoading, setContactsLoading] = useState(false);
-  const [contactsTotal, setContactsTotal] = useState(0);
-  const [contactFilters, setContactFilters] = useState<ContactFilters>({
-    search: "",
-    page: 0,
-    perPage: 8,
-    profileLevel: "all",
-    interactionLevel: "all",
-    purchaseLevel: "all",
-    ageLevel: "all",
-    purchaseInterestLevel: "all",
-    campaignIds: [],
-  });
+  const [audience, setAudience] = useState(emptyMassAudienceValue);
+  const [audienceVersion, setAudienceVersion] = useState(0);
+  const [creationSummary, setCreationSummary] = useState<AudienceCreationSummary | null>(null);
+  const audienceClient = useRef(new MassAudienceClient());
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -448,27 +334,6 @@ function MassMessagesScreen() {
     }
   };
 
-  const loadCrmCampaignOptions = async () => {
-    if (!token) {
-      return;
-    }
-
-    try {
-      customersService.setAuth(token.startsWith("Bearer ") ? token : `Bearer ${token}`);
-      const crmCampaigns = await customersService.getCampaigns();
-      setCrmCampaignOptions(
-        crmCampaigns
-          .filter((campaign) => typeof campaign.CODIGO === "number")
-          .map((campaign) => ({
-            id: campaign.CODIGO,
-            name: campaign.NOME || `Campanha #${campaign.CODIGO}`,
-          })),
-      );
-    } catch {
-      setCrmCampaignOptions([]);
-    }
-  };
-
   const loadCampaigns = async () => {
     const epoch = ++readEpoch.current;
     setLoading(true);
@@ -517,7 +382,7 @@ function MassMessagesScreen() {
   };
 
   const handleCreate = async () => {
-    if (writeLock.current || writeUnknown) return;
+    if (writeLock.current || writeUnknown || !token || !audience.canCreate) return;
     if (!availableChannels.some((channel) => String(channel.id) === draft.senderClientId)) {
       toast.warning("Selecione um canal disponível.");
       return;
@@ -550,7 +415,7 @@ function MassMessagesScreen() {
     writeLock.current = true;
     setWriteBusy(true);
     try {
-      await marketingService.createCampaign({
+      const created = await audienceClient.current.create(token, {
         name: draft.name,
         description: draft.description,
         senderClientId: Number(draft.senderClientId),
@@ -561,12 +426,7 @@ function MassMessagesScreen() {
                 templateName: draft.templateName,
                 templateLanguage: selectedTemplate?.language || "pt_BR",
               },
-        audienceDefinition: {
-          manualIncludeJson: {
-            contactIds: selectedContactIds,
-          },
-          estimatedAudienceCount: selectedContactIds.length,
-        },
+        audienceDefinition: audience.definition,
         scheduleRule: {
           sendMode: draft.scheduleMode,
           startAt: `${draft.startDate}T00:00:00.000Z`,
@@ -584,7 +444,8 @@ function MassMessagesScreen() {
           ],
         },
       });
-      toast.success("Disparo criado com sucesso.");
+      setCreationSummary(created.summary);
+      toast.success("Disparo criado com público fixado.");
       setCreateOpen(false);
       setDraft({
         name: "",
@@ -600,7 +461,8 @@ function MassMessagesScreen() {
         dayPeriodStart: "09:00",
         dayPeriodEnd: "12:00",
       });
-      setSelectedContactIds([]);
+      setAudience(emptyMassAudienceValue());
+      setAudienceVersion((value) => value + 1);
       setSelectedFile(null);
       await loadCampaigns();
       await loadCampaignFilterOptions();
@@ -613,134 +475,6 @@ function MassMessagesScreen() {
       writeLock.current = false;
       setWriteBusy(false);
     }
-  };
-
-  const loadContacts = async () => {
-    if (!createOpen) {
-      return;
-    }
-
-    setContactsLoading(true);
-
-    try {
-      let eligibleCustomerIds: Set<number> | null = null;
-      if (
-        contactFilters.profileLevel !== "all" ||
-        contactFilters.interactionLevel !== "all" ||
-        contactFilters.purchaseLevel !== "all" ||
-        contactFilters.ageLevel !== "all" ||
-        contactFilters.purchaseInterestLevel !== "all"
-      ) {
-        const customerIds = await wppApi.current.findCustomerIdsByProfileFilters({
-          profileLevel:
-            contactFilters.profileLevel !== "all" ? contactFilters.profileLevel : undefined,
-          interactionLevel:
-            contactFilters.interactionLevel !== "all" ? contactFilters.interactionLevel : undefined,
-          purchaseLevel:
-            contactFilters.purchaseLevel !== "all" ? contactFilters.purchaseLevel : undefined,
-          ageLevel: contactFilters.ageLevel !== "all" ? contactFilters.ageLevel : undefined,
-          purchaseInterestLevel:
-            contactFilters.purchaseInterestLevel !== "all"
-              ? contactFilters.purchaseInterestLevel
-              : undefined,
-        });
-        eligibleCustomerIds = new Set(customerIds);
-      }
-
-      const response = await wppApi.current.getContactsWithCustomer({
-        name: contactFilters.search || undefined,
-        page: contactFilters.page + 1,
-        perPage: contactFilters.perPage,
-      });
-
-      const customerIds = Array.from(
-        new Set(
-          response.data
-            .map((contact) => Number(contact.customerId))
-            .filter((customerId) => Number.isInteger(customerId) && customerId > 0),
-        ),
-      );
-
-      const summaries = customerIds.length
-        ? await wppApi.current.getCustomerProfileSummaries({ customerIds })
-        : [];
-
-      const summariesByCustomer = new Map(
-        summaries.map((summary) => [summary.customerId, summary]),
-      );
-      const campaignsById = new Map(
-        crmCampaignOptions.map((campaign) => [campaign.id, campaign.name]),
-      );
-      const selectedCampaignIds = new Set(
-        contactFilters.campaignIds.map((campaignId) => Number(campaignId)),
-      );
-
-      const mapped = response.data
-        .filter((contact) => {
-          if (selectedCampaignIds.size > 0) {
-            const campaignId = Number(contact.customer?.COD_CAMPANHA);
-            if (!campaignId || !selectedCampaignIds.has(campaignId)) {
-              return false;
-            }
-          }
-
-          if (eligibleCustomerIds) {
-            const customerId = Number(contact.customerId);
-            if (!Number.isInteger(customerId) || !eligibleCustomerIds.has(customerId)) {
-              return false;
-            }
-          }
-
-          return true;
-        })
-        .map((contact) => ({
-          id: contact.id,
-          name: contact.name,
-          phone: contact.phone,
-          customerId: contact.customerId,
-          customerName: contact.customer?.RAZAO || null,
-          customerCampaignId: contact.customer?.COD_CAMPANHA || null,
-          customerCampaignName:
-            (contact.customer?.COD_CAMPANHA
-              ? campaignsById.get(contact.customer.COD_CAMPANHA)
-              : null) ||
-            (contact.customer?.COD_CAMPANHA ? `Campanha #${contact.customer.COD_CAMPANHA}` : null),
-          isBlocked: contact.isBlocked,
-          conversationExpiration: contact.conversationExpiration,
-          profileLabel: contact.customerId
-            ? summariesByCustomer.get(contact.customerId)?.label || null
-            : null,
-          purchaseInterestLabel: contact.customerId
-            ? summariesByCustomer.get(contact.customerId)?.purchaseInterest.label || null
-            : null,
-          interactionTagLabel: contact.customerId
-            ? summariesByCustomer.get(contact.customerId)?.tags.interaction.label || null
-            : null,
-          purchaseTagLabel: contact.customerId
-            ? summariesByCustomer.get(contact.customerId)?.tags.purchase.label || null
-            : null,
-          ageTagLabel: contact.customerId
-            ? summariesByCustomer.get(contact.customerId)?.tags.age.label || null
-            : null,
-        }));
-
-      setContactsError(false);
-      setContacts(mapped);
-      setContactsTotal(response.pagination.total);
-    } catch {
-      setContactsError(true);
-      toast.error("Não foi possível carregar o público. Os dados anteriores foram preservados.");
-    } finally {
-      setContactsLoading(false);
-    }
-  };
-
-  const toggleContactSelection = (contactId: number) => {
-    setSelectedContactIds((current) =>
-      current.includes(contactId)
-        ? current.filter((id) => id !== contactId)
-        : [...current, contactId],
-    );
   };
 
   const handleOpenDetails = async (campaign: MarketingCampaign) => {
@@ -803,37 +537,8 @@ function MassMessagesScreen() {
   ]);
 
   useEffect(() => {
-    void loadContacts();
-  }, [
-    createOpen,
-    contactFilters.page,
-    contactFilters.perPage,
-    contactFilters.profileLevel,
-    contactFilters.interactionLevel,
-    contactFilters.purchaseLevel,
-    contactFilters.ageLevel,
-    contactFilters.purchaseInterestLevel,
-    contactFilters.campaignIds,
-  ]);
-
-  useEffect(() => {
     void loadCampaignFilterOptions();
   }, []);
-
-  useEffect(() => {
-    void loadCrmCampaignOptions();
-  }, [token]);
-
-  const filteredCountLabel = useMemo(
-    () => `${totalRows || campaigns.length} disparos`,
-    [campaigns.length, totalRows],
-  );
-  const customerCampaignOptions = useMemo(() => {
-    return crmCampaignOptions.map((campaign) => ({
-      value: String(campaign.id),
-      label: campaign.name,
-    }));
-  }, [crmCampaignOptions]);
 
   return (
     <CrmPage
@@ -847,6 +552,14 @@ function MassMessagesScreen() {
         </Button>
       }
     >
+      {creationSummary && (
+        <Alert severity="success">
+          Público fixado: {creationSummary.selected} selecionados, {creationSummary.eligible}{" "}
+          elegíveis, {creationSummary.blocked} bloqueados e {creationSummary.skipped} ignorados (
+          {creationSummary.skippedReasons.CONTACT_NOT_FOUND} não encontrados;{" "}
+          {creationSummary.skippedReasons.MISSING_PHONE} sem telefone).
+        </Alert>
+      )}
       {listError && (
         <Alert severity="error">
           Não foi possível atualizar os disparos. Os dados anteriores permanecem visíveis.
@@ -1099,11 +812,6 @@ function MassMessagesScreen() {
             <Alert severity="warning">
               Não foi possível confirmar o cadastro. O rascunho foi preservado; confira a lista
               antes de iniciar outra operação.
-            </Alert>
-          )}
-          {contactsError && (
-            <Alert severity="error">
-              Não foi possível atualizar o público. Tente novamente antes de cadastrar.
             </Alert>
           )}
           <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -1377,394 +1085,14 @@ function MassMessagesScreen() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[var(--ip-border)] bg-[var(--ip-surface)] p-3 shadow-none">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <PeopleAlt sx={{ fontSize: 16, color: "text.secondary" }} />
-                    <p className="text-sm font-semibold text-[var(--ip-text)]">
-                      Selecionar contatos
-                    </p>
-                  </div>
-                  <p className="text-xs text-[var(--ip-muted)]">
-                    Use filtros, paginação e seleção manual para compor a audiencia do disparo.
-                  </p>
-                </div>
-                <Chip
-                  label={`${selectedContactIds.length} selecionados`}
-                  color={selectedContactIds.length > 0 ? "success" : "default"}
-                  variant={selectedContactIds.length > 0 ? "filled" : "outlined"}
-                />
-              </div>
-
-              <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-                <TextField
-                  size="small"
-                  label="Buscar contato"
-                  value={contactFilters.search}
-                  onChange={(event) =>
-                    setContactFilters((current) => ({ ...current, search: event.target.value }))
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      setContactFilters((current) => ({ ...current, page: 0 }));
-                      void loadContacts();
-                    }
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  startIcon={<Search />}
-                  onClick={() => void loadContacts()}
-                >
-                  Buscar
-                </Button>
-              </div>
-
-              <div className="mt-3 flex items-center gap-1.5">
-                <FilterAlt sx={{ fontSize: 13, color: "text.disabled" }} />
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--ip-muted)]">
-                  Segmentação
-                </p>
-              </div>
-              <div className="mt-1.5 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                <TextField
-                  select
-                  size="small"
-                  label="Perfil"
-                  value={contactFilters.profileLevel}
-                  onChange={(event) =>
-                    setContactFilters((current) => ({
-                      ...current,
-                      profileLevel: event.target.value as ContactFilters["profileLevel"],
-                      page: 0,
-                    }))
-                  }
-                >
-                  {PROFILE_FILTER_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  label="Interação"
-                  value={contactFilters.interactionLevel}
-                  onChange={(event) =>
-                    setContactFilters((current) => ({
-                      ...current,
-                      interactionLevel: event.target.value as ContactFilters["interactionLevel"],
-                      page: 0,
-                    }))
-                  }
-                >
-                  {INTERACTION_FILTER_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  label="Compras"
-                  value={contactFilters.purchaseLevel}
-                  onChange={(event) =>
-                    setContactFilters((current) => ({
-                      ...current,
-                      purchaseLevel: event.target.value as ContactFilters["purchaseLevel"],
-                      page: 0,
-                    }))
-                  }
-                >
-                  {PURCHASE_FILTER_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  label="Idade do cliente"
-                  value={contactFilters.ageLevel}
-                  onChange={(event) =>
-                    setContactFilters((current) => ({
-                      ...current,
-                      ageLevel: event.target.value as ContactFilters["ageLevel"],
-                      page: 0,
-                    }))
-                  }
-                >
-                  {AGE_FILTER_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  label="Interesse de compra"
-                  value={contactFilters.purchaseInterestLevel}
-                  onChange={(event) =>
-                    setContactFilters((current) => ({
-                      ...current,
-                      purchaseInterestLevel: event.target
-                        .value as ContactFilters["purchaseInterestLevel"],
-                      page: 0,
-                    }))
-                  }
-                >
-                  {PURCHASE_INTEREST_FILTER_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
-                  size="small"
-                  label="Campanha do cliente"
-                  value={contactFilters.campaignIds}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setContactFilters((current) => ({
-                      ...current,
-                      campaignIds: typeof value === "string" ? value.split(",") : value,
-                      page: 0,
-                    }));
-                  }}
-                  SelectProps={{
-                    multiple: true,
-                    renderValue: (selected) =>
-                      (selected as string[])
-                        .map(
-                          (campaignId) =>
-                            customerCampaignOptions.find((option) => option.value === campaignId)
-                              ?.label || campaignId,
-                        )
-                        .join(", "),
-                  }}
-                >
-                  {customerCampaignOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </div>
-
-              <Divider sx={{ my: 2 }} />
-
-              <TableContainer
-                className="ip-crud-table scrollbar-whatsapp overflow-auto"
-                sx={{ maxHeight: { xs: "none", lg: 340 } }}
-              >
-                <Table stickyHeader size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell padding="checkbox" />
-                      <TableCell sx={{ minWidth: 160 }}>Contato</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Telefone</TableCell>
-                      <TableCell sx={{ minWidth: 170 }}>Cliente</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Perfil</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Interação</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Compras</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Idade</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Interesse</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Janela</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {contactsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                          <CircularProgress size={28} />
-                        </TableCell>
-                      </TableRow>
-                    ) : contacts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                          Nenhum contato encontrado
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      contacts.map((contact) => (
-                        <TableRow key={contact.id} hover>
-                          <TableCell data-label="Selecionar" padding="checkbox">
-                            <Checkbox
-                              inputProps={{ "aria-label": `Selecionar ${contact.name}` }}
-                              checked={selectedContactIds.includes(contact.id)}
-                              onChange={() => toggleContactSelection(contact.id)}
-                            />
-                          </TableCell>
-                          <TableCell data-label="Contato">
-                            <div className="max-w-[170px]">
-                              <p className="truncate text-sm font-medium text-[var(--ip-text)]">
-                                {contact.name}
-                              </p>
-                              {contact.isBlocked && (
-                                <p className="text-[11px] text-red-500">Bloqueado</p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell data-label="Telefone">
-                            <p className="text-xs text-[var(--ip-text)]">{contact.phone}</p>
-                          </TableCell>
-                          <TableCell data-label="Cliente">
-                            <div className="max-w-[190px]">
-                              <p className="truncate text-xs font-medium text-[var(--ip-text)]">
-                                {contact.customerName || "Sem cliente"}
-                              </p>
-                              <p className="truncate text-[11px] text-[var(--ip-muted)]">
-                                {contact.customerCampaignName || "Sem campanha"}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell data-label="Perfil">
-                            {contact.profileLabel ? (
-                              <Chip
-                                size="small"
-                                label={contact.profileLabel}
-                                variant="outlined"
-                                sx={{
-                                  height: 20,
-                                  "& .MuiChip-label": {
-                                    fontSize: "0.68rem",
-                                    px: "6px",
-                                    maxWidth: "110px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  },
-                                }}
-                              />
-                            ) : (
-                              <span className="text-[11px] text-[var(--ip-muted)]">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell data-label="Interação">
-                            {contact.interactionTagLabel ? (
-                              <Chip
-                                size="small"
-                                label={contact.interactionTagLabel}
-                                variant="outlined"
-                                sx={{
-                                  height: 20,
-                                  "& .MuiChip-label": {
-                                    fontSize: "0.68rem",
-                                    px: "6px",
-                                    maxWidth: "110px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  },
-                                }}
-                              />
-                            ) : (
-                              <span className="text-[11px] text-[var(--ip-muted)]">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell data-label="Compras">
-                            {contact.purchaseTagLabel ? (
-                              <Chip
-                                size="small"
-                                label={contact.purchaseTagLabel}
-                                variant="outlined"
-                                sx={{
-                                  height: 20,
-                                  "& .MuiChip-label": {
-                                    fontSize: "0.68rem",
-                                    px: "6px",
-                                    maxWidth: "110px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  },
-                                }}
-                              />
-                            ) : (
-                              <span className="text-[11px] text-[var(--ip-muted)]">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell data-label="Idade">
-                            {contact.ageTagLabel ? (
-                              <Chip
-                                size="small"
-                                label={contact.ageTagLabel}
-                                variant="outlined"
-                                sx={{
-                                  height: 20,
-                                  "& .MuiChip-label": {
-                                    fontSize: "0.68rem",
-                                    px: "6px",
-                                    maxWidth: "110px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  },
-                                }}
-                              />
-                            ) : (
-                              <span className="text-[11px] text-[var(--ip-muted)]">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell data-label="Interesse">
-                            {contact.purchaseInterestLabel ? (
-                              <Chip
-                                size="small"
-                                label={contact.purchaseInterestLabel}
-                                color="info"
-                                sx={{
-                                  height: 20,
-                                  "& .MuiChip-label": {
-                                    fontSize: "0.68rem",
-                                    px: "6px",
-                                    maxWidth: "110px",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                  },
-                                }}
-                              />
-                            ) : (
-                              <span className="text-[11px] text-[var(--ip-muted)]">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell data-label="Janela">
-                            <p className="text-[11px] text-[var(--ip-text)]">
-                              {contact.conversationExpiration
-                                ? `Ate ${dayjs(contact.conversationExpiration).format("DD/MM HH:mm")}`
-                                : "Sem janela ativa"}
-                            </p>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <div className="mt-3 flex justify-end">
-                <TablePagination
-                  component="div"
-                  count={contactsTotal}
-                  page={contactFilters.page}
-                  rowsPerPageOptions={[8, 16, 32]}
-                  rowsPerPage={contactFilters.perPage}
-                  labelRowsPerPage="Contatos por pagina"
-                  labelDisplayedRows={(info) => `${info.from}-${info.to} de ${info.count}`}
-                  onRowsPerPageChange={(event) =>
-                    setContactFilters((current) => ({
-                      ...current,
-                      perPage: Number(event.target.value),
-                      page: 0,
-                    }))
-                  }
-                  onPageChange={(_, newPage) =>
-                    setContactFilters((current) => ({ ...current, page: newPage }))
-                  }
-                />
-              </div>
-            </div>
+            {createOpen && (
+              <MassAudienceSelector
+                key={audienceVersion}
+                sectors={sectors}
+                onChange={setAudience}
+                disabled={writeBusy || writeUnknown}
+              />
+            )}
           </div>
         </DialogContent>
         <DialogActions sx={{ borderTop: "1px solid", borderColor: "divider", px: 3, py: 1.5 }}>
@@ -1773,7 +1101,7 @@ function MassMessagesScreen() {
           </Button>
           <Button
             variant="contained"
-            disabled={writeBusy || writeUnknown || contactsError}
+            disabled={writeBusy || writeUnknown || !audience.canCreate}
             endIcon={<Send fontSize="small" />}
             onClick={() => void handleCreate()}
           >

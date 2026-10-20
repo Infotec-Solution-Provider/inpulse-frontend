@@ -518,6 +518,48 @@ export const marketingService = {
     return { id: 2, ...data };
   },
 };
+export class MassAudienceClient {
+  async search(_token, filters, page, perPage) {
+    record("read-mass-audience", {
+      path: "/api/whatsapp/contacts/customer/search",
+      ...filters,
+      pagination: { page, perPage },
+    });
+    const rows = contacts.map((contact) => ({
+      ...contact,
+      isBlocked: false,
+      sectorIds: [1],
+      customer: null,
+      conversationExpiration: null,
+    }));
+    return {
+      data: rows,
+      pagination: {
+        page,
+        perPage,
+        total: rows.length,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      },
+      summary: { total: rows.length, eligible: rows.length, blocked: 0, skipped: 0 },
+    };
+  }
+  async create(_token, data) {
+    record("create-mass", { path: "/api/marketing/campaigns/with-audience", ...data });
+    const selected = data.audienceDefinition.manualIncludeJson.contactIds.length;
+    return {
+      data: { id: 2, ...data },
+      summary: {
+        selected,
+        eligible: selected,
+        blocked: 0,
+        skipped: 0,
+        skippedReasons: { CONTACT_NOT_FOUND: 0, MISSING_PHONE: 0 },
+      },
+    };
+  }
+}
 export const getMetrics = async () => [
   {
     id: "1",

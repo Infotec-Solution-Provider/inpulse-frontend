@@ -180,6 +180,9 @@ test("uncertain mass dispatch creation preserves the draft and blocks a duplicat
   await dialog.getByLabel("Titulo do disparo", { exact: false }).fill("Rascunho de disparo");
   await dialog.getByRole("combobox", { name: "WhatsApp", exact: true }).click();
   await page.getByRole("option", { name: /Canal demonstrativo/ }).click();
+  await dialog
+    .getByRole("checkbox", { name: "Selecionar Contato demonstrativo", exact: true })
+    .check();
   await page.evaluate(() => (window as any).adminCrudTest.fail());
   await dialog.getByRole("button", { name: "Criar disparo", exact: true }).click();
   await expect(
