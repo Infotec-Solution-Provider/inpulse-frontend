@@ -4,7 +4,7 @@ import lightTheme from "../../src/lib/themes/light";
 import LinkCustomerModal from "../../src/app/(private)/[instance]/(cruds)/contacts/(table)/(modal)/link-customer-modal";
 import type { WppContact } from "../../src/lib/sdk-local";
 import { state } from "./doubles";
-import "../telephony/harness.css";
+import "./harness.css";
 
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider theme={lightTheme}><CssBaseline />
