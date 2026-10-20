@@ -1,13 +1,11 @@
 import { AuthContext } from "@/app/auth-context";
-import { Avatar } from "@mui/material";
-import { IconButton, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
-import PushPinIcon from "@mui/icons-material/PushPin";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import MarkunreadIcon from "@mui/icons-material/Markunread";
-import DoneIcon from "@mui/icons-material/Done";
+import { Avatar, ListItemIcon, ListItemText, Menu, MenuItem } from "@mui/material";
+import { Check, Mail, Pin } from "lucide-react";
 import { ReactNode, useContext, useMemo, useState } from "react";
 import { ContactsContext } from "../../(cruds)/contacts/contacts-context";
 import { InternalChatContext } from "../../internal-context";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { UiIcon } from "@/lib/ui-system/icons";
 import ChatsMenuItemTag from "./chats-menu-item-tag";
 
 interface Tag {
@@ -48,161 +46,111 @@ export default function ChatsMenuItem({
   const { user } = useContext(AuthContext);
   const { users } = useContext(InternalChatContext);
   const { state } = useContext(ContactsContext);
-
   const lastMessageDateText = useMemo(() => {
-    if (!messageDate) {
-      return "Nunca";
+    if (!messageDate || Number.isNaN(messageDate.getTime())) return null;
+    if (messageDate.toDateString() === new Date().toDateString()) {
+      return messageDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     }
-
-    const today = new Date();
-    const isMessageFromToday = messageDate.toDateString() === today.toDateString();
-
-    if (isMessageFromToday) {
-      return messageDate.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    }
-
-    return messageDate.toLocaleDateString("pt-BR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    return messageDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   }, [messageDate]);
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onClick?.();
-  };
-
-  const closeMenu = () => setMenuAnchor(null);
-
   function wasMentioned(text: string): boolean {
-    if (!text || typeof text !== "string") return false;
-
-    // Extrai todos os "@<telefone>"
     const matches = text.match(/@(\d{6,})/g);
     if (!matches) return false;
-
-    const mentionedPhones = matches.map((m) => m.replace("@", ""));
-
+    const mentionedPhones = matches.map((match) => match.replace("@", ""));
     const userPhones = new Set<string>();
-
-    // Se o user logado tiver telefone
-    if (user?.WHATSAPP) {
-      userPhones.add(user.WHATSAPP.replace(/\D/g, ""));
-    }
-
-    // Busca nos users com o mesmo CODIGO do logado
-    const matchUser = users.find((u) => u.CODIGO === user?.CODIGO);
-    if (matchUser?.WHATSAPP) {
-      userPhones.add(matchUser.WHATSAPP.replace(/\D/g, ""));
-    }
-
-    // Busca nos contacts (caso o número não esteja nos users)
+    if (user?.WHATSAPP) userPhones.add(user.WHATSAPP.replace(/\D/g, ""));
+    const matchUser = users.find((candidate) => candidate.CODIGO === user?.CODIGO);
+    if (matchUser?.WHATSAPP) userPhones.add(matchUser.WHATSAPP.replace(/\D/g, ""));
     for (const contact of state.contacts) {
       if (contact.id === user?.CODIGO && contact.phone) {
         userPhones.add(contact.phone.replace(/\D/g, ""));
       }
     }
-
-    // Verifica se algum telefone mencionado bate com o telefone do usuário
-    return mentionedPhones.some((p) => userPhones.has(p));
+    return mentionedPhones.some((phone) => userPhones.has(phone));
   }
 
   return (
-    <li
-      aria-busy={Boolean(isUnread)}
-      aria-selected={Boolean(isOpen)}
-      className="chat-list-item group relative"
+    <div
+      role="listitem"
+      className="attendance-conversation-item"
+      data-selected={Boolean(isOpen)}
+      data-unread={Boolean(isUnread)}
     >
-      <div
-        className="chat-item-clickable grid h-full w-full cursor-pointer touch-manipulation select-none grid-cols-[58px_minmax(0,1fr)] rounded-md px-3 py-2.5 transition-colors hover:bg-indigo-500/10 active:bg-indigo-500/20 aria-selected:bg-white/10 sm:grid-cols-[66px_minmax(0,1fr)] sm:p-3"
-        onClick={handleClick}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          // Ignora teclas vindas de filhos (ex.: botão de ações), que têm comportamento próprio.
-          if (e.target !== e.currentTarget) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (typeof onClick === "function") {
-              onClick();
-            }
-          }
-        }}
+      <button
+        type="button"
+        className="attendance-conversation-open"
+        aria-current={isOpen ? "true" : undefined}
+        onClick={onClick}
         data-testid="chat-menu-item"
         data-clickable="true"
       >
-        <div className="flex items-center">
-          <Avatar
-            alt={name}
-            src={avatar || ""}
-            sx={{ width: { xs: 48, sm: 56 }, height: { xs: 48, sm: 56 } }}
-          />
-        </div>
-        <div className="flex flex-col gap-1 truncate">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm font-semibold leading-none text-gray-900 dark:text-slate-100">
+        <span className="attendance-conversation-avatar">
+          <Avatar component="span" alt="" src={avatar || ""} sx={{ width: 40, height: 40 }}>
+            {name.trim().charAt(0).toUpperCase()}
+          </Avatar>
+          {isUnread && <span className="attendance-unread-dot" aria-hidden="true" />}
+        </span>
+        <span className="attendance-conversation-copy">
+          <span className="attendance-conversation-identity">
+            <span className="attendance-conversation-name" title={name}>
               {name}
-            </p>
-            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 group-aria-busy:dark:text-orange-200">
-              {isPinned && <PushPinIcon fontSize="inherit" titleAccess="Conversa fixada" />}
-              <p className={`text-xs font-semibold ${isUnread ? "text-red-600" : ""}`}>
+            </span>
+            {isPinned && <UiIcon icon={Pin} scale="metadata" aria-label="Conversa fixada" />}
+            {lastMessageDateText && (
+              <time
+                dateTime={messageDate!.toISOString()}
+                title={messageDate!.toLocaleString("pt-BR")}
+                className="attendance-conversation-time"
+              >
                 {lastMessageDateText}
-              </p>
-              {isUnread && (
-                <div className="flex items-center gap-1">
-                  <div className="h-3 w-3 rounded-full bg-red-600"></div>
-                  {typeof message === "string" && wasMentioned(message) && (
-                    <span className="text-xs font-bold leading-none text-indigo-600">@</span>
-                  )}
-                </div>
-              )}
-              {(onTogglePin || onToggleUnread) && (
-                <IconButton
-                  size="small"
-                  aria-label="Ações da conversa"
-                  title="Ações da conversa"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setMenuAnchor(event.currentTarget);
-                  }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              )}
-            </div>
-          </div>
-          {customer && (
-            <p className="truncate text-xs font-semibold leading-none text-gray-900 dark:text-slate-100">
+              </time>
+            )}
+          </span>
+          {customer && customer !== name && (
+            <span className="attendance-conversation-customer" title={customer}>
               {customer}
-            </p>
+            </span>
           )}
-          <div className="font-emoji truncate text-xs text-gray-700 dark:text-slate-300">
-            {message}
-          </div>
-          <div className="flex items-center justify-end gap-1">
-            {tags?.map((tag) => (
-              <ChatsMenuItemTag key={tag.name} name={tag.name} color={tag.color} />
-            ))}
-          </div>
-        </div>
-      </div>
-      {/* Fora da div clicável: eventos do React atravessam o portal do Menu e,
-          dentro dela, o clique numa opção também abriria (e leria) a conversa. */}
+          <span className="attendance-conversation-preview font-emoji">{message}</span>
+          {tags.length > 0 && (
+            <span className="attendance-conversation-tags">
+              {tags.map((tag) => (
+                <ChatsMenuItemTag key={tag.name} name={tag.name} color={tag.color} />
+              ))}
+            </span>
+          )}
+          {isUnread && <span className="sr-only">Não lida</span>}
+          {isUnread && typeof message === "string" && wasMentioned(message) && (
+            <span className="attendance-conversation-mention">Você foi mencionado</span>
+          )}
+        </span>
+      </button>
       {(onTogglePin || onToggleUnread) && (
-        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
+        <div className="attendance-conversation-more">
+          <OperationalIconButton
+            label={`Mais ações da conversa de ${name}`}
+            tooltip="Mais ações"
+            aria-haspopup="menu"
+            aria-expanded={Boolean(menuAnchor)}
+            onClick={(event) => setMenuAnchor(event.currentTarget)}
+          >
+            <UiIcon name="more" scale="row" />
+          </OperationalIconButton>
+        </div>
+      )}
+      {/* O menu fica fora da ação de abrir, preservando a leitura explícita da conversa. */}
+      {(onTogglePin || onToggleUnread) && (
+        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
           {onTogglePin && (
             <MenuItem
               onClick={() => {
-                closeMenu();
+                setMenuAnchor(null);
                 onTogglePin();
               }}
             >
               <ListItemIcon>
-                <PushPinIcon fontSize="small" />
+                <UiIcon icon={Pin} scale="row" />
               </ListItemIcon>
               <ListItemText>{isPinned ? "Desafixar conversa" : "Fixar conversa"}</ListItemText>
             </MenuItem>
@@ -210,20 +158,18 @@ export default function ChatsMenuItem({
           {onToggleUnread && (
             <MenuItem
               onClick={() => {
-                closeMenu();
+                setMenuAnchor(null);
                 onToggleUnread();
               }}
             >
               <ListItemIcon>
-                {isUnread ? <DoneIcon fontSize="small" /> : <MarkunreadIcon fontSize="small" />}
+                <UiIcon icon={isUnread ? Check : Mail} scale="row" />
               </ListItemIcon>
-              <ListItemText>
-                {isUnread ? "Marcar como lida" : "Marcar como não lida"}
-              </ListItemText>
+              <ListItemText>{isUnread ? "Marcar como lida" : "Marcar como não lida"}</ListItemText>
             </MenuItem>
           )}
         </Menu>
       )}
-    </li>
+    </div>
   );
 }

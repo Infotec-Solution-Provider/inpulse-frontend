@@ -1,0 +1,400 @@
+.ip-ui .ip-attendance-header {
+  container-type: inline-size;
+  flex-shrink: 0;
+  color: var(--ip-text);
+  background: var(--ip-surface);
+  border-bottom: 1px solid var(--ip-border-subtle);
+}
+.ip-ui .ip-attendance-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 16px;
+}
+.ip-ui .ip-attendance-avatar.MuiAvatar-root {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+  font-size: 16px;
+  font-weight: 600;
+}
+.ip-ui .ip-attendance-identity {
+  flex: 1;
+  min-width: 0;
+}
+.ip-ui .ip-attendance-identity h2,
+.ip-ui .ip-attendance-customer {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui .ip-attendance-identity h2 {
+  color: var(--ip-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.ip-ui .ip-attendance-customer,
+.ip-ui .ip-attendance-contact-meta {
+  color: var(--ip-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+.ip-ui .ip-attendance-contact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  overflow-wrap: anywhere;
+}
+.ip-ui .ip-attendance-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ip-ui .ip-attendance-header-back {
+  display: none;
+}
+.ip-ui .ip-attendance-header-menu-compact {
+  display: none;
+}
+.ip-ui .ip-attendance-header .ip-icon-action.MuiIconButton-root,
+.ip-ui .ip-attendance-composer .ip-icon-action.MuiIconButton-root,
+.ip-ui .ip-attendance-attachment .ip-icon-action.MuiIconButton-root {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.ip-ui .ip-attendance-header-commit.MuiButton-root {
+  min-height: 44px;
+  border-color: var(--ip-border);
+  color: var(--ip-text);
+  padding-inline: 12px;
+}
+.ip-ui .ip-attendance-header-commit.MuiButton-root:hover {
+  background: var(--ip-surface-muted);
+  border-color: var(--ip-muted);
+}
+.ip-ui .ip-attendance-menu-item.MuiMenuItem-root {
+  min-height: 44px;
+  gap: 12px;
+  color: var(--ip-text);
+  white-space: normal;
+}
+.ip-ui .ip-attendance-composer {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px 16px calc(8px + env(safe-area-inset-bottom));
+  color: var(--ip-text);
+  background: var(--ip-surface);
+}
+.ip-ui .ip-composer-input-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.ip-ui .ip-composer-field {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.ip-ui .ip-composer-field .MuiInputBase-root,
+.ip-ui .ip-attachment-caption .MuiInputBase-root {
+  min-height: 44px;
+  color: var(--ip-text);
+  background: var(--ip-surface);
+  font-size: 14px;
+  line-height: 22px;
+}
+.ip-ui .ip-composer-send.MuiButton-root {
+  min-width: 104px;
+  min-height: 44px;
+  flex-shrink: 0;
+  padding-inline: 16px;
+}
+.ip-ui .ip-composer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-width: 0;
+}
+.ip-ui .ip-composer-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+.ip-ui .ip-composer-channel.MuiButton-root {
+  min-width: 0;
+  max-width: min(100%, 240px);
+  min-height: 44px;
+  margin-left: auto;
+  color: var(--ip-muted);
+  font-size: 13px;
+  text-transform: none;
+}
+.ip-ui .ip-composer-channel > span:not(.MuiButton-icon) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui .ip-composer-help {
+  margin: 0;
+  color: var(--ip-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ip-ui .ip-composer-help[role="status"] {
+  color: var(--ip-accent);
+}
+.ip-ui .ip-composer-reference {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
+  border-left: 3px solid var(--ip-accent);
+  border-radius: 8px;
+  background: var(--ip-accent-soft);
+}
+.ip-ui .ip-composer-reference-copy {
+  min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  line-height: 18px;
+}
+.ip-ui .ip-composer-reference-copy > strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ip-accent);
+  font-weight: 500;
+}
+.ip-ui .ip-composer-reference-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.ip-ui .ip-composer-reference-copy > span {
+  display: block;
+  color: var(--ip-muted);
+  overflow-wrap: anywhere;
+}
+.ip-ui .ip-composer-mentions {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: min(320px, 100%);
+  max-height: 180px;
+  overflow: auto;
+  padding: 4px;
+  background: var(--ip-surface-raised);
+  border: 1px solid var(--ip-border);
+  border-radius: 8px;
+  box-shadow: var(--ip-shadow-menu);
+}
+.ip-ui .ip-composer-mention {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: var(--ip-text);
+  background: transparent;
+  font-size: 14px;
+  text-align: left;
+}
+.ip-ui .ip-composer-mention:hover {
+  background: var(--ip-surface-muted);
+}
+.ip-ui .ip-composer-mention-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+}
+.ip-ui .ip-composer-recorder,
+.ip-ui .ip-composer-audio-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ip-ui .ip-composer-audio-preview audio {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+}
+.ip-ui .ip-composer-recording-time {
+  color: var(--ip-danger);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ip-ui .ip-composer-recording-stop.MuiIconButton-root {
+  color: var(--ip-danger);
+  background: var(--ip-danger-soft);
+}
+.ip-ui .ip-composer-emoji-picker.MuiPaper-root {
+  width: min(350px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  border-radius: 12px;
+  box-shadow: var(--ip-shadow-overlay);
+}
+.ip-ui .ip-attendance-attachment {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-height: min(460px, 65dvh);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--ip-border);
+  color: var(--ip-text);
+  background: var(--ip-surface);
+}
+.ip-ui .ip-attachment-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+.ip-ui .ip-attachment-identity {
+  flex: 1;
+  min-width: 0;
+}
+.ip-ui .ip-attachment-identity > strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+}
+.ip-ui .ip-attachment-identity > span {
+  color: var(--ip-muted);
+  font-size: 13px;
+}
+.ip-ui .ip-attachment-preview {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  max-height: min(240px, 30dvh);
+  overflow: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--ip-bg);
+}
+.ip-ui .ip-attachment-preview :is(img, video) {
+  max-width: 100%;
+  max-height: min(224px, 28dvh);
+  object-fit: contain;
+}
+.ip-ui .ip-attachment-preview audio {
+  width: min(100%, 480px);
+}
+.ip-ui .ip-attachment-document {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--ip-muted);
+  font-size: 13px;
+}
+.ip-ui .ip-attachment-file-icon {
+  width: 44px;
+  padding: 4px;
+  flex-shrink: 0;
+}
+.ip-ui .ip-attachment-footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.ip-ui .ip-attachment-caption {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.ip-ui .ip-attachment-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.ip-ui .ip-attachment-actions .MuiButton-root {
+  min-height: 44px;
+}
+.ip-ui .ip-attachment-actions .MuiButton-outlined {
+  border-color: var(--ip-border);
+  color: var(--ip-text);
+}
+@container (max-width: 760px) {
+  .ip-ui .ip-attendance-header-actions {
+    display: none;
+  }
+  .ip-ui .ip-attendance-header-menu-compact {
+    display: block;
+  }
+}
+@container (max-width: 480px) {
+  .ip-ui .ip-attendance-header-row {
+    gap: 8px;
+    padding: 8px;
+  }
+  .ip-ui .ip-attendance-customer-codes {
+    display: none;
+  }
+  .ip-ui .ip-composer-field .MuiInputBase-root {
+    font-size: 16px;
+  }
+  .ip-ui .ip-composer-send.MuiButton-root {
+    min-width: 92px;
+    padding-inline: 12px;
+  }
+}
+@media (max-width: 1023px) {
+  .ip-ui .ip-attendance-header-back {
+    display: inline-flex;
+  }
+  .ip-ui .ip-attendance-header-close {
+    display: none;
+  }
+  .ip-ui .ip-attendance-composer,
+  .ip-ui .ip-attendance-attachment {
+    padding-inline: 12px;
+  }
+  .ip-ui .ip-attachment-caption .MuiInputBase-root {
+    font-size: 16px;
+  }
+}
+@media (pointer: coarse) {
+  .ip-ui .ip-composer-keyboard-hint:not([role="status"]) {
+    display: none;
+  }
+}

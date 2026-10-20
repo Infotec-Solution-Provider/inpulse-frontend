@@ -338,6 +338,7 @@ export function activeNavigationPath(
 
 export function isModernCrmPath(pathname: string): boolean {
   const route = pathname.split("?")[0].split("/").filter(Boolean)[1];
+  if (!route) return true;
   if (route === "tools" && pathname.split("/").filter(Boolean)[2] === "mass-messages") return true;
   if (
     route === "reports" &&

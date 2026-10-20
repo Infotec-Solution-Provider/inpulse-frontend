@@ -1,25 +1,15 @@
 "use client";
 
-import { ShowingMessagesType } from "@/lib/reducers/chats-filter.reducer";
-import { FilterList } from "@mui/icons-material";
-import AddIcon from "@mui/icons-material/Add";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import CategoryIcon from "@mui/icons-material/Category";
-import GroupsIcon from "@mui/icons-material/Groups";
-import HailIcon from "@mui/icons-material/Hail";
-import MarkChatUnreadIcon from "@mui/icons-material/MarkChatUnread";
-import ScheduleIcon from "@mui/icons-material/Schedule";
-import SmsIcon from "@mui/icons-material/Sms";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import type { ChatsFiltersState, ShowingMessagesType } from "@/lib/reducers/chats-filter.reducer";
 import {
+  Button,
   FormControl,
-  IconButton,
+  InputAdornment,
   InputLabel,
   Menu,
   MenuItem,
   Popover,
   Select,
-  SelectChangeEvent,
   TextField,
 } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
@@ -27,6 +17,9 @@ import { AuthContext } from "@/app/auth-context";
 import { useAppContext } from "../../app-context";
 import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
 import { canAccessInternalChats, isExternalOperator } from "@/lib/permissions/operator-access";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { OperationalPanel } from "@/lib/ui-system/components";
+import { UiIcon } from "@/lib/ui-system/icons";
 import dynamic from "next/dynamic";
 
 const SchedulesModal = dynamic(() => import("./(schedules-modal)/schedules-modal"), { ssr: false });
@@ -38,12 +31,18 @@ const StartInternalChatModal = dynamic(
   { ssr: false },
 );
 
-const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
-  all: "",
-  unread: "(Lidas)",
-  scheduled: "(Agendadas)",
-  internal: "(Internas)",
-  external: "(Clientes)",
+const CHAT_TYPES: { value: ShowingMessagesType; label: string }[] = [
+  { value: "all", label: "Todas" },
+  { value: "unread", label: "Não lidas" },
+  { value: "external", label: "Clientes" },
+  { value: "internal", label: "Internas" },
+  { value: "scheduled", label: "Agendadas" },
+];
+const SORT_LABELS: Record<ChatsFiltersState["sortBy"], string> = {
+  lastMessage: "Última mensagem",
+  startedAt: "Data de início",
+  finishedAt: "Data de finalização",
+  userCreator: "Responsável ou criador",
 };
 
 export default function ChatsMenuFilters() {
@@ -52,66 +51,30 @@ export default function ChatsMenuFilters() {
   const { changeChatFilters, chatFilters, parameters } = useWhatsappChatList();
   const isExternal = isExternalOperator(user?.NIVEL);
   const canStartInternalChat = canAccessInternalChats(parameters, user?.NIVEL);
+  const [newChatMenuAnchorEl, setNewChatMenuAnchorEl] = useState<HTMLElement | null>(null);
+  const [newInternalChatAnchorEl, setNewInternalChatAnchorEl] = useState<HTMLElement | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [draft, setDraft] = useState(chatFilters);
+  const availableTypes = isExternal
+    ? CHAT_TYPES.filter((type) => type.value === "internal")
+    : CHAT_TYPES;
 
-  const [newChatMenuAnchorEl, setNewChatMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [newInternalChatAnchorEl, setNewInternalChatAnchorEl] = useState<null | HTMLElement>(null);
-  const [filterMenuAnchorEl, setFilterMenuAnchorEl] = useState<null | HTMLElement>(null);
-
-  const isStartMenuOpen = Boolean(newChatMenuAnchorEl);
-  const isInternalChatOpen = Boolean(newInternalChatAnchorEl);
-  const isFilterMenuOpen = Boolean(filterMenuAnchorEl);
-
-  const handleStartMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNewChatMenuAnchorEl(event.currentTarget);
+  const openFilters = () => {
+    setDraft(chatFilters);
+    setFiltersOpen(true);
   };
-
-  const handleStartMenuClose = () => {
-    setNewChatMenuAnchorEl(null);
+  const cancelFilters = () => {
+    setDraft(chatFilters);
+    setFiltersOpen(false);
   };
-
-  const handleOpenInternalChat = (event: React.MouseEvent<HTMLElement>) => {
-    setNewInternalChatAnchorEl(event.currentTarget);
-    handleStartMenuClose();
-  };
-
-  const handleOpenStartChatModal = () => {
-    openModal(<StartChatModal onClose={closeModal} />);
-    handleStartMenuClose();
-  };
-
-  const handleCloseInternalChat = () => {
-    setNewInternalChatAnchorEl(null);
-  };
-
-  const handleFilterMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setFilterMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleFilterMenuClose = () => {
-    setFilterMenuAnchorEl(null);
-  };
-
-  const handleChangeShowingType = (showingType: ShowingMessagesType) => {
-    changeChatFilters({ type: "change-showing-type", showingType });
-    handleFilterMenuClose();
-  };
-
-  const handleChangeText = (event: React.ChangeEvent<HTMLInputElement>) => {
-    changeChatFilters({ type: "change-search", search: event.target.value });
-  };
-
-  const handleSchedulesMenuOpen = () => {
-    openModal(<SchedulesModal onClose={closeModal} />);
-  };
-
-  const handleChangeSortBy = (event: SelectChangeEvent) => {
-    const value = event.target.value as any;
-    changeChatFilters({ type: "change-sort-by", sortBy: value });
-  };
-
-  const handleChangeSortOrder = (event: SelectChangeEvent) => {
-    const value = event.target.value as any;
-    changeChatFilters({ type: "change-sort-order", sortOrder: value });
+  const applyFilters = () => {
+    changeChatFilters({
+      type: "change-showing-type",
+      showingType: isExternal ? "internal" : draft.showingType,
+    });
+    changeChatFilters({ type: "change-sort-by", sortBy: draft.sortBy });
+    changeChatFilters({ type: "change-sort-order", sortOrder: draft.sortOrder });
+    setFiltersOpen(false);
   };
 
   useEffect(() => {
@@ -121,156 +84,220 @@ export default function ChatsMenuFilters() {
   }, [isExternal, chatFilters.showingType, changeChatFilters]);
 
   return (
-    <div className="flex flex-col gap-1 rounded-t-md p-3">
-      <header className="mb-1 flex w-full items-center justify-between font-semibold dark:font-normal">
-        <h1>Conversas {SHOWING_TYPE_TEXT[chatFilters.showingType]}</h1>
-        <div className="flex items-center gap-2">
-          <IconButton id="schedules-button" onClick={handleSchedulesMenuOpen}>
-            <CalendarMonthIcon />
-          </IconButton>
-
-          <IconButton id="filter-chats-button" onClick={handleFilterMenuOpen}>
-            <FilterList />
-          </IconButton>
-
-          <IconButton id="start-button" onClick={handleStartMenuOpen}>
-            <AddIcon />
-          </IconButton>
-        </div>
-
-        {/* Menu do botão "+" */}
-        <Menu
-          id="start-menu"
-          anchorEl={newChatMenuAnchorEl}
-          open={isStartMenuOpen}
-          onClose={handleStartMenuClose}
-          PaperProps={{
-            sx: {
-              bgcolor: "background.paper",
-              color: "text.primary",
-            },
-          }}
-        >
-          {!isExternal && (
-            <MenuItem onClick={handleOpenStartChatModal} className="flex items-center gap-2">
-              <WhatsAppIcon />
-              <p>Nova Conversa</p>
-            </MenuItem>
-          )}
-
-          {canStartInternalChat && (
-            <MenuItem onClick={handleOpenInternalChat} className="flex items-center gap-2">
-              <SmsIcon />
-              <p>Nova Conversa Interna</p>
-            </MenuItem>
-          )}
-        </Menu>
-
-        <Popover
-          open={isInternalChatOpen}
-          anchorEl={newInternalChatAnchorEl}
-          onClose={handleCloseInternalChat}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          PaperProps={{ sx: { width: 350, maxWidth: "calc(100vw - 24px)" } }}
-        >
-          <StartInternalChatModal onClose={handleCloseInternalChat} />
-        </Popover>
-        {/* Menu filtros */}
-        <Menu
-          id="filter-menu"
-          anchorEl={filterMenuAnchorEl}
-          open={isFilterMenuOpen}
-          onClose={handleFilterMenuClose}
-        >
-          {!isExternal && [
-            <MenuItem
-              key="all"
-              onClick={() => handleChangeShowingType("all")}
-              aria-hidden={chatFilters.showingType === "all"}
-              className="flex items-center gap-2"
-            >
-              <CategoryIcon />
-              <p>Todas</p>
-            </MenuItem>,
-            <MenuItem
-              key="unread"
-              onClick={() => handleChangeShowingType("unread")}
-              aria-hidden={chatFilters.showingType === "unread"}
-              className="flex items-center gap-2"
-            >
-              <MarkChatUnreadIcon />
-              <p>Não lidas</p>
-            </MenuItem>,
-            <MenuItem
-              key="scheduled"
-              onClick={() => handleChangeShowingType("scheduled")}
-              aria-hidden={chatFilters.showingType === "scheduled"}
-              className="flex items-center gap-2"
-            >
-              <ScheduleIcon />
-              <p>Agendados</p>
-            </MenuItem>,
-          ]}
-          <MenuItem
-            onClick={() => handleChangeShowingType("internal")}
-            aria-hidden={chatFilters.showingType === "internal"}
-            className="flex items-center gap-2"
+    <div className="attendance-conversation-filters">
+      <header className="attendance-conversation-heading">
+        <h1>Conversas</h1>
+        <div className="attendance-conversation-actions">
+          <OperationalIconButton
+            id="schedules-button"
+            label="Consultar agendamentos"
+            tooltip="Agendamentos"
+            onClick={() => openModal(<SchedulesModal onClose={closeModal} />)}
           >
-            <GroupsIcon />
-            <p>Internos</p>
-          </MenuItem>
-          {!isExternal && (
-            <MenuItem
-              onClick={() => handleChangeShowingType("external")}
-              aria-hidden={chatFilters.showingType === "external"}
-              className="flex items-center gap-2"
+            <UiIcon name="calendar" scale="toolbar" />
+          </OperationalIconButton>
+          <OperationalIconButton
+            id="filter-chats-button"
+            label="Filtrar e ordenar conversas"
+            tooltip="Filtros e ordenação"
+            onClick={openFilters}
+          >
+            <UiIcon name="filter" scale="toolbar" />
+          </OperationalIconButton>
+          {(!isExternal || canStartInternalChat) && (
+            <OperationalIconButton
+              id="start-button"
+              label="Iniciar conversa"
+              aria-haspopup="menu"
+              aria-controls={newChatMenuAnchorEl ? "start-menu" : undefined}
+              aria-expanded={Boolean(newChatMenuAnchorEl)}
+              onClick={(event) => setNewChatMenuAnchorEl(event.currentTarget)}
             >
-              <HailIcon />
-              <p>Clientes</p>
-            </MenuItem>
+              <UiIcon name="add" scale="toolbar" />
+            </OperationalIconButton>
           )}
-        </Menu>
+        </div>
       </header>
 
-      <div className="flex gap-2">
-        <TextField
-          id="chats-search"
-          label="Pesquisar conversa"
-          className="grow"
-          onChange={handleChangeText}
-        />
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <FormControl fullWidth size="small">
-          <InputLabel id="sort-by-label">Ordenar por</InputLabel>
-          <Select
-            labelId="sort-by-label"
-            id="sort-by-select"
-            value={chatFilters.sortBy}
-            label="Ordenar por"
-            onChange={handleChangeSortBy}
+      <TextField
+        id="chats-search"
+        label="Buscar conversa"
+        placeholder="Nome, telefone ou documento"
+        value={chatFilters.search}
+        fullWidth
+        size="small"
+        onChange={(event) =>
+          changeChatFilters({ type: "change-search", search: event.target.value })
+        }
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <UiIcon name="search" scale="row" />
+              </InputAdornment>
+            ),
+            endAdornment: chatFilters.search ? (
+              <InputAdornment position="end">
+                <OperationalIconButton
+                  label="Limpar busca de conversas"
+                  onClick={() => changeChatFilters({ type: "change-search", search: "" })}
+                >
+                  <UiIcon name="close" scale="metadata" />
+                </OperationalIconButton>
+              </InputAdornment>
+            ) : undefined,
+          },
+        }}
+      />
+
+      <div className="attendance-conversation-types" role="group" aria-label="Tipos de conversa">
+        {availableTypes.map((type) => (
+          <button
+            key={type.value}
+            type="button"
+            aria-pressed={chatFilters.showingType === type.value}
+            onClick={() =>
+              changeChatFilters({ type: "change-showing-type", showingType: type.value })
+            }
           >
-            <MenuItem value="startedAt">Data de início</MenuItem>
-            <MenuItem value="finishedAt">Data de finalização</MenuItem>
-            <MenuItem value="lastMessage">Data da última mensagem</MenuItem>
-            <MenuItem value="userCreator">Nome</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl fullWidth size="small">
-          <InputLabel id="sort-order-label">Ordem</InputLabel>
-          <Select
-            labelId="sort-order-label"
-            id="sort-order-select"
-            value={chatFilters.sortOrder}
-            label="Ordem"
-            onChange={handleChangeSortOrder}
-          >
-            <MenuItem value="asc">Crescente</MenuItem>
-            <MenuItem value="desc">Decrescente</MenuItem>
-          </Select>
-        </FormControl>
+            {type.label}
+          </button>
+        ))}
       </div>
+      <div className="attendance-conversation-order">
+        <UiIcon name="sort" scale="metadata" />
+        <span>
+          {SORT_LABELS[chatFilters.sortBy]} ·{" "}
+          {chatFilters.sortBy === "userCreator"
+            ? chatFilters.sortOrder === "asc"
+              ? "A–Z"
+              : "Z–A"
+            : chatFilters.sortOrder === "desc"
+              ? "Mais recentes"
+              : "Mais antigas"}
+        </span>
+      </div>
+
+      <Menu
+        id="start-menu"
+        anchorEl={newChatMenuAnchorEl}
+        open={Boolean(newChatMenuAnchorEl)}
+        onClose={() => setNewChatMenuAnchorEl(null)}
+      >
+        {!isExternal && (
+          <MenuItem
+            onClick={() => {
+              openModal(<StartChatModal onClose={closeModal} />);
+              setNewChatMenuAnchorEl(null);
+            }}
+          >
+            <UiIcon name="conversations" scale="row" />
+            <span className="ml-3">Nova conversa com cliente</span>
+          </MenuItem>
+        )}
+        {canStartInternalChat && (
+          <MenuItem
+            onClick={() => {
+              setNewInternalChatAnchorEl(newChatMenuAnchorEl);
+              setNewChatMenuAnchorEl(null);
+            }}
+          >
+            <UiIcon name="operator" scale="row" />
+            <span className="ml-3">Nova conversa interna</span>
+          </MenuItem>
+        )}
+      </Menu>
+
+      <Popover
+        open={Boolean(newInternalChatAnchorEl)}
+        anchorEl={newInternalChatAnchorEl}
+        onClose={() => setNewInternalChatAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { sx: { width: 350, maxWidth: "calc(100vw - 24px)" } } }}
+      >
+        <StartInternalChatModal onClose={() => setNewInternalChatAnchorEl(null)} />
+      </Popover>
+
+      <OperationalPanel
+        open={filtersOpen}
+        title="Filtros de conversas"
+        description="Escolha quais conversas exibir e como ordenar a lista."
+        onClose={cancelFilters}
+        footer={
+          <>
+            <Button color="inherit" onClick={cancelFilters}>
+              Cancelar
+            </Button>
+            <Button variant="contained" onClick={applyFilters}>
+              Aplicar filtros
+            </Button>
+          </>
+        }
+      >
+        <div className="attendance-filter-fields">
+          <FormControl fullWidth size="small">
+            <InputLabel id="conversation-type-label">Tipo de conversa</InputLabel>
+            <Select
+              labelId="conversation-type-label"
+              id="conversation-type-select"
+              label="Tipo de conversa"
+              value={isExternal ? "internal" : draft.showingType}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  showingType: event.target.value as ShowingMessagesType,
+                }))
+              }
+            >
+              {availableTypes.map((type) => (
+                <MenuItem key={type.value} value={type.value}>
+                  {type.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel id="sort-by-label">Ordenar por</InputLabel>
+            <Select
+              labelId="sort-by-label"
+              id="sort-by-select"
+              label="Ordenar por"
+              value={draft.sortBy}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  sortBy: event.target.value as ChatsFiltersState["sortBy"],
+                }))
+              }
+            >
+              {Object.entries(SORT_LABELS).map(([value, label]) => (
+                <MenuItem key={value} value={value}>
+                  {label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel id="sort-order-label">Ordem</InputLabel>
+            <Select
+              labelId="sort-order-label"
+              id="sort-order-select"
+              label="Ordem"
+              value={draft.sortOrder}
+              onChange={(event) =>
+                setDraft((current) => ({
+                  ...current,
+                  sortOrder: event.target.value as ChatsFiltersState["sortOrder"],
+                }))
+              }
+            >
+              <MenuItem value="asc">Crescente</MenuItem>
+              <MenuItem value="desc">Decrescente</MenuItem>
+            </Select>
+          </FormControl>
+        </div>
+      </OperationalPanel>
     </div>
   );
 }

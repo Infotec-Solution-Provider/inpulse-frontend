@@ -1,166 +1,121 @@
-import { useContext, useEffect, useMemo } from "react";
-import { ChatContext } from "./chat-context";
-import { IconButton, TextField } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import SendIcon from "@mui/icons-material/Send";
+import { useContext, useEffect, useMemo, useRef } from "react";
+import { Button, CircularProgress, TextField } from "@mui/material";
+import { Send } from "lucide-react";
 import { DefaultExtensionType, FileIcon, defaultStyles } from "react-file-icon";
 import prettyBytes from "pretty-bytes";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { UiIcon } from "@/lib/ui-system/icons";
+import { ChatContext } from "./chat-context";
+import "./attendance-composer.css";
 
 interface ChatAttachmentPreviewProps {
   file: File;
 }
 
 export default function ChatAttachmentPreview({ file }: ChatAttachmentPreviewProps) {
-  const { dispatch, sendMessage, state, isSending, isReadOnlyMode } =
-    useContext(ChatContext);
+  const { dispatch, sendMessage, state, isSending, isReadOnlyMode } = useContext(ChatContext);
   const isDisabled = isSending || isReadOnlyMode;
+  const captionRef = useRef<HTMLTextAreaElement | null>(null);
+  const sourceUrl = useMemo(() => URL.createObjectURL(file), [file]);
 
-  const handleClose = () => {
-    dispatch({ type: "remove-file" });
-  };
+  useEffect(() => () => URL.revokeObjectURL(sourceUrl), [sourceUrl]);
 
+  const handleClose = () => dispatch({ type: "remove-file" });
   const handleSend = () => {
     if (!isDisabled) void sendMessage();
   };
-
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     dispatch({ type: "change-text", text: e.target.value });
   };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target !== captionRef.current || e.isComposing || e.key !== "Enter") return;
       const isAuxKeyPressed = e.shiftKey || e.altKey || e.ctrlKey;
-      if (e.key !== "Enter") return;
-
       e.preventDefault();
-
       if (isAuxKeyPressed) {
         dispatch({ type: "change-text", text: state.text + "\n" });
-      } else {
-        if (!isDisabled) void sendMessage();
+      } else if (!isDisabled) {
+        void sendMessage();
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [dispatch, sendMessage, state.text, isDisabled]);
 
-  const fileComponent = useMemo(() => {
-    const src = URL.createObjectURL(file);
-
-    if (file.type.includes("image")) {
-      return (
-        <div className="flex flex-col items-center gap-2">
-          <p className="truncate text-xs text-slate-700 dark:text-slate-300">{file.name}</p>
-          <img src={src} alt={file.name} className="max-h-[14rem] max-w-[28rem]" />
-        </div>
-      );
-    }
-
-    if (file.type.includes("video")) {
-      return (
-        <div className="flex flex-col items-center gap-2">
-          <p className="truncate text-xs text-slate-700 dark:text-slate-300">{file.name}</p>
-          <video controls className="max-h-[12rem] max-w-[28rem] object-contain">
-            <source src={src} type={file.type} />
-          </video>
-        </div>
-      );
-    }
-
-    if (file.type.includes("audio")) {
-      return (
-        <div className="flex flex-col items-center gap-2">
-          <p className="truncate text-xs text-slate-700 dark:text-slate-300">{file.name}</p>
-          <audio controls className="max-w-[28rem]">
-            <source src={src} type={file.type} />
-          </audio>
-        </div>
-      );
-    }
-
-    const ext = file.name.split(".").reverse()[0];
-
-    return (
-      <div className="flex flex-col items-center gap-2 rounded-md bg-slate-100 px-8 py-4 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
-        <p className="truncate text-xs text-slate-600 dark:text-slate-300">{file.name}</p>
-        <div className="h-32 w-32 p-8">
-          <FileIcon {...(defaultStyles[ext as DefaultExtensionType] || {})} radius={1.25} />
-        </div>
-        <h2 className="text-xl">Prévia Indisponível</h2>
-        <p className="text-sm">
-          {prettyBytes(file.size)} - {ext.toLocaleUpperCase()}
-        </p>
-      </div>
-    );
-  }, [file]);
-
+  const ext = file.name.split(".").reverse()[0];
   return (
-    <div className="absolute inset-0 z-10 h-full w-full bg-slate-100 p-4 pb-8 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-      <div className="grid h-full grid-rows-[auto_1fr_auto]">
-        <header className="mb-2 flex w-full items-center justify-between">
-          <div></div>
-          <h1 className="max-w-[75%] truncate text-base font-medium">{file.name}</h1>
-          <IconButton onClick={handleClose} sx={{ color: "inherit" }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </header>
-
-        <div className="flex items-center justify-center">{fileComponent}</div>
-
-        <div className="mt-4 flex items-center justify-center gap-4">
-          <IconButton
-            onClick={handleClose}
-            sx={{
-              bgcolor: "rgba(0,0,0,0.05)",
-              color: "inherit",
-              "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
-            }}
-          >
-            <CloseIcon fontSize="large" />
-          </IconButton>
-
-          <TextField
-            placeholder="Adicione uma legenda"
-            variant="outlined"
-            sx={{
-              width: "34rem",
-              "& .MuiInputBase-root": {
-                color: "inherit",
-                backgroundColor: "rgba(0,0,0,0.03)",
-                borderRadius: 1,
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "rgba(100,100,100,0.3)",
-              },
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: "rgba(100,100,100,0.6)",
-              },
-            }}
-            multiline
-            maxRows={5}
-            onChange={handleTextChange}
-            value={state.text}
-            disabled={isReadOnlyMode}
-          />
-
-          <IconButton
+    <section className="ip-attendance-attachment" aria-label="Prévia do anexo">
+      <header className="ip-attachment-header">
+        <div className="ip-attachment-identity">
+          <strong title={file.name}>{file.name}</strong>
+          <span>{prettyBytes(file.size)} · Prévia do anexo</span>
+        </div>
+        <OperationalIconButton label="Remover anexo" onClick={handleClose}>
+          <UiIcon name="close" scale="toolbar" />
+        </OperationalIconButton>
+      </header>
+      <div className="ip-attachment-preview">
+        {file.type.includes("image") ? (
+          <img src={sourceUrl} alt={file.name} />
+        ) : file.type.includes("video") ? (
+          <video controls aria-label={file.name}>
+            <source src={sourceUrl} type={file.type} />
+          </video>
+        ) : file.type.includes("audio") ? (
+          <audio controls aria-label={file.name}>
+            <source src={sourceUrl} type={file.type} />
+          </audio>
+        ) : (
+          <div className="ip-attachment-document">
+            <div className="ip-attachment-file-icon" aria-hidden="true">
+              <FileIcon {...(defaultStyles[ext as DefaultExtensionType] || {})} radius={1.25} />
+            </div>
+            <p>Prévia indisponível · {ext.toLocaleUpperCase()}</p>
+          </div>
+        )}
+      </div>
+      <div className="ip-attachment-footer">
+        <TextField
+          className="ip-attachment-caption"
+          placeholder="Adicione uma legenda"
+          inputProps={{ "aria-label": "Legenda do anexo" }}
+          inputRef={captionRef}
+          fullWidth
+          multiline
+          maxRows={3}
+          size="small"
+          onChange={handleTextChange}
+          value={state.text}
+          disabled={isReadOnlyMode}
+        />
+        <div className="ip-attachment-actions">
+          <Button variant="outlined" onClick={handleClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            disableElevation
             onClick={handleSend}
             disabled={isDisabled}
             aria-label={isSending ? "Registrando anexo" : "Enviar anexo"}
-            sx={{
-              bgcolor: "rgba(0,0,0,0.05)",
-              color: "inherit",
-              "&:hover": { bgcolor: "rgba(0,0,0,0.1)" },
-            }}
+            startIcon={
+              isSending ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <UiIcon icon={Send} scale="row" />
+              )
+            }
           >
-            <SendIcon fontSize="large" />
-          </IconButton>
+            {isSending ? "Registrando…" : "Enviar"}
+          </Button>
         </div>
       </div>
-    </div>
+      {isSending && (
+        <p className="ip-composer-help" role="status">
+          Registrando anexo…
+        </p>
+      )}
+    </section>
   );
 }

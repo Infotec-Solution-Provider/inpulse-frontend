@@ -1,0 +1,296 @@
+.ip-ui .attendance-sidebar {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--ip-text);
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border);
+  border-radius: 12px;
+}
+.ip-ui .attendance-sidebar-telephony {
+  max-height: 45%;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ip-border-subtle);
+  background: var(--ip-bg);
+}
+.ip-ui .attendance-sidebar-telephony > * + * {
+  margin-top: 12px;
+}
+.ip-ui .attendance-sidebar-conversations {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+.ip-ui .attendance-sidebar-filters {
+  max-height: 65%;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--ip-border-subtle);
+}
+.ip-ui .attendance-sidebar-list {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.ip-ui .attendance-conversation-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.ip-ui .attendance-conversation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ip-ui .attendance-conversation-heading h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.ip-ui .attendance-conversation-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ip-ui .attendance-conversation-types {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin: -4px;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+.ip-ui .attendance-conversation-types button {
+  min-height: 32px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ip-muted);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  transition:
+    background 120ms,
+    color 120ms;
+}
+.ip-ui .attendance-conversation-types button:hover {
+  background: var(--ip-surface-muted);
+  color: var(--ip-text);
+}
+.ip-ui .attendance-conversation-types button[aria-pressed="true"] {
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+  box-shadow: inset 0 -2px var(--ip-accent);
+}
+.ip-ui .attendance-conversation-types button:active {
+  background: var(--ip-pressed);
+}
+.ip-ui .attendance-conversation-order {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ip-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+.ip-ui .attendance-filter-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-top: 8px;
+}
+.ip-ui .attendance-conversation-list {
+  height: 100%;
+  background: var(--ip-surface);
+  scrollbar-color: var(--ip-border) transparent;
+}
+.ip-ui .attendance-conversation-list::-webkit-scrollbar-thumb {
+  background: var(--ip-border);
+}
+.ip-ui .attendance-conversation-item {
+  position: relative;
+  border-bottom: 1px solid var(--ip-border-subtle);
+  background: var(--ip-surface);
+}
+.ip-ui .attendance-conversation-open {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 16px 48px 16px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--ip-text);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 120ms;
+}
+.ip-ui .attendance-conversation-open:hover {
+  background: var(--ip-surface-muted);
+}
+.ip-ui .attendance-conversation-open:active {
+  background: var(--ip-pressed);
+}
+.ip-ui .attendance-conversation-open:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline-offset: -4px;
+}
+.ip-ui .attendance-conversation-item[data-selected="true"] {
+  background: var(--ip-accent-soft);
+  box-shadow: inset 3px 0 var(--ip-accent);
+}
+.ip-ui .attendance-conversation-item[data-selected="true"] .attendance-conversation-open:hover {
+  background: transparent;
+}
+.ip-ui .attendance-conversation-avatar {
+  position: relative;
+  padding-top: 2px;
+}
+.ip-ui .attendance-conversation-avatar .MuiAvatar-root {
+  font: inherit;
+  font-weight: 500;
+  background: var(--ip-surface-muted);
+  color: var(--ip-muted);
+}
+.ip-ui .attendance-unread-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ip-surface);
+  border-radius: 50%;
+  background: var(--ip-accent);
+}
+.ip-ui .attendance-conversation-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.ip-ui .attendance-conversation-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+.ip-ui .attendance-conversation-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ip-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui .attendance-conversation-item[data-unread="true"] .attendance-conversation-name {
+  font-weight: 600;
+}
+.ip-ui .attendance-conversation-identity > .ip-icon {
+  color: var(--ip-muted);
+}
+.ip-ui .attendance-conversation-time {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--ip-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.ip-ui .attendance-conversation-customer,
+.ip-ui .attendance-conversation-preview {
+  overflow: hidden;
+  color: var(--ip-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ip-ui .attendance-conversation-customer {
+  font-size: 12px;
+}
+.ip-ui .attendance-message-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+.ip-ui .attendance-conversation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.ip-ui .attendance-conversation-tag {
+  color: var(--ip-muted);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ip-ui .attendance-conversation-mention {
+  color: var(--ip-accent);
+  font-size: 12px;
+  line-height: 16px;
+}
+.ip-ui .attendance-conversation-more {
+  position: absolute;
+  top: 8px;
+  right: 6px;
+}
+.ip-ui .attendance-conversation-empty {
+  display: flex;
+  height: 100%;
+  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+}
+.ip-ui .attendance-conversation-empty .ip-empty-state {
+  padding: 32px 20px;
+}
+.ip-ui .attendance-conversation-empty .ip-empty-state h2 {
+  font-size: 15px;
+}
+
+@media (max-width: 767px) {
+  .ip-ui .attendance-sidebar {
+    border: 0;
+    border-radius: 0;
+  }
+  .ip-ui .attendance-conversation-filters {
+    padding: 12px 16px;
+  }
+  .ip-ui .attendance-conversation-types button {
+    min-height: 44px;
+  }
+}
+@media (pointer: coarse) {
+  .ip-ui .attendance-conversation-types button {
+    min-height: 44px;
+  }
+  .ip-ui .attendance-conversation-more {
+    top: 6px;
+    right: 2px;
+  }
+  .ip-ui .attendance-conversation-open {
+    padding-right: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ip-ui .attendance-conversation-types button,
+  .ip-ui .attendance-conversation-open {
+    transition: none;
+  }
+}

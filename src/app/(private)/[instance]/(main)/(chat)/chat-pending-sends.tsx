@@ -24,7 +24,7 @@ export default function ChatPendingSends({
 
   return pending.map((attempt) => (
     <li key={attempt.id} className="flex w-full justify-end" data-pending-send-id={attempt.id}>
-      <div className="w-max min-w-12 max-w-[86%] rounded-md rounded-br-none bg-green-200 px-2 py-1 text-sm text-slate-800 dark:bg-green-800 dark:text-slate-200 sm:max-w-[76%] lg:max-w-[66%]">
+      <div className="ip-message-bubble ip-message-bubble--sent w-max min-w-12 max-w-[86%] rounded-md rounded-br-none bg-green-200 px-2 py-1 text-sm text-slate-800 dark:bg-green-800 dark:text-slate-200 sm:max-w-[76%] lg:max-w-[66%]">
         {attempt.snapshot.text && (
           <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
             {attempt.snapshot.text}

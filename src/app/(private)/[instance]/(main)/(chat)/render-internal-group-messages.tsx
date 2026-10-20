@@ -119,7 +119,7 @@ export default function RenderInternalGroupMessages({
   return (
     <div
       ref={messagesContainerRef}
-      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+      className="ip-message-history scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
     >
       {visibleCount < (currentInternalChatMessages?.length ?? 0) && (
         <div className="mb-2 flex justify-center">

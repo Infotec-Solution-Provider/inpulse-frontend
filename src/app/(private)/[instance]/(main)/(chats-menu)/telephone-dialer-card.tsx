@@ -5,7 +5,8 @@ import { useAuthContext } from "@/app/auth-context";
 import customersService from "@/lib/services/customers.service";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import ScheduleIcon from "@mui/icons-material/Schedule";
-import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import { ChevronRight } from "lucide-react";
+import { UiIcon } from "@/lib/ui-system/icons";
 import { Button, Chip } from "@mui/material";
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
@@ -246,11 +247,11 @@ export default function TelephoneDialerCard() {
 
   if (isLoadingQueue) {
     return (
-      <section className="mx-3 mb-3 rounded-md border border-slate-300 bg-white/70 px-3 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-200">
+      <section className="ip-attendance-next-call mx-3 mb-3 rounded-md border border-slate-300 bg-white/70 px-3 py-3 text-sm text-slate-700 shadow-sm dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-200">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold text-slate-900 dark:text-slate-100">Discagem</h2>
-            <p className="mt-1 text-xs">Carregando fila telefonica...</p>
+            <p className="mt-1 text-xs">Carregando fila telefônica…</p>
           </div>
           <Chip size="small" label="Sincronizando" color="info" />
         </div>
@@ -260,7 +261,10 @@ export default function TelephoneDialerCard() {
 
   if (queueError) {
     return (
-      <section className="mx-3 mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200">
+      <section
+        data-queue-state="error"
+        className="ip-attendance-next-call mx-3 mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200"
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold">Discagem</h2>
@@ -276,13 +280,13 @@ export default function TelephoneDialerCard() {
 
   if (!nextAppointment) {
     return (
-      <section className="mx-3 mb-3 rounded-md border border-dashed border-slate-400/70 bg-slate-300/60 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700/40 dark:text-slate-200">
+      <section className="ip-attendance-next-call mx-3 mb-3 rounded-md border border-dashed border-slate-400/70 bg-slate-300/60 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700/40 dark:text-slate-200">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-semibold text-slate-900 dark:text-slate-100">Discagem</h2>
           <Chip size="small" label="Fila vazia" color="default" />
         </div>
         <p className="mt-1 text-xs leading-5">
-          Nenhum agendamento pendente. O proximo item de campanhas_clientes aparecera aqui.
+          Nenhuma ligação pendente. O próximo agendamento aparecerá aqui.
         </p>
       </section>
     );
@@ -291,7 +295,7 @@ export default function TelephoneDialerCard() {
   return (
     <>
       <section
-        className="mx-3 mb-3 cursor-pointer rounded-md border border-slate-300 bg-white/70 px-3 py-2.5 text-slate-800 shadow-sm backdrop-blur transition hover:border-slate-400 hover:shadow-md dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:hover:border-slate-500"
+        className="ip-attendance-next-call mx-3 mb-3 cursor-pointer rounded-md border border-slate-300 bg-white/70 px-3 py-2.5 text-slate-800 shadow-sm backdrop-blur transition hover:border-slate-400 hover:shadow-md dark:border-slate-600 dark:bg-slate-700/60 dark:text-slate-100 dark:hover:border-slate-500"
         role="button"
         tabIndex={0}
         onClick={handleOpenDrawer}
@@ -301,7 +305,7 @@ export default function TelephoneDialerCard() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">
-                Proxima ligacao
+                Próxima ligação
               </p>
               <Chip
                 size="small"
@@ -314,10 +318,10 @@ export default function TelephoneDialerCard() {
               {nextAppointment.contactName}
             </h2>
             <p className="truncate text-xs text-slate-600 dark:text-slate-300 sm:text-sm">
-              {nextAppointment.customerName || "Cliente nao vinculado"}
+              {nextAppointment.customerName || "Cliente não vinculado"}
             </p>
           </div>
-          <KeyboardArrowRightIcon className="mt-1 text-slate-400" />
+          <UiIcon icon={ChevronRight} className="mt-1" />
         </header>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 dark:text-slate-300 sm:text-sm">

@@ -47,8 +47,11 @@ export default function Chat({
   };
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white text-black shadow-md dark:bg-slate-900 dark:text-white md:rounded-md">
-      <div className="sticky top-0 z-30">
+    <section
+      aria-label={`Conversa com ${name}`}
+      className="ip-attendance-chat relative flex h-full min-h-0 flex-col overflow-hidden"
+    >
+      <div className="shrink-0">
         <div className="relative">
           <ChatHeader
             avatarUrl={avatarUrl}
@@ -62,29 +65,31 @@ export default function Chat({
             onClose={onClose}
           />
           {isReadOnlyMode && (
-            <div className="border-y border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300">
-              Modo somente leitura: esta conversa foi aberta apenas para visualizacao.
+            <div className="ip-attendance-readonly" role="status">
+              Somente leitura. Esta conversa está aberta para consulta.
             </div>
           )}
         </div>
       </div>
 
       <div
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 flex-1 overflow-hidden"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onPaste={handlePaste}
       >
         <ChatMessagesList />
-        {!isReadOnlyMode && state?.file && !state.sendAsAudio && (
-          <ChatAttachmentPreview file={state.file} />
-        )}
       </div>
+      {!isReadOnlyMode && state?.file && !state.sendAsAudio && (
+        <div className="ip-attendance-attachment-slot">
+          <ChatAttachmentPreview file={state.file} />
+        </div>
+      )}
       {!isReadOnlyMode && (!state?.file || state.sendAsAudio) && (
-        <div className="sticky bottom-0 z-30 border-t border-slate-300/70 bg-slate-200/95 backdrop-blur dark:border-slate-700/70 dark:bg-slate-800/95 md:static">
+        <div className="ip-attendance-composer-slot shrink-0">
           <ChatSendMessageArea />
         </div>
       )}
-    </div>
+    </section>
   );
 }

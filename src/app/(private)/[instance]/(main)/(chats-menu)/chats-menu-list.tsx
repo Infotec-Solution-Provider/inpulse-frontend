@@ -1,7 +1,6 @@
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
 import { isExternalOperator } from "@/lib/permissions/operator-access";
-import { getTypeTextIcon } from "@/lib/utils/get-type-text-icon";
 import { mentionDisplayText } from "@/lib/utils/message-mentions";
 import { useContext, useMemo } from "react";
 import { toast } from "react-toastify";
@@ -9,6 +8,8 @@ import { DetailedInternalChat, InternalChatContext } from "../../internal-contex
 import { DetailedChat, WhatsappContext } from "../../whatsapp-context";
 import ChatsMenuItem from "./chats-menu-item";
 import { Virtuoso } from "react-virtuoso";
+import { MonitorEmptyState } from "@/lib/ui-system/components";
+import ChatListMessagePreview from "./chat-list-message-preview";
 
 type CombinedChat = DetailedChat | DetailedInternalChat;
 
@@ -50,6 +51,7 @@ export default function ChatsMenuList() {
     openChat,
     currentChat,
     chatFilters,
+    changeChatFilters,
     updateChatPreference: updateWppPreference,
   } = useContext(WhatsappContext);
   const {
@@ -170,9 +172,39 @@ export default function ChatsMenuList() {
     return result;
   }, [filteredChats, chatFilters.sortBy, chatFilters.sortOrder]);
 
+  if (!sortedChats.length) {
+    const hasFilters =
+      Boolean(chatFilters.search) || chatFilters.showingType !== (isExternal ? "internal" : "all");
+    return (
+      <div className="attendance-conversation-empty">
+        <MonitorEmptyState
+          title={hasFilters ? "Nenhuma conversa encontrada" : "Nenhuma conversa disponível"}
+          description={
+            hasFilters
+              ? "Tente outro nome, telefone ou documento, ou ajuste os filtros."
+              : "Suas conversas aparecerão aqui quando um atendimento for iniciado."
+          }
+          onReset={
+            hasFilters
+              ? () => {
+                  changeChatFilters({ type: "change-search", search: "" });
+                  changeChatFilters({
+                    type: "change-showing-type",
+                    showingType: isExternal ? "internal" : "all",
+                  });
+                }
+              : undefined
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <Virtuoso
-      className="scrollbar-whatsapp h-full bg-slate-300/5 dark:bg-slate-800/50"
+      className="attendance-conversation-list scrollbar-whatsapp"
+      role="list"
+      aria-label="Lista de conversas"
       data={sortedChats}
       increaseViewportBy={240}
       computeItemKey={(_, chat) => `${chat.chatType}:${chat.id}`}
@@ -208,15 +240,19 @@ export default function ChatsMenuList() {
               key={`internal-chat:${chat.id}`}
               name={names}
               message={
-                chat.lastMessage
-                  ? chat.lastMessage.type !== "vcard" && chat.lastMessage.body?.trim()
-                    ? mentionDisplayText(
-                        chat.lastMessage.body,
-                        chat.lastMessage.mentionEntities,
-                        mentionDirectory,
-                      )
-                    : getTypeTextIcon(chat.lastMessage.type)
-                  : "Nenhuma mensagem"
+                chat.lastMessage ? (
+                  chat.lastMessage.type !== "vcard" && chat.lastMessage.body?.trim() ? (
+                    mentionDisplayText(
+                      chat.lastMessage.body,
+                      chat.lastMessage.mentionEntities,
+                      mentionDirectory,
+                    )
+                  ) : (
+                    <ChatListMessagePreview type={chat.lastMessage.type} />
+                  )
+                ) : (
+                  "Nenhuma mensagem"
+                )
               }
               messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}
               tags={[{ color: tagColor, name: tagName }]}
@@ -241,15 +277,19 @@ export default function ChatsMenuList() {
             customer={chat.customer?.RAZAO || chat.customer?.FANTASIA || undefined}
             avatar={chat.avatarUrl ?? undefined}
             message={
-              chat.lastMessage
-                ? chat.lastMessage.type !== "vcard" && chat.lastMessage.body?.trim()
-                  ? mentionDisplayText(
-                      chat.lastMessage.body,
-                      chat.lastMessage.mentionEntities,
-                      mentionDirectory,
-                    )
-                  : getTypeTextIcon(chat.lastMessage.type)
-                : "Nenhuma mensagem"
+              chat.lastMessage ? (
+                chat.lastMessage.type !== "vcard" && chat.lastMessage.body?.trim() ? (
+                  mentionDisplayText(
+                    chat.lastMessage.body,
+                    chat.lastMessage.mentionEntities,
+                    mentionDirectory,
+                  )
+                ) : (
+                  <ChatListMessagePreview type={chat.lastMessage.type} />
+                )
+              ) : (
+                "Nenhuma mensagem"
+              )
             }
             messageDate={chat.lastMessage ? new Date(+chat.lastMessage.timestamp) : null}
             tags={[]}

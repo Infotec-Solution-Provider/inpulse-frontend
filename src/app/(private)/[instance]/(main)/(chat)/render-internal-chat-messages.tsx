@@ -84,7 +84,7 @@ export default function RenderInternalChatMessages({
   return (
     <div
       ref={messagesContainerRef}
-      className="scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+      className="ip-message-history scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
     >
       {visibleCount < total && (
         <div className="mb-2 flex justify-center">
