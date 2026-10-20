@@ -15,6 +15,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useState } from "react";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { toast } from "react-toastify";
 import { dialogPaperSx } from "../../monitor/surface";
 
@@ -48,6 +49,7 @@ export default function OpenAiKeyPanel({
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
 
+  useCrmLeaveGuard(Boolean(apiKey), saving || removing);
   const trimmed = apiKey.trim();
   const formatOk = KEY_PATTERN.test(trimmed);
   const storageAvailable = status?.storageAvailable !== false;
@@ -165,7 +167,6 @@ export default function OpenAiKeyPanel({
         onClose={removing ? undefined : () => setConfirmRemove(false)}
         maxWidth="xs"
         fullWidth
-        slotProps={{ paper: { sx: dialogPaperSx } }}
       >
         <DialogTitle className="text-[var(--ip-text)]">Remover a chave da OpenAI?</DialogTitle>
         <DialogContent>

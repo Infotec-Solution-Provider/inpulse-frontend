@@ -22,6 +22,7 @@ import Rules from "../../src/app/(private)/[instance]/(cruds)/auto-response/page
 import Senders from "../../src/app/(private)/[instance]/(cruds)/whatsapp-senders/page";
 import Requests from "../../src/app/(private)/[instance]/(cruds)/contact-requests/page";
 import Agents from "../../src/app/(private)/[instance]/(cruds)/ai-agents/page";
+import Assistant from "../../src/app/(private)/[instance]/(cruds)/ai-supervisor/page";
 import AiSettings from "../../src/app/(private)/[instance]/(cruds)/ai-settings/page";
 import Wallets from "../../src/app/(private)/[instance]/(cruds)/wallets/page";
 import Sip from "../../src/app/(private)/[instance]/(cruds)/sip-config/page";
@@ -46,6 +47,7 @@ const screens = {
   "contact-requests": Requests,
   "ai-agents": Agents,
   "ai-settings": AiSettings,
+  "ai-supervisor": Assistant,
   wallets: Wallets,
   "sip-config": Sip,
   funnel: Pipelines,

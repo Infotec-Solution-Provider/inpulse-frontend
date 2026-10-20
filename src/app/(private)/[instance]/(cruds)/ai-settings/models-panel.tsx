@@ -21,7 +21,7 @@ function CheckMark({ checked }: { checked: boolean }) {
       className={[
         "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
         checked
-          ? "border-indigo-600 bg-indigo-600 text-[var(--ip-text)] text-white dark:border-indigo-400 dark:bg-indigo-400"
+          ? "border-[var(--ip-accent)] bg-[var(--ip-accent)] text-[var(--ip-on-accent)]"
           : "border-[var(--ip-border)] bg-[var(--ip-surface)]",
       ].join(" ")}
     >
@@ -41,7 +41,7 @@ function cardClass(
     "rounded-lg border text-left transition-colors",
     "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500",
     state === "checked"
-      ? "border-indigo-400 bg-indigo-50/70 dark:border-indigo-400/70 dark:bg-indigo-500/10"
+      ? "border-[var(--ip-accent)] bg-[var(--ip-accent-soft)]"
       : state === "unchecked"
         ? "border-[var(--ip-border)] bg-[var(--ip-surface)] hover:border-[var(--ip-border)] hover:bg-[var(--ip-surface)] border-[var(--ip-border)] bg-[var(--ip-surface)] dark:hover:border-[var(--ip-border)] dark:hover:bg-[var(--ip-surface)]"
         : "border-dashed border-[var(--ip-border)] bg-[var(--ip-surface)] border-[var(--ip-border)] bg-[var(--ip-surface)]",

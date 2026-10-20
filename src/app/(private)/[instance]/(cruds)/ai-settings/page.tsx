@@ -24,6 +24,8 @@ import { SavingsOutlined as SavingsOutlinedIcon } from "@/lib/ui-system/crm-icon
 import { Tune as TuneIcon } from "@/lib/ui-system/crm-icons";
 import { Alert, Button, CircularProgress, Skeleton } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
+import { SettingsSections } from "@/lib/ui-system/settings-sections";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { toast } from "react-toastify";
 import BudgetPanel from "./budget-panel";
 import FeatureModelsPanel from "./feature-models-panel";
@@ -91,7 +93,14 @@ function PageShell({ children, header }: { children: React.ReactNode; header?: R
 }
 
 export default function AiSettingsPage() {
+  const { user, instance } = useAuthContext();
+  return <AiSettings key={`${instance}:${user?.CODIGO}`} />;
+}
+
+function AiSettings() {
+  const [section, setSection] = useState("access");
   const { token, user, instance } = useAuthContext();
+  const authenticated = typeof token === "string";
   const isAdmin = String(user?.NIVEL ?? "") === UserRole.ADMIN;
 
   const [config, setConfig] = useState<AiTenantConfig | null>(null);
@@ -137,7 +146,7 @@ export default function AiSettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin, token, instance]);
+  }, [isAdmin, authenticated, instance]);
 
   useEffect(() => {
     if (!isAdmin || typeof token !== "string") return;
@@ -145,12 +154,14 @@ export default function AiSettingsPage() {
       .getUsers({ perPage: "500" })
       .then(({ data }) => setOperators(data))
       .catch(() => setOperators([]));
-  }, [isAdmin, token]);
+  }, [isAdmin, authenticated]);
 
   const dirty = useMemo(
     () => form !== null && savedForm !== null && formKey(form) !== formKey(savedForm),
     [form, savedForm],
   );
+
+  useCrmLeaveGuard(dirty, saving);
 
   const operatorMonthCosts = useMemo(() => {
     if (!monthUsage.data) return null;
@@ -177,11 +188,14 @@ export default function AiSettingsPage() {
   }
 
   async function handleSave() {
-    if (!form || typeof token !== "string" || !instance) return;
+    if (!form || typeof token !== "string" || !instance || saving) return;
 
     const result = validateForm(form);
     if (!result.ok) {
       setInvalidField(result.field);
+      setSection(
+        result.field === "budget" || result.field.startsWith("operator:") ? "limits" : "models",
+      );
       toast.error(result.error);
       return;
     }
@@ -202,6 +216,7 @@ export default function AiSettingsPage() {
   }
 
   function handleDiscard() {
+    if (!window.confirm("Descartar alterações das configurações de IA?")) return;
     setForm(savedForm);
     setInvalidField(null);
   }
@@ -271,125 +286,163 @@ export default function AiSettingsPage() {
 
   return (
     <PageShell header={header}>
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <SectionCard
-          icon={<KeyIcon fontSize="small" />}
-          title="Chave da OpenAI"
-          description="A IA desta empresa usa a conta da empresa na OpenAI. A chave é salva na hora, separada das demais configurações."
-        >
-          {typeof token === "string" && instance ? (
-            <OpenAiKeyPanel
-              instance={instance}
-              token={token}
-              status={openaiKey}
-              onChange={setOpenaiKey}
-            />
-          ) : null}
-        </SectionCard>
-
-        <SectionCard
-          icon={<SavingsOutlinedIcon fontSize="small" />}
-          title="Limites de gasto"
-          description="Limites mensais em US$. Ao atingir um limite, o copiloto e o Assistente IA ficam bloqueados até o mês seguinte."
-        >
-          <BudgetPanel
-            budget={form.budget}
-            budgetError={invalidField === "budget"}
-            onBudgetChange={(budget) => update({ budget })}
-            monthCost={
-              monthUsage.data
-                ? monthUsage.data.estimatedCostUsd
-                : monthUsage.failed
-                  ? undefined
-                  : null
-            }
-            operatorMonthCosts={operatorMonthCosts}
-            operatorBudgets={form.operatorBudgets}
-            invalidOperatorId={
-              invalidField?.startsWith("operator:") ? invalidField.slice("operator:".length) : null
-            }
-            operators={operators}
-            onOperatorBudgetChange={(id, value) =>
-              update({ operatorBudgets: { ...form.operatorBudgets, [id]: value } })
-            }
-            onRemoveOperator={(id) => {
-              const next = { ...form.operatorBudgets };
-              delete next[id];
-              update({ operatorBudgets: next });
-            }}
-          />
-        </SectionCard>
-      </div>
-
-      <SectionCard
-        icon={<ModelTrainingIcon fontSize="small" />}
-        title="Modelos"
-        description={
-          <>
-            Marque os modelos que os operadores podem escolher no Assistente IA
-            {" · "}
-            <span className="font-medium text-[var(--ip-text)]">
-              {unrestricted
-                ? "todos liberados"
-                : `${releasedCount} de ${ASSISTANT_MODEL_CATALOG.length} liberados`}
-            </span>
-            . Preços em US$ por 1 milhão de tokens, conforme a tabela da OpenAI de 07/10/2026.
-          </>
-        }
-        actions={
-          <ModelsPanelActions
-            selected={form.selectedModels}
-            onChange={(selectedModels) => update({ selectedModels })}
-          />
-        }
-      >
-        <ModelsPanel
-          selected={form.selectedModels}
-          offCatalog={offCatalog}
-          defaultModel={form.defaultModel}
-          onChange={(selectedModels) => update({ selectedModels })}
+      <fieldset disabled={saving} className="m-0 min-w-0 border-0 p-0">
+        <SettingsSections
+          label="Seções das configurações de IA"
+          value={section}
+          onChange={setSection}
+          sections={[
+            {
+              id: "access",
+              label: "Conexão",
+              content: (
+                <>
+                  <SectionCard
+                    icon={<KeyIcon fontSize="small" />}
+                    title="Chave da OpenAI"
+                    description="A IA desta empresa usa a conta da empresa na OpenAI. A chave é salva na hora, separada das demais configurações."
+                  >
+                    {typeof token === "string" && instance ? (
+                      <OpenAiKeyPanel
+                        instance={instance}
+                        token={token}
+                        status={openaiKey}
+                        onChange={setOpenaiKey}
+                      />
+                    ) : null}
+                  </SectionCard>
+                </>
+              ),
+            },
+            {
+              id: "models",
+              label: "Modelos",
+              content: (
+                <>
+                  <SectionCard
+                    icon={<ModelTrainingIcon fontSize="small" />}
+                    title="Modelos"
+                    description={
+                      <>
+                        Marque os modelos que os operadores podem escolher no Assistente IA
+                        {" · "}
+                        <span className="font-medium text-[var(--ip-text)]">
+                          {unrestricted
+                            ? "todos liberados"
+                            : `${releasedCount} de ${ASSISTANT_MODEL_CATALOG.length} liberados`}
+                        </span>
+                        . Preços em US$ por 1 milhão de tokens, conforme a tabela da OpenAI de
+                        07/10/2026.
+                      </>
+                    }
+                    actions={
+                      <ModelsPanelActions
+                        selected={form.selectedModels}
+                        onChange={(selectedModels) => update({ selectedModels })}
+                      />
+                    }
+                  >
+                    <ModelsPanel
+                      selected={form.selectedModels}
+                      offCatalog={offCatalog}
+                      defaultModel={form.defaultModel}
+                      onChange={(selectedModels) => update({ selectedModels })}
+                    />
+                  </SectionCard>
+                  <SectionCard
+                    icon={<TuneIcon fontSize="small" />}
+                    title="Modelo por funcionalidade"
+                    description="O modelo padrão vale para tudo; troque só onde precisar de mais qualidade ou de menos custo."
+                  >
+                    <FeatureModelsPanel
+                      defaultModel={form.defaultModel}
+                      featureModels={form.featureModels}
+                      onDefaultModelChange={(defaultModel) => update({ defaultModel })}
+                      onFeatureModelChange={(feature, value) => {
+                        const next = { ...form.featureModels };
+                        if (value) next[feature] = value;
+                        else delete next[feature];
+                        update({ featureModels: next });
+                      }}
+                    />
+                  </SectionCard>
+                </>
+              ),
+            },
+            {
+              id: "limits",
+              label: "Limites de gasto",
+              content: (
+                <>
+                  <SectionCard
+                    icon={<SavingsOutlinedIcon fontSize="small" />}
+                    title="Limites de gasto"
+                    description="Limites mensais em US$. Ao atingir um limite, o copiloto e o Assistente IA ficam bloqueados até o mês seguinte."
+                  >
+                    <BudgetPanel
+                      budget={form.budget}
+                      budgetError={invalidField === "budget"}
+                      onBudgetChange={(budget) => update({ budget })}
+                      monthCost={
+                        monthUsage.data
+                          ? monthUsage.data.estimatedCostUsd
+                          : monthUsage.failed
+                            ? undefined
+                            : null
+                      }
+                      operatorMonthCosts={operatorMonthCosts}
+                      operatorBudgets={form.operatorBudgets}
+                      invalidOperatorId={
+                        invalidField?.startsWith("operator:")
+                          ? invalidField.slice("operator:".length)
+                          : null
+                      }
+                      operators={operators}
+                      onOperatorBudgetChange={(id, value) =>
+                        update({ operatorBudgets: { ...form.operatorBudgets, [id]: value } })
+                      }
+                      onRemoveOperator={(id) => {
+                        const next = { ...form.operatorBudgets };
+                        delete next[id];
+                        update({ operatorBudgets: next });
+                      }}
+                    />
+                  </SectionCard>
+                </>
+              ),
+            },
+            {
+              id: "usage",
+              label: "Consumo",
+              content: (
+                <>
+                  <SectionCard
+                    icon={<QueryStatsIcon fontSize="small" />}
+                    title="Consumo"
+                    description="Tokens e custo estimado por funcionalidade e por operador."
+                    actions={
+                      <UsagePanelActions
+                        view={usageView}
+                        period={period}
+                        onViewChange={setUsageView}
+                        onPeriodChange={setPeriod}
+                      />
+                    }
+                  >
+                    <UsagePanel
+                      usage={usage.data}
+                      loading={usage.loading}
+                      view={usageView}
+                      operatorName={operatorName}
+                      operatorLimits={operatorLimits}
+                    />
+                  </SectionCard>
+                </>
+              ),
+            },
+          ]}
         />
-      </SectionCard>
-
-      <SectionCard
-        icon={<TuneIcon fontSize="small" />}
-        title="Modelo por funcionalidade"
-        description="O modelo padrão vale para tudo; troque só onde precisar de mais qualidade ou de menos custo."
-      >
-        <FeatureModelsPanel
-          defaultModel={form.defaultModel}
-          featureModels={form.featureModels}
-          onDefaultModelChange={(defaultModel) => update({ defaultModel })}
-          onFeatureModelChange={(feature, value) => {
-            const next = { ...form.featureModels };
-            if (value) next[feature] = value;
-            else delete next[feature];
-            update({ featureModels: next });
-          }}
-        />
-      </SectionCard>
-
-      <SectionCard
-        icon={<QueryStatsIcon fontSize="small" />}
-        title="Consumo"
-        description="Tokens e custo estimado por funcionalidade e por operador."
-        actions={
-          <UsagePanelActions
-            view={usageView}
-            period={period}
-            onViewChange={setUsageView}
-            onPeriodChange={setPeriod}
-          />
-        }
-      >
-        <UsagePanel
-          usage={usage.data}
-          loading={usage.loading}
-          view={usageView}
-          operatorName={operatorName}
-          operatorLimits={operatorLimits}
-        />
-      </SectionCard>
+      </fieldset>
     </PageShell>
   );
 }

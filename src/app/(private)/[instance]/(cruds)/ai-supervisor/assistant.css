@@ -1,0 +1,108 @@
+.ip-ui .ip-assistant {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+.ip-ui .ip-assistant > .ip-crud-page {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.ip-ui .ip-assistant-workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.ip-ui .ip-assistant-workspace > section {
+  min-width: 0;
+  border-radius: 10px;
+}
+.ip-ui .ip-assistant-session {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+}
+.ip-ui .ip-assistant-session .MuiListItemButton-root {
+  min-width: 0;
+  flex: 1;
+}
+.ip-ui .ip-assistant-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ip-ui .ip-assistant-selects {
+  min-width: 0;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.ip-ui .ip-assistant-selects .MuiFormControl-root {
+  min-width: 0;
+  max-width: 100%;
+}
+.ip-ui .ip-assistant-controls {
+  min-width: 0;
+}
+.ip-ui .ip-assistant .max-w-\[88\%\] {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.ip-ui .ip-assistant .MuiInputBase-root {
+  min-height: 44px;
+}
+@media (max-width: 1023px) {
+  .ip-ui .ip-assistant-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ip-ui .ip-assistant .ip-crud-header p,
+  .ip-ui .ip-assistant .MuiBreadcrumbs-root {
+    display: none;
+  }
+  .ip-ui .ip-assistant .ip-crud-header {
+    gap: 8px;
+  }
+  .ip-ui .ip-assistant > .ip-crud-page {
+    gap: 10px;
+    padding: 12px;
+  }
+  .ip-ui .ip-assistant-controls {
+    padding: 12px;
+  }
+  .ip-ui .ip-assistant-selects {
+    width: 100%;
+  }
+  .ip-ui .ip-assistant-selects .MuiFormControl-root {
+    flex: 1 1 100px;
+  }
+}
+@media (max-height: 500px) and (max-width: 1023px) {
+  .ip-ui .ip-assistant > .ip-crud-page {
+    min-height: 560px;
+    height: auto;
+    overflow: visible;
+  }
+  .ip-ui .ip-assistant-workspace {
+    min-height: 420px;
+  }
+  .ip-ui .ip-assistant-controls {
+    padding: 4px 12px;
+  }
+}
+
+.ip-ui .ip-assistant-prompts {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--ip-muted);
+}
+.ip-ui .ip-assistant-prompts summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.ip-ui .ip-assistant-prompts[open] {
+  max-height: 160px;
+  overflow-y: auto;
+}

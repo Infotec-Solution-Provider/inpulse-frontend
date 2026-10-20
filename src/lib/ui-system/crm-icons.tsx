@@ -2,6 +2,11 @@
 import { SvgIcon, type SvgIconProps } from "@mui/material";
 import { forwardRef } from "react";
 import {
+  Archive as IconArchive,
+  ArchiveRestore as IconArchiveRestore,
+  CircleStop as IconCircleStop,
+  CircleAlert as IconCircleAlert,
+  TriangleAlert as IconTriangleAlert,
   Download as IconDownload,
   Ban as IconBan,
   Smile as IconSmile,
@@ -141,3 +146,10 @@ export const PlayArrow = controlIcon(IconPlay);
 export const AssessmentOutlined = controlIcon(IconAssessment);
 
 export const FileDownload = controlIcon(IconDownload);
+
+export const ArchiveOutlined = controlIcon(IconArchive);
+export const UnarchiveOutlined = controlIcon(IconArchiveRestore);
+
+export const StopCircleOutlined = controlIcon(IconCircleStop);
+export const ErrorOutlineRounded = controlIcon(IconCircleAlert);
+export const WarningAmberRounded = controlIcon(IconTriangleAlert);

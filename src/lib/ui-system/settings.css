@@ -1,0 +1,74 @@
+.ip-ui .ip-settings {
+  min-width: 0;
+}
+.ip-ui .ip-settings > .MuiTabs-root {
+  border-bottom: 1px solid var(--ip-border);
+  margin-bottom: 20px;
+}
+.ip-ui .ip-settings .MuiTab-root {
+  text-transform: none;
+  min-height: 48px;
+  padding: 12px 16px;
+}
+.ip-ui .ip-settings-panel {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+.ip-ui .ip-settings-card {
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--ip-border);
+  border-radius: 10px;
+  background: var(--ip-surface);
+}
+.ip-ui .ip-settings-card > header {
+  margin-bottom: 24px;
+}
+.ip-ui .ip-settings-card h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.ip-ui .ip-settings-card header p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--ip-muted);
+  max-width: 80ch;
+}
+.ip-ui .ip-settings-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-top: 1px solid var(--ip-border);
+  padding-top: 16px;
+}
+.ip-ui .ip-settings-footer p {
+  font-size: 13px;
+  color: var(--ip-muted);
+}
+.ip-ui .ip-settings details {
+  border: 1px solid var(--ip-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.ip-ui .ip-settings summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 4px 0;
+}
+.ip-ui .ip-settings details[open] > summary {
+  margin-bottom: 16px;
+}
+@media (max-width: 599px) {
+  .ip-ui .ip-settings-card {
+    padding: 16px;
+  }
+  .ip-ui .ip-settings-footer > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

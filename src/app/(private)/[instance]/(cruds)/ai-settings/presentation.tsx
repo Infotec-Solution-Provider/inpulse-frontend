@@ -3,10 +3,10 @@ import { surface, surfaceBorder } from "../../monitor/surface";
 
 /** Paper dos menus e popovers MUI na paleta slate da página (ver monitor/surface). */
 export const menuPaperSx = {
-  bgcolor: surface,
+  bgcolor: "var(--ip-surface)",
   backgroundImage: "none",
   border: 1,
-  borderColor: surfaceBorder,
+  borderColor: "var(--ip-border)",
 } as const;
 
 export const selectMenuProps = { slotProps: { paper: { sx: menuPaperSx } } } as const;
@@ -32,7 +32,7 @@ export function SectionCard({
     >
       <header className="mb-4 flex flex-wrap items-start gap-x-4 gap-y-3">
         <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--ip-surface-raised)] text-[var(--ip-muted)]">
             {icon}
           </span>
           <div className="min-w-0">

@@ -15,6 +15,8 @@ export const AuthContext = createContext({
   user: { CODIGO: 1, NOME: "Supervisão fictícia", NIVEL: "ADMIN", SETOR: 1 },
   signOut() {},
 });
+export const useCustomersContext = () => ({ searchCustomers: async () => [] });
+export const executeGeneratedReport = async () => ({ rows: [], columns: [] });
 export const useAuthContext = () => useContext(AuthContext);
 export const AppContext = createContext({ modal: null, openModal() {}, closeModal() {} });
 export const useAppContext = () => useContext(AppContext);
@@ -165,8 +167,12 @@ export const InternalChatContext = createContext({ users, internalApi });
 export const useInternalChatContext = () => useContext(InternalChatContext);
 export const WhatsappContext = createContext({
   loaded: true,
+  chats: [],
+  monitorChats: [],
+  currentChat: null,
   parameters: {
     feature_ai_enabled: "true",
+    feature_ai_supervisor_enabled: "true",
     feature_ai_agents_enabled: "true",
     feature_ai_settings_enabled: "true",
     feature_funnels_enabled: "true",
@@ -358,6 +364,14 @@ export const usersService = {
   async getUsers() {
     return { data: users };
   },
+  async upsertGlobalSipConfig(payload) {
+    record("save-sip", payload);
+    return payload;
+  },
+  async saveWebrtcSettings(payload) {
+    record("save-webrtc", payload);
+    return payload;
+  },
   async getGlobalSipConfig() {
     return {};
   },
@@ -372,7 +386,40 @@ export const usersService = {
     };
   },
 };
+const fixtureSession = {
+  id: 1,
+  title: "Conversa demonstrativa",
+  mode: "STANDARD",
+  status: "ACTIVE",
+  lastMessageAt: null,
+};
 export const aiService = {
+  async streamSupervisorMessage(_id, payload, _token, callbacks) {
+    record("send-assistant", payload);
+    callbacks.onDelta("Resposta demonstrativa");
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return {
+      session: fixtureSession,
+      userMessage: { id: 1, role: "USER", content: payload.message },
+      assistantMessage: { id: 2, role: "ASSISTANT", content: "Resposta demonstrativa" },
+      actions: [],
+    };
+  },
+  async listSupervisorSessions() {
+    return [fixtureSession];
+  },
+  async getSupervisorSession() {
+    return { session: fixtureSession, messages: [], actions: [] };
+  },
+  async createSupervisorSession() {
+    record("create-assistant", {});
+    return fixtureSession;
+  },
+  async upsertTenantConfig(_tenant, payload) {
+    record("save-ai", payload);
+    return { model: payload.model, ...payload };
+  },
+
   async getTenantConfig() {
     return {
       model: "gpt-4.1-mini",

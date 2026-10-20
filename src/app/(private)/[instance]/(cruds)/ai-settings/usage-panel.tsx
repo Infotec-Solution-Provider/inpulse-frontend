@@ -109,7 +109,7 @@ function UsageTable({ rows, view }: { rows: UsageRow[]; view: UsageView }) {
   const cell = "py-2 pl-3 text-right tabular-nums text-[var(--ip-text)] text-[var(--ip-text)]";
   const head = "pb-2 pl-3 text-right";
   return (
-    <div className="overflow-x-auto">
+    <div className="ip-crud-table overflow-x-auto">
       <table className="w-full min-w-[36rem] text-sm">
         <thead>
           <tr className="border-b border-[var(--ip-border)]">
@@ -140,15 +140,26 @@ function UsageTable({ rows, view }: { rows: UsageRow[]; view: UsageView }) {
             const percent = row.limit ? (row.cost / row.limit) * 100 : null;
             return (
               <tr key={row.key} className="border-b border-[var(--ip-border)] last:border-0">
-                <td className="py-2 text-[var(--ip-text)]">{row.name}</td>
-                <td className={cell}>{row.callCount.toLocaleString("pt-BR")}</td>
-                <td className={cell}>{formatTokens(row.inputTokens)}</td>
-                <td className={cell}>{formatTokens(row.outputTokens)}</td>
-                <td className={`${cell} font-medium text-[var(--ip-text)]`}>
+                <td
+                  data-label={view === "feature" ? "Funcionalidade" : "Operador"}
+                  className="py-2 text-[var(--ip-text)]"
+                >
+                  {row.name}
+                </td>
+                <td data-label="Chamadas" className={cell}>
+                  {row.callCount.toLocaleString("pt-BR")}
+                </td>
+                <td data-label="Entrada" className={cell}>
+                  {formatTokens(row.inputTokens)}
+                </td>
+                <td data-label="Saída" className={cell}>
+                  {formatTokens(row.outputTokens)}
+                </td>
+                <td data-label="Custo" className={`${cell} font-medium text-[var(--ip-text)]`}>
                   {formatUsd(row.cost)}
                 </td>
                 {view === "operator" && (
-                  <td className={cell}>
+                  <td data-label="Limite" className={cell}>
                     {row.limit === null ? (
                       <span className="text-[var(--ip-muted)]">—</span>
                     ) : (

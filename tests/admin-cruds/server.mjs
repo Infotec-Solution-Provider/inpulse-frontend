@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url),
 const root = fileURLToPath(new URL("../../", import.meta.url)),
   d = "/tests/admin-cruds/doubles.tsx";
 const modules = {
+  "customers-context": "useCustomersContext",
   "auth-context": "AuthContext,useAuthContext",
   "app-context": "AppContext,useAppContext",
   "whatsapp-context": "WhatsappContext,useWhatsappContext,WPP_BASE_URL",
@@ -25,6 +26,7 @@ const stubs = {
   "marketing.service": `export {marketingService as default} from '${d}'`,
   "sql-reports-context": `export {SqlReportsContext,SqlReportsProvider as default} from '${d}'`,
   "users.service": `export {usersService as default} from '${d}'`,
+  "customer-crm-detail-modal": `export {Empty as default} from '${d}'`,
   "ai.service": `export {aiService as default} from '${d}'`,
   "funnel.service": `export {funnelService as default} from '${d}'`,
   "lazy-notifications-dropdown": `export {Empty as default} from '${d}'`,
@@ -66,7 +68,7 @@ const server = await createServer({
       },
       load(id) {
         if (id === "\0preview:reports-api")
-          return `export {getMetrics,deleteMetric,getDashboards,createDashboard,getDashboard,addDashboardItem,removeDashboardItem,executeDashboard,getTables,createMetric,listGeneratedReports} from '${d}';`;
+          return `export {getMetrics,deleteMetric,getDashboards,createDashboard,getDashboard,addDashboardItem,removeDashboardItem,executeDashboard,getTables,createMetric,listGeneratedReports,executeGeneratedReport} from '${d}';`;
         if (id === "\0preview:navigation")
           return `export {usePathname,useSearchParams} from '/tests/monitor/navigation-doubles.tsx';import {navigate,usePathname} from '/tests/monitor/navigation-doubles.tsx';export function useRouter(){return {push:navigate,replace:navigate,back:()=>navigate('/tenant-a/funnel')}};export function useParams(){return {instance:'tenant-a',funnelId:'1',id:'1'}};`;
         if (id === "\0preview:link")

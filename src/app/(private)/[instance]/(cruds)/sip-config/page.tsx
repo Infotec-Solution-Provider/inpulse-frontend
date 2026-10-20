@@ -11,6 +11,7 @@ import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { Save as SaveIcon } from "@/lib/ui-system/crm-icons";
 import { SettingsPhone as SettingsPhoneIcon } from "@/lib/ui-system/crm-icons";
 import {
+  Alert,
   Button,
   CircularProgress,
   FormControlLabel,
@@ -18,7 +19,9 @@ import {
   Switch,
   TextField,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SettingsSections, SettingsPanel } from "@/lib/ui-system/settings-sections";
+import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { toast } from "react-toastify";
 
 const initialForm: GlobalSipConfigDTO = {
@@ -113,12 +116,28 @@ function toNullableString(value: string): string | null {
 }
 
 export default function SipConfigPage() {
+  const { instance, user } = useAuthContext();
+  return <SipSettings key={`${instance}:${user?.CODIGO}`} />;
+}
+
+function SipSettings() {
   const { token } = useAuthContext();
+  const [section, setSection] = useState("web");
+  const [saved, setSaved] = useState<GlobalSipConfigDTO>(initialForm);
+  const [failed, setFailed] = useState(false);
+  const requestRef = useRef(0);
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<GlobalSipConfigDTO>(initialForm);
 
+  const dirty = JSON.stringify(form) !== JSON.stringify(saved);
+  useCrmLeaveGuard(dirty, isSaving);
+
   const loadData = async () => {
+    if (dirty && !window.confirm("Descartar alterações da central e atualizar?")) return;
+    const request = ++requestRef.current;
     if (!token) {
       setForm(initialForm);
       setIsLoading(false);
@@ -126,22 +145,29 @@ export default function SipConfigPage() {
     }
 
     setIsLoading(true);
+    setFailed(false);
 
     try {
       usersService.setAuth(token);
       const data = await usersService.getGlobalSipConfig();
-      setForm(normalizeForm(data));
+      if (request !== requestRef.current) return;
+      const next = normalizeForm(data);
+      setForm(next);
+      setSaved(next);
     } catch (err) {
       toast.error(`Falha ao carregar configuração global de SIP: ${sanitizeErrorMessage(err)}`);
-      setForm(initialForm);
+      if (request === requestRef.current) setFailed(true);
     } finally {
-      setIsLoading(false);
+      if (request === requestRef.current) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     void loadData();
-  }, [token]);
+    return () => {
+      requestRef.current++;
+    };
+  }, []);
 
   const handleChangeField = (key: keyof GlobalSipConfigDTO, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -157,14 +183,12 @@ export default function SipConfigPage() {
   };
 
   const handleSave = async () => {
-    if (!token) {
-      return;
-    }
-
+    if (!tokenRef.current || isSaving || failed) return;
+    const request = ++requestRef.current;
     setIsSaving(true);
 
     try {
-      usersService.setAuth(token);
+      usersService.setAuth(tokenRef.current);
 
       const payload: UpsertGlobalSipConfigPayload = {
         ASTERISK_SERVER: toNullableString(form.ASTERISK_SERVER ?? ""),
@@ -189,12 +213,15 @@ export default function SipConfigPage() {
       };
 
       const data = await usersService.upsertGlobalSipConfig(payload);
-      setForm(normalizeForm(data));
+      if (request !== requestRef.current) return;
+      const next = normalizeForm(data);
+      setForm(next);
+      setSaved(next);
       toast.success("Configuração global de SIP salva com sucesso.");
     } catch (err) {
       toast.error(`Falha ao salvar configuração global de SIP: ${sanitizeErrorMessage(err)}`);
     } finally {
-      setIsSaving(false);
+      if (request === requestRef.current) setIsSaving(false);
     }
   };
 
@@ -212,7 +239,7 @@ export default function SipConfigPage() {
             onChange={(event) =>
               handleChangeField(field.key as keyof GlobalSipConfigDTO, event.target.value)
             }
-            disabled={isLoading || isSaving}
+            disabled={isLoading || isSaving || failed}
             fullWidth
             className="bg-[var(--ip-surface)]"
           />
@@ -230,6 +257,7 @@ export default function SipConfigPage() {
             control={
               <Switch
                 size="small"
+                disabled={isLoading || isSaving || failed}
                 checked={String(form[field.key] ?? field.falseValue) === field.trueValue}
                 onChange={(event) =>
                   handleToggleField(
@@ -252,104 +280,117 @@ export default function SipConfigPage() {
       title="Configuração SIP"
       description="Configure a central telefônica da empresa. As credenciais por operador ficam no cadastro de usuários."
       breadcrumbs={[{ label: "Configurações" }, { label: "Configuração SIP" }]}
-      actions={
-        <>
-          <OperationalIconButton
-            label="Atualizar"
-            onClick={() => void loadData()}
-            disabled={isLoading || isSaving}
-          >
-            <UiIcon name="refresh" scale="toolbar" />
-          </OperationalIconButton>
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={() => void handleSave()}
-            disabled={isLoading || isSaving}
-          >
-            Salvar
-          </Button>
-        </>
-      }
     >
-      <WebrtcSettingsForm />
-
-      {isLoading ? (
-        <Paper className="border border-[var(--ip-border)]">
-          <div className="flex items-center justify-center py-20">
-            <CircularProgress size={28} />
+      <SettingsSections
+        label="Seções da configuração SIP"
+        value={section}
+        onChange={setSection}
+        sections={[
+          { id: "web", label: "Telefonia web", content: <WebrtcSettingsForm /> },
+          {
+            id: "central",
+            label: "Central e chamadas",
+            content: (
+              <>
+                <SettingsPanel
+                  title="Conexão com a central"
+                  description="Dados globais de conexão SIP / Asterisk. O ramal e a senha de cada operador ficam no cadastro de usuários."
+                >
+                  {isLoading ? (
+                    <CircularProgress size={24} aria-label="Carregando central" />
+                  ) : failed ? (
+                    <Alert severity="error">
+                      Não foi possível carregar a central. Atualize antes de editar.
+                    </Alert>
+                  ) : (
+                    renderTextFields([
+                      "ASTERISK_SERVER",
+                      "ASTERISK_PORTA",
+                      "ASTERISK_PROXY",
+                      "SIP_ID",
+                      "SIP_KEY",
+                    ])
+                  )}
+                </SettingsPanel>
+                <SettingsPanel
+                  title="Comportamento das chamadas"
+                  description="Preferências de áudio, discagem e gravação para a empresa."
+                >
+                  {renderSwitchFields([
+                    "SIP_EMITE_BIP",
+                    "SIP_VOLUME_AUTOMATICO",
+                    "LIGACAO_IMEDIATA",
+                    "GRAVAR_LIGACAO",
+                  ])}
+                </SettingsPanel>
+              </>
+            ),
+          },
+          {
+            id: "advanced",
+            label: "Avançado",
+            content: (
+              <>
+                <SettingsPanel
+                  title="Dispositivos e roteamento"
+                  description="Identificadores dos dispositivos utilizados pela central."
+                >
+                  {renderTextFields(["CALL_IN_DEVICE", "CALL_OUT_DEVICE", "RING_DEVICE"])}
+                </SettingsPanel>
+                <SettingsPanel
+                  title="Pausa de ramal"
+                  description="Códigos usados para pausar e retomar o ramal."
+                >
+                  <div className="mb-4">{renderSwitchFields(["PAUSARRAMAL"])}</div>
+                  {renderTextFields(["RAMALPAUSA", "RAMALDESPAUSA"])}
+                </SettingsPanel>
+                <details>
+                  <summary>Integração legada via Telnet</summary>
+                  {renderTextFields([
+                    "IP_TELNET",
+                    "PORTA_TELNET",
+                    "USUARIO_TELNET",
+                    "SENHA_TELNET",
+                  ])}
+                </details>
+              </>
+            ),
+          },
+        ]}
+      />
+      {section !== "web" && (
+        <footer className="ip-settings-footer">
+          <p role="status">
+            {dirty
+              ? "Alterações da central não salvas"
+              : "As seções Central e Avançado são salvas juntas."}
+          </p>
+          <div className="ip-crud-actions">
+            <OperationalIconButton
+              label="Atualizar central"
+              onClick={() => void loadData()}
+              disabled={isLoading || isSaving}
+            >
+              <UiIcon name="refresh" scale="toolbar" />
+            </OperationalIconButton>
+            <Button
+              disabled={!dirty || isSaving}
+              onClick={() => {
+                if (window.confirm("Descartar alterações da central?")) setForm(saved);
+              }}
+            >
+              Descartar
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<SaveIcon />}
+              onClick={() => void handleSave()}
+              disabled={isLoading || isSaving || failed || !dirty}
+            >
+              {isSaving ? "Salvando…" : "Salvar central"}
+            </Button>
           </div>
-        </Paper>
-      ) : (
-        <div className="grid gap-5 xl:grid-cols-2">
-          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-[var(--ip-text)]">
-                Conectividade SIP / Asterisk
-              </h2>
-              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
-                Dados principais de conexão e autenticação com a infraestrutura de telefonia.
-              </p>
-            </div>
-            {renderTextFields([
-              "ASTERISK_SERVER",
-              "ASTERISK_PORTA",
-              "ASTERISK_PROXY",
-              "SIP_ID",
-              "SIP_KEY",
-            ])}
-          </Paper>
-
-          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-[var(--ip-text)]">
-                Dispositivos e roteamento
-              </h2>
-              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
-                Defina os devices usados para entrada, saída e toque das chamadas.
-              </p>
-            </div>
-            {renderTextFields(["CALL_IN_DEVICE", "CALL_OUT_DEVICE", "RING_DEVICE"])}
-          </Paper>
-
-          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-[var(--ip-text)]">
-                Comportamento da chamada
-              </h2>
-              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
-                Controle flags globais de experiência, discagem imediata e gravação.
-              </p>
-            </div>
-            {renderSwitchFields([
-              "SIP_EMITE_BIP",
-              "SIP_VOLUME_AUTOMATICO",
-              "LIGACAO_IMEDIATA",
-              "GRAVAR_LIGACAO",
-            ])}
-          </Paper>
-
-          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-[var(--ip-text)]">Integração Telnet</h2>
-              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
-                Parâmetros auxiliares usados em integrações legadas de telefonia.
-              </p>
-            </div>
-            {renderTextFields(["IP_TELNET", "PORTA_TELNET", "USUARIO_TELNET", "SENHA_TELNET"])}
-          </Paper>
-
-          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6 xl:col-span-2">
-            <div className="mb-5">
-              <h2 className="text-lg font-semibold text-[var(--ip-text)]">Pausa de ramal</h2>
-              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
-                Configura a pausa automática de ramal e os códigos usados para pausa e retorno.
-              </p>
-            </div>
-            <div className="mb-4">{renderSwitchFields(["PAUSARRAMAL"])}</div>
-            {renderTextFields(["RAMALPAUSA", "RAMALDESPAUSA"])}
-          </Paper>
-        </div>
+        </footer>
       )}
     </CrmPage>
   );

@@ -370,6 +370,7 @@ export function isModernCrmPath(pathname: string): boolean {
     "wallets",
     "ai-agents",
     "ai-settings",
+    "ai-supervisor",
     "channels",
     "funnel",
   ].includes(route);

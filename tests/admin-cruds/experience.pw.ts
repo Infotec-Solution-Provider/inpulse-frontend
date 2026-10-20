@@ -15,6 +15,7 @@ const screens: Record<string, string> = {
   "contact-requests": "Solicitações de contatos",
   "ai-agents": "Agentes",
   "ai-settings": "Configurações de IA",
+  "ai-supervisor": "Assistente",
   wallets: "Carteiras",
   "sip-config": "Configuração SIP",
   funnel: "Pipelines",
