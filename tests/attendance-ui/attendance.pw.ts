@@ -81,6 +81,20 @@ test("conversation type carousel navigates without applying filters and keeps ke
     "aria-pressed",
     "true",
   );
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(scheduled).toBeFocused();
+    await expect
+      .poll(() =>
+        scheduled.evaluate((button) => {
+          const option = button.getBoundingClientRect();
+          const bounds = button.closest(".attendance-type-carousel-viewport")!.getBoundingClientRect();
+          return option.left >= bounds.left + 5 && option.right <= bounds.right - 5;
+        }),
+      )
+      .toBe(true);
+    await expect(all).toHaveAttribute("aria-pressed", "true");
+  }
   await page.keyboard.press("Enter");
   await expect(scheduled).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Home");

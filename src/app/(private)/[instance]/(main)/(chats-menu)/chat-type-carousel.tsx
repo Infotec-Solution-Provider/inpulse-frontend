@@ -61,12 +61,20 @@ export default function ChatTypeCarousel({ options, value, onChange }: ChatTypeC
       });
   }, []);
 
+  const revealCurrentOption = useCallback(() => {
+    const active = document.activeElement;
+    const target =
+      active instanceof HTMLButtonElement && track.current?.contains(active)
+        ? active
+        : track.current?.querySelector<HTMLButtonElement>(
+            `[data-value="${selectedValue.current}"]`,
+          );
+    if (target) reveal(target);
+  }, [reveal]);
+
   useLayoutEffect(() => {
     const observer = new ResizeObserver(() => {
-      const selected = track.current?.querySelector<HTMLButtonElement>(
-        `[data-value="${selectedValue.current}"]`,
-      );
-      if (selected) reveal(selected);
+      revealCurrentOption();
       updateNavigation();
     });
     for (const element of [root.current, viewport.current, track.current]) {
@@ -74,13 +82,12 @@ export default function ChatTypeCarousel({ options, value, onChange }: ChatTypeC
     }
     updateNavigation();
     return () => observer.disconnect();
-  }, [optionKey, reveal, updateNavigation]);
+  }, [optionKey, revealCurrentOption, updateNavigation]);
 
   useLayoutEffect(() => {
-    const selected = track.current?.querySelector<HTMLButtonElement>(`[data-value="${value}"]`);
-    if (selected) reveal(selected);
+    revealCurrentOption();
     updateNavigation();
-  }, [value, optionKey, navigation.visible, reveal, updateNavigation]);
+  }, [value, optionKey, navigation.visible, revealCurrentOption, updateNavigation]);
 
   const move = (direction: -1 | 1) => {
     if (!viewport.current || !track.current) return;
