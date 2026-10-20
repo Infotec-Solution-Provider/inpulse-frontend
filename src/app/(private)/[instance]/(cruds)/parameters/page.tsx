@@ -1,5 +1,6 @@
 "use client";
 
+import { CrmPage } from "@/lib/ui-system";
 import { useAuthContext } from "@/app/auth-context";
 import { ParameterSettingsPanel } from "@/lib/parameters/parameter-settings-panel";
 import { WhatsappParameterSettings } from "@/lib/parameters/whatsapp-parameter-settings";
@@ -14,18 +15,13 @@ function ParametersScreen() {
   const [tab, setTab] = useState<ParameterSource>("whatsapp");
   const [visitedCrm, setVisitedCrm] = useState(false);
   return (
-    <div
-      className="scrollbar-whatsapp box-border h-full min-h-0 w-full overflow-y-auto bg-slate-50 text-slate-800 dark:bg-gray-900 dark:text-slate-200"
-      data-testid="parameters-scroll"
-    >
-      <div className="mx-auto w-full max-w-7xl space-y-5 p-4 sm:p-6 lg:p-8">
-        <header>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Parâmetros</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Gerencie as configurações do WhatsApp e do CRM.
-          </p>
-        </header>
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <div className="min-w-0" data-testid="parameters-scroll">
+      <CrmPage
+        title="Parâmetros"
+        description="Gerencie as configurações do WhatsApp e do CRM."
+        breadcrumbs={[{ label: "Configurações" }, { label: "Parâmetros" }]}
+      >
+        <div className="rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] shadow-none">
           <Tabs
             value={tab}
             onChange={(_, value: ParameterSource) => {
@@ -54,7 +50,7 @@ function ParametersScreen() {
         <div role="tabpanel" id="panel-crm" aria-labelledby="tab-crm" hidden={tab !== "crm"}>
           {visitedCrm && <ParameterSettingsPanel source="crm" />}
         </div>
-      </div>
+      </CrmPage>
     </div>
   );
 }

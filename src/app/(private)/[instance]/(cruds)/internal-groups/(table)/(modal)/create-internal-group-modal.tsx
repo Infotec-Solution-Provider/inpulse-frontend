@@ -1,10 +1,10 @@
 import { Button, IconButton, TextField } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
 import { useContext, useMemo, useRef, useState } from "react";
 import { useAppContext } from "../../../../app-context";
 import { InternalChatContext } from "../../../../internal-context";
 import { toast } from "react-toastify";
-import ImageIcon from "@mui/icons-material/Image";
+import { Image as ImageIcon } from "@/lib/ui-system/crm-icons";
 import { useInternalGroupsContext } from "../../internal-groups-context";
 import { WhatsappGroup } from "@/lib/sdk-local";
 import GroupMembershipFields, { InternalGroupUser } from "./group-membership-fields";
@@ -141,6 +141,7 @@ export default function CreateInternalGroupModal() {
             </p>
           </div>
           <IconButton
+            aria-label="Fechar"
             onClick={closeModal}
             className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
           >
@@ -218,7 +219,7 @@ export default function CreateInternalGroupModal() {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
+        <div className="ip-crud-form-footer flex items-center justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
           <Button variant="outlined" color="error" onClick={closeModal} className="px-6 py-2">
             Cancelar
           </Button>

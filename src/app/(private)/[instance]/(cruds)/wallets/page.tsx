@@ -4,7 +4,7 @@ import WalletsTable from "./(table)/wallets-table";
 
 export default function WalletsManagementPage() {
   return (
-    <div className="flex flex-col max-w-[75rem] mx-auto px-10 pt-5 h-full min-h-0 box-border relative">
+    <div className="min-w-0">
       <WalletsTable />
       <WalletManagementModal />
     </div>

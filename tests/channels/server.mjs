@@ -22,6 +22,7 @@ const server = await createServer({
       name: "isolated-channels",
       enforce: "pre",
       resolveId(source) {
+        if (source === "next/link") return "\0fixture:next-link";
         const name = source
           .replaceAll("\\", "/")
           .split("/")
@@ -31,6 +32,8 @@ const server = await createServer({
         if (source.endsWith("/sdk-local")) return "\0channels:sdk";
       },
       load(id) {
+        if (id === "\0fixture:next-link")
+          return "export {TestLink as default} from '/tests/monitor/navigation-doubles.tsx'";
         if (id === "\0channels:sdk")
           return "export const SocketEventType = { WwebjsSessionStatus: 'session-status' }";
         if (id.startsWith("\0channels:"))

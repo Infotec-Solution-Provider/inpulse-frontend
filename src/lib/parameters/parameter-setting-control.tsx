@@ -57,7 +57,7 @@ export function ParameterSettingControl({
 
   return (
     <div
-      className="flex flex-col gap-3 border-t border-slate-200 py-4 first:border-t-0 dark:border-slate-700 md:flex-row md:items-start md:justify-between"
+      className="flex flex-col gap-3 border-t border-[var(--ip-border)] py-4 first:border-t-0 md:flex-row md:items-start md:justify-between"
       data-testid={`parameter-${setting.key}`}
     >
       <div className="min-w-0 flex-1">

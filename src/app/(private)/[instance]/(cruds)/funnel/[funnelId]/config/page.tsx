@@ -1,20 +1,21 @@
 "use client";
 
+import { CrmPage } from "@/lib/ui-system";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import AddIcon from "@mui/icons-material/Add";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteIcon from "@mui/icons-material/Delete";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Add as AddIcon } from "@/lib/ui-system/crm-icons";
+import { ArrowBack as ArrowBackIcon } from "@/lib/ui-system/crm-icons";
+import { BookmarkBorder as BookmarkBorderIcon } from "@/lib/ui-system/crm-icons";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
+import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
+import { ExpandMore as ExpandMoreIcon } from "@/lib/ui-system/crm-icons";
+import { InfoOutlined as InfoOutlinedIcon } from "@/lib/ui-system/crm-icons";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
 import Collapse from "@mui/material/Collapse";
-import Dialog from "@mui/material/Dialog";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -34,7 +35,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import SearchIcon from "@mui/icons-material/Search";
+import { Search as SearchIcon } from "@/lib/ui-system/crm-icons";
 import { toast } from "react-toastify";
 import { AuthContext } from "@/app/auth-context";
 import { type MessageTemplate, useWhatsappContext } from "../../../../whatsapp-context";
@@ -169,7 +170,7 @@ function TriStateToggle({
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="text-xs text-[var(--ip-muted)] text-[var(--ip-muted)]">{label}</span>
       <ToggleButtonGroup
         size="small"
         exclusive
@@ -268,7 +269,7 @@ function ResultadoForm({
       {/* Resultado filter */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+          <span className="text-xs font-medium text-[var(--ip-text)]">
             Filtrar por resultado (opcional)
           </span>
           {(value.resultadoFilter?.resultadoIds?.length ?? 0) > 0 && (
@@ -311,9 +312,9 @@ function ResultadoForm({
             ),
           }}
         />
-        <div className="flex max-h-40 flex-col overflow-y-auto rounded border border-slate-200 dark:border-slate-600">
+        <div className="flex max-h-40 flex-col overflow-y-auto rounded border border-[var(--ip-border)]">
           {filtered.length === 0 ? (
-            <p className="py-3 text-center text-xs text-slate-400">Nenhum resultado.</p>
+            <p className="py-3 text-center text-xs text-[var(--ip-muted)]">Nenhum resultado.</p>
           ) : (
             <FormGroup>
               {filtered.map((r) => (
@@ -335,7 +336,7 @@ function ResultadoForm({
           )}
         </div>
         {(value.resultadoFilter?.resultadoIds?.length ?? 0) > 0 && (
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[var(--ip-muted)]">
             {value.resultadoFilter!.resultadoIds.length} selecionado(s)
           </p>
         )}
@@ -343,7 +344,7 @@ function ResultadoForm({
 
       {/* Flags */}
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+        <span className="text-xs font-medium text-[var(--ip-text)]">
           Flags do resultado (opcional)
         </span>
         <div className="flex flex-wrap gap-3">
@@ -409,7 +410,7 @@ function AgendamentoForm({
 
       {value.has && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-[var(--ip-muted)]">
             Intervalo (dias a partir de hoje — opcional)
           </span>
           <div className="flex gap-2">
@@ -448,7 +449,7 @@ function AgendamentoForm({
               sx={{ flex: 1 }}
             />
           </div>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-[var(--ip-muted)]">
             Hoje + {value.minDays ?? 0} até hoje + {value.maxDays ?? "∞"} dias.
           </p>
         </div>
@@ -703,7 +704,7 @@ function AddConditionForm({
   const handleAddAnother = () => { resetForm(); };
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-800/60">
+    <div className="flex flex-col gap-3 rounded-lg border border-dashed border-[var(--ip-border)] bg-[var(--ip-surface)] p-3">
       {savedConditionId ? (
         /* Post-save actions */
         <div className="flex flex-col items-start gap-2">
@@ -900,7 +901,7 @@ function TemplateLibrary({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-700">
+    <div className="rounded-xl border border-[var(--ip-border)]">
       <button
         className="flex w-full items-center justify-between px-4 py-2.5 text-left"
         onClick={() => setExpanded((v) => !v)}
@@ -918,9 +919,9 @@ function TemplateLibrary({
         />
       </button>
       <Collapse in={expanded}>
-        <div className="border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+        <div className="border-t border-[var(--ip-border)] px-4 py-3">
           {templates.length === 0 ? (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[var(--ip-muted)]">
               Nenhum template salvo. Adicione uma condição e clique em &quot;Salvar como template&quot;.
             </p>
           ) : (
@@ -1226,28 +1227,13 @@ export default function FunnelConfigPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-5 overflow-y-auto p-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <IconButton size="small" onClick={() => router.back()}>
-          <ArrowBackIcon fontSize="small" />
-        </IconButton>
+    <CrmPage title={`Configurar: ${funnelName}`} description="Defina estágios e condições de classificação dos clientes." breadcrumbs={[{label:"Pipelines",href:`/${params.instance}/funnel`},{label:funnelName},{label:"Configuração"}]} actions={<Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={()=>router.back()}>Voltar</Button>}>
+      <div className="flex flex-col gap-3 rounded-lg border border-[var(--ip-border)] p-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
-            Configurar: {funnelName}
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Defina os estágios e as condições de classificação dos clientes.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 p-4 dark:border-slate-700">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ip-muted)] text-[var(--ip-muted)]">
             Gatilhos de entrada
           </h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-[var(--ip-muted)]">
             Inclua o cliente depois do envio bem-sucedido de uma mensagem pronta ou template.
           </p>
           {funnelType === "AUTOMATIC" && audienceMode === "TRIGGERED" && (
@@ -1295,7 +1281,7 @@ export default function FunnelConfigPage() {
         </div>
 
         {currentTriggerBindings.length === 0 ? (
-          <p className="text-xs text-slate-400">Nenhum gatilho configurado.</p>
+          <p className="text-xs text-[var(--ip-muted)]">Nenhum gatilho configurado.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {currentTriggerBindings.map((binding) => {
@@ -1303,10 +1289,10 @@ export default function FunnelConfigPage() {
               const catalogLoaded = binding.sourceType === "READY_MESSAGE" ? readyMessagesLoaded : officialTemplatesLoaded;
               const unavailable = catalogLoaded && !catalogSourceKeys.has(binding.sourceKey);
               return (
-                <div key={binding.id} className="flex items-center justify-between gap-3 rounded border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                <div key={binding.id} className="flex items-center justify-between gap-3 rounded border border-[var(--ip-border)] px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-slate-700 dark:text-slate-200">{binding.sourceLabel}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="truncate font-medium text-[var(--ip-text)]">{binding.sourceLabel}</p>
+                    <p className="text-xs text-[var(--ip-muted)]">
                       {binding.sourceType === "READY_MESSAGE" ? "Mensagem pronta" : "Template oficial"} → {stage?.name ?? "Etapa removida"}
                       {unavailable ? " · origem indisponível" : ""}
                     </p>
@@ -1324,7 +1310,7 @@ export default function FunnelConfigPage() {
       {/* ── Stages section ───────────────────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ip-muted)] text-[var(--ip-muted)]">
             Estágios
           </h2>
           <Button size="small" startIcon={<AddIcon />} onClick={() => setShowStageForm((v) => !v)}>
@@ -1333,7 +1319,7 @@ export default function FunnelConfigPage() {
         </div>
 
         {showStageForm && (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--ip-border)] p-3">
             <TextField
               size="small"
               label="Nome do estágio"
@@ -1372,7 +1358,7 @@ export default function FunnelConfigPage() {
         )}
 
         {stages.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum estágio criado ainda.</p>
+          <p className="text-sm text-[var(--ip-muted)]">Nenhum estágio criado ainda.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {stages.map((s) => (
@@ -1393,7 +1379,7 @@ export default function FunnelConfigPage() {
                 {s.name}
                 <Tooltip title="Excluir estágio">
                   <span>
-                    <IconButton
+                    <IconButton aria-label="Excluir estágio"
                       sx={{ color: s.color, padding: "2px" }}
                       onClick={() => handleDeleteStage(s.id, s.name)}
                       disabled={deletingStageId === s.id}
@@ -1416,10 +1402,10 @@ export default function FunnelConfigPage() {
       {funnelType !== "MANUAL" && stages.length > 0 && (
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ip-muted)] text-[var(--ip-muted)]">
               Condições por estágio
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-[var(--ip-muted)] mt-0.5">
               Um cliente entra no estágio quando{" "}
               <strong>todas</strong> as condições são atendidas.
             </p>
@@ -1427,14 +1413,14 @@ export default function FunnelConfigPage() {
           {stages.map((stage) => (
             <div
               key={stage.id}
-              className="rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+              className="rounded-lg border border-[var(--ip-border)] p-3"
             >
               <div className="mb-2 flex items-center gap-2">
                 <span
                   className="inline-block h-3 w-3 rounded-full"
                   style={{ backgroundColor: stage.color }}
                 />
-                <span className="font-medium text-slate-700 dark:text-slate-200">
+                <span className="font-medium text-[var(--ip-text)]">
                   {stage.name}
                 </span>
                 {stage.conditions.length === 0 && (
@@ -1515,6 +1501,6 @@ export default function FunnelConfigPage() {
         onTemplateDeleted={(id) => setTemplates((prev) => prev.filter((t) => t.id !== id))}
       />
       )}
-    </div>
+    </CrmPage>
   );
 }

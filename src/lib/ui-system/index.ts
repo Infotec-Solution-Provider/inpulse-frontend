@@ -9,3 +9,7 @@ export type { UiIconName, UiIconScale, UiIconProps } from "./icons";
 
 export { CrmPage, CrmToolbar } from "./crm-components";
 export { CrmQueryProvider, useCrmQueryState } from "./query-state";
+
+export { CrmFilters } from "./crm-filters";
+export type { CrmFilterValues, CrmFilterField } from "./crm-filters";
+export { CrmTableHead } from "./crm-table-head";

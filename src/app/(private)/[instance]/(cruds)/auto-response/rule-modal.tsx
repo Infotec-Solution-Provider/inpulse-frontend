@@ -1,9 +1,24 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button,
-  IconButton, Switch, FormControlLabel, Select, MenuItem, OutlinedInput,
-  Box, Chip, InputLabel, FormControl, Typography, Autocomplete
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  IconButton,
+  Switch,
+  FormControlLabel,
+  Select,
+  MenuItem,
+  OutlinedInput,
+  Box,
+  Chip,
+  InputLabel,
+  FormControl,
+  Typography,
+  Autocomplete,
 } from "@mui/material";
 import { X, Plus, Trash } from "lucide-react";
 import { toast } from "react-toastify";
@@ -12,7 +27,7 @@ import { useAutoResponseContext } from "./auto-response.context";
 import { AutomaticResponseRule } from "@/lib/sdk-local";
 import useInternalChatContext from "../../internal-context";
 
-type Frequency = 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+type Frequency = "ONCE" | "DAILY" | "WEEKLY" | "MONTHLY" | "YEARLY";
 
 interface RuleModalProps {
   rule?: AutomaticResponseRule;
@@ -26,11 +41,11 @@ type UISchedule = {
   dayOfMonth?: number | null;
   month?: number | null;
   // janela opcional
-  startDate?: string | null;  // ISO yyyy-MM-dd
-  endDate?: string | null;    // ISO yyyy-MM-dd
+  startDate?: string | null; // ISO yyyy-MM-dd
+  endDate?: string | null; // ISO yyyy-MM-dd
   // horário
-  startTime: string;          // HH:mm
-  endTime: string;            // HH:mm
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
   timezone?: string | null;
   // legado
   dayOfWeek?: number | null;
@@ -41,8 +56,8 @@ export default function RuleModal({ rule }: RuleModalProps) {
   const { users } = useInternalChatContext();
   const isEditMode = !!rule;
 
-  const [name, setName] = useState('');
-  const [message, setMessage] = useState('');
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
   const [isEnabled, setIsEnabled] = useState(true);
   const [isGlobal, setIsGlobal] = useState(true);
   const [cooldownSeconds, setCooldownSeconds] = useState(3600);
@@ -62,12 +77,14 @@ export default function RuleModal({ rule }: RuleModalProps) {
       setSelectedUserIds((rule.userAssignments || []).map((u: any) => u.userId));
 
       const mapped: UISchedule[] = (rule.schedules || []).map((s: any) => {
-        const freq: Frequency = s.frequency || 'WEEKLY';
+        const freq: Frequency = s.frequency || "WEEKLY";
         let daysOfWeek: number[] | undefined = undefined;
-        if (freq === 'WEEKLY') {
+        if (freq === "WEEKLY") {
           daysOfWeek = Array.isArray(s.daysOfWeek)
             ? s.daysOfWeek
-            : (s.dayOfWeek !== undefined && s.dayOfWeek !== null ? [s.dayOfWeek] : []);
+            : s.dayOfWeek !== undefined && s.dayOfWeek !== null
+              ? [s.dayOfWeek]
+              : [];
         }
         return {
           frequency: freq,
@@ -78,59 +95,79 @@ export default function RuleModal({ rule }: RuleModalProps) {
           endDate: s.endDate ? new Date(s.endDate).toISOString().slice(0, 10) : null,
           startTime: s.startTime,
           endTime: s.endTime,
-          timezone: s.timezone || 'America/Fortaleza',
-          dayOfWeek: s.dayOfWeek ?? null
+          timezone: s.timezone || "America/Fortaleza",
+          dayOfWeek: s.dayOfWeek ?? null,
         };
       });
 
-      setSchedules(mapped.length ? mapped : [{
-        frequency: 'WEEKLY',
-        daysOfWeek: [1],
-        startTime: '18:00',
-        endTime: '23:59',
-        timezone: 'America/Fortaleza',
-        dayOfMonth: null,
-        month: null,
-        startDate: null,
-        endDate: null
-      }]);
+      setSchedules(
+        mapped.length
+          ? mapped
+          : [
+              {
+                frequency: "WEEKLY",
+                daysOfWeek: [1],
+                startTime: "18:00",
+                endTime: "23:59",
+                timezone: "America/Fortaleza",
+                dayOfMonth: null,
+                month: null,
+                startDate: null,
+                endDate: null,
+              },
+            ],
+      );
     } else {
-      setSchedules([{
-        frequency: 'WEEKLY',
-        daysOfWeek: [1],
-        startTime: '18:00',
-        endTime: '23:59',
-        timezone: 'America/Fortaleza',
-        dayOfMonth: null,
-        month: null,
-        startDate: null,
-        endDate: null
-      }]);
+      setSchedules([
+        {
+          frequency: "WEEKLY",
+          daysOfWeek: [1],
+          startTime: "18:00",
+          endTime: "23:59",
+          timezone: "America/Fortaleza",
+          dayOfMonth: null,
+          month: null,
+          startDate: null,
+          endDate: null,
+        },
+      ]);
     }
   }, [rule]);
 
   const daysOfWeekLabels = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
   const months = useMemo(
     () => [
-      { v: 1, n: "Jan" }, { v: 2, n: "Fev" }, { v: 3, n: "Mar" }, { v: 4, n: "Abr" },
-      { v: 5, n: "Mai" }, { v: 6, n: "Jun" }, { v: 7, n: "Jul" }, { v: 8, n: "Ago" },
-      { v: 9, n: "Set" }, { v: 10, n: "Out" }, { v: 11, n: "Nov" }, { v: 12, n: "Dez" }
+      { v: 1, n: "Jan" },
+      { v: 2, n: "Fev" },
+      { v: 3, n: "Mar" },
+      { v: 4, n: "Abr" },
+      { v: 5, n: "Mai" },
+      { v: 6, n: "Jun" },
+      { v: 7, n: "Jul" },
+      { v: 8, n: "Ago" },
+      { v: 9, n: "Set" },
+      { v: 10, n: "Out" },
+      { v: 11, n: "Nov" },
+      { v: 12, n: "Dez" },
     ],
-    []
+    [],
   );
 
   const handleAddSchedule = () => {
-    setSchedules(prev => [...prev, {
-      frequency: 'WEEKLY',
-      daysOfWeek: [1],
-      startTime: '18:00',
-      endTime: '23:59',
-      timezone: 'America/Fortaleza',
-      dayOfMonth: null,
-      month: null,
-      startDate: null,
-      endDate: null
-    }]);
+    setSchedules((prev) => [
+      ...prev,
+      {
+        frequency: "WEEKLY",
+        daysOfWeek: [1],
+        startTime: "18:00",
+        endTime: "23:59",
+        timezone: "America/Fortaleza",
+        dayOfMonth: null,
+        month: null,
+        startDate: null,
+        endDate: null,
+      },
+    ]);
   };
 
   const handleRemoveSchedule = (index: number) => {
@@ -143,23 +180,23 @@ export default function RuleModal({ rule }: RuleModalProps) {
 
     if (patch.frequency) {
       const f = patch.frequency;
-      if (f === 'DAILY') {
+      if (f === "DAILY") {
         clone[index].daysOfWeek = undefined;
         clone[index].dayOfMonth = null;
         clone[index].month = null;
-      } else if (f === 'WEEKLY') {
+      } else if (f === "WEEKLY") {
         clone[index].daysOfWeek = clone[index].daysOfWeek?.length ? clone[index].daysOfWeek : [1];
         clone[index].dayOfMonth = null;
         clone[index].month = null;
-      } else if (f === 'MONTHLY') {
+      } else if (f === "MONTHLY") {
         clone[index].daysOfWeek = undefined;
         clone[index].dayOfMonth = clone[index].dayOfMonth ?? 1;
         clone[index].month = null;
-      } else if (f === 'YEARLY') {
+      } else if (f === "YEARLY") {
         clone[index].daysOfWeek = undefined;
         clone[index].dayOfMonth = clone[index].dayOfMonth ?? 1;
         clone[index].month = clone[index].month ?? 1;
-      } else if (f === 'ONCE') {
+      } else if (f === "ONCE") {
         clone[index].startDate = clone[index].startDate ?? new Date().toISOString().slice(0, 10);
       }
     }
@@ -174,23 +211,23 @@ export default function RuleModal({ rule }: RuleModalProps) {
       return;
     }
 
-    const normalized = schedules.map(s => {
+    const normalized = schedules.map((s) => {
       const dto: any = {
         frequency: s.frequency,
         startTime: s.startTime,
         endTime: s.endTime,
-        timezone: s.timezone || 'America/Fortaleza',
+        timezone: s.timezone || "America/Fortaleza",
         startDate: s.startDate || null,
-        endDate: s.endDate || null
+        endDate: s.endDate || null,
       };
-      if (s.frequency === 'WEEKLY') {
+      if (s.frequency === "WEEKLY") {
         dto.daysOfWeek = s.daysOfWeek && s.daysOfWeek.length ? s.daysOfWeek : undefined;
-      } else if (s.frequency === 'MONTHLY') {
+      } else if (s.frequency === "MONTHLY") {
         dto.dayOfMonth = s.dayOfMonth ?? 1;
-      } else if (s.frequency === 'YEARLY') {
+      } else if (s.frequency === "YEARLY") {
         dto.dayOfMonth = s.dayOfMonth ?? 1;
         dto.month = s.month ?? 1;
-      } else if (s.frequency === 'ONCE') {
+      } else if (s.frequency === "ONCE") {
         dto.startDate = s.startDate || new Date().toISOString().slice(0, 10);
       }
       return dto;
@@ -204,7 +241,7 @@ export default function RuleModal({ rule }: RuleModalProps) {
       cooldownSeconds: Number(cooldownSeconds),
       userIds: isGlobal ? [] : selectedUserIds,
       schedules: normalized,
-      fileId: (rule as any)?.fileId ?? null
+      fileId: (rule as any)?.fileId ?? null,
     };
 
     if (isEditMode) {
@@ -219,8 +256,8 @@ export default function RuleModal({ rule }: RuleModalProps) {
   }, [users]);
 
   const selectedUserOptions = useMemo(
-    () => userOptions.filter(o => selectedUserIds.includes(o.id)),
-    [userOptions, selectedUserIds]
+    () => userOptions.filter((o) => selectedUserIds.includes(o.id)),
+    [userOptions, selectedUserIds],
   );
 
   return (
@@ -234,20 +271,18 @@ export default function RuleModal({ rule }: RuleModalProps) {
           "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xl shadow-slate-900/10 dark:shadow-black/30",
         sx: {
           backgroundImage: "none",
-        }
+        },
       }}
       slotProps={{
         backdrop: {
-          className: "bg-black/40 dark:bg-black/60 backdrop-blur-[2px]"
-        }
+          className: "bg-black/40 dark:bg-black/60 backdrop-blur-[2px]",
+        },
       }}
       BackdropProps={{
-        className: "bg-black/40 dark:bg-black/60 backdrop-blur-[2px]"
+        className: "bg-black/40 dark:bg-black/60 backdrop-blur-[2px]",
       }}
     >
-      <DialogTitle
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-      >
+      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         {isEditMode ? "Editar Regra" : "Criar Nova Regra"}
         <IconButton onClick={closeModal} size="small" aria-label="Fechar">
           <X size={18} />
@@ -264,7 +299,7 @@ export default function RuleModal({ rule }: RuleModalProps) {
             size="small"
             label="Nome da Regra"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             fullWidth
             required
           />
@@ -273,20 +308,32 @@ export default function RuleModal({ rule }: RuleModalProps) {
             size="small"
             label="Mensagem Automática"
             value={message}
-            onChange={e => setMessage(e.target.value)}
+            onChange={(e) => setMessage(e.target.value)}
             fullWidth
             multiline
             minRows={2}
             required
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <FormControlLabel
-              control={<Switch size="small" checked={isEnabled} onChange={e => setIsEnabled(e.target.checked)} />}
+              control={
+                <Switch
+                  size="small"
+                  checked={isEnabled}
+                  onChange={(e) => setIsEnabled(e.target.checked)}
+                />
+              }
               label="Regra Ativa"
             />
             <FormControlLabel
-              control={<Switch size="small" checked={isGlobal} onChange={e => setIsGlobal(e.target.checked)} />}
+              control={
+                <Switch
+                  size="small"
+                  checked={isGlobal}
+                  onChange={(e) => setIsGlobal(e.target.checked)}
+                />
+              }
               label="Aplicar a todos (Global)"
             />
           </div>
@@ -304,11 +351,16 @@ export default function RuleModal({ rule }: RuleModalProps) {
               filterSelectedOptions
               getOptionLabel={(o) => o.label}
               isOptionEqualToValue={(o, v) => o.id === v.id}
-              onChange={(_, newValue) => setSelectedUserIds(newValue.map(v => v.id))}
+              onChange={(_, newValue) => setSelectedUserIds(newValue.map((v) => v.id))}
               ListboxProps={{ style: { maxHeight: 380, overflow: "auto" } }} // mantém dropdown compacto
               renderTags={(value, getTagProps) =>
                 value.map((option, index) => (
-                  <Chip variant="outlined" label={option.label} {...getTagProps({ index })} key={option.id} />
+                  <Chip
+                    variant="outlined"
+                    label={option.label}
+                    {...getTagProps({ index })}
+                    key={option.id}
+                  />
                 ))
               }
               renderInput={(params) => (
@@ -339,8 +391,8 @@ export default function RuleModal({ rule }: RuleModalProps) {
               )}
               slotProps={{
                 paper: {
-                  sx: { maxHeight: 380 }
-                }
+                  sx: { maxHeight: 380 },
+                },
               }}
             />
           )}
@@ -350,22 +402,24 @@ export default function RuleModal({ rule }: RuleModalProps) {
             label="Intervalo de Reenvio (segundos)"
             type="number"
             value={cooldownSeconds}
-            onChange={e => setCooldownSeconds(Number(e.target.value))}
+            onChange={(e) => setCooldownSeconds(Number(e.target.value))}
             fullWidth
             required
           />
 
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="font-semibold text-sm">Recorrência / Horários de Ativação</h4>
-              <Button size="small" startIcon={<Plus size={14} />} onClick={handleAddSchedule}>Adicionar</Button>
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-sm font-semibold">Recorrência / Horários de Ativação</h4>
+              <Button size="small" startIcon={<Plus size={14} />} onClick={handleAddSchedule}>
+                Adicionar
+              </Button>
             </div>
 
-            <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+            <div className="max-h-64 space-y-3 overflow-y-auto pr-2">
               {schedules.map((s, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-1 md:grid-cols-12 gap-2 items-center p-2 rounded border border-slate-300 dark:border-slate-700"
+                  className="grid grid-cols-1 items-center gap-2 rounded border border-slate-300 p-2 dark:border-slate-700 md:grid-cols-12"
                 >
                   <FormControl className="md:col-span-3" size="small">
                     <InputLabel id={`freq-${i}`}>Periodicidade</InputLabel>
@@ -373,7 +427,9 @@ export default function RuleModal({ rule }: RuleModalProps) {
                       labelId={`freq-${i}`}
                       value={s.frequency}
                       label="Periodicidade"
-                      onChange={e => handleScheduleChange(i, { frequency: e.target.value as Frequency })}
+                      onChange={(e) =>
+                        handleScheduleChange(i, { frequency: e.target.value as Frequency })
+                      }
                       fullWidth
                       size="small"
                       MenuProps={{ PaperProps: { style: { maxHeight: 320 } } }}
@@ -386,39 +442,47 @@ export default function RuleModal({ rule }: RuleModalProps) {
                     </Select>
                   </FormControl>
 
-                  {s.frequency === 'WEEKLY' && (
+                  {s.frequency === "WEEKLY" && (
                     <FormControl className="md:col-span-4" size="small">
                       <InputLabel id={`dow-${i}`}>Dias da semana</InputLabel>
                       <Select
                         labelId={`dow-${i}`}
                         multiple
                         value={s.daysOfWeek || []}
-                        onChange={e => handleScheduleChange(i, { daysOfWeek: e.target.value as number[] })}
+                        onChange={(e) =>
+                          handleScheduleChange(i, { daysOfWeek: e.target.value as number[] })
+                        }
                         input={<OutlinedInput label="Dias da semana" />}
-                        renderValue={(selected) => (selected as number[]).map(v => daysOfWeekLabels[v]).join(', ')}
+                        renderValue={(selected) =>
+                          (selected as number[]).map((v) => daysOfWeekLabels[v]).join(", ")
+                        }
                         size="small"
                         MenuProps={{ PaperProps: { style: { maxHeight: 320 } } }}
                       >
                         {daysOfWeekLabels.map((d, idx) => (
-                          <MenuItem key={idx} value={idx}>{d}</MenuItem>
+                          <MenuItem key={idx} value={idx}>
+                            {d}
+                          </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   )}
 
-                  {s.frequency === 'MONTHLY' && (
+                  {s.frequency === "MONTHLY" && (
                     <TextField
                       className="md:col-span-2"
                       label="Dia do mês"
                       type="number"
                       inputProps={{ min: 1, max: 31 }}
                       value={s.dayOfMonth ?? 1}
-                      onChange={e => handleScheduleChange(i, { dayOfMonth: Number(e.target.value) })}
+                      onChange={(e) =>
+                        handleScheduleChange(i, { dayOfMonth: Number(e.target.value) })
+                      }
                       size="small"
                     />
                   )}
 
-                  {s.frequency === 'YEARLY' && (
+                  {s.frequency === "YEARLY" && (
                     <>
                       <FormControl className="md:col-span-2" size="small">
                         <InputLabel id={`month-${i}`}>Mês</InputLabel>
@@ -426,11 +490,17 @@ export default function RuleModal({ rule }: RuleModalProps) {
                           labelId={`month-${i}`}
                           value={s.month ?? 1}
                           label="Mês"
-                          onChange={e => handleScheduleChange(i, { month: Number(e.target.value) })}
+                          onChange={(e) =>
+                            handleScheduleChange(i, { month: Number(e.target.value) })
+                          }
                           size="small"
                           MenuProps={{ PaperProps: { style: { maxHeight: 320 } } }}
                         >
-                          {months.map(m => <MenuItem key={m.v} value={m.v}>{m.n}</MenuItem>)}
+                          {months.map((m) => (
+                            <MenuItem key={m.v} value={m.v}>
+                              {m.n}
+                            </MenuItem>
+                          ))}
                         </Select>
                       </FormControl>
                       <TextField
@@ -439,19 +509,21 @@ export default function RuleModal({ rule }: RuleModalProps) {
                         type="number"
                         inputProps={{ min: 1, max: 31 }}
                         value={s.dayOfMonth ?? 1}
-                        onChange={e => handleScheduleChange(i, { dayOfMonth: Number(e.target.value) })}
+                        onChange={(e) =>
+                          handleScheduleChange(i, { dayOfMonth: Number(e.target.value) })
+                        }
                         size="small"
                       />
                     </>
                   )}
 
-                  {s.frequency === 'ONCE' && (
+                  {s.frequency === "ONCE" && (
                     <TextField
                       className="md:col-span-3"
                       label="Data (única)"
                       type="date"
-                      value={s.startDate || ''}
-                      onChange={e => handleScheduleChange(i, { startDate: e.target.value })}
+                      value={s.startDate || ""}
+                      onChange={(e) => handleScheduleChange(i, { startDate: e.target.value })}
                       InputLabelProps={{ shrink: true }}
                       size="small"
                     />
@@ -462,7 +534,7 @@ export default function RuleModal({ rule }: RuleModalProps) {
                     label="Início"
                     type="time"
                     value={s.startTime}
-                    onChange={e => handleScheduleChange(i, { startTime: e.target.value })}
+                    onChange={(e) => handleScheduleChange(i, { startTime: e.target.value })}
                     InputLabelProps={{ shrink: true }}
                     size="small"
                   />
@@ -471,7 +543,7 @@ export default function RuleModal({ rule }: RuleModalProps) {
                     label="Fim"
                     type="time"
                     value={s.endTime}
-                    onChange={e => handleScheduleChange(i, { endTime: e.target.value })}
+                    onChange={(e) => handleScheduleChange(i, { endTime: e.target.value })}
                     InputLabelProps={{ shrink: true }}
                     size="small"
                   />
@@ -480,9 +552,11 @@ export default function RuleModal({ rule }: RuleModalProps) {
                     <InputLabel id={`tz-${i}`}>Fuso Horário</InputLabel>
                     <Select
                       labelId={`tz-${i}`}
-                      value={s.timezone || 'America/Fortaleza'}
+                      value={s.timezone || "America/Fortaleza"}
                       label="Fuso Horário"
-                      onChange={e => handleScheduleChange(i, { timezone: e.target.value as string })}
+                      onChange={(e) =>
+                        handleScheduleChange(i, { timezone: e.target.value as string })
+                      }
                       size="small"
                       MenuProps={{ PaperProps: { style: { maxHeight: 320 } } }}
                     >
@@ -492,27 +566,31 @@ export default function RuleModal({ rule }: RuleModalProps) {
                     </Select>
                   </FormControl>
 
-                  <div className="md:col-span-1 flex justify-end">
+                  <div className="flex justify-end md:col-span-1">
                     <IconButton onClick={() => handleRemoveSchedule(i)} color="error" size="small">
                       <Trash size={16} />
                     </IconButton>
                   </div>
 
-                  {(s.frequency !== 'ONCE') && (
-                    <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {s.frequency !== "ONCE" && (
+                    <div className="grid grid-cols-1 gap-2 md:col-span-12 md:grid-cols-2">
                       <TextField
                         label="Ativar a partir de (opcional)"
                         type="date"
-                        value={s.startDate || ''}
-                        onChange={e => handleScheduleChange(i, { startDate: e.target.value || null })}
+                        value={s.startDate || ""}
+                        onChange={(e) =>
+                          handleScheduleChange(i, { startDate: e.target.value || null })
+                        }
                         InputLabelProps={{ shrink: true }}
                         size="small"
                       />
                       <TextField
                         label="Desativar em (opcional)"
                         type="date"
-                        value={s.endDate || ''}
-                        onChange={e => handleScheduleChange(i, { endDate: e.target.value || null })}
+                        value={s.endDate || ""}
+                        onChange={(e) =>
+                          handleScheduleChange(i, { endDate: e.target.value || null })
+                        }
                         InputLabelProps={{ shrink: true }}
                         size="small"
                       />
@@ -522,16 +600,18 @@ export default function RuleModal({ rule }: RuleModalProps) {
               ))}
             </div>
 
-            <Typography variant="caption" color="text.secondary" className="block mt-2">
+            <Typography variant="caption" color="text.secondary" className="mt-2 block">
               Dica: janelas que cruzam meia-noite são suportadas (ex.: 22:00 → 02:00).
             </Typography>
           </div>
         </DialogContent>
 
         <DialogActions sx={{ p: 1.5 }}>
-          <Button onClick={closeModal} size="small">Cancelar</Button>
+          <Button onClick={closeModal} size="small">
+            Cancelar
+          </Button>
           <Button type="submit" variant="contained" size="small">
-            {isEditMode ? 'Salvar Alterações' : 'Criar Regra'}
+            {isEditMode ? "Salvar Alterações" : "Criar Regra"}
           </Button>
         </DialogActions>
       </form>

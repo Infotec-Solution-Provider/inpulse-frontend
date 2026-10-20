@@ -1,8 +1,8 @@
 "use client";
 
 import { InternalWhatsappSenderSummary } from "@/lib/sdk-local";
-import HistoryIcon from "@mui/icons-material/History";
-import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
+import { History as HistoryIcon } from "@/lib/ui-system/crm-icons";
+import { PersonAddAlt1 as PersonAddAlt1Icon } from "@/lib/ui-system/crm-icons";
 import { Button, Chip, TableCell, TableRow } from "@mui/material";
 import { useContext } from "react";
 import { MentionDirectoryContext } from "@/lib/components/message-mention-text";
@@ -20,24 +20,26 @@ export default function SenderRow({ sender, onHistory, onAssign }: SenderRowProp
 
   return (
     <TableRow hover>
-      <TableCell>
+      <TableCell data-label="ID do WhatsApp">
         <span className="break-all font-mono text-sm">{sender.senderId}</span>
       </TableCell>
-      <TableCell align="center">
+      <TableCell data-label="Mensagens" align="center">
         <Chip size="small" label={sender.messageCount} variant="outlined" />
       </TableCell>
-      <TableCell className="max-w-sm">
+      <TableCell data-label="Mensagem mais recente" className="max-w-sm">
         <p className="truncate text-sm">
           {lastMessage?.body
             ? mentionDisplayText(lastMessage.body, lastMessage.mentionEntities, directory)
             : getMessagePreview(lastMessage?.type)}
         </p>
         {lastMessage && (
-          <p className="mt-1 text-xs text-slate-500">{formatMessageDate(lastMessage.timestamp)}</p>
+          <p className="mt-1 text-xs text-[var(--ip-muted)]">
+            {formatMessageDate(lastMessage.timestamp)}
+          </p>
         )}
       </TableCell>
-      <TableCell>{lastMessage?.chat?.groupName || "Grupo interno"}</TableCell>
-      <TableCell align="right">
+      <TableCell data-label="Grupo">{lastMessage?.chat?.groupName || "Grupo interno"}</TableCell>
+      <TableCell data-label="Ações" align="right">
         <div className="flex justify-end gap-2">
           <Button size="small" startIcon={<HistoryIcon />} onClick={onHistory}>
             Ver mensagens

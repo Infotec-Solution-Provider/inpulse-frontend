@@ -1,6 +1,7 @@
+import { Button as CrmDeleteButton } from "@mui/material";
 import { ReadyMessage } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
-import { Delete, Edit } from "@mui/icons-material";
+import { Delete, Edit } from "@/lib/ui-system/crm-icons";
 import { IconButton, TableCell, TableRow } from "@mui/material";
 import { READY_MESSAGES_TABLE_COLUMNS } from "./table-config";
 
@@ -19,7 +20,7 @@ export default function ReadyMessagesTableItem({
 }: ReadyMessagesTableItemProps) {
   return (
     <TableRow
-      className="transition-colors even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      hover
       sx={{
         "& .MuiTableCell-root": {
           borderBottom: "1px solid",
@@ -29,6 +30,7 @@ export default function ReadyMessagesTableItem({
       }}
     >
       <TableCell
+        data-label="Código"
         className="px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.CODIGO.width,
@@ -38,6 +40,7 @@ export default function ReadyMessagesTableItem({
         <span className="font-mono text-sm font-medium">{readyMessage.id}</span>
       </TableCell>
       <TableCell
+        data-label="Título"
         className="truncate px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.TITULO.width,
@@ -48,6 +51,7 @@ export default function ReadyMessagesTableItem({
         <p className="truncate text-sm font-medium">{readyMessage.title || "N/D"}</p>
       </TableCell>
       <TableCell
+        data-label="Arquivo"
         className="truncate px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.ARQUIVO.width,
@@ -58,6 +62,7 @@ export default function ReadyMessagesTableItem({
         <p className="truncate text-sm">{readyMessage.fileName || "-"}</p>
       </TableCell>
       <TableCell
+        data-label="Mensagem"
         className="truncate px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.TEXTO_MENSAGEM.width,
@@ -68,6 +73,7 @@ export default function ReadyMessagesTableItem({
         <p className="truncate text-sm">{readyMessage.message || "N/D"}</p>
       </TableCell>
       <TableCell
+        data-label="Setor"
         className="px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.SETOR.width,
@@ -77,6 +83,7 @@ export default function ReadyMessagesTableItem({
         <p className="truncate text-sm">{sectorName || "N/D"}</p>
       </TableCell>
       <TableCell
+        data-label="Atualização"
         className="px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.LAST_UPDATE.width,
@@ -86,6 +93,7 @@ export default function ReadyMessagesTableItem({
         <p className="text-sm">{Formatter.date(readyMessage.updatedAt)}</p>
       </TableCell>
       <TableCell
+        data-label="Ações"
         className="px-3 py-3"
         sx={{
           width: READY_MESSAGES_TABLE_COLUMNS.ACTIONS.width,
@@ -95,20 +103,21 @@ export default function ReadyMessagesTableItem({
         <div className="flex items-center gap-1">
           <IconButton
             title="Editar Mensagem Pronta"
+            aria-label="Editar Mensagem Pronta"
             onClick={() => openEditModalHandler(readyMessage)}
             size="small"
-            className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+            color="inherit"
           >
             <Edit fontSize="small" />
           </IconButton>
-          <IconButton
-            title="Excluir Mensagem Pronta"
-            onClick={() => openDeleteModalHandler(readyMessage)}
+          <CrmDeleteButton
+            aria-label="Excluir mensagem pronta"
             size="small"
-            className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+            color="error"
+            onClick={() => openDeleteModalHandler(readyMessage)}
           >
-            <Delete fontSize="small" />
-          </IconButton>
+            Excluir
+          </CrmDeleteButton>
         </div>
       </TableCell>
     </TableRow>

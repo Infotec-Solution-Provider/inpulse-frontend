@@ -7,7 +7,7 @@ import {
   ListItemText,
   Divider,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
 import { useReadyMessagesContext } from "../../ready-messages-context";
 
 interface VariablesMenuProps {
@@ -16,13 +16,13 @@ interface VariablesMenuProps {
 }
 
 export const VariablesMenu = ({ onSelect, onClose }: VariablesMenuProps) => {
-  const { variables } = useReadyMessagesContext()
+  const { variables } = useReadyMessagesContext();
 
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">Selecione a variável</Typography>
-        <IconButton onClick={onClose} size="small">
+        <IconButton aria-label="Fechar" onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
       </Box>

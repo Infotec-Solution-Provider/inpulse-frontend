@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, IconButton, Typography } from "@mui/material";
-import { Close } from "@mui/icons-material";
+import { Close } from "@/lib/ui-system/crm-icons";
 import { useContactsContext } from "../../contacts-context";
 import { WppContact } from "@/lib/sdk-local";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
@@ -24,6 +24,7 @@ export default function DeleteContactModal({ contact }: DeleteContactModalProps)
       <header className="mb-4 flex items-center justify-between border-b border-slate-200 pb-4 dark:border-slate-700">
         <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Deletar Contato</h1>
         <IconButton
+          aria-label="Fechar"
           onClick={closeModal}
           className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
         >
@@ -38,7 +39,7 @@ export default function DeleteContactModal({ contact }: DeleteContactModalProps)
         </Typography>
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+      <div className="ip-crud-form-footer flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
         <Button onClick={closeModal} variant="outlined" color="inherit">
           Cancelar
         </Button>

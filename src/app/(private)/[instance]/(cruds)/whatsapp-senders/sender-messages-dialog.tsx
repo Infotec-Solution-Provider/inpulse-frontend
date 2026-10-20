@@ -1,14 +1,15 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+
 import MessageMentionText from "@/lib/components/message-mention-text";
 
 import { InternalChatContext } from "@/app/(private)/[instance]/internal-context";
 import { InternalWhatsappSenderMessage } from "@/lib/sdk-local";
-import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
+import { PersonAddAlt1 as PersonAddAlt1Icon } from "@/lib/ui-system/crm-icons";
 import {
   Button,
   Chip,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -60,22 +61,22 @@ export default function SenderMessagesDialog({
     <Dialog open={Boolean(senderId)} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <span className="block">Mensagens para identificação</span>
-        <span className="mt-1 block break-all font-mono text-xs font-normal text-slate-500">
+        <span className="mt-1 block break-all font-mono text-xs font-normal text-[var(--ip-muted)]">
           {senderId}
         </span>
       </DialogTitle>
-      <DialogContent dividers className="min-h-80 bg-slate-50 dark:bg-slate-900">
+      <DialogContent dividers className="min-h-80 bg-[var(--ip-surface)]">
         {isLoading && messages.length === 0 ? (
           <div className="flex h-64 items-center justify-center">
             <CircularProgress size={32} />
           </div>
         ) : hasError && messages.length === 0 ? (
-          <div className="flex h-64 flex-col items-center justify-center gap-3 text-sm text-slate-500">
+          <div className="flex h-64 flex-col items-center justify-center gap-3 text-sm text-[var(--ip-muted)]">
             Não foi possível carregar as mensagens.
             <Button onClick={() => void loadMessages()}>Tentar novamente</Button>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+          <div className="flex h-64 items-center justify-center text-sm text-[var(--ip-muted)]">
             Nenhuma mensagem encontrada para este ID.
           </div>
         ) : (
@@ -83,7 +84,7 @@ export default function SenderMessagesDialog({
             {messages.map((message) => (
               <article
                 key={message.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                className="rounded-xl border border-[var(--ip-border)] bg-[var(--ip-surface)] p-4 shadow-none"
               >
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Chip
@@ -91,11 +92,11 @@ export default function SenderMessagesDialog({
                     label={message.chat?.groupName || "Grupo interno"}
                     variant="outlined"
                   />
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-[var(--ip-muted)]">
                     {formatMessageDate(message.timestamp)}
                   </span>
                 </div>
-                <div className="text-slate-800 dark:text-slate-100">
+                <div className="text-[var(--ip-text)]">
                   <MessageMentionText
                     text={message.body || message.fileName || getMessageTypeLabel(message.type)}
                     mentionEntities={message.body ? message.mentionEntities : []}

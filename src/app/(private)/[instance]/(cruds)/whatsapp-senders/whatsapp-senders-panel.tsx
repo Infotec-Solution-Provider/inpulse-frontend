@@ -2,8 +2,8 @@
 
 import { InternalChatContext } from "@/app/(private)/[instance]/internal-context";
 import { PaginatedInternalWhatsappSenders } from "@/lib/sdk-local";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import SearchIcon from "@mui/icons-material/Search";
+import { Refresh as RefreshIcon } from "@/lib/ui-system/crm-icons";
+import { Search as SearchIcon } from "@/lib/ui-system/crm-icons";
 import {
   Alert,
   Button,
@@ -23,6 +23,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
+import { CrmPage, CrmToolbar } from "@/lib/ui-system";
 import AssignSenderNameDialog from "./assign-sender-name-dialog";
 import SenderMessagesDialog from "./sender-messages-dialog";
 import SenderRow from "./sender-row";
@@ -91,49 +92,40 @@ export default function WhatsappSendersPanel() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-5 md:p-8">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">
-              Identificação de remetentes
-            </h1>
-            <Chip
-              color={data.total > 0 ? "warning" : "success"}
-              label={`${data.total} ID${data.total === 1 ? "" : "s"} sem nome`}
-              size="small"
-            />
-          </div>
-          <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-300">
-            Consulte as mensagens recebidas nos grupos internos para reconhecer um ID do WhatsApp e
-            atribuir o nome que será exibido nas conversas.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <TextField
-            size="small"
-            placeholder="Buscar ID do WhatsApp"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          <Tooltip title="Atualizar lista">
-            <span>
-              <IconButton onClick={() => void loadSenders()} disabled={isLoading}>
-                <RefreshIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </div>
-      </div>
+    <CrmPage
+      title="Identificar remetentes"
+      description="Consulte mensagens recebidas nos grupos internos e atribua um nome ao remetente."
+      count={isLoading ? undefined : data.total}
+      breadcrumbs={[{ label: "Comunicação" }, { label: "Identificar remetentes" }]}
+    >
+      <CrmToolbar>
+        <TextField
+          size="small"
+          label="Buscar ID do WhatsApp"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+        <Tooltip title="Atualizar lista">
+          <span>
+            <IconButton
+              aria-label="Atualizar lista"
+              onClick={() => void loadSenders()}
+              disabled={isLoading}
+            >
+              <RefreshIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </CrmToolbar>
 
       {hasError && (
         <Alert
@@ -144,9 +136,9 @@ export default function WhatsappSendersPanel() {
         </Alert>
       )}
 
-      <TableContainer component={Paper} variant="outlined" className="overflow-hidden">
+      <TableContainer component={Paper} variant="outlined" className="ip-crud-table">
         <Table>
-          <TableHead className="bg-slate-100 dark:bg-slate-800">
+          <TableHead className="bg-[var(--ip-surface)]">
             <TableRow>
               <TableCell>ID do WhatsApp</TableCell>
               <TableCell align="center">Mensagens</TableCell>
@@ -168,10 +160,10 @@ export default function WhatsappSendersPanel() {
               <TableRow>
                 <TableCell colSpan={5}>
                   <div className="flex h-64 flex-col items-center justify-center text-center">
-                    <p className="font-medium text-slate-700 dark:text-slate-200">
+                    <p className="font-medium text-[var(--ip-text)]">
                       Nenhum ID sem nome encontrado
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-[var(--ip-muted)]">
                       {search
                         ? "Tente outro termo de busca."
                         : "Todos os remetentes estão identificados."}
@@ -214,6 +206,6 @@ export default function WhatsappSendersPanel() {
         onClose={() => setAssignSenderId(null)}
         onAssigned={handleAssigned}
       />
-    </div>
+    </CrmPage>
   );
 }

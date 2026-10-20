@@ -1,13 +1,8 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+
 import { AutomaticResponseRule } from "@/lib/sdk-local";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-} from "@mui/material";
+import { DialogTitle, DialogContent, DialogActions, Button, Typography } from "@mui/material";
 import { useAutoResponseContext } from "./auto-response.context";
 
 interface DeleteRuleModalProps {

@@ -90,7 +90,7 @@ export function WhatsappParameterSettings({ onSaved }: { onSaved: () => Promise<
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-5">
+      <section className="rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] p-4 shadow-none sm:p-5">
         <Typography fontWeight={600} variant="body2" sx={{ mb: 2 }}>
           Aplicar configurações para
         </Typography>

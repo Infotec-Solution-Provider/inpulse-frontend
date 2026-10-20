@@ -1,14 +1,8 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 
 import { InternalChatContext } from "@/app/(private)/[instance]/internal-context";
-import {
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-} from "@mui/material";
+import { Button, DialogActions, DialogContent, DialogTitle, TextField } from "@mui/material";
 import { FormEvent, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -57,13 +51,11 @@ export default function AssignSenderNameDialog({
       <form onSubmit={handleSubmit}>
         <DialogTitle>Identificar remetente</DialogTitle>
         <DialogContent className="flex flex-col gap-4 !pt-2">
-          <div className="rounded-lg bg-slate-100 p-3 dark:bg-slate-800">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="rounded-lg bg-[var(--ip-surface)] p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--ip-muted)]">
               ID do WhatsApp
             </p>
-            <p className="mt-1 break-all font-mono text-sm text-slate-800 dark:text-slate-100">
-              {senderId}
-            </p>
+            <p className="mt-1 break-all font-mono text-sm text-[var(--ip-text)]">{senderId}</p>
           </div>
           <TextField
             autoFocus

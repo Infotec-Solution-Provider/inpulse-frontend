@@ -9,14 +9,14 @@ export default function InternalGroupsPage() {
 
   if (isExternalOperator(user?.NIVEL)) {
     return (
-      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500 dark:text-slate-300">
+      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
         Perfil sem acesso a grupos internos.
       </div>
     );
   }
 
   return (
-    <div className="relative box-border flex h-full min-h-0 w-full min-w-0 flex-col px-10 pt-5">
+    <div className="min-w-0">
       <InternalGroupsTable />
     </div>
   );

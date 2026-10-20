@@ -1,3 +1,4 @@
+import { PilotDesignProvider } from "../../src/lib/ui-system/provider";
 import { createRoot } from "react-dom/client";
 import { useState, type ReactNode } from "react";
 import { createTheme, ThemeProvider, Modal } from "@mui/material";
@@ -9,16 +10,18 @@ function Harness() {
   const [modal, setModal] = useState<ReactNode>(null);
   return (
     <ThemeProvider theme={createTheme()}>
-      <AppContext.Provider value={{ openModal: setModal, closeModal: () => setModal(null) }}>
-        <ChannelSessionPanel />
-        <Modal
-          open={!!modal}
-          onClose={() => setModal(null)}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          <div>{modal}</div>
-        </Modal>
-      </AppContext.Provider>
+      <PilotDesignProvider>
+        <AppContext.Provider value={{ openModal: setModal, closeModal: () => setModal(null) }}>
+          <ChannelSessionPanel />
+          <Modal
+            open={!!modal}
+            onClose={() => setModal(null)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <div>{modal}</div>
+          </Modal>
+        </AppContext.Provider>
+      </PilotDesignProvider>
     </ThemeProvider>
   );
 }

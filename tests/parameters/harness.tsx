@@ -1,3 +1,4 @@
+import { PilotDesignProvider } from "../../src/lib/ui-system/provider";
 import { createRoot } from "react-dom/client";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import lightTheme from "../../src/lib/themes/light";
@@ -13,9 +14,9 @@ const theme = dark ? darkTheme : lightTheme;
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider theme={theme}>
     <CssBaseline />
-    <div style={{ height: "100dvh", overflow: "hidden" }}>
+    <PilotDesignProvider style={{ height: "100dvh", overflowY: "auto" }}>
       <ParametersPage />
-    </div>
+    </PilotDesignProvider>
     <ToastContainer />
   </ThemeProvider>,
 );

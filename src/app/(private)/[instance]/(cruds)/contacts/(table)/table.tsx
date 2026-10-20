@@ -13,7 +13,9 @@ import {
   TextField,
 } from "@mui/material";
 import { useContactsContext } from "../contacts-context";
-import ContactsTableHeader from "./table-header";
+import { CrmPage, CrmTableHead } from "@/lib/ui-system";
+import ContactsFilters from "./filters";
+import { Plus } from "lucide-react";
 import ContactsTableItem from "./table-item";
 
 export default function ContactsTable() {
@@ -28,98 +30,66 @@ export default function ContactsTable() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-medium text-slate-800 dark:text-slate-100" aria-live="polite">
-            {state.isLoading ? "Carregando contatos…" : `${state.totalRows.toLocaleString("pt-BR")} contatos${state.filters.hasCustomer === "false" ? " sem cliente" : state.filters.hasCustomer === "true" ? " com cliente" : " ativos"}`}
-          </p>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Contatos não excluídos. O total respeita os filtros aplicados.
-          </p>
-        </div>
-        <TextField
-          select size="small" label="Vínculo com cliente" value={state.filters.hasCustomer || ""}
-          onChange={(event) => dispatch({ type: "change-filter", key: "hasCustomer", value: event.target.value })}
-          sx={{ minWidth: 210 }}
-        >
-          <MenuItem value="">Todos os contatos</MenuItem>
-          <MenuItem value="false">Sem cliente</MenuItem>
-          <MenuItem value="true">Com cliente</MenuItem>
-        </TextField>
-      </div>
-      <TableContainer className="scrollbar-whatsapp h-[calc(100vh-280px)] overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
-        <Table stickyHeader>
-          <ContactsTableHeader />
-          <TableBody>
-            {state.isLoading ? (
-              <TableRow className="h-32">
-                <TableCell colSpan={6} align="center">
-                  <div className="flex flex-col items-center gap-2">
-                    <CircularProgress />
-                    <span className="text-slate-600 dark:text-slate-300">
-                      Carregando contatos...
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : state.contacts.length === 0 ? (
-              <TableRow className="h-[30rem]">
-                <TableCell
-                  colSpan={6}
-                  align="center"
-                  sx={{
-                    borderBottom: "none",
-                  }}
-                >
-                  <span className="text-slate-600 dark:text-slate-300">
-                    Nenhum contato encontrado
-                  </span>
-                </TableCell>
-              </TableRow>
-            ) : (
-              state.contacts.map((contact) => (
-                <ContactsTableItem
-                  key={`${contact.id}`}
-                  contact={contact}
-                  openEditModalHandler={openContactModal}
-                  deleteContactHandler={handleDeleteContact}
-                />
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
+    <CrmPage
+      title="Contatos"
+      description="Consulte contatos, setores e vínculos com clientes."
+      count={state.isLoading ? undefined : state.totalRows}
+      breadcrumbs={[{ label: "Comunicação" }, { label: "Contatos" }]}
+      actions={
         <Button
-          onClick={() => openContactModal()}
           variant="contained"
-          color="primary"
-          size="medium"
-          className="w-full sm:w-auto"
+          startIcon={<Plus size={16} />}
+          onClick={() => openContactModal()}
         >
-          + Cadastrar Contato
+          Novo contato
         </Button>
-        <TablePagination
-          component="div"
-          count={Number(state.totalRows || 0)}
-          page={Number(state.filters.page || 1) - 1}
-          onPageChange={handleChangePage}
-          rowsPerPage={Number(state.filters.perPage || 10)}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          labelRowsPerPage="Entradas por página"
-          labelDisplayedRows={(info) => {
-            const { from, to, count } = info;
-            return `${from}-${to} de ${count}`;
-          }}
-          sx={{
-            ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
-              marginBottom: 0,
-            },
-          }}
-        />
+      }
+    >
+      <ContactsFilters />
+      <div className="ip-crud-table">
+        <TableContainer>
+          <Table size="small" aria-label="Contatos">
+            <CrmTableHead labels={["Código", "Nome", "Telefone", "Cliente", "Setores", "Ações"]} />
+            <TableBody>
+              {state.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <div className="ip-crud-state">
+                      <CircularProgress size={24} />
+                      <span>Carregando contatos...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : state.contacts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <div className="ip-crud-state">Nenhum contato encontrado.</div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                state.contacts.map((contact) => (
+                  <ContactsTableItem
+                    key={contact.id}
+                    contact={contact}
+                    openEditModalHandler={openContactModal}
+                    deleteContactHandler={handleDeleteContact}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
-    </div>
+      <TablePagination
+        component="div"
+        count={Number(state.totalRows || 0)}
+        page={Number(state.filters.page || 1) - 1}
+        rowsPerPage={Number(state.filters.perPage || 10)}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        labelRowsPerPage="Por página"
+        labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+      />
+    </CrmPage>
   );
 }

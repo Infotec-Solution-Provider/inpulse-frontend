@@ -1,4 +1,7 @@
 "use client";
+import { CrmPage, CrmFilters, CrmTableHead, useCrmQueryState } from "@/lib/ui-system";
+import { Plus } from "lucide-react";
+
 import { ReadyMessage } from "@/lib/sdk-local";
 import {
   Button,
@@ -20,8 +23,15 @@ import ReadyMessagesTableItem from "./table-item";
 
 export default function ReadyMessagesTable() {
   const { openModal } = useAppContext();
-  const { state, dispatch, sectors, createReadyMessage, updateReadyMessage, deleteReadyMessage } =
-    useReadyMessagesContext();
+  const {
+    state,
+    dispatch,
+    sectors,
+    createReadyMessage,
+    updateReadyMessage,
+    deleteReadyMessage,
+    loadReadyMessages,
+  } = useReadyMessagesContext();
 
   function openEditReadyMessageModal(readyMessage: ReadyMessage) {
     openModal(
@@ -48,111 +58,103 @@ export default function ReadyMessagesTable() {
     );
   }
 
-  const onChangePage = (page: number) => {
-    dispatch({ type: "change-page", page });
-  };
-
-  const onChangePerPage = (perPage: number) => {
-    dispatch({ type: "change-per-page", perPage });
-  };
-
+  const [query, setQuery] = useCrmQueryState("ready-messages-list", {
+    filters: {} as Record<string, string>,
+    page: 0,
+    perPage: 10,
+  });
+  const filtered = state.readyMessages.filter(
+    (row) =>
+      (!query.filters.title ||
+        row.title?.toLocaleLowerCase().includes(query.filters.title.toLocaleLowerCase())) &&
+      (!query.filters.id || String(row.id).includes(query.filters.id)) &&
+      (!query.filters.message ||
+        row.message?.toLocaleLowerCase().includes(query.filters.message.toLocaleLowerCase())) &&
+      (!query.filters.sectorId || String(row.sectorId) === query.filters.sectorId),
+  );
+  const page = Math.min(query.page, Math.max(0, Math.ceil(filtered.length / query.perPage) - 1));
+  const rows = filtered.slice(page * query.perPage, (page + 1) * query.perPage);
   return (
-    <div className="flex flex-col gap-4">
-      <TableContainer
-        className="scrollbar-whatsapp mx-auto overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800"
-        sx={{
-          height: "calc(100vh - 280px)",
-          minHeight: "400px",
-          maxHeight: "70vh",
-        }}
-      >
-        <Table className="scrollbar-whatsapp" stickyHeader>
-          <ReadyMessagesTableHeader />
-          <TableBody
-            sx={{
-              minHeight: state.isLoading || state.readyMessages.length === 0 ? "300px" : "auto",
-            }}
-          >
-            {state.isLoading && (
-              <TableRow sx={{ height: "300px" }}>
-                <TableCell
-                  colSpan={7}
-                  className="border-0"
-                  sx={{
-                    textAlign: "center",
-                    backgroundColor: "transparent",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-3 py-8">
-                    <CircularProgress size={40} />
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Carregando mensagens prontas...
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-            {!state.isLoading && state.readyMessages.length === 0 && (
-              <TableRow sx={{ height: "300px" }}>
-                <TableCell
-                  colSpan={7}
-                  className="border-0"
-                  sx={{
-                    textAlign: "center",
-                    backgroundColor: "transparent",
-                    borderBottom: "none",
-                  }}
-                >
-                  <div className="flex flex-col items-center gap-2 py-8">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Nenhuma mensagem pronta encontrada
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-            {!state.isLoading &&
-              state.readyMessages.map((readyMessage) => (
-                <ReadyMessagesTableItem
-                  key={`${readyMessage.id}`}
-                  readyMessage={readyMessage}
-                  sectorName={sectors?.find((s) => s.id === readyMessage.sectorId)?.name}
-                  openEditModalHandler={openEditReadyMessageModal}
-                  openDeleteModalHandler={openDeleteReadyMessageModal}
-                />
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
+    <CrmPage
+      title="Mensagens prontas"
+      description="Organize textos, arquivos e mensagens disponíveis para cada setor."
+      count={state.isLoading ? undefined : filtered.length}
+      breadcrumbs={[{ label: "Comunicação" }, { label: "Mensagens prontas" }]}
+      actions={
         <Button
-          onClick={openCreateReadyMessageModal}
           variant="contained"
-          color="primary"
-          size="medium"
-          className="w-full sm:w-auto"
+          startIcon={<Plus size={16} />}
+          onClick={openCreateReadyMessageModal}
         >
-          + Cadastrar Mensagem Pronta
+          Nova mensagem
         </Button>
-        <TablePagination
-          component="div"
-          count={Number(state.totalRows || 0)}
-          page={Number(state.filters.page || 1) - 1}
-          rowsPerPage={Number(state.filters.perPage || 10)}
-          labelRowsPerPage="Entradas por página"
-          labelDisplayedRows={(info) => {
-            const { from, to, count } = info;
-            return `${from}-${to} de ${count}`;
-          }}
-          onRowsPerPageChange={(e) => onChangePerPage(+e.target.value)}
-          onPageChange={(_, newPage) => onChangePage(newPage)}
-          sx={{
-            ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": {
-              marginBottom: 0,
-            },
-          }}
-        />
+      }
+    >
+      <CrmFilters
+        fields={[
+          { key: "title", label: "Título" },
+          { key: "id", label: "Código" },
+          { key: "message", label: "Mensagem" },
+          {
+            key: "sectorId",
+            label: "Setor",
+            options: sectors.map((sector) => ({ value: String(sector.id), label: sector.name })),
+          },
+        ]}
+        values={query.filters}
+        onApply={(filters) => setQuery((current) => ({ ...current, filters, page: 0 }))}
+        onRefresh={() => loadReadyMessages()}
+        loading={state.isLoading}
+      />
+      <div className="ip-crud-table">
+        <TableContainer>
+          <Table size="small" aria-label="Mensagens prontas">
+            <CrmTableHead
+              labels={["Código", "Título", "Arquivo", "Mensagem", "Setor", "Atualização", "Ações"]}
+            />
+            <TableBody>
+              {state.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="ip-crud-state">
+                      <CircularProgress size={24} />
+                      <span>Carregando...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="ip-crud-state">Nenhum registro encontrado.</div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row) => (
+                  <ReadyMessagesTableItem
+                    key={row.id}
+                    readyMessage={row}
+                    sectorName={sectors?.find((s) => s.id === row.sectorId)?.name}
+                    openEditModalHandler={openEditReadyMessageModal}
+                    openDeleteModalHandler={openDeleteReadyMessageModal}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
-    </div>
+      <TablePagination
+        component="div"
+        count={filtered.length}
+        page={page}
+        rowsPerPage={query.perPage}
+        onPageChange={(_, page) => setQuery((current) => ({ ...current, page }))}
+        onRowsPerPageChange={(event) =>
+          setQuery((current) => ({ ...current, page: 0, perPage: Number(event.target.value) }))
+        }
+        labelRowsPerPage="Por página"
+        labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+      />
+    </CrmPage>
   );
 }

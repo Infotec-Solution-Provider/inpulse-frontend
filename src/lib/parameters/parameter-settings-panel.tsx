@@ -170,7 +170,7 @@ export function ParameterSettingsPanel({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+      <div className="rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] px-4 py-3 text-sm text-[var(--ip-muted)] shadow-none">
         {source === "whatsapp"
           ? "Prioridade: usuário → setor → instância → padrão. Personalize uma opção para definir uma exceção ou restaure o valor herdado. As mudanças chegam às outras sessões no próximo carregamento."
           : "Configuração global do CRM legado. Usar padrão restaura o valor definido pelo banco. Algumas mudanças são percebidas no próximo carregamento do CRM."}
@@ -184,7 +184,7 @@ export function ParameterSettingsPanel({
               : " · Sem setor WhatsApp vinculado; herda da instância e do padrão.")}
         </Typography>
       )}
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] p-4 shadow-none sm:flex-row sm:items-center sm:justify-between">
         <TextField
           placeholder="Buscar configuração"
           size="small"
@@ -234,9 +234,9 @@ export function ParameterSettingsPanel({
             {groups.map((group) => (
               <section
                 key={group}
-                className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800"
+                className="overflow-hidden rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] shadow-none"
               >
-                <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-100 px-4 py-3 dark:border-slate-700 dark:bg-slate-800 sm:px-5">
+                <div className="flex items-center gap-2 border-b border-[var(--ip-border)] bg-[var(--ip-surface)] px-4 py-3 sm:px-5">
                   <Typography component="h2" variant="subtitle1" fontWeight={600}>
                     {group}
                   </Typography>
@@ -279,7 +279,7 @@ export function ParameterSettingsPanel({
               </section>
             ))}
             {!catalog.length && (
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] p-8 text-center shadow-none">
                 <Typography color="text.secondary">
                   {snapshot.catalog.length
                     ? "Nenhuma configuração encontrada para esta busca."
@@ -287,7 +287,7 @@ export function ParameterSettingsPanel({
                 </Typography>
               </div>
             )}
-            <div className="sticky bottom-0 z-10 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <div className="sticky bottom-0 z-10 rounded-lg border border-[var(--ip-border)] bg-[var(--ip-surface)] p-4 shadow-none">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <Typography variant="body2" color="text.secondary" role="status">
                   {changes.length

@@ -31,10 +31,10 @@ export default function SqlReportHistoryListItem({ report }: Props) {
     <>
       <li
         onClick={() => fillForm(report.sql, report.description)}
-        className="flex cursor-pointer items-center justify-between rounded-md border bg-gray-50 p-3 shadow-sm transition-colors hover:bg-indigo-50"
+        className="flex cursor-pointer items-center justify-between rounded-md border bg-[var(--ip-surface)] p-3 shadow-none transition-colors hover:bg-indigo-50"
       >
         <div>
-          <strong className="text-gray-800">{report.description}</strong>
+          <strong className="text-[var(--ip-text)]">{report.description}</strong>
           <br />
           <small className="text-gray-500">{Formatter.date(report.createdAt)}</small>
         </div>

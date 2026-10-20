@@ -54,6 +54,118 @@
 .ip-ui .ip-crud-toolbar {
   padding: 12px 0;
 }
+.ip-ui .ip-crud-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 240px;
+  max-width: 440px;
+  min-width: 0;
+}
+.ip-ui .ip-crud-search .MuiTextField-root {
+  flex: 1;
+  min-width: 0;
+}
+.ip-ui .ip-crud-applied-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ip-ui .ip-crud-state {
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--ip-muted);
+}
+.ip-ui .ip-crud-record {
+  border: 1px solid var(--ip-border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--ip-surface);
+  min-width: 0;
+}
+.ip-ui .ip-crud-record-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.ip-ui .ip-crud-modal-host {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--ip-surface);
+  box-shadow: var(--ip-shadow-overlay);
+}
+.ip-ui .ip-crud-modal-host > * {
+  max-width: min(960px, calc(100vw - 24px));
+}
+.ip-ui .ip-crud-modal-host h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.ip-ui .ip-crud-modal-host h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.ip-ui .ip-crud-modal-host footer,
+.ip-ui .ip-crud-dialog .MuiDialogActions-root {
+  position: sticky;
+  bottom: 0;
+  background: var(--ip-surface);
+  border-top: 1px solid var(--ip-border);
+  z-index: 1;
+}
+.ip-ui .ip-crud-page .MuiPaper-root {
+  box-shadow: none;
+}
+.ip-ui .ip-crud-page h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.ip-ui .ip-crud-page svg.lucide:not(.ip-icon) {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.ip-ui .ip-crud-page .MuiIconButton-root {
+  color: var(--ip-muted);
+}
+.ip-ui .ip-crud-page .MuiTableContainer-root {
+  min-width: 0;
+}
+.ip-ui .ip-crud-form-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--ip-surface);
+  border-color: var(--ip-border);
+  z-index: 1;
+}
+.ip-ui .MuiModal-root [class*="bg-slate-"],
+.ip-ui .MuiModal-root [class*="bg-gray-"],
+.ip-ui .MuiModal-root [class*="bg-white"] {
+  background-color: var(--ip-surface);
+}
+.ip-ui .MuiModal-root [class*="text-slate-"],
+.ip-ui .MuiModal-root [class*="text-gray-"],
+.ip-ui .MuiModal-root [class*="dark:text-white"] {
+  color: var(--ip-text);
+}
+.ip-ui .MuiModal-root [class*="border-slate-"],
+.ip-ui .MuiModal-root [class*="border-gray-"] {
+  border-color: var(--ip-border);
+}
+.ip-ui .MuiModal-root [class*="shadow-"] {
+  box-shadow: none;
+}
+.ip-ui .MuiModal-root h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
 .ip-ui .ip-crud-table {
   border: 1px solid var(--ip-border-subtle);
   border-radius: 12px;
@@ -79,7 +191,7 @@
 .ip-ui .ip-crud-table .MuiTableRow-hover:hover {
   background: var(--ip-surface-muted);
 }
-.ip-ui .ip-crud-page .MuiTablePagination-root {
+.ip-ui :is(.ip-crud-page, .ip-crud-dialog) .MuiTablePagination-root {
   border-top: 1px solid var(--ip-border-subtle);
 }
 .ip-ui .ip-crud-page .MuiDialogActions-root {
@@ -173,6 +285,7 @@
     gap: 12px;
     min-width: 0 !important;
     width: auto !important;
+    max-width: none !important;
     border: 0;
     padding: 5px 0;
     overflow-wrap: anywhere;
@@ -195,19 +308,19 @@
   .ip-ui .ip-crud-table tbody td[data-label="Ações"]:before {
     margin-right: auto;
   }
-  .ip-ui .ip-crud-page .MuiTablePagination-toolbar {
+  .ip-ui :is(.ip-crud-page, .ip-crud-dialog) .MuiTablePagination-toolbar {
     padding-left: 0;
     flex-wrap: wrap;
     justify-content: flex-end;
     min-height: 52px;
   }
-  .ip-ui .ip-crud-page .MuiTablePagination-spacer {
+  .ip-ui :is(.ip-crud-page, .ip-crud-dialog) .MuiTablePagination-spacer {
     display: none;
   }
-  .ip-ui .ip-crud-page .MuiTablePagination-selectLabel {
+  .ip-ui :is(.ip-crud-page, .ip-crud-dialog) .MuiTablePagination-selectLabel {
     font-size: 12px;
   }
-  .ip-ui .ip-crud-page .MuiTablePagination-actions {
+  .ip-ui :is(.ip-crud-page, .ip-crud-dialog) .MuiTablePagination-actions {
     margin-left: 8px;
   }
 }

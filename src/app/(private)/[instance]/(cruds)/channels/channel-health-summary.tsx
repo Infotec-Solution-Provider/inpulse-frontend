@@ -74,7 +74,7 @@ export default function ChannelHealthSummary({
       className={
         detailed
           ? "my-4 space-y-3 text-sm"
-          : "mt-2 max-w-sm space-y-1 text-xs text-slate-600 dark:text-slate-300"
+          : "mt-2 max-w-sm space-y-1 text-xs text-[var(--ip-text)]"
       }
     >
       <p>{reason}</p>
@@ -89,13 +89,13 @@ export default function ChannelHealthSummary({
             <dl className="grid gap-2 sm:grid-cols-2">
               {stages.map(([name, status]) => (
                 <div key={name}>
-                  <dt className="text-slate-500">{name}</dt>
+                  <dt className="text-[var(--ip-muted)]">{name}</dt>
                   <dd>{status ? labels[status] : "Sem registro"}</dd>
                 </div>
               ))}
             </dl>
           )}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--ip-muted)]">
             Validade do teste: {date(functionalHealth?.expiresAt)}
           </p>
           <h3 className="font-semibold">
@@ -117,12 +117,12 @@ export default function ChannelHealthSummary({
                   ["Recebidas aguardando processamento", messageHealth.receiveDelayed],
                 ].map(([name, value]) => (
                   <div key={name}>
-                    <dt className="text-slate-500">{name}</dt>
+                    <dt className="text-[var(--ip-muted)]">{name}</dt>
                     <dd>{count(Number(value))}</dd>
                   </div>
                 ))}
               </dl>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--ip-muted)]">
                 Consulta: {date(messageHealth.observedAt)}. Cada mensagem é contada uma vez por
                 sinal. Atrasos incluem pendências anteriores à janela: atenção após 1 minuto;
                 instável após 5 minutos.

@@ -1,4 +1,5 @@
-import { Delete, Edit, PeopleAlt, WhatsApp } from "@mui/icons-material";
+import { Button as CrmDeleteButton } from "@mui/material";
+import { Delete, Edit, PeopleAlt, WhatsApp } from "@/lib/ui-system/crm-icons";
 import { InternalGroup, User, WhatsappGroup } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { IconButton, TableCell, TableRow } from "@mui/material";
@@ -28,7 +29,7 @@ export default function InternalGroupsTableItem({
 
   return (
     <TableRow
-      className="transition-colors even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+      hover
       sx={{
         "& .MuiTableCell-root": {
           borderBottom: "1px solid",
@@ -38,6 +39,7 @@ export default function InternalGroupsTableItem({
       }}
     >
       <TableCell
+        data-label="Código"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.ID.width,
@@ -47,6 +49,7 @@ export default function InternalGroupsTableItem({
         <span className="font-mono text-sm font-medium">{group.id}</span>
       </TableCell>
       <TableCell
+        data-label="Nome"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.GROUP_NAME.width,
@@ -56,6 +59,7 @@ export default function InternalGroupsTableItem({
         <p className="truncate text-sm font-medium">{group.groupName || "N/D"}</p>
       </TableCell>
       <TableCell
+        data-label="Criação"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.STARTED_AT.width,
@@ -65,6 +69,7 @@ export default function InternalGroupsTableItem({
         <p className="text-sm">{group.startedAt ? Formatter.date(group.startedAt) : "N/D"}</p>
       </TableCell>
       <TableCell
+        data-label="Criador"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.CREATOR.width,
@@ -74,6 +79,7 @@ export default function InternalGroupsTableItem({
         <p className="truncate text-sm">{getCreator(users, group.creatorId || -3)}</p>
       </TableCell>
       <TableCell
+        data-label="Usuários do sistema"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.PARTICIPANTS_COUNT.width,
@@ -86,6 +92,7 @@ export default function InternalGroupsTableItem({
         </span>
       </TableCell>
       <TableCell
+        data-label="Grupo WhatsApp"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.WHATSAPP_GROUP.width,
@@ -101,10 +108,11 @@ export default function InternalGroupsTableItem({
             <span className="truncate">{linkedWhatsappGroup?.name || "Grupo vinculado"}</span>
           </span>
         ) : (
-          <span className="text-xs text-slate-400 dark:text-slate-500">Não vinculado</span>
+          <span className="text-xs text-[var(--ip-muted)]">Não vinculado</span>
         )}
       </TableCell>
       <TableCell
+        data-label="Ações"
         className="px-3 py-3"
         sx={{
           width: INTERNAL_GROUPS_TABLE_COLUMNS.ACTIONS.width,
@@ -114,20 +122,21 @@ export default function InternalGroupsTableItem({
         <div className="flex items-center gap-1">
           <IconButton
             title="Editar Grupo"
+            aria-label="Editar Grupo"
             onClick={() => openEditModalHandler(group)}
             size="small"
-            className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
+            color="inherit"
           >
             <Edit fontSize="small" />
           </IconButton>
-          <IconButton
-            title="Deletar Grupo"
-            onClick={() => openDeleteModalHandler(group)}
+          <CrmDeleteButton
+            aria-label="Excluir grupo"
             size="small"
-            className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
+            color="error"
+            onClick={() => openDeleteModalHandler(group)}
           >
-            <Delete fontSize="small" />
-          </IconButton>
+            Excluir
+          </CrmDeleteButton>
         </div>
       </TableCell>
     </TableRow>

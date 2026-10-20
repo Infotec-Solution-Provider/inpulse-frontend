@@ -1,7 +1,7 @@
 import usersService from "@/lib/services/users.service";
 import { User } from "@/lib/sdk-local";
-import CloseIcon from "@mui/icons-material/Close";
-import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
+import { HourglassBottom as HourglassBottomIcon } from "@/lib/ui-system/crm-icons";
 import {
   Button,
   DialogTitle,
@@ -84,7 +84,7 @@ export default function WalletManagementModal() {
             sx={{
               alignSelf: "center",
               padding: 0,
-              color: "white",
+              color: "text.primary",
             }}
           >
             Gerenciar: {selectedWallet.name}

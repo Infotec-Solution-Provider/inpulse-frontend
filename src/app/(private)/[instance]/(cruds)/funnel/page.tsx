@@ -1,19 +1,20 @@
 "use client";
 
+import { CrmPage, CrmFilters, useCrmQueryState } from "@/lib/ui-system";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import AddIcon from "@mui/icons-material/Add";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import PanToolAltIcon from "@mui/icons-material/PanToolAlt";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
-import SettingsIcon from "@mui/icons-material/Settings";
+import { Add as AddIcon } from "@/lib/ui-system/crm-icons";
+import { Autorenew as AutorenewIcon } from "@/lib/ui-system/crm-icons";
+import { DeleteOutline as DeleteOutlineIcon } from "@/lib/ui-system/crm-icons";
+import { FilterAlt as FilterAltIcon } from "@/lib/ui-system/crm-icons";
+import { PanToolAlt as PanToolAltIcon } from "@/lib/ui-system/crm-icons";
+import { ArrowForward as ArrowForwardIcon } from "@/lib/ui-system/crm-icons";
+import { ViewKanbanOutlined as ViewKanbanOutlinedIcon } from "@/lib/ui-system/crm-icons";
+import { Settings as SettingsIcon } from "@/lib/ui-system/crm-icons";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
-import Dialog from "@mui/material/Dialog";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -90,60 +91,54 @@ export default function FunnelListPage() {
     }
   };
 
+  const [filters, setFilters] = useCrmQueryState<Record<string, string>>("pipelines-list", {});
+  const filtered = funnels.filter(
+    (f) =>
+      (!filters.name || f.name.toLocaleLowerCase().includes(filters.name.toLocaleLowerCase())) &&
+      (!filters.type || f.type === filters.type),
+  );
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-slate-50/70 dark:bg-slate-950/30">
-      <div className="border-b border-slate-200 bg-white px-4 py-5 dark:border-slate-800 dark:bg-slate-900 sm:px-6">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
-              <ViewKanbanOutlinedIcon />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-                  Pipelines
-                </h1>
-                {!loading && funnels.length > 0 && (
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                    {funnels.length}
-                  </span>
-                )}
-              </div>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                Organize oportunidades e acompanhe cada etapa da jornada comercial.
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setCreateOpen(true)}
-            sx={{
-              alignSelf: { xs: "stretch", sm: "center" },
-              borderRadius: 2,
-              textTransform: "none",
-            }}
-          >
-            Novo pipeline
-          </Button>
-        </div>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4 sm:p-6">
+    <CrmPage
+      title="Pipelines"
+      description="Organize oportunidades e acompanhe as etapas da jornada comercial."
+      count={loading ? undefined : filtered.length}
+      breadcrumbs={[{ label: "Pipelines" }]}
+      actions={
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>
+          Novo pipeline
+        </Button>
+      }
+    >
+      <CrmFilters
+        values={filters}
+        onApply={setFilters}
+        onRefresh={load}
+        loading={loading}
+        fields={[
+          { key: "name", label: "Nome" },
+          {
+            key: "type",
+            label: "Tipo",
+            options: [
+              { value: "MANUAL", label: "Manual" },
+              { value: "AUTOMATIC", label: "Automático" },
+            ],
+          },
+        ]}
+      />
+      <div className="ip-crud-record-list">
         {loading ? (
           <div className="flex min-h-64 flex-1 items-center justify-center">
             <CircularProgress />
           </div>
-        ) : funnels.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="flex min-h-80 flex-1 items-center justify-center">
-            <div className="flex max-w-sm flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-white px-8 py-10 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex max-w-sm flex-col items-center rounded-2xl border border-dashed border-[var(--ip-border)] bg-[var(--ip-surface)] px-8 py-10 text-center shadow-none">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-500 dark:bg-blue-950/50 dark:text-blue-300">
                 <ViewKanbanOutlinedIcon sx={{ fontSize: 30 }} />
               </div>
-              <p className="font-semibold text-slate-800 dark:text-slate-100">
-                Crie seu primeiro pipeline
-              </p>
-              <p className="mt-1 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="font-semibold text-[var(--ip-text)]">Crie seu primeiro pipeline</p>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--ip-muted)]">
                 Separe clientes por etapas e tenha uma visão clara do andamento de cada
                 oportunidade.
               </p>
@@ -159,13 +154,13 @@ export default function FunnelListPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {funnels.map((f) => (
+          <div className="ip-crud-record-list">
+            {filtered.map((f) => (
               <div
                 key={f.id}
                 role="link"
                 tabIndex={0}
-                className="group relative flex min-h-44 cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm outline-none transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-slate-200/60 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800 dark:hover:shadow-black/20"
+                className="ip-crud-record group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--ip-accent)]"
                 onClick={() => router.push(`/${params.instance}/funnel/${f.id}`)}
                 onKeyDown={(event) => {
                   if (event.target !== event.currentTarget) return;
@@ -178,7 +173,7 @@ export default function FunnelListPage() {
                 <div
                   className={`h-1 w-full ${f.type === "MANUAL" ? "bg-violet-500" : "bg-blue-500"}`}
                 />
-                <div className="flex flex-1 flex-col p-4">
+                <div className="grid min-w-0 gap-3 lg:grid-cols-[2fr_2fr_1fr] lg:items-center">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
                       <div
@@ -191,15 +186,13 @@ export default function FunnelListPage() {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
-                          {f.name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
+                        <p className="truncate font-semibold text-[var(--ip-text)]">{f.name}</p>
+                        <p className="mt-0.5 text-xs text-[var(--ip-muted)]">
                           Criado em {new Date(f.createdAt).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-0.5 sm:opacity-0 sm:transition-opacity sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+                    <div className="flex shrink-0 items-center gap-1">
                       <Tooltip title="Configurar">
                         <IconButton
                           size="small"
@@ -228,13 +221,13 @@ export default function FunnelListPage() {
                     </div>
                   </div>
 
-                  <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                  <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-[var(--ip-muted)]">
                     {f.type === "MANUAL"
                       ? "Mova clientes livremente entre as etapas do processo."
                       : "Classifique clientes automaticamente usando regras e condições."}
                   </p>
 
-                  <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <Chip
                       label={f.type === "MANUAL" ? "Manual" : "Automático"}
                       size="small"
@@ -267,7 +260,7 @@ export default function FunnelListPage() {
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
           />
           <div>
-            <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">Tipo</p>
+            <p className="mb-1.5 text-xs font-medium text-[var(--ip-muted)]">Tipo</p>
             <ToggleButtonGroup
               value={newType}
               exclusive
@@ -286,7 +279,7 @@ export default function FunnelListPage() {
                 Manual
               </ToggleButton>
             </ToggleButtonGroup>
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-[11px] text-[var(--ip-muted)]">
               {newType === "AUTOMATIC"
                 ? "Clientes são classificados automaticamente por regras e condições."
                 : "Você adiciona e move clientes manualmente entre as etapas."}
@@ -313,7 +306,7 @@ export default function FunnelListPage() {
       >
         <DialogTitle>Excluir pipeline?</DialogTitle>
         <DialogContent>
-          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          <p className="text-sm leading-relaxed text-[var(--ip-text)]">
             O pipeline <strong>“{funnelToDelete?.name}”</strong> e sua configuração serão excluídos.
             Essa ação não pode ser desfeita.
           </p>
@@ -336,6 +329,6 @@ export default function FunnelListPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </CrmPage>
   );
 }

@@ -1,6 +1,6 @@
-import SettingsIcon from '@mui/icons-material/Settings';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { TableRow } from "@mui/material";
+import { Settings as SettingsIcon } from "@/lib/ui-system/crm-icons";
+import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
+import { IconButton, Button, Tooltip, TableRow } from "@mui/material";
 import { WppWallet } from "@/lib/sdk-local";
 import { useContext } from "react";
 import { WalletsContext } from "../context";
@@ -12,40 +12,38 @@ interface WalletTableRowProps {
 }
 
 export default function WalletTableRow({ wallet, index }: WalletTableRowProps) {
-
   const { setSelectedWallet, deleteWallet } = useContext(WalletsContext);
 
   return (
-    <TableRow sx={{ background: index % 2 === 0 ? 'transparent' : 'rgba(67, 56, 202, 0.05)' }}>
-      <StyledTableCell className="px-2 py-3">
-        <div className='flex justify-center'>
-          {wallet.id}
-        </div>
+    <TableRow hover>
+      <StyledTableCell data-label="Código" className="px-2 py-3">
+        <div className="flex justify-center">{wallet.id}</div>
       </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <div className='flex justify-center'>
-          {wallet.name}
-        </div>
+      <StyledTableCell data-label="Nome" className="px-2 py-3">
+        <div className="flex justify-center">{wallet.name}</div>
       </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <div className='flex justify-center'>
-          {(wallet.userIds)?.length}
-        </div>
+      <StyledTableCell data-label="Integrantes" className="px-2 py-3">
+        <div className="flex justify-center">{wallet.userIds?.length}</div>
       </StyledTableCell>
-      <StyledTableCell className="px-2 py-3">
-        <div className="flex gap-2 justify-center">
-          <SettingsIcon
-            className="cursor-pointer hover:text-blue-500"
-            onClick={() => setSelectedWallet(wallet as WppWallet)}
-          />
-          <DeleteIcon
-            className="cursor-pointer hover:text-red-500"
+      <StyledTableCell data-label="Ações" className="px-2 py-3">
+        <div className="flex justify-center gap-2">
+          <Tooltip title="Gerenciar carteira">
+            <IconButton
+              aria-label="Gerenciar carteira"
+              onClick={() => setSelectedWallet(wallet as WppWallet)}
+            >
+              <SettingsIcon />
+            </IconButton>
+          </Tooltip>
+          <Button
+            color="error"
             onClick={() => {
-              if (confirm('Tem certeza que deseja excluir esta carteira?')) {
+              if (confirm("Tem certeza que deseja excluir esta carteira?"))
                 deleteWallet(wallet.id!);
-              }
             }}
-          />
+          >
+            Excluir
+          </Button>
         </div>
       </StyledTableCell>
     </TableRow>

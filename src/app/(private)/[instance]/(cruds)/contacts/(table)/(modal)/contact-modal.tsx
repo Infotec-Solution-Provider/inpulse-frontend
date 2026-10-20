@@ -4,7 +4,7 @@ import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import SelectCustomerInput from "@/lib/components/select-customer-input";
 import { Customer, WppContact } from "@/lib/sdk-local";
-import { Close } from "@mui/icons-material";
+import { Close } from "@/lib/ui-system/crm-icons";
 import { Autocomplete, Button, Chip, IconButton, TextField } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -87,6 +87,7 @@ export default function ContactModal({ contact }: ContactModalProps) {
           {isEditMode ? "Editar Contato" : "Cadastrar Contato"}
         </h1>
         <IconButton
+          aria-label="Fechar"
           onClick={closeModal}
           className="text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
         >
@@ -94,7 +95,7 @@ export default function ContactModal({ contact }: ContactModalProps) {
         </IconButton>
       </header>
 
-      <div className="mb-6 flex w-80 flex-col gap-4">
+      <div className="mb-6 flex w-full min-w-0 flex-col gap-4">
         <TextField
           label="Nome"
           placeholder="João Silva"
@@ -178,7 +179,7 @@ export default function ContactModal({ contact }: ContactModalProps) {
         />
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+      <div className="ip-crud-form-footer flex justify-end gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
         <Button onClick={closeModal} variant="outlined" color="inherit">
           Cancelar
         </Button>

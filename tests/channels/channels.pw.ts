@@ -57,8 +57,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByText("2 envios sem confirmação nos últimos 15 minutos.")).toBeVisible();
     await expect(page.getByText(/Teste aprovado/)).toBeVisible();
     await page
-      .getByRole("button")
-      .filter({ has: page.locator('[data-testid="HistoryIcon"]') })
+      .getByRole("button", { name: "Saúde do canal e histórico de 24 horas", exact: true })
       .click();
     const modal = page.locator(".MuiModal-root");
     await expect(modal.getByText("Healthcheck funcional")).toBeVisible();
@@ -84,8 +83,7 @@ test("shows unavailable data without presenting zero failures", async ({ page })
   await page.goto("/tests/channels/index.html");
   await expect(page.getByText(/Sem teste/)).toBeVisible();
   await page
-    .getByRole("button")
-    .filter({ has: page.locator('[data-testid="HistoryIcon"]') })
+    .getByRole("button", { name: "Saúde do canal e histórico de 24 horas", exact: true })
     .click();
   await expect(page.getByText("Dados de mensagens indisponíveis.")).toBeVisible();
   await expect(page.getByText("Falhas técnicas de envio", { exact: true })).toHaveCount(0);

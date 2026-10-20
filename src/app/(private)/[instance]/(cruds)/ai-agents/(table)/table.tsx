@@ -1,11 +1,13 @@
 "use client";
+import { CrmPage, CrmFilters, CrmTableHead, useCrmQueryState } from "@/lib/ui-system";
+
 import { AiAgent } from "@/lib/sdk-local";
 import { AGENT_PRIORITY_HINT, findOverlappingAlwaysAgents } from "@/lib/utils/ai-agent-labels";
-import AddIcon from "@mui/icons-material/Add";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import ManageSearchIcon from "@mui/icons-material/ManageSearch";
+import { Add as AddIcon } from "@/lib/ui-system/crm-icons";
+import { AutoAwesome as AutoAwesomeIcon } from "@/lib/ui-system/crm-icons";
+import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
+import { Edit as EditIcon } from "@/lib/ui-system/crm-icons";
+import { ManageSearch as ManageSearchIcon } from "@/lib/ui-system/crm-icons";
 import {
   Alert,
   Button,
@@ -25,9 +27,11 @@ import { useAiAgentsContext } from "../ai-agents-context";
 import AgentAuditDrawer from "./agent-audit-drawer";
 import AgentModal from "../(modal)/agent-modal";
 
-const cardClass = "rounded-md border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900";
-const insetPanelClass = "rounded-md bg-slate-50 p-4 dark:bg-slate-800/40";
-const sectionLabelClass = "text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400";
+const cardClass =
+  "rounded-md border border-[var(--ip-border)] bg-[var(--ip-surface)] shadow-none border-[var(--ip-border)] bg-[var(--ip-surface)]";
+const insetPanelClass = "rounded-md bg-[var(--ip-surface)] p-4 bg-[var(--ip-surface)]";
+const sectionLabelClass =
+  "text-xs font-semibold uppercase tracking-wide text-[var(--ip-muted)] text-[var(--ip-muted)]";
 
 const subtleChipSx = {
   backgroundColor: (theme: { palette: { mode: string } }) =>
@@ -95,13 +99,14 @@ function getProactiveSummary(agent: AiAgent) {
   }
 
   const frequency =
-    PROACTIVE_FREQUENCY_LABELS[agent.proactiveConfig.schedule.frequency] ?? agent.proactiveConfig.schedule.frequency;
+    PROACTIVE_FREQUENCY_LABELS[agent.proactiveConfig.schedule.frequency] ??
+    agent.proactiveConfig.schedule.frequency;
 
   return `${frequency} · ${agent.proactiveConfig.schedule.startTime} · ${agent.proactiveConfig.batchSize} contatos`;
 }
 
 export default function AiAgentsTable() {
-  const { agents, loading, deleteAgent } = useAiAgentsContext();
+  const { agents, loading, deleteAgent, loadAgents } = useAiAgentsContext();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AiAgent | undefined>(undefined);
   const [auditAgent, setAuditAgent] = useState<AiAgent | null>(null);
@@ -136,44 +141,42 @@ export default function AiAgentsTable() {
     await deleteAgent(agent.id);
   }
 
+  const [filters, setFilters] = useCrmQueryState<Record<string, string>>("ai-agents-list", {});
+  const filtered = agents.filter(
+    (agent) =>
+      (!filters.name ||
+        agent.name.toLocaleLowerCase().includes(filters.name.toLocaleLowerCase())) &&
+      (!filters.enabled || String(agent.enabled) === filters.enabled),
+  );
   return (
-    <div className="grid gap-6">
-      <section className={`${cardClass} flex flex-col gap-4 p-6`}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="rounded-md bg-slate-100 p-3 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              <AutoAwesomeIcon />
-            </div>
-            <div className="space-y-2">
-              <p className={sectionLabelClass}>Operação de IA</p>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Agentes</h1>
-
-            </div>
-          </div>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-            Novo agente
-          </Button>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className={insetPanelClass}>
-            <p className={sectionLabelClass}>Base</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{summary.total}</p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Agentes cadastrados</p>
-          </div>
-          <div className={insetPanelClass}>
-            <p className={sectionLabelClass}>Status</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{summary.active}</p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Agentes ativos</p>
-          </div>
-          <div className={insetPanelClass}>
-            <p className={sectionLabelClass}>Cobertura</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{summary.receptive}/{summary.proactive}</p>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Receptivos e de prospecção ativa</p>
-          </div>
-        </div>
-      </section>
-
+    <CrmPage
+      title="Agentes"
+      description="Gerencie modelos, gatilhos, público e ações permitidas."
+      count={loading ? undefined : filtered.length}
+      breadcrumbs={[{ label: "IA" }, { label: "Agentes" }]}
+      actions={
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+          Novo agente
+        </Button>
+      }
+    >
+      <CrmFilters
+        fields={[
+          { key: "name", label: "Nome" },
+          {
+            key: "enabled",
+            label: "Status",
+            options: [
+              { value: "true", label: "Ativo" },
+              { value: "false", label: "Inativo" },
+            ],
+          },
+        ]}
+        values={filters}
+        onApply={setFilters}
+        onRefresh={() => void loadAgents()}
+        loading={loading}
+      />
       {overlappingAlwaysAgents.length > 1 && (
         <Alert severity="warning" sx={{ borderRadius: 1.5 }}>
           <span className="font-semibold">
@@ -184,47 +187,21 @@ export default function AiAgentsTable() {
         </Alert>
       )}
 
-      <section className={cardClass}>
-        <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-4 dark:border-slate-700">
-          <p className={sectionLabelClass}>Cadastro principal</p>
-          <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between">
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Tabela de agentes</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Revise modelo, gatilhos, escopo de atuação e ações permitidas antes de editar ou auditar.
-            </p>
-          </div>
-        </div>
-
-        <TableContainer
-          className="scrollbar-whatsapp overflow-auto px-4 py-4"
-          sx={{ height: "calc(100vh - 280px)", minHeight: "420px", maxHeight: "72vh" }}
-        >
+      <section className="ip-crud-table">
+        <TableContainer className="scrollbar-whatsapp overflow-auto">
           <Table stickyHeader sx={{ minWidth: 1080 }}>
-            <TableHead>
-              <TableRow
-                sx={{
-                  "& .MuiTableCell-root": {
-                    backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgb(30 41 59)" : "rgb(226 232 240)",
-                    borderBottom: "2px solid",
-                    borderColor: (theme) => theme.palette.mode === "dark" ? "rgb(51 65 85)" : "rgb(203 213 225)",
-                    color: (theme) => theme.palette.mode === "dark" ? "rgb(226 232 240)" : "rgb(30 41 59)",
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  },
-                }}
-              >
-                <TableCell>Nome</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Atuação</TableCell>
-                <TableCell>Modelo</TableCell>
-                <TableCell>Gatilhos</TableCell>
-                <TableCell>Ações permitidas</TableCell>
-                <TableCell>Turnos máx.</TableCell>
-                <TableCell align="right">Ações</TableCell>
-              </TableRow>
-            </TableHead>
+            <CrmTableHead
+              labels={[
+                "Nome",
+                "Status",
+                "Atuação",
+                "Modelo",
+                "Gatilhos",
+                "Ações permitidas",
+                "Turnos máx.",
+                "Ações",
+              ]}
+            />
 
             <TableBody>
               {loading && (
@@ -235,10 +212,10 @@ export default function AiAgentsTable() {
                 </TableRow>
               )}
 
-              {!loading && agents.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <TableRow sx={{ height: "300px", "& td": { borderBottom: "none" } }}>
                   <TableCell colSpan={8} sx={{ textAlign: "center" }}>
-                    <span className="text-sm text-slate-500 dark:text-slate-400">
+                    <span className="text-sm text-[var(--ip-muted)]">
                       Nenhum agente cadastrado.
                     </span>
                   </TableCell>
@@ -246,7 +223,7 @@ export default function AiAgentsTable() {
               )}
 
               {!loading &&
-                agents.map((agent) => {
+                filtered.map((agent) => {
                   const { receptiveEnabled, proactiveEnabled, hybridEnabled } = getModeFlags(agent);
                   const proactiveSummary = getProactiveSummary(agent);
 
@@ -256,23 +233,27 @@ export default function AiAgentsTable() {
                       hover
                       sx={{
                         "& .MuiTableCell-root": {
-                          borderBottomColor: (theme) => theme.palette.mode === "dark" ? "rgb(30 41 59)" : "rgb(241 245 249)",
-                          color: (theme) => theme.palette.mode === "dark" ? "rgb(226 232 240)" : "rgb(51 65 85)",
+                          borderBottomColor: (theme) =>
+                            theme.palette.mode === "dark" ? "rgb(30 41 59)" : "rgb(241 245 249)",
+                          color: (theme) =>
+                            theme.palette.mode === "dark" ? "rgb(226 232 240)" : "rgb(51 65 85)",
                           verticalAlign: "top",
                           py: 2,
                         },
                       }}
                     >
-                      <TableCell>
+                      <TableCell data-label="Nome">
                         <div>
-                          <span className="font-medium text-slate-900 dark:text-slate-100">{agent.name}</span>
+                          <span className="font-medium text-[var(--ip-text)]">{agent.name}</span>
                           {agent.description && (
-                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{agent.description}</p>
+                            <p className="mt-1 text-xs text-[var(--ip-muted)]">
+                              {agent.description}
+                            </p>
                           )}
                         </div>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell data-label="Status">
                         <Chip
                           label={agent.enabled ? "Ativo" : "Inativo"}
                           size="small"
@@ -281,7 +262,7 @@ export default function AiAgentsTable() {
                         />
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell data-label="Atuação">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex flex-wrap gap-1">
                             <Chip
@@ -296,20 +277,29 @@ export default function AiAgentsTable() {
                               variant="outlined"
                               sx={proactiveEnabled ? statusChipSx(true) : subtleChipSx}
                             />
-                            {hybridEnabled && <Chip label="Híbrido" size="small" variant="outlined" sx={subtleChipSx} />}
+                            {hybridEnabled && (
+                              <Chip
+                                label="Híbrido"
+                                size="small"
+                                variant="outlined"
+                                sx={subtleChipSx}
+                              />
+                            )}
                           </div>
 
                           {proactiveSummary && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{proactiveSummary}</p>
+                            <p className="text-xs text-[var(--ip-muted)]">{proactiveSummary}</p>
                           )}
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        <span className="rounded-md bg-slate-50 px-2 py-1 font-mono text-xs text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">{agent.model}</span>
+                      <TableCell data-label="Modelo">
+                        <span className="rounded-md bg-[var(--ip-surface)] px-2 py-1 font-mono text-xs text-[var(--ip-text)]">
+                          {agent.model}
+                        </span>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell data-label="Gatilhos">
                         <div className="flex flex-wrap gap-1">
                           {agent.triggers.map((t) => (
                             <Chip
@@ -321,38 +311,61 @@ export default function AiAgentsTable() {
                             />
                           ))}
                           {agent.triggers.length === 0 && (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">Modo receptivo desligado</span>
+                            <span className="text-xs text-[var(--ip-muted)]">
+                              Modo receptivo desligado
+                            </span>
                           )}
                         </div>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell data-label="Ações permitidas">
                         <div className="flex flex-wrap gap-1">
                           {agent.allowedActions.map((a) => (
-                            <Chip key={a} label={ACTION_LABELS[a] ?? a} size="small" variant="outlined" sx={subtleChipSx} />
+                            <Chip
+                              key={a}
+                              label={ACTION_LABELS[a] ?? a}
+                              size="small"
+                              variant="outlined"
+                              sx={subtleChipSx}
+                            />
                           ))}
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        <span className="font-medium text-slate-900 dark:text-slate-100">{agent.maxTurnsPerChat}</span>
+                      <TableCell data-label="Turnos máx.">
+                        <span className="font-medium text-[var(--ip-text)]">
+                          {agent.maxTurnsPerChat}
+                        </span>
                       </TableCell>
 
-                      <TableCell align="right">
+                      <TableCell data-label="Ações" align="right">
                         <Tooltip title="Auditar">
-                          <IconButton size="small" onClick={() => setAuditAgent(agent)}>
+                          <IconButton
+                            aria-label="Auditar agente"
+                            size="small"
+                            onClick={() => setAuditAgent(agent)}
+                          >
                             <ManageSearchIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Editar">
-                          <IconButton size="small" onClick={() => openEdit(agent)}>
+                          <IconButton
+                            aria-label="Editar agente"
+                            size="small"
+                            onClick={() => openEdit(agent)}
+                          >
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Remover">
-                          <IconButton size="small" color="error" onClick={() => handleDelete(agent)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                          <Button
+                            aria-label="Excluir agente"
+                            size="small"
+                            color="error"
+                            onClick={() => handleDelete(agent)}
+                          >
+                            Excluir
+                          </Button>
                         </Tooltip>
                       </TableCell>
                     </TableRow>
@@ -363,11 +376,9 @@ export default function AiAgentsTable() {
         </TableContainer>
       </section>
 
-      {modalOpen && (
-        <AgentModal agent={editingAgent} onClose={() => setModalOpen(false)} />
-      )}
+      {modalOpen && <AgentModal agent={editingAgent} onClose={() => setModalOpen(false)} />}
 
       {auditAgent && <AgentAuditDrawer agent={auditAgent} onClose={() => setAuditAgent(null)} />}
-    </div>
+    </CrmPage>
   );
 }

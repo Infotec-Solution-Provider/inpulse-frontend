@@ -34,6 +34,7 @@ function AppModal({
   modal: ReactNode;
   setModal: (value: ReactNode | null) => void;
 }) {
+  const modern = isModernCrmPath(usePathname());
   if (!modal) return null;
   return (
     <Modal
@@ -43,7 +44,7 @@ function AppModal({
       }}
       className="flex items-center justify-center"
     >
-      <div>{modal as ReactElement}</div>
+      <div className={modern ? "ip-crud-modal-host" : undefined}>{modal as ReactElement}</div>
     </Modal>
   );
 }

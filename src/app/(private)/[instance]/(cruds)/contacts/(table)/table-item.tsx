@@ -1,9 +1,10 @@
 "use client";
+import { Button as CrmDeleteButton } from "@mui/material";
 
 import { WppContact } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
-import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
+import { Edit as EditIcon } from "@/lib/ui-system/crm-icons";
 import { Button, IconButton, TableCell, TableRow, Tooltip, Chip } from "@mui/material";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
 import { useContactsContext } from "../contacts-context";
@@ -34,34 +35,49 @@ export default function ContactsTableItem({
     }
   };
 
-  const customerObj = (contact as any).customer || (contact.customerId ? customerObjectMap.get(contact.customerId) : undefined);
-  const customerId: number | null = contact.customerId || contact.CLIENTE_ID || customerObj?.CODIGO || null;
-  const customerName: string | undefined = customerObj?.RAZAO || (customerId ? customerMap.get(customerId) : undefined);
+  const customerObj =
+    (contact as any).customer ||
+    (contact.customerId ? customerObjectMap.get(contact.customerId) : undefined);
+  const customerId: number | null =
+    contact.customerId || contact.CLIENTE_ID || customerObj?.CODIGO || null;
+  const customerName: string | undefined =
+    customerObj?.RAZAO || (customerId ? customerMap.get(customerId) : undefined);
   const sectors = contact.sectors ?? [];
 
   return (
-    <TableRow className="even:bg-indigo-700/5 hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.ID.width }}>{contact.id}</TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.NAME.width }}>{contact.name}</TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.PHONE.width }}>
+    <TableRow hover>
+      <TableCell data-label="Código" style={{ width: CONTACTS_TABLE_COLUMNS.ID.width }}>
+        {contact.id}
+      </TableCell>
+      <TableCell data-label="Nome" style={{ width: CONTACTS_TABLE_COLUMNS.NAME.width }}>
+        {contact.name}
+      </TableCell>
+      <TableCell data-label="Telefone" style={{ width: CONTACTS_TABLE_COLUMNS.PHONE.width }}>
         {safeFormatPhone(contact.phone)}
       </TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width }}>
+      <TableCell data-label="Cliente" style={{ width: CONTACTS_TABLE_COLUMNS.CUSTOMER.width }}>
         <div className="flex flex-col">
-          <span className="text-slate-700 dark:text-slate-300">
-            {customerName || (customerId ? `Cliente ${customerId} · dados indisponíveis` : "Sem cliente vinculado")}
+          <span className="text-[var(--ip-text)]">
+            {customerName ||
+              (customerId
+                ? `Cliente ${customerId} · dados indisponíveis`
+                : "Sem cliente vinculado")}
           </span>
           {contact.customerId == null && !contact.CLIENTE_ID && !customerObj && (
-            <Button size="small" onClick={() => openLinkCustomerModal(contact)} sx={{ alignSelf: "flex-start", paddingLeft: 0 }}>
+            <Button
+              size="small"
+              onClick={() => openLinkCustomerModal(contact)}
+              sx={{ alignSelf: "flex-start", paddingLeft: 0 }}
+            >
               Vincular cliente
             </Button>
           )}
           {customerObj?.CODIGO_ERP && (
-            <small className="text-slate-400 dark:text-slate-500">ERP: {customerObj.CODIGO_ERP}</small>
+            <small className="text-[var(--ip-muted)]">ERP: {customerObj.CODIGO_ERP}</small>
           )}
         </div>
       </TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.SECTORS.width }}>
+      <TableCell data-label="Setores" style={{ width: CONTACTS_TABLE_COLUMNS.SECTORS.width }}>
         <div className="flex flex-wrap gap-1">
           {sectors.length > 0 ? (
             sectors.map((sector, index: number) => (
@@ -74,21 +90,35 @@ export default function ContactsTableItem({
               />
             ))
           ) : (
-            <span className="text-slate-500 dark:text-slate-400">—</span>
+            <span className="text-[var(--ip-muted)]">—</span>
           )}
         </div>
       </TableCell>
-      <TableCell style={{ width: CONTACTS_TABLE_COLUMNS.ACTIONS.width }} align="right">
+      <TableCell
+        data-label="Ações"
+        style={{ width: CONTACTS_TABLE_COLUMNS.ACTIONS.width }}
+        align="right"
+      >
         <div className="flex items-center justify-end gap-1">
-          <Tooltip title="Editar">
-            <IconButton onClick={() => openEditModalHandler(contact)} size="small" color="primary">
+          <Tooltip title="Editar" aria-label="Editar">
+            <IconButton
+              aria-label="Editar"
+              onClick={() => openEditModalHandler(contact)}
+              size="small"
+              color="primary"
+            >
               <EditIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Excluir">
-            <IconButton onClick={() => deleteContactHandler(contact)} size="small" color="error">
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+          <Tooltip title="Excluir" aria-label="Excluir">
+            <CrmDeleteButton
+              aria-label="Excluir contato"
+              size="small"
+              color="error"
+              onClick={() => deleteContactHandler(contact)}
+            >
+              Excluir
+            </CrmDeleteButton>
           </Tooltip>
         </div>
       </TableCell>

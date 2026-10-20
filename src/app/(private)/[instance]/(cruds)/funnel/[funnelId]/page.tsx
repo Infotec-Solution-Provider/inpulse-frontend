@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
-import PanToolAltIcon from "@mui/icons-material/PanToolAlt";
-import SettingsIcon from "@mui/icons-material/Settings";
+import { ArrowBack as ArrowBackIcon } from "@/lib/ui-system/crm-icons";
+import { Autorenew as AutorenewIcon } from "@/lib/ui-system/crm-icons";
+import { ExpandLess as ExpandLessIcon } from "@/lib/ui-system/crm-icons";
+import { ExpandMore as ExpandMoreIcon } from "@/lib/ui-system/crm-icons";
+import { FilterList as FilterListIcon } from "@/lib/ui-system/crm-icons";
+import { FilterAltOff as FilterAltOffIcon } from "@/lib/ui-system/crm-icons";
+import { PanToolAlt as PanToolAltIcon } from "@/lib/ui-system/crm-icons";
+import { Settings as SettingsIcon } from "@/lib/ui-system/crm-icons";
 import Autocomplete from "@mui/material/Autocomplete";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -112,7 +112,7 @@ function FunnelPageContent() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-100/70 dark:bg-slate-950/40">
+    <div className="flex h-full flex-col bg-[var(--ip-surface)]">
       {/* Processing progress bar */}
       {isProcessing && (
         <LinearProgress
@@ -121,7 +121,7 @@ function FunnelPageContent() {
       )}
 
       {/* Header */}
-      <div className="flex flex-shrink-0 flex-col gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="flex flex-shrink-0 flex-col gap-3 border-b border-[var(--ip-border)] bg-[var(--ip-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <IconButton
             size="small"
@@ -133,7 +133,7 @@ function FunnelPageContent() {
           </IconButton>
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <h1 className="truncate text-lg font-bold tracking-tight text-[var(--ip-text)]">
                 {funnelName || "Pipeline"}
               </h1>
               <span
@@ -147,7 +147,7 @@ function FunnelPageContent() {
                 {isManual ? "Manual" : "Automático"}
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-[var(--ip-muted)]">
               {isManual
                 ? "Pipeline manual — adicione e mova clientes arrastando entre etapas."
                 : isProcessing
@@ -167,8 +167,8 @@ function FunnelPageContent() {
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
           {!loading && (
-            <span className="mr-1 hidden text-xs text-slate-500 dark:text-slate-400 lg:inline">
-              <strong className="font-semibold text-slate-700 dark:text-slate-200">
+            <span className="mr-1 hidden text-xs text-[var(--ip-muted)] lg:inline">
+              <strong className="font-semibold text-[var(--ip-text)]">
                 {totalCustomers.toLocaleString("pt-BR")}
               </strong>{" "}
               {totalCustomers === 1 ? "cliente" : "clientes"}
@@ -213,7 +213,7 @@ function FunnelPageContent() {
       </div>
 
       {filtersOpen && (
-        <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-slate-200 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid shrink-0 grid-cols-1 gap-3 border-b border-[var(--ip-border)] bg-[var(--ip-surface)] px-4 py-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           <Autocomplete
             multiple
             freeSolo
@@ -366,7 +366,7 @@ function FunnelPageContent() {
             <MenuItem value="asc">Asc</MenuItem>
           </TextField>
           <div className="flex items-center justify-end gap-2 sm:col-span-2 lg:col-span-4 xl:col-span-6">
-            <span className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-[var(--ip-muted)]">
               {activeFiltersCount > 0
                 ? `${activeFiltersCount} filtro(s) ativos`
                 : "Sem filtros ativos"}
@@ -399,7 +399,7 @@ function FunnelPageContent() {
       {/* Board or empty state */}
       {!isManual && !hasSnapshot && !loading ? (
         <div className="flex flex-1 items-center justify-center p-4">
-          <div className="flex max-w-sm flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-white px-8 py-10 text-center text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+          <div className="flex max-w-sm flex-col items-center rounded-2xl border border-dashed border-[var(--ip-border)] bg-[var(--ip-surface)] px-8 py-10 text-center text-[var(--ip-muted)] shadow-none">
             <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/40 dark:text-blue-300">
               <AutorenewIcon sx={{ fontSize: 26 }} />
             </div>

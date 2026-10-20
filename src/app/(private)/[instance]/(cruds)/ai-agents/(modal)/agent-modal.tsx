@@ -1,4 +1,6 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+
 
 import { useAuthContext } from "@/app/auth-context";
 import { AI_MODEL_CATALOG, AI_MODEL_TIERS, findCatalogModel, modelSupportsTemperature } from "@/lib/ai-model-catalog";
@@ -31,15 +33,15 @@ import {
 } from "@/lib/utils/ai-agent-labels";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { type MessageTemplate, useWhatsappContext } from "../../../whatsapp-context";
-import AddIcon from "@mui/icons-material/Add";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
-import CloseIcon from "@mui/icons-material/Close";
-import DeleteIcon from "@mui/icons-material/Delete";
-import Groups2Icon from "@mui/icons-material/Groups2";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import SaveIcon from "@mui/icons-material/Save";
-import SmartToyOutlinedIcon from "@mui/icons-material/SmartToyOutlined";
+import { Add as AddIcon } from "@/lib/ui-system/crm-icons";
+import { CheckBox as CheckBoxIcon } from "@/lib/ui-system/crm-icons";
+import { CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon } from "@/lib/ui-system/crm-icons";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
+import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
+import { Groups2 as Groups2Icon } from "@/lib/ui-system/crm-icons";
+import { InfoOutlined as InfoOutlinedIcon } from "@/lib/ui-system/crm-icons";
+import { Save as SaveIcon } from "@/lib/ui-system/crm-icons";
+import { SmartToyOutlined as SmartToyOutlinedIcon } from "@/lib/ui-system/crm-icons";
 import {
   Alert,
   Autocomplete,
@@ -49,7 +51,6 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
-  Dialog,
   DialogContent,
   DialogTitle,
   FormControlLabel,
@@ -815,8 +816,8 @@ export default function AgentModal({ agent, onClose }: Props) {
   const surfaceSx = {
     borderRadius: 3,
     border: "1px solid",
-    borderColor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.28 : 0.14),
-    bgcolor: alpha(theme.palette.primary.main, theme.palette.mode === "dark" ? 0.08 : 0.04),
+    borderColor: theme.palette.divider,
+    bgcolor: theme.palette.background.paper,
     p: { xs: 2, md: 2.5 },
   };
 
@@ -1002,12 +1003,9 @@ export default function AgentModal({ agent, onClose }: Props) {
       onClose={onClose}
       PaperProps={{
         sx: {
-          borderRadius: 4,
+          borderRadius: 3,
           overflow: "hidden",
-          backgroundImage:
-            theme.palette.mode === "dark"
-              ? `linear-gradient(180deg, ${alpha(theme.palette.primary.dark, 0.18)} 0%, ${theme.palette.background.paper} 18%)`
-              : `linear-gradient(180deg, ${alpha(theme.palette.primary.light, 0.28)} 0%, ${theme.palette.background.paper} 18%)`,
+          backgroundImage: "none",
         },
       }}
     >
@@ -1016,30 +1014,22 @@ export default function AgentModal({ agent, onClose }: Props) {
           px: 3,
           py: 2.5,
           borderBottom: "1px solid",
-          borderColor: alpha(theme.palette.primary.main, 0.16),
+          borderColor: theme.palette.divider,
         }}
       >
         <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={2}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Avatar
-              sx={{
-                bgcolor: alpha(theme.palette.primary.main, 0.14),
-                color: theme.palette.primary.main,
-              }}
-            >
-              <SmartToyOutlinedIcon />
-            </Avatar>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 800 }}>
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{minWidth:0}}>
+            <Box sx={{minWidth:0}}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {isEdit ? `Editar agente: ${agent.name}` : "Novo agente de IA"}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{display:{xs:"none",sm:"block"}}}>
                 Configure identidade, modo receptivo e prospecção ativa no mesmo cadastro do agente.
               </Typography>
             </Box>
           </Stack>
 
-          <IconButton onClick={onClose} size="small">
+          <IconButton aria-label="Fechar" onClick={onClose} size="small">
             <CloseIcon />
           </IconButton>
         </Stack>
@@ -1053,10 +1043,10 @@ export default function AgentModal({ agent, onClose }: Props) {
         sx={{
           px: 2.5,
           borderBottom: "1px solid",
-          borderColor: alpha(theme.palette.primary.main, 0.12),
+          borderColor: theme.palette.divider,
           "& .MuiTab-root": {
-            minHeight: 56,
-            fontWeight: 700,
+            minHeight: 40,
+            fontWeight: 600,
             color: "text.secondary",
           },
           "& .Mui-selected": {
@@ -1075,7 +1065,7 @@ export default function AgentModal({ agent, onClose }: Props) {
         {tab === 0 && (
           <Stack spacing={3}>
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Identidade do agente
               </Typography>
               <Box
@@ -1138,7 +1128,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             </Box>
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Configuração do modelo
               </Typography>
               <Box
@@ -1274,7 +1264,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             )}
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Modo de atuação
               </Typography>
               <Box
@@ -1300,7 +1290,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   <Stack spacing={1.5}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
                       <Box>
-                        <Typography sx={{ fontWeight: 800 }}>Receptivo</Typography>
+                        <Typography sx={{ fontWeight: 600 }}>Receptivo</Typography>
                         <Typography variant="body2" color="text.secondary">
                           Entra em conversas iniciadas pelo cliente com base em gatilhos de mensagem.
                         </Typography>
@@ -1348,7 +1338,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   <Stack spacing={1.5}>
                     <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
                       <Box>
-                        <Typography sx={{ fontWeight: 800 }}>Prospecção ativa</Typography>
+                        <Typography sx={{ fontWeight: 600 }}>Prospecção ativa</Typography>
                         <Typography variant="body2" color="text.secondary">
                           Agenda rodadas recorrentes para iniciar conversas de forma automática.
                         </Typography>
@@ -1383,7 +1373,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             </Box>
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Receptivo: gatilhos de entrada
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1604,7 +1594,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             </Box>
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Prospecção ativa: agenda recorrente
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1774,7 +1764,7 @@ export default function AgentModal({ agent, onClose }: Props) {
         {tab === 2 && (
           <Stack spacing={3}>
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Permissões do agente
               </Typography>
               <FormGroup>
@@ -1829,7 +1819,7 @@ export default function AgentModal({ agent, onClose }: Props) {
 
             {(form.allowedActions.includes("SEND_TEMPLATE") || proactiveNeedsTemplate) && (
               <Box sx={surfaceSx}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                   Configuração de template WABA
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1893,7 +1883,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                       py: 1.25,
                     }}
                   >
-                    <Typography variant="caption" sx={{ display: "block", fontWeight: 800, mb: 1, color: "text.secondary" }}>
+                    <Typography variant="caption" sx={{ display: "block", fontWeight: 600, mb: 1, color: "text.secondary" }}>
                       Prévia do template {selectedTemplate.language ? `• ${selectedTemplate.language}` : ""}
                     </Typography>
                     {selectedTemplatePreview.split("\n").map((line, index) => (
@@ -1908,7 +1898,7 @@ export default function AgentModal({ agent, onClose }: Props) {
 
             {form.allowedActions.includes("ESCALATE") && (
               <Box sx={surfaceSx}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                   Destino da transferência
                 </Typography>
                 <Stack spacing={2}>
@@ -1972,7 +1962,7 @@ export default function AgentModal({ agent, onClose }: Props) {
           <Stack spacing={3}>
             <Box sx={surfaceSx}>
               <Stack spacing={1.5}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                   Escopo de atendimento
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -1997,7 +1987,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             </Box>
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Tags automáticas de perfil
               </Typography>
               <Box
@@ -2094,7 +2084,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             </Box>
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Filtros de CRM
               </Typography>
               <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
@@ -2243,7 +2233,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                   spacing={1.5}
                 >
                   <Box>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                       Prévia do público
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
@@ -2294,7 +2284,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                               gap: 1.5,
                               borderRadius: 2.5,
                               border: "1px solid",
-                              borderColor: alpha(theme.palette.primary.main, 0.12),
+                              borderColor: theme.palette.divider,
                               bgcolor: alpha(theme.palette.primary.main, 0.03),
                               px: 1.5,
                               py: 1.25,
@@ -2348,7 +2338,7 @@ export default function AgentModal({ agent, onClose }: Props) {
         {tab === knowledgeTabIndex && isEdit && (
           <Stack spacing={3}>
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Base de conhecimento
               </Typography>
               {(currentAgent?.knowledgeEntries.length ?? 0) === 0 && (
@@ -2367,7 +2357,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                       gap: 1,
                       borderRadius: 2.5,
                       border: "1px solid",
-                      borderColor: alpha(theme.palette.primary.main, 0.12),
+                      borderColor: theme.palette.divider,
                       bgcolor: alpha(theme.palette.primary.main, 0.03),
                       px: 1.5,
                       py: 1.25,
@@ -2417,7 +2407,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                       )}
                     </Box>
                     <Tooltip title="Remover entrada">
-                      <IconButton
+                      <IconButton aria-label="Remover entrada"
                         size="small"
                         color="error"
                         onClick={() => deleteKnowledgeEntry(currentAgent.id, entry.id)}
@@ -2431,7 +2421,7 @@ export default function AgentModal({ agent, onClose }: Props) {
             </Box>
 
             <Box sx={surfaceSx}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
                 Adicionar entrada
               </Typography>
               <Stack spacing={2}>
@@ -2467,19 +2457,21 @@ export default function AgentModal({ agent, onClose }: Props) {
       </DialogContent>
 
       {tab !== knowledgeTabIndex && (
-        <Box
+        <Box className="ip-crud-form-footer"
           sx={{
             display: "flex",
+            flexWrap: "wrap",
+            minWidth: 0,
             justifyContent: "space-between",
             alignItems: "center",
             gap: 2,
             px: 3,
             py: 2,
             borderTop: "1px solid",
-            borderColor: alpha(theme.palette.primary.main, 0.12),
+            borderColor: theme.palette.divider,
           }}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{display:{xs:"none",sm:"block"},minWidth:0,flex:"1 1 260px"}}>
             {tab === 1
               ? "Ative ao menos um modo. O receptivo depende de gatilhos; a prospecção ativa depende da agenda recorrente configurada."
               : tab === 3
@@ -2487,7 +2479,7 @@ export default function AgentModal({ agent, onClose }: Props) {
                 : "Campos obrigatórios: nome, prompt do sistema, ao menos uma ação permitida e um modo de atuação ativo."}
           </Typography>
 
-          <Stack direction="row" spacing={1.5}>
+          <Stack direction="row" spacing={1.5} sx={{flexShrink:0,marginLeft:"auto"}}>
             <Button onClick={onClose} color="inherit">
               Cancelar
             </Button>

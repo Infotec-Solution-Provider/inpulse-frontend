@@ -6,7 +6,9 @@ import { PilotDesignProvider } from "./provider";
 export function CrmDialog({ children, ...props }: DialogProps) {
   return (
     <MuiDialog {...props}>
-      <PilotDesignProvider style={{ display: "contents" }}>{children}</PilotDesignProvider>
+      <PilotDesignProvider className="ip-crud-dialog" style={{ display: "contents" }}>
+        {children}
+      </PilotDesignProvider>
     </MuiDialog>
   );
 }

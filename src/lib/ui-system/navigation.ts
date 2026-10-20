@@ -338,6 +338,14 @@ export function activeNavigationPath(
 
 export function isModernCrmPath(pathname: string): boolean {
   const route = pathname.split("?")[0].split("/").filter(Boolean)[1];
+  if (route === "tools" && pathname.split("/").filter(Boolean)[2] === "mass-messages") return true;
+  if (
+    route === "reports" &&
+    ["metrics", "dashboards", "report-generator", "generated"].includes(
+      pathname.split("/").filter(Boolean)[2],
+    )
+  )
+    return true;
   return [
     "monitor",
     "customers",
@@ -351,6 +359,19 @@ export function isModernCrmPath(pathname: string): boolean {
     "crm-results",
     "crm-exceptions",
     "crm-ordering",
+    "contacts",
+    "internal-groups",
+    "ready-messages",
+    "auto-response",
+    "whatsapp-senders",
+    "contact-requests",
+    "parameters",
+    "sip-config",
+    "wallets",
+    "ai-agents",
+    "ai-settings",
+    "channels",
+    "funnel",
   ].includes(route);
 }
 

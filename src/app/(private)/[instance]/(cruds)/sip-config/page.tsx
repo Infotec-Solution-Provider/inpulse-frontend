@@ -1,5 +1,6 @@
 "use client";
 
+import { CrmPage, OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import { useAuthContext } from "@/app/auth-context";
 import { WebrtcSettingsForm } from "@/lib/telephony/webrtc-settings-form";
 import usersService, {
@@ -7,8 +8,8 @@ import usersService, {
   UpsertGlobalSipConfigPayload,
 } from "@/lib/services/users.service";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import SaveIcon from "@mui/icons-material/Save";
-import SettingsPhoneIcon from "@mui/icons-material/SettingsPhone";
+import { Save as SaveIcon } from "@/lib/ui-system/crm-icons";
+import { SettingsPhone as SettingsPhoneIcon } from "@/lib/ui-system/crm-icons";
 import {
   Button,
   CircularProgress,
@@ -213,7 +214,7 @@ export default function SipConfigPage() {
             }
             disabled={isLoading || isSaving}
             fullWidth
-            className="bg-white dark:bg-slate-700"
+            className="bg-[var(--ip-surface)]"
           />
         ))}
     </div>
@@ -247,29 +248,19 @@ export default function SipConfigPage() {
   );
 
   return (
-    <div className="flex min-h-full w-full flex-col gap-6 bg-slate-50 px-4 py-5 md:px-8 dark:bg-slate-900/40">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
-            <SettingsPhoneIcon sx={{ fontSize: 16 }} />
-            SIP global
-          </div>
-          <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            Configuração global de SIP
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-300">
-            Configure a central telefônica da empresa. As credenciais por operador ficam na tela de
-            usuários.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <Button
-            variant="outlined"
+    <CrmPage
+      title="Configuração SIP"
+      description="Configure a central telefônica da empresa. As credenciais por operador ficam no cadastro de usuários."
+      breadcrumbs={[{ label: "Configurações" }, { label: "Configuração SIP" }]}
+      actions={
+        <>
+          <OperationalIconButton
+            label="Atualizar"
             onClick={() => void loadData()}
             disabled={isLoading || isSaving}
           >
-            Atualizar
-          </Button>
+            <UiIcon name="refresh" scale="toolbar" />
+          </OperationalIconButton>
           <Button
             variant="contained"
             startIcon={<SaveIcon />}
@@ -278,25 +269,25 @@ export default function SipConfigPage() {
           >
             Salvar
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <WebrtcSettingsForm />
 
       {isLoading ? (
-        <Paper className="border border-slate-200 dark:border-slate-700">
+        <Paper className="border border-[var(--ip-border)]">
           <div className="flex items-center justify-center py-20">
             <CircularProgress size={28} />
           </div>
         </Paper>
       ) : (
         <div className="grid gap-5 xl:grid-cols-2">
-          <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
+          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+              <h2 className="text-lg font-semibold text-[var(--ip-text)]">
                 Conectividade SIP / Asterisk
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
+              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
                 Dados principais de conexão e autenticação com a infraestrutura de telefonia.
               </p>
             </div>
@@ -309,24 +300,24 @@ export default function SipConfigPage() {
             ])}
           </Paper>
 
-          <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
+          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+              <h2 className="text-lg font-semibold text-[var(--ip-text)]">
                 Dispositivos e roteamento
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
+              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
                 Defina os devices usados para entrada, saída e toque das chamadas.
               </p>
             </div>
             {renderTextFields(["CALL_IN_DEVICE", "CALL_OUT_DEVICE", "RING_DEVICE"])}
           </Paper>
 
-          <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
+          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+              <h2 className="text-lg font-semibold text-[var(--ip-text)]">
                 Comportamento da chamada
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
+              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
                 Controle flags globais de experiência, discagem imediata e gravação.
               </p>
             </div>
@@ -338,24 +329,20 @@ export default function SipConfigPage() {
             ])}
           </Paper>
 
-          <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800">
+          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                Integração Telnet
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
+              <h2 className="text-lg font-semibold text-[var(--ip-text)]">Integração Telnet</h2>
+              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
                 Parâmetros auxiliares usados em integrações legadas de telefonia.
               </p>
             </div>
             {renderTextFields(["IP_TELNET", "PORTA_TELNET", "USUARIO_TELNET", "SENHA_TELNET"])}
           </Paper>
 
-          <Paper className="border border-slate-200 p-6 dark:border-slate-700 dark:bg-slate-800 xl:col-span-2">
+          <Paper className="border border-[var(--ip-border)] bg-[var(--ip-surface)] p-6 xl:col-span-2">
             <div className="mb-5">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                Pausa de ramal
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-300">
+              <h2 className="text-lg font-semibold text-[var(--ip-text)]">Pausa de ramal</h2>
+              <p className="text-sm text-[var(--ip-muted)] text-[var(--ip-text)]">
                 Configura a pausa automática de ramal e os códigos usados para pausa e retorno.
               </p>
             </div>
@@ -364,6 +351,6 @@ export default function SipConfigPage() {
           </Paper>
         </div>
       )}
-    </div>
+    </CrmPage>
   );
 }

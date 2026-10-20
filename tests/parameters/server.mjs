@@ -21,6 +21,7 @@ const server = await createServer({
       name: "isolated-parameters",
       enforce: "pre",
       resolveId(source) {
+        if (source === "next/link") return "\0fixture:next-link";
         if (source in stubs) return `\0parameters:${source}`;
         if (source.endsWith("/auth-context")) return "\0parameters:@/app/auth-context";
         if (source.endsWith("/sdk-local")) return "\0parameters:@/lib/sdk-local";
@@ -29,6 +30,8 @@ const server = await createServer({
         if (source.endsWith("/whatsapp-context")) return "\0parameters:whatsapp";
       },
       load(id) {
+        if (id === "\0fixture:next-link")
+          return "export {TestLink as default} from '/tests/monitor/navigation-doubles.tsx'";
         if (id === "\0parameters:whatsapp")
           return `export { useWhatsappContext } from '${doubles}'`;
         if (id.startsWith("\0parameters:")) return stubs[id.slice("\0parameters:".length)];

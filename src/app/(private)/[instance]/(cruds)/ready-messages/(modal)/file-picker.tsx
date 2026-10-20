@@ -1,10 +1,10 @@
 import { Button, IconButton, Typography } from "@mui/material";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import CloseIcon from "@mui/icons-material/Close";
-import ImageIcon from "@mui/icons-material/Image";
-import VideoFileIcon from "@mui/icons-material/VideoFile";
-import AudioFileIcon from "@mui/icons-material/AudioFile";
-import DescriptionIcon from "@mui/icons-material/Description";
+import { AttachFile as AttachFileIcon } from "@/lib/ui-system/crm-icons";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
+import { Image as ImageIcon } from "@/lib/ui-system/crm-icons";
+import { VideoFile as VideoFileIcon } from "@/lib/ui-system/crm-icons";
+import { AudioFile as AudioFileIcon } from "@/lib/ui-system/crm-icons";
+import { Description as DescriptionIcon } from "@/lib/ui-system/crm-icons";
 import { useRef, useState } from "react";
 
 interface FilePickerProps {
@@ -33,9 +33,15 @@ const getFileTypeFromUrl = (url: string): "image" | "video" | "audio" | "documen
 };
 
 // Componente de ícone do tipo de arquivo
-const FileTypeIcon = ({ fileType, size = "medium" }: { fileType: "image" | "video" | "audio" | "document"; size?: "small" | "medium" | "large" }) => {
+const FileTypeIcon = ({
+  fileType,
+  size = "medium",
+}: {
+  fileType: "image" | "video" | "audio" | "document";
+  size?: "small" | "medium" | "large";
+}) => {
   const iconProps = { fontSize: size };
-  
+
   switch (fileType) {
     case "image":
       return <ImageIcon className="text-green-500" {...iconProps} />;
@@ -48,7 +54,11 @@ const FileTypeIcon = ({ fileType, size = "medium" }: { fileType: "image" | "vide
   }
 };
 
-export default function FilePicker({ selectedFile, onChangeFile, existingFilePreview }: FilePickerProps) {
+export default function FilePicker({
+  selectedFile,
+  onChangeFile,
+  existingFilePreview,
+}: FilePickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
 
@@ -95,16 +105,9 @@ export default function FilePicker({ selectedFile, onChangeFile, existingFilePre
           {/* Ícone ou preview do arquivo */}
           <div className="flex h-8 w-8 items-center justify-center">
             {displayFileType === "image" && displayPreview ? (
-              <img
-                src={displayPreview}
-                alt="Preview"
-                className="h-8 w-8 rounded object-cover"
-              />
+              <img src={displayPreview} alt="Preview" className="h-8 w-8 rounded object-cover" />
             ) : displayFileType === "video" && displayPreview ? (
-              <video
-                src={displayPreview}
-                className="h-8 w-8 rounded object-cover"
-              />
+              <video src={displayPreview} className="h-8 w-8 rounded object-cover" />
             ) : displayFileType ? (
               <FileTypeIcon fileType={displayFileType} size="small" />
             ) : null}
@@ -122,6 +125,7 @@ export default function FilePicker({ selectedFile, onChangeFile, existingFilePre
 
           {/* Botão de remover */}
           <IconButton
+            aria-label="Remover arquivo"
             size="small"
             onClick={handleRemoveFile}
             className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
@@ -132,12 +136,7 @@ export default function FilePicker({ selectedFile, onChangeFile, existingFilePre
         </div>
       )}
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        hidden
-        onChange={handleFileChange}
-      />
+      <input ref={fileInputRef} type="file" hidden onChange={handleFileChange} />
     </div>
   );
 }

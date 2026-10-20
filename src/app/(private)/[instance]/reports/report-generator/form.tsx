@@ -1,10 +1,10 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 
-import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import { FileDownload as FileDownloadIcon } from "@/lib/ui-system/crm-icons";
 import {
   Button,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,

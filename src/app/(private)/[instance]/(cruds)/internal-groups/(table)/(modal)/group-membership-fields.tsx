@@ -1,4 +1,4 @@
-import { Groups, PersonAdd, PersonRemove, WhatsApp } from "@mui/icons-material";
+import { Groups, PersonAdd, PersonRemove, WhatsApp } from "@/lib/ui-system/crm-icons";
 import { Autocomplete, IconButton, List, ListItem, ListItemText, TextField } from "@mui/material";
 import { WhatsappGroup } from "@/lib/sdk-local";
 
@@ -46,16 +46,16 @@ export default function GroupMembershipFields({
 }: GroupMembershipFieldsProps) {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <section className="flex min-h-[25rem] flex-col overflow-hidden rounded-xl border border-indigo-200 bg-indigo-50/40 dark:border-indigo-900 dark:bg-indigo-950/20">
-        <header className="border-b border-indigo-200 bg-indigo-100/60 px-4 py-3 dark:border-indigo-900 dark:bg-indigo-950/40">
-          <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300">
+      <section className="flex min-h-[25rem] flex-col overflow-hidden rounded-xl border border-[var(--ip-border)] bg-[var(--ip-surface-muted)]">
+        <header className="border-b border-[var(--ip-border)] bg-[var(--ip-surface-muted)] px-4 py-3">
+          <div className="flex items-center gap-2 text-[var(--ip-text)]">
             <Groups fontSize="small" />
             <h2 className="font-semibold">Usuários do sistema</h2>
-            <span className="ml-auto rounded-full bg-indigo-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+            <span className="ml-auto rounded-full bg-[var(--ip-surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--ip-text)]">
               {participants.length}
             </span>
           </div>
-          <p className="mt-1 text-xs text-indigo-700/80 dark:text-indigo-300/80">
+          <p className="mt-1 text-xs text-[var(--ip-text)]">
             Pessoas com acesso a esta conversa dentro do InPulse.
           </p>
         </header>
@@ -94,7 +94,7 @@ export default function GroupMembershipFields({
             </IconButton>
           </div>
 
-          <div className="scrollbar-whatsapp max-h-64 flex-1 overflow-y-auto rounded-lg border border-indigo-100 bg-white dark:border-indigo-900/70 dark:bg-slate-800">
+          <div className="scrollbar-whatsapp max-h-64 flex-1 overflow-y-auto rounded-lg border border-[var(--ip-border)] bg-white dark:bg-slate-800">
             <List dense disablePadding>
               {participants.length === 0 ? (
                 <li className="flex min-h-40 items-center justify-center px-6 text-center text-sm text-slate-500 dark:text-slate-400">
@@ -139,7 +139,7 @@ export default function GroupMembershipFields({
           <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
             <WhatsApp fontSize="small" />
             <h2 className="font-semibold">Membros do WhatsApp</h2>
-            <span className="ml-auto rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+            <span className="ml-auto rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-[var(--ip-text)]">
               Vínculo opcional
             </span>
           </div>

@@ -1,28 +1,29 @@
-'use client';
+"use client";
+import { CrmPage, CrmFilters, CrmTableHead, useCrmQueryState } from "@/lib/ui-system";
 
-import { useEffect, useState } from 'react';
-import { getMetrics, deleteMetric } from '@/lib/reports/api';
-import { Metric } from '@/types/reports';
-import { useParams, useRouter } from 'next/navigation';
-import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import CircularProgress from '@mui/material/CircularProgress';
-import Table from '@mui/material/Table';
-import TableHead from '@mui/material/TableHead';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { useEffect, useState } from "react";
+import { getMetrics, deleteMetric } from "@/lib/reports/api";
+import { Metric } from "@/types/reports";
+import { useParams, useRouter } from "next/navigation";
+import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import IconButton from "@mui/material/IconButton";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
+import { Add as AddIcon } from "@/lib/ui-system/crm-icons";
+import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
 
 const VIZ_LABELS: Record<string, string> = {
-  bar: 'Barra',
-  line: 'Linha',
-  pie: 'Pizza',
-  table: 'Tabela',
-  card: 'Card',
+  bar: "Barra",
+  line: "Linha",
+  pie: "Pizza",
+  table: "Tabela",
+  card: "Card",
 };
 
 export default function MetricsPage() {
@@ -38,73 +39,83 @@ export default function MetricsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Remover esta métrica?')) return;
+    if (!confirm("Remover esta métrica?")) return;
     await deleteMetric(id).catch(() => null);
     setMetrics((prev) => prev.filter((m) => m.id !== id));
   };
 
+  const [filters, setFilters] = useCrmQueryState<Record<string, string>>("report-metrics-list", {});
+  const filtered = metrics.filter(
+    (metric) =>
+      !filters.name || metric.name.toLocaleLowerCase().includes(filters.name.toLocaleLowerCase()),
+  );
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <Typography variant="h5" fontWeight={700}>Métricas</Typography>
+    <CrmPage
+      title="Métricas"
+      description="Organize as definições de métricas dos relatórios."
+      count={loading ? undefined : filtered.length}
+      breadcrumbs={[{ label: "Relatórios" }, { label: "Métricas" }]}
+      actions={
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => router.push(`/${instance}/reports/metrics/new`)}
         >
-          Nova Métrica
+          Nova métrica
         </Button>
-      </div>
-
+      }
+    >
+      <CrmFilters
+        fields={[{ key: "name", label: "Nome" }]}
+        values={filters}
+        onApply={setFilters}
+        onRefresh={() => void load()}
+        loading={loading}
+      />
       {loading ? (
-        <div className="flex justify-center mt-16"><CircularProgress /></div>
-      ) : metrics.length === 0 ? (
-        <div className="flex justify-center mt-16 text-gray-400">
-          <Typography>Nenhuma métrica criada ainda.</Typography>
+        <div className="ip-crud-state">
+          <CircularProgress size={24} />
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="ip-crud-record ip-crud-state">Nenhuma métrica encontrada.</div>
       ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nome</TableCell>
-              <TableCell>Tabela</TableCell>
-              <TableCell>Agregação</TableCell>
-              <TableCell>Coluna</TableCell>
-              <TableCell>Visualização</TableCell>
-              <TableCell align="right">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {metrics.map((m) => (
-              <TableRow key={m.id} hover>
-                <TableCell>{m.name}</TableCell>
-                <TableCell><code>{m.tableName}</code></TableCell>
-                <TableCell>{m.aggregation.toUpperCase()}</TableCell>
-                <TableCell>{m.column}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={VIZ_LABELS[m.visualizationType] ?? m.visualizationType}
-                    size="small"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => handleDelete(m.id)}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <div className="ip-crud-table">
+          <Table>
+            <CrmTableHead
+              labels={["Nome", "Tabela", "Agregação", "Coluna", "Visualização", "Ações"]}
+            />
+            <TableBody>
+              {filtered.map((m) => (
+                <TableRow key={m.id} hover>
+                  <TableCell data-label="Nome">{m.name}</TableCell>
+                  <TableCell data-label="Tabela">
+                    <code>{m.tableName}</code>
+                  </TableCell>
+                  <TableCell data-label="Agregação">{m.aggregation.toUpperCase()}</TableCell>
+                  <TableCell data-label="Coluna">{m.column}</TableCell>
+                  <TableCell data-label="Visualização">
+                    <Chip
+                      label={VIZ_LABELS[m.visualizationType] ?? m.visualizationType}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </TableCell>
+                  <TableCell data-label="Ações" align="right">
+                    <Button color="error" onClick={() => void handleDelete(m.id)}>
+                      Excluir
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
-    </div>
+    </CrmPage>
   );
 }

@@ -15,8 +15,8 @@ import {
   summarizeAgentError,
 } from "@/lib/utils/ai-agent-labels";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
-import CloseIcon from "@mui/icons-material/Close";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import { Close as CloseIcon } from "@/lib/ui-system/crm-icons";
+import { Refresh as RefreshIcon } from "@/lib/ui-system/crm-icons";
 import {
   Box,
   Chip,
@@ -116,7 +116,14 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
         },
       }}
     >
-      <Box sx={{ px: 3, py: 2.5, borderBottom: "1px solid", borderColor: alpha(theme.palette.divider, 0.8) }}>
+      <Box
+        sx={{
+          px: 3,
+          py: 2.5,
+          borderBottom: "1px solid",
+          borderColor: alpha(theme.palette.divider, 0.8),
+        }}
+      >
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800 }}>
@@ -129,11 +136,11 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
 
           <Stack direction="row" spacing={0.5}>
             <Tooltip title="Atualizar">
-              <IconButton size="small" onClick={load} disabled={loading}>
+              <IconButton aria-label="Atualizar" size="small" onClick={load} disabled={loading}>
                 <RefreshIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <IconButton size="small" onClick={onClose}>
+            <IconButton aria-label="Fechar" size="small" onClick={onClose}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Stack>
@@ -214,11 +221,19 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                         variant="outlined"
                       />
                     </Stack>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 1 }}
+                    >
                       Iniciada em {formatAiDateTime(getSessionStartedAt(session))}
                     </Typography>
                     {session.lastRepliedAt && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: "block" }}
+                      >
                         Última resposta em {formatAiDateTime(session.lastRepliedAt)}
                       </Typography>
                     )}
@@ -231,11 +246,21 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
           <Divider />
 
           <Box>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5} sx={{ mb: 1.5 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              spacing={1.5}
+              sx={{ mb: 1.5 }}
+            >
               <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
                 Últimas ações
               </Typography>
-              <Chip size="small" label={`${summary.proactiveCount} de prospecção ativa`} variant="outlined" />
+              <Chip
+                size="small"
+                label={`${summary.proactiveCount} de prospecção ativa`}
+                variant="outlined"
+              />
             </Stack>
 
             {loading && logs.length === 0 ? (
@@ -272,7 +297,12 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                         py: 1.25,
                       }}
                     >
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="flex-start"
+                        spacing={1.5}
+                      >
                         <Box>
                           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                             <Chip
@@ -297,7 +327,11 @@ export default function AgentAuditDrawer({ agent, onClose }: Props) {
                       </Stack>
 
                       {payloadSummary && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25, whiteSpace: "pre-wrap" }}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 1.25, whiteSpace: "pre-wrap" }}
+                        >
                           {payloadSummary}
                         </Typography>
                       )}

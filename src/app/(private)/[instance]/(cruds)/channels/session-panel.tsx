@@ -1,21 +1,23 @@
 "use client";
+import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 
+
+import { CrmPage, OperationalIconButton } from "@/lib/ui-system";
 import { AuthContext } from "@/app/auth-context";
 import { AppContext } from "@/app/(private)/[instance]/app-context";
 import { SocketContext } from "@/app/(private)/[instance]/socket-context";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { SocketEventType, WWEBJSSessionStatusEventData } from "@/lib/sdk-local";
-import HistoryIcon from "@mui/icons-material/History";
-import QrCode2Icon from "@mui/icons-material/QrCode2";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import RestartAltIcon from "@mui/icons-material/RestartAlt";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import { History as HistoryIcon } from "@/lib/ui-system/crm-icons";
+import { QrCode2 as QrCode2Icon } from "@/lib/ui-system/crm-icons";
+import { Refresh as RefreshIcon } from "@/lib/ui-system/crm-icons";
+import { RestartAlt as RestartAltIcon } from "@/lib/ui-system/crm-icons";
+import { VpnKey as VpnKeyIcon } from "@/lib/ui-system/crm-icons";
 import {
   Alert,
   Button,
   Chip,
   CircularProgress,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -354,14 +356,14 @@ export default function ChannelSessionPanel() {
       <div className="flex min-w-[132px] justify-end gap-1">
         <Tooltip title="Saúde do canal e histórico de 24 horas">
           <span>
-            <IconButton size="small" onClick={() => void showDetails(channel)}>
+            <IconButton aria-label="Saúde do canal e histórico de 24 horas" size="small" onClick={() => void showDetails(channel)}>
               <HistoryIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title="Reiniciar sessão">
           <span>
-            <IconButton
+            <IconButton aria-label="Reiniciar sessão"
               size="small"
               disabled={busy}
               onClick={() => setConfirmAction({ channel, action: "restart" })}
@@ -372,7 +374,7 @@ export default function ChannelSessionPanel() {
         </Tooltip>
         <Tooltip title="Gerar novo QR">
           <span>
-            <IconButton
+            <IconButton aria-label="Gerar novo QR"
               size="small"
               color="error"
               disabled={busy}
@@ -385,7 +387,7 @@ export default function ChannelSessionPanel() {
         {channel.monitorRole === "PRIMARY" && channel.monitorGroupId && (
           <Tooltip title="Autenticar grupo, uma sessão por vez">
             <span>
-              <IconButton
+              <IconButton aria-label="Autenticar grupo, uma sessão por vez"
                 size="small"
                 color="primary"
                 disabled={busy}
@@ -401,27 +403,7 @@ export default function ChannelSessionPanel() {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-950 dark:bg-gray-950 dark:text-slate-100">
-      <div className="mx-auto w-full max-w-[1480px] px-4 py-6 md:px-8">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-4 dark:border-slate-700">
-          <div>
-            <h1 className="text-2xl font-semibold">Canais WhatsApp</h1>
-            <p
-              className="mt-1 text-sm text-slate-600 dark:text-slate-300"
-              title={formatDate(newestObservation)}
-            >
-              Última atualização: {relativeTime(newestObservation, now)}
-            </p>
-          </div>
-          <Tooltip title="Atualizar canais">
-            <span>
-              <IconButton onClick={() => void loadChannels()} disabled={loading}>
-                <RefreshIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
-        </div>
-
+    <CrmPage title="Canais WhatsApp" description={`Última atualização: ${relativeTime(newestObservation, now)}`} count={loading ? undefined : channels.length} breadcrumbs={[{label:"Canais WhatsApp"}]} actions={<OperationalIconButton label="Atualizar canais" onClick={()=>void loadChannels()} disabled={loading}><RefreshIcon /></OperationalIconButton>}>
         {error && (
           <Alert severity="warning" className="mb-4">
             {error}. Os últimos dados permanecem visíveis.
@@ -438,12 +420,12 @@ export default function ChannelSessionPanel() {
             {channels.map((channel) => (
               <article
                 key={channel.id}
-                className="rounded-md border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-gray-900"
+                className="rounded-md border border-[var(--ip-border)] bg-[var(--ip-surface)] p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="font-semibold">{channel.name}</h2>
-                    <p className="text-sm text-slate-500">{channel.phone || "Sem telefone"}</p>
+                    <p className="text-sm text-[var(--ip-muted)]">{channel.phone || "Sem telefone"}</p>
                   </div>
                   {actions(channel)}
                 </div>
@@ -459,16 +441,16 @@ export default function ChannelSessionPanel() {
                 />
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-slate-500">Conexão</span>
+                    <span className="text-[var(--ip-muted)]">Conexão</span>
                     <p>{duration(channel.connectedUptimeSeconds)}</p>
                   </div>
                   <div>
-                    <span className="text-slate-500">Quedas em 24h</span>
+                    <span className="text-[var(--ip-muted)]">Quedas em 24h</span>
                     <p>{channel.disconnections24h}</p>
                   </div>
                 </div>
                 <p
-                  className="mt-3 text-xs text-slate-500"
+                  className="mt-3 text-xs text-[var(--ip-muted)]"
                   title={formatDate(channel.snapshot?.lastObservedAt)}
                 >
                   Atualizado {relativeTime(channel.snapshot?.lastObservedAt, now)}
@@ -477,7 +459,7 @@ export default function ChannelSessionPanel() {
             ))}
           </div>
         ) : (
-          <TableContainer className="rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-gray-900">
+          <TableContainer className="ip-crud-table">
             <Table stickyHeader sx={{ minWidth: 980 }}>
               <TableHead>
                 <TableRow>
@@ -499,7 +481,7 @@ export default function ChannelSessionPanel() {
                     <TableRow key={channel.id} hover>
                       <TableCell>
                         <strong>{channel.name}</strong>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-[var(--ip-muted)]">
                           {channel.phone || "Sem telefone"}
                         </div>
                       </TableCell>
@@ -539,7 +521,6 @@ export default function ChannelSessionPanel() {
             </Table>
           </TableContainer>
         )}
-      </div>
 
       <Dialog open={!!confirmAction} onClose={() => setConfirmAction(null)} maxWidth="xs" fullWidth>
         <DialogTitle>
@@ -561,7 +542,7 @@ export default function ChannelSessionPanel() {
           </Button>
         </DialogActions>
       </Dialog>
-    </div>
+    </CrmPage>
   );
 }
 
@@ -685,11 +666,11 @@ function AuthBatchWizard({
   const qrExpired = qr ? new Date(qr.expiresAt).getTime() <= Date.now() : false;
 
   return (
-    <div className="max-h-[92dvh] w-[min(560px,94vw)] overflow-y-auto rounded-md bg-white p-5 text-slate-950 dark:bg-gray-900 dark:text-slate-100">
+    <div className="max-h-[92dvh] w-[min(560px,94vw)] overflow-y-auto rounded-md bg-[var(--ip-surface)] p-5 text-[var(--ip-text)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">Autenticar grupo</h2>
-          <p className="text-sm text-slate-500">{batch?.groupName || channel.monitorGroupId}</p>
+          <p className="text-sm text-[var(--ip-muted)]">{batch?.groupName || channel.monitorGroupId}</p>
         </div>
         <Button onClick={onClose}>Fechar</Button>
       </div>
@@ -712,12 +693,12 @@ function AuthBatchWizard({
         {batch?.items.map((item) => (
           <div
             key={item.id}
-            className={`rounded border p-3 ${item.id === current?.id ? "border-blue-500" : "border-slate-200 dark:border-slate-700"}`}
+            className={`rounded border p-3 ${item.id === current?.id ? "border-blue-500" : "border-[var(--ip-border)] border-[var(--ip-border)]"}`}
           >
             <div className="flex items-center justify-between gap-3">
               <div>
                 <strong>{item.instance}</strong>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--ip-muted)]">
                   {item.library} · {item.role}
                 </p>
               </div>
@@ -747,7 +728,7 @@ function AuthBatchWizard({
           <p className="text-center text-sm font-medium">
             Leia o QR de {current.instance} ({current.role})
           </p>
-          <div className="mx-auto my-4 flex aspect-square w-[min(380px,80vw)] items-center justify-center bg-white p-3">
+          <div className="mx-auto my-4 flex aspect-square w-[min(380px,80vw)] items-center justify-center bg-[var(--ip-surface)] p-3">
             {qr && !qrExpired ? (
               <QRCodeSVG value={qr.qr} className="h-full w-full" />
             ) : qrExpired ? (
@@ -788,11 +769,11 @@ function AuthBatchWizard({
 
 function SessionDetail({ channel, onClose }: { channel: ChannelSession; onClose: () => void }) {
   return (
-    <div className="max-h-[85dvh] w-[min(720px,92vw)] overflow-y-auto rounded-md bg-white p-5 text-slate-950 dark:bg-gray-900 dark:text-slate-100">
+    <div className="max-h-[85dvh] w-[min(720px,92vw)] overflow-y-auto rounded-md bg-[var(--ip-surface)] p-5 text-[var(--ip-text)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">{channel.name}</h2>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-[var(--ip-muted)]">
             Saúde atual e mensagens dos últimos 15 minutos · histórico de quedas: 24 horas
           </p>
         </div>
@@ -805,17 +786,17 @@ function SessionDetail({ channel, onClose }: { channel: ChannelSession; onClose:
         now={Date.now()}
         detailed
       />
-      <div className="my-5 grid gap-3 border-y border-slate-200 py-4 dark:border-slate-700 sm:grid-cols-3">
+      <div className="my-5 grid gap-3 border-y border-[var(--ip-border)] py-4 sm:grid-cols-3">
         <div>
-          <span className="text-xs text-slate-500">Processo iniciado</span>
+          <span className="text-xs text-[var(--ip-muted)]">Processo iniciado</span>
           <p className="text-sm">{formatDate(channel.snapshot?.processStartedAt)}</p>
         </div>
         <div>
-          <span className="text-xs text-slate-500">Última conexão</span>
+          <span className="text-xs text-[var(--ip-muted)]">Última conexão</span>
           <p className="text-sm">{formatDate(channel.snapshot?.lastConnectedAt)}</p>
         </div>
         <div>
-          <span className="text-xs text-slate-500">Última desconexão</span>
+          <span className="text-xs text-[var(--ip-muted)]">Última desconexão</span>
           <p className="text-sm">{formatDate(channel.snapshot?.lastDisconnectedAt)}</p>
         </div>
       </div>
@@ -832,7 +813,7 @@ function SessionDetail({ channel, onClose }: { channel: ChannelSession; onClose:
           ))}
         </List>
       ) : (
-        <p className="mt-3 text-sm text-slate-500">
+        <p className="mt-3 text-sm text-[var(--ip-muted)]">
           Nenhuma transição registrada nas últimas 24 horas.
         </p>
       )}
@@ -888,16 +869,16 @@ function SessionQr({
   }, [api, channel.id, channel.name, onClose]);
 
   return (
-    <div className="w-[min(440px,92vw)] rounded-md bg-white p-5 text-center text-slate-950 dark:bg-gray-900 dark:text-slate-100">
+    <div className="w-[min(440px,92vw)] rounded-md bg-[var(--ip-surface)] p-5 text-center text-[var(--ip-text)]">
       <h2 className="text-xl font-semibold">{channel.name}</h2>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-[var(--ip-muted)]">
         {state === "QR_PENDING"
           ? "Aguardando leitura"
           : state === "CONNECTED"
             ? "Conectado"
             : "Preparando sessão"}
       </p>
-      <div className="my-5 flex aspect-square w-full items-center justify-center bg-white p-3">
+      <div className="my-5 flex aspect-square w-full items-center justify-center bg-[var(--ip-surface)] p-3">
         {qr && !expired ? (
           <QRCodeSVG value={qr} className="h-full w-full" />
         ) : expired ? (
