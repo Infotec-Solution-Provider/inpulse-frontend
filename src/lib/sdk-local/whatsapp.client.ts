@@ -1,5 +1,6 @@
 import FormData from "form-data";
 import ApiClient from "./api-client";
+import { authSession } from "@/lib/auth-session";
 import { RequestFilters } from "./types";
 import { DataResponse, MessageResponse } from "./types/response.types";
 import {
@@ -429,12 +430,27 @@ export default class WhatsappClient extends ApiClient {
     sectorIds?: number[] | null,
   ) {
     const url = `/api/whatsapp/contacts/${contactId}`;
+    // Pin the same identity across the link command and the ordinary edit; never replay writes.
+    const token = await authSession.tokenForRequest();
+    const config = {
+      headers: { Authorization: token ? `Bearer ${token}` : String(this.ax.defaults.headers.common["Authorization"] || "") },
+      skipAuthInjection: true,
+      skipAuthRefresh: true,
+    };
+    if (customerId != null) {
+      await this.ax.post(`/api/whatsapp/contacts/${contactId}/customer`, { customerId }, config);
+    }
     const body: Record<string, any> = {};
     if (name !== undefined) body["name"] = name;
     if (customerId !== undefined) body["customerId"] = customerId;
     if (sectorIds !== undefined) body["sectorIds"] = sectorIds;
-    const { data: res } = await this.ax.put<DataResponse<WppContact>>(url, body);
-    return res.data;
+    try {
+      const { data: res } = await this.ax.put<DataResponse<WppContact>>(url, body, config);
+      return res.data;
+    } catch (cause) {
+      if (customerId != null) throw new Error("O vínculo foi confirmado, mas não foi possível confirmar a edição. Recarregue o contato antes de tentar novamente.", { cause });
+      throw cause;
+    }
   }
 
   public async addSectorToContact(contactId: number, sectorId: number) {

@@ -13,7 +13,7 @@ import {
 import { useAuthContext } from "@/app/auth-context";
 import { Customer, WppContact } from "@/lib/sdk-local";
 import { getContactRegistrationConflict } from "@/lib/utils/contact-registration-conflict";
-import { Logger } from "@in.pulse-crm/utils";
+import { Logger, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
 import { usePathname } from "next/navigation";
@@ -154,7 +154,7 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
         }
       } catch (err) {
         Logger.error("Error updating contact", err as Error);
-        toast.error("Falha ao atualizar cliente!");
+        toast.error(sanitizeErrorMessage(err));
       }
     },
     [closeModal, token, wppApi],

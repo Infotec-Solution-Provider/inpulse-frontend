@@ -20,7 +20,7 @@ export default function EditContactModal() {
     if (!currentChat || !wppApi.current || !chat.contact) return;
     const { contact } = chat;
     try {
-      await wppApi.current.updateContact(contact.id, name, customer?.CODIGO || null);
+      await wppApi.current.updateContact(contact.id, name, contact.customerId && contact.customerId > 0 ? contact.customerId : customer?.CODIGO || null);
 
       toast.success("Contato atualizado com sucesso!");
       updateChatContact(contact.id, name, customer);
@@ -48,7 +48,8 @@ export default function EditContactModal() {
       <form className="flex flex-col gap-6">
         <TextField label="Nome" value={name} onChange={(e) => setName(e.target.value)} />
         <TextField label="Whatsapp" defaultValue={chat!.contact!.phone} disabled />
-        <SelectCustomerInput defaultValue={chat.customer} onChange={(c) => setCustomer(c)} />
+        <SelectCustomerInput defaultValue={chat.customer} onChange={(c) => setCustomer(c)} disabled={Number(chat.contact?.customerId) > 0} />
+        {Number(chat.contact?.customerId) > 0 && <p className="text-sm text-slate-500">O cliente vinculado não pode ser trocado nesta edição.</p>}
         <div className="flex items-center justify-end gap-2">
           <Button
             type="button"

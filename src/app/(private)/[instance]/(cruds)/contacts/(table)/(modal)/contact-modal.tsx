@@ -44,7 +44,7 @@ export default function ContactModal({ contact }: ContactModalProps) {
         contact.id,
         name,
         selectedSectors.map((s) => s.id),
-        selectedCustomer?.CODIGO,
+        contact.customerId && contact.customerId > 0 ? contact.customerId : selectedCustomer?.CODIGO,
       );
     } else {
       if (!phone.trim()) {
@@ -136,7 +136,9 @@ export default function ContactModal({ contact }: ContactModalProps) {
         <SelectCustomerInput
           defaultValue={selectedCustomer}
           onChange={(customer) => setSelectedCustomer(customer)}
+          disabled={isEditMode && Number(contact.customerId) > 0}
         />
+        {isEditMode && Number(contact.customerId) > 0 && <p className="text-sm text-slate-500">O cliente vinculado não pode ser trocado nesta edição.</p>}
 
         <Autocomplete
           multiple
