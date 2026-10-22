@@ -214,11 +214,13 @@ export default function CrmUserRegistrationDialog({
     } catch (failure) {
       if (!alive.current || context.current.instance !== instance || context.current.token !== auth)
         return;
-      const { status, outcome } = getCustomerSegmentsError(failure);
+      const { status, outcome, code } = getCustomerSegmentsError(failure);
       const unknown = outcome === "UNKNOWN" || status === undefined || status >= 500;
       setBlocked(status === 401 || status === 409 || status === 404 || unknown);
       setError(
-        status === 401
+        status === 409 && code === "CRM_USER_PENDING_AGENDA"
+          ? "Antes de desativar o operador, transfira os clientes com agenda CRM pendente para outro operador. Seu rascunho foi preservado."
+          : status === 401
           ? "Sua sessão expirou ou mudou. Recarregue os dados antes de continuar."
           : unknown
             ? "Não foi possível confirmar a gravação. Ela pode ter sido concluída. Confira o cadastro antes de tentar novamente."
