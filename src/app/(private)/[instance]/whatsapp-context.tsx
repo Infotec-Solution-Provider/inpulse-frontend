@@ -73,6 +73,8 @@ import {
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
+import useSessionChanges from "@/lib/hooks/use-session-changes";
+import { mergeChangedCache, mergeChangedChats, mergeChangedMessages } from "@/lib/utils/session-change-state";
 import {
   canReactToWhatsappMessage,
   MessageReactionTarget,
@@ -292,6 +294,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, []);
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
+  const refreshSyncRef = useRef<() => void>(() => {});
   useEffect(() => {
     api.current.setAuth(token || "");
     if (token) usersService.setAuth(token);
@@ -1004,19 +1007,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   );
 
   const getChats = useCallback(() => {
-    if (typeof token === "string" && token.length > 0 && api.current) {
-      api.current.setAuth(token);
-      api.current.getChatsBySession(true, true).then(({ chats, messages }) => {
-        const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-
-        setChats(detailedChats);
-        setMessages(chatsMessages);
-      });
-    } else {
-      setChats([]);
-      setMessages({});
-    }
-  }, [token, api.current]);
+    refreshSyncRef.current();
+  }, []);
 
   const startChatByContactId = useCallback(
     async (contactId: number, template?: SendTemplateData) => {
@@ -1060,21 +1052,6 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               : [];
 
           setSectors(secs);
-
-          api.current
-            .getChatsBySession(true, true)
-            .then((payload) => {
-              if (!isCurrent()) return;
-              const chats = Array.isArray(payload?.chats) ? payload.chats : [];
-              const messages = Array.isArray(payload?.messages) ? payload.messages : [];
-
-              const { chatsMessages, detailedChats } = processChatsAndMessages(chats, messages);
-              setChats(detailedChats);
-              setMessages(chatsMessages);
-            })
-            .catch((error) => {
-              if (isCurrent()) console.error("Falha ao carregar conversas", error);
-            });
 
           const sector = secs.find((s) => s.id === sessionUser.SETOR);
 
@@ -1240,6 +1217,58 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       };
     }
   }, [socket, chats, currentChat, emitPolicyNotification]);
+
+  useSessionChanges({
+    scope: sessionScope,
+    enabled: !!token && !!user,
+    api: api.current,
+    socket,
+    refreshRef: refreshSyncRef,
+    activeChat: () => currentChat,
+    snapshot: (snapshot) => {
+      const { chatsMessages, detailedChats } = processChatsAndMessages(snapshot.chats, snapshot.messages);
+      setChats(detailedChats);
+      setMessages(chatsMessages);
+      const active = currentChat;
+      if (active?.chatType === "wpp" && !isReadOnlyMode) {
+        const next = detailedChats.find((chat) => chat.id === active.id);
+        ++historyRequestId.current;
+        currentChatRef.current = next ?? null;
+        setCurrentChat(next ?? null);
+        setUniqueCurrentChatMessages(next ? snapshot.messages.filter((message) => message.chatId === next.id) : []);
+      }
+    },
+    changes: (changes) => {
+      if (!changes.chats.length && !changes.messages.length && !changes.removedChatIds.length && !changes.removedMessageIds.length) return;
+      setChats((previous) => mergeChangedChats(previous, changes));
+      setMessages((previous) => mergeChangedCache(previous, changes));
+      const active = currentChat;
+      if (active?.chatType === "wpp") {
+        if (changes.removedChatIds.includes(active.id)) {
+          ++historyRequestId.current;
+          currentChatRef.current = null;
+          setCurrentChat(null);
+          setUniqueCurrentChatMessages([]);
+        } else {
+          const summary = changes.chats.find((chat) => chat.id === active.id);
+          if (summary) {
+            const updated = { ...active, ...summary };
+            currentChatRef.current = updated;
+            setCurrentChat(updated);
+          }
+          const incoming = changes.messages.filter((message) => message.chatId === active.id);
+          const removed = [
+            ...changes.removedMessageIds,
+            ...changes.messages.filter((message) => message.chatId !== active.id).map((message) => message.id),
+          ];
+          const removedIds = new Set(removed);
+          if (incoming.length || (removedIds.size && currentChatMessages.some((message) => removedIds.has(message.id)))) {
+            setUniqueCurrentChatMessages((previous) => mergeChangedMessages(previous, incoming, removed));
+          }
+        }
+      }
+    },
+  });
 
   return (
     <WhatsappContext.Provider
