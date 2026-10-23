@@ -21,28 +21,25 @@ const format = (timestamp: number) => new Intl.DateTimeFormat("pt-BR", {
 export default function ConversationSyncStatus({ connectionStatus, lastWebSocketAt, sync, onRefresh }: Props) {
   const status = statuses[connectionStatus];
   return (
-    <section aria-label="Atualização das conversas" className="mb-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5" title="Estado da conexão em tempo real">
-          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${status.color}`} />
-          <span role="status" aria-live="polite">WebSocket: {status.label}</span>
+    <section aria-label="Atualização das conversas" className="mb-1 text-[11px] text-slate-500 dark:text-slate-400">
+      <div className="flex items-center gap-2">
+        <span role="status" aria-live="polite" className="inline-flex shrink-0 items-center" title={`Conexão: ${status.label.toLowerCase()}`}>
+          <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${status.color}`} />
+          <span className="sr-only">{status.label}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          Última atualização:{" "}
+          {lastWebSocketAt === null ? <span>Aguardando</span> :
+            <time dateTime={new Date(lastWebSocketAt).toISOString()}>{format(lastWebSocketAt)}</time>}
         </span>
         <button type="button" onClick={onRefresh} disabled={sync.isRefreshing}
           aria-busy={sync.isRefreshing}
+          aria-label="Atualizar"
           title="Buscar mensagens novas agora"
-          className="inline-flex min-h-8 items-center gap-1 rounded border border-slate-300 px-2 font-medium hover:bg-slate-200 disabled:cursor-wait disabled:opacity-60 dark:border-slate-600 dark:hover:bg-slate-700">
-          <RefreshIcon aria-hidden="true" sx={{ fontSize: 16 }} className={sync.isRefreshing ? "animate-spin" : ""} />
-          {sync.isRefreshing ? "Atualizando..." : "Atualizar"}
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500 disabled:cursor-wait disabled:opacity-60 dark:hover:bg-slate-800">
+          <RefreshIcon aria-hidden="true" sx={{ fontSize: 14 }} className={sync.isRefreshing ? "animate-spin" : ""} />
         </button>
       </div>
-      <div className="mt-1.5">
-        Última atualização via WebSocket:{" "}
-        {lastWebSocketAt === null ? <span>Aguardando eventos</span> :
-          <time dateTime={new Date(lastWebSocketAt).toISOString()}>{format(lastWebSocketAt)}</time>}
-      </div>
-      {sync.lastSuccessAt !== null && <div className="mt-1 text-[11px]">
-        Última busca: <time dateTime={new Date(sync.lastSuccessAt).toISOString()}>{format(sync.lastSuccessAt)}</time>
-      </div>}
       {sync.error && <p role="alert" className="mt-1 text-red-700 dark:text-red-300">Não foi possível atualizar. Tente novamente.</p>}
     </section>
   );
