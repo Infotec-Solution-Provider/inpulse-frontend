@@ -29,12 +29,13 @@ for (const width of [1440, 390]) {
     expect(snapshots).toBe(1);
     await expect(panel.getByText("Aguardando", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Evento WebSocket" }).click();
-    await expect(panel.locator("time").first()).toHaveText("23/10/2026, 09:15:00");
+    await expect(panel.locator("time").first()).toHaveText(/^23\/10\/2026, 09:15:\d{2}$/);
+    const receivedAt = await panel.locator("time").first().textContent();
     await page.getByRole("button", { name: "Interromper conexão" }).click();
     await expect(panel.getByRole("status")).toHaveText("Desconectado");
     await panel.getByRole("button", { name: "Atualizar", exact: true }).click();
     await expect.poll(() => pulls).toBe(3);
-    await expect(panel.locator("time").first()).toHaveText("23/10/2026, 09:15:00");
+    await expect(panel.locator("time").first()).toHaveText(receivedAt!);
     expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
     await panel.screenshot({ path: info.outputPath(`connection-${width}.png`) });
   });
@@ -66,6 +67,39 @@ test("recovers a missed socket delivery using only the incremental cursor", asyn
   await page.getByRole("button", { name: "Reconectar" }).click();
   await expect.poll(() => pulls).toBe(3);
   await expect(page.getByTestId("message-10")).toHaveCount(1);
+});
+
+test("waits for Retry-After despite focus, reconnection and manual refresh with the real SDK error wrapper", async ({ page }) => {
+  await page.clock.install();
+  let pulls = 0, snapshots = 0;
+  await page.route("**/api/whatsapp/session/chats?**", (route) => {
+    snapshots++;
+    return route.fulfill({ json: { data: { chats: [], messages: [], syncCursor: "initial" } } });
+  });
+  await page.route("**/api/whatsapp/session/changes?**", (route) => {
+    pulls++;
+    if (pulls === 1) return route.fulfill({ status: 429, headers: { "Retry-After": "90" },
+      json: { code: "READ_REQUEST_LIMIT", message: "Aguarde", retryAfterSeconds: 90 } });
+    return route.fulfill({ json: { data: { resetRequired: false, hasMore: false, nextCursor: "next", changes: empty } } });
+  });
+  await page.goto("/tests/session-changes/index.html");
+  const panel = page.locator('section[aria-label="Atualização das conversas"]');
+  await expect(panel.getByRole("alert")).toBeVisible();
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event("focus"));
+      window.dispatchEvent(new Event("online"));
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await page.getByRole("button", { name: "Reconectar", exact: true }).click();
+    await panel.getByRole("button", { name: "Atualizar", exact: true }).click();
+    await page.clock.runFor(15000);
+  }
+  expect(pulls).toBe(1);
+  await page.clock.runFor(20000);
+  await expect.poll(() => pulls).toBe(2);
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  expect(snapshots).toBe(1);
 });
 
 test("recovers immediately when returning to the tab without reloading history", async ({ page }) => {

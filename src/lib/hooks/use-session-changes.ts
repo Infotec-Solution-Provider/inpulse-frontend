@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
 import type { SocketClient, WhatsappClient, WppChatsAndMessages } from "@/lib/sdk-local";
 import { SocketEventType } from "../sdk-local/types/socket-events.types";
-import { SessionChangePoller, type ChangePage } from "../utils/session-change-poller";
+import { SessionChangePoller, syncErrorResponse, type ChangePage } from "../utils/session-change-poller";
 import type { SessionChanges } from "../utils/session-change-state";
 
 type Snapshot = WppChatsAndMessages & { syncCursor: string };
@@ -74,7 +74,7 @@ export default function useSessionChanges(options: Options) {
       },
       onError: (error) => {
         // Do not log payloads, tokens or Axios configs containing customer data.
-        const status = (error as { response?: { status?: number } })?.response?.status;
+        const status = syncErrorResponse(error)?.status;
         console.warn("[message-sync] recovery deferred", { status: status ?? "network" });
         if (latest.current.scope === scope) latest.current.onSyncStatus?.({ error: true });
       },

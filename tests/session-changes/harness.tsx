@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { useRef, useState } from "react";
-import axios from "axios";
+import ApiClient from "../../src/lib/sdk-local/api-client";
 import useSessionChanges from "../../src/lib/hooks/use-session-changes";
 import { mergeChangedCache, mergeChangedChats } from "../../src/lib/utils/session-change-state";
 import processChatsAndMessages from "../../src/lib/process-chats-and-messages";
@@ -28,7 +28,7 @@ const socket = {
   },
   subscribeActivity(callback: (event: string) => void) { activity.add(callback); return () => { activity.delete(callback); }; },
 } as unknown as SocketClient;
-const api = { ax: axios.create() } as WhatsappClient;
+const api = new ApiClient("") as unknown as WhatsappClient;
 function Harness() {
   const [scope, setScope] = useState("alpha:2");
   const [chats, setChats] = useState<DetailedChat[]>([]);
