@@ -5,6 +5,40 @@ const message = { id: 10, chatId: 1, contactId: 10, from: "customer", to: "me:7"
 const chat = { id: 1, contactId: 10, userId: 2, isUnread: true, lastMessage: message };
 const empty = { chats: [], messages: [], removedChatIds: [], removedMessageIds: [] };
 
+for (const width of [1440, 390]) {
+  test(`connection indicator, websocket timestamp and manual incremental refresh at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.clock.install({ time: new Date("2026-10-23T12:15:00Z") });
+    let pulls = 0, snapshots = 0;
+    await page.route("**/api/whatsapp/session/chats?**", (route) => {
+      snapshots++;
+      return route.fulfill({ json: { data: { chats: [chat], messages: [], syncCursor: "initial" } } });
+    });
+    await page.route("**/api/whatsapp/session/changes?**", (route) => {
+      pulls++;
+      return route.fulfill({ json: { data: { resetRequired: false, hasMore: false, nextCursor: `cursor-${pulls}`, changes: { ...empty, chats: [chat], messages: [message] } } } });
+    });
+    await page.goto("/tests/session-changes/index.html");
+    await expect.poll(() => pulls).toBe(1);
+    const panel = page.locator('section[aria-label="Atualização das conversas"]');
+    await expect(panel.getByRole("status")).toHaveText("WebSocket: Conectado");
+    await expect(panel.getByText("Aguardando eventos")).toBeVisible();
+    await panel.getByRole("button", { name: "Atualizar", exact: true }).click();
+    await expect.poll(() => pulls).toBe(2);
+    expect(snapshots).toBe(1);
+    await expect(panel.getByText("Aguardando eventos")).toBeVisible();
+    await page.getByRole("button", { name: "Evento WebSocket" }).click();
+    await expect(panel.locator("time").first()).toHaveText("23/10/2026, 09:15:00");
+    await page.getByRole("button", { name: "Interromper conexão" }).click();
+    await expect(panel.getByRole("status")).toHaveText("WebSocket: Desconectado");
+    await panel.getByRole("button", { name: "Atualizar", exact: true }).click();
+    await expect.poll(() => pulls).toBe(3);
+    await expect(panel.locator("time").first()).toHaveText("23/10/2026, 09:15:00");
+    expect(await panel.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await panel.screenshot({ path: info.outputPath(`connection-${width}.png`) });
+  });
+}
+
 test("recovers a missed socket delivery using only the incremental cursor", async ({ page }) => {
   await page.clock.install();
   let snapshots = 0, pulls = 0, available = false;
@@ -24,7 +58,7 @@ test("recovers a missed socket delivery using only the incremental cursor", asyn
   await expect.poll(() => pulls).toBe(1);
   expect(cursors[0]).toBe("initial");
   available = true;
-  await page.clock.runFor(19000);
+  await page.clock.runFor(121000);
   await expect(page.getByTestId("message-10")).toHaveText("Mensagem recuperada");
   expect(snapshots).toBe(1);
   expect(cursors[1]).toBe("cursor-1");
@@ -47,7 +81,7 @@ test("recovers immediately when returning to the tab without reloading history",
   await page.goto("/tests/session-changes/index.html");
   await expect.poll(() => pulls).toBe(1);
   await page.evaluate(() => Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" }));
-  await page.clock.runFor(60000);
+  await page.clock.runFor(240000);
   expect(pulls).toBe(1);
   await page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });

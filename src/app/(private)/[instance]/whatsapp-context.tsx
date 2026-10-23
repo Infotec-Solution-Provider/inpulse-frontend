@@ -73,7 +73,7 @@ import {
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
-import useSessionChanges from "@/lib/hooks/use-session-changes";
+import useSessionChanges, { type SyncStatus } from "@/lib/hooks/use-session-changes";
 import { mergeChangedCache, mergeChangedChats, mergeChangedMessages } from "@/lib/utils/session-change-state";
 import {
   canReactToWhatsappMessage,
@@ -130,6 +130,8 @@ interface TracedSendMessageOptions extends SendMessageOptions {
 }
 
 interface IWhatsappContext {
+  messageSync: SyncStatus;
+  pullNewMessages: () => void;
   mentionDirectoryRef: React.RefObject<MentionDirectory>;
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
@@ -295,6 +297,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const refreshSyncRef = useRef<() => void>(() => {});
+  const manualSyncRef = useRef<() => void>(() => {});
+  const [messageSync, setMessageSync] = useState<SyncStatus>({ isRefreshing: false, error: false, lastSuccessAt: null });
+  useEffect(() => { setMessageSync({ isRefreshing: false, error: false, lastSuccessAt: null }); }, [sessionScope]);
   useEffect(() => {
     api.current.setAuth(token || "");
     if (token) usersService.setAuth(token);
@@ -458,8 +463,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     sortOrder: "desc",
   });
 
+  const historyRequestId = useRef(0);
   const openChat = useCallback(
     (chat: DetailedChat, preloadedMessages?: WppMessage[]) => {
+      const requestId = ++historyRequestId.current;
       setCurrentChat(chat);
       // Se há mensagens pré-carregadas, usa elas; senão, pega do estado messages
 
@@ -468,6 +475,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
       setUniqueCurrentChatMessages(messagesToUse);
       currentChatRef.current = chat;
+
+      if (preloadedMessages === undefined && chat.id && chat.contactId) {
+        const scope = liveAuth.current.scope;
+        void api.current.getChatById(chat.id).then((result) => {
+          if (requestId !== historyRequestId.current || scope !== liveAuth.current.scope ||
+              currentChatRef.current?.id !== chat.id || currentChatRef.current.chatType !== "wpp") return;
+          setUniqueCurrentChatMessages((current) => {
+            const merged = new Map((result.messages || []).map((message) => [message.id, message]));
+            for (const message of current) merged.set(message.id, message);
+            return [...merged.values()].sort((a, b) => a.id - b.id);
+          });
+        }).catch(() => {
+          if (requestId === historyRequestId.current && scope === liveAuth.current.scope)
+            toast.error("Falha ao carregar o histórico. Abra a conversa novamente para tentar.");
+        });
+      }
 
       if (chat.contactId && globalChannel.current) {
         api.current.markContactMessagesAsRead(chat.contactId);
@@ -1224,6 +1247,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     api: api.current,
     socket,
     refreshRef: refreshSyncRef,
+    manualRefreshRef: manualSyncRef,
+    onSyncStatus: (patch) => setMessageSync((previous) => ({ ...previous, ...patch })),
     activeChat: () => currentChat,
     snapshot: (snapshot) => {
       const { chatsMessages, detailedChats } = processChatsAndMessages(snapshot.chats, snapshot.messages);
@@ -1273,6 +1298,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   return (
     <WhatsappContext.Provider
       value={{
+        messageSync,
+        pullNewMessages: () => manualSyncRef.current(),
         mentionDirectoryRef,
         chats,
         messages,

@@ -28,7 +28,9 @@ describe("incremental recovery", () => {
     await bootstrap(f);
     expect(f.snapshot).toHaveBeenCalledTimes(1);
     expect(f.changes.mock.calls[0]?.[0]).toBe("start");
-    await vi.advanceTimersByTimeAsync(15000);
+    await vi.advanceTimersByTimeAsync(119000);
+    expect(f.changes).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1001);
     expect(f.changes.mock.calls[1]?.[0]).toBe("next");
     expect(f.snapshot).toHaveBeenCalledTimes(1);
     f.poller.stop();
@@ -48,7 +50,7 @@ describe("incremental recovery", () => {
   });
   it("pauses hidden/offline work and recovers immediately on return", async () => {
     const f = fixture(); await bootstrap(f);
-    f.hide(); await vi.advanceTimersByTimeAsync(60000);
+    f.hide(); await vi.advanceTimersByTimeAsync(240000);
     expect(f.changes).toHaveBeenCalledTimes(1);
     f.show(); f.poller.wake(); await vi.advanceTimersByTimeAsync(1);
     expect(f.changes).toHaveBeenCalledTimes(2);

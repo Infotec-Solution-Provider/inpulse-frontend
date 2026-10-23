@@ -91,6 +91,35 @@ export default class SocketClient {
 		this.ws.off(event, listener);
 	};
 
+	public subscribeConnection(callback: () => void): () => void {
+		this.ws.on("connect", callback);
+		return () => { this.ws.off("connect", callback); };
+	}
+
+	public getConnectionState(): "connected" | "connecting" | "disconnected" {
+		return this.ws.connected ? "connected" : this.ws.active ? "connecting" : "disconnected";
+	}
+
+	public subscribeConnectionState(callback: (state: "connected" | "connecting" | "disconnected") => void): () => void {
+		const update = () => callback(this.getConnectionState());
+		this.ws.on("connect", update);
+		this.ws.on("disconnect", update);
+		this.ws.on("connect_error", update);
+		this.ws.io.on("reconnect_attempt", update);
+		update();
+		return () => {
+			this.ws.off("connect", update);
+			this.ws.off("disconnect", update);
+			this.ws.off("connect_error", update);
+			this.ws.io.off("reconnect_attempt", update);
+		};
+	}
+
+	public subscribeActivity(callback: (event: string) => void): () => void {
+		this.ws.onAny(callback);
+		return () => { this.ws.offAny(callback); };
+	}
+
 	public joinRoom: JoinRoomFn = (room) => {
 		this.ws.emit("join-room", room);
 	};

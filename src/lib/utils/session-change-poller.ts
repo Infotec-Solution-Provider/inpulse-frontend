@@ -13,6 +13,7 @@ interface PollOptions<S, T> {
   canRun: () => boolean;
   generation: () => number;
   onError: (error: unknown) => void;
+  onRunning?: (running: boolean) => void;
   random?: () => number;
 }
 
@@ -51,11 +52,12 @@ export class SessionChangePoller<S, T> {
     if (this.stopped || this.running) return;
     if (!this.options.canRun()) return; // visibility/online events wake it again.
     this.running = true;
+    this.options.onRunning?.(true);
     this.wakeAgain = false;
     this.controller = new AbortController();
     const signal = this.controller.signal;
     const timeout = setTimeout(() => this.controller?.abort(), 20000);
-    let delay = 15000 + Math.floor((this.options.random?.() ?? Math.random()) * 3000);
+    let delay = 120000;
     try {
       if (this.resetRequested) { this.cursor = null; this.resetRequested = false; }
       const generation = this.options.generation();
@@ -93,6 +95,7 @@ export class SessionChangePoller<S, T> {
       clearTimeout(timeout);
       this.controller = null;
       this.running = false;
+      this.options.onRunning?.(false);
       this.schedule(this.wakeAgain && this.errors === 0 ? 0 : delay);
     }
   }

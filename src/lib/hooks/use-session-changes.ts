@@ -12,10 +12,14 @@ interface Options {
   api: WhatsappClient;
   socket: SocketClient;
   refreshRef: MutableRefObject<() => void>;
+  manualRefreshRef?: MutableRefObject<() => void>;
+  onSyncStatus?: (patch: Partial<SyncStatus>) => void;
   activeChat: () => { id: number; chatType: string } | null;
   snapshot: (value: Snapshot) => void;
   changes: (value: SessionChanges) => void;
 }
+
+export interface SyncStatus { isRefreshing: boolean; error: boolean; lastSuccessAt: number | null }
 
 export default function useSessionChanges(options: Options) {
   const latest = useRef(options);
@@ -60,16 +64,22 @@ export default function useSessionChanges(options: Options) {
         latest.current.snapshot(value);
         const ids = value.chats.map((chat) => chat.id);
         reconcileRooms(ids, [...rooms].filter((id) => !ids.includes(id)));
+        latest.current.onSyncStatus?.({ error: false, lastSuccessAt: Date.now() });
       },
       applyChanges: (value) => {
         if (latest.current.scope !== scope) return;
         latest.current.changes(value);
         reconcileRooms(value.chats.map((chat) => chat.id), value.removedChatIds);
+        latest.current.onSyncStatus?.({ error: false, lastSuccessAt: Date.now() });
       },
       onError: (error) => {
         // Do not log payloads, tokens or Axios configs containing customer data.
         const status = (error as { response?: { status?: number } })?.response?.status;
         console.warn("[message-sync] recovery deferred", { status: status ?? "network" });
+        if (latest.current.scope === scope) latest.current.onSyncStatus?.({ error: true });
+      },
+      onRunning: (isRefreshing) => {
+        if (latest.current.scope === scope) latest.current.onSyncStatus?.({ isRefreshing });
       },
     });
     const wake = () => poller.wake();
@@ -79,6 +89,7 @@ export default function useSessionChanges(options: Options) {
     };
     const reset = () => poller.wake(true);
     options.refreshRef.current = reset;
+    if (options.manualRefreshRef) options.manualRefreshRef.current = wake;
     const cleanups = [
       options.socket.subscribeConnection(reconnect),
       ...[
@@ -95,6 +106,7 @@ export default function useSessionChanges(options: Options) {
       poller.stop();
       for (const id of rooms) options.socket.leaveRoom(`chat:${id}`);
       if (options.refreshRef.current === reset) options.refreshRef.current = () => {};
+      if (options.manualRefreshRef?.current === wake) options.manualRefreshRef.current = () => {};
       cleanups.forEach((cleanup) => cleanup());
       window.removeEventListener("online", wake);
       document.removeEventListener("visibilitychange", wake);

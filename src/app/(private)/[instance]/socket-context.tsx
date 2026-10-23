@@ -5,9 +5,12 @@ import { AuthContext } from "../../auth-context";
 import { AppContext } from "./app-context";
 import QRModal from "./(main)/qr-modal";
 import { toast } from "react-toastify";
+import useSocketActivity, { type WebSocketStatus } from "@/lib/hooks/use-socket-activity";
 
 interface ISocketContext {
   socket: SocketClient;
+  connectionStatus: WebSocketStatus;
+  lastWebSocketAt: number | null;
 }
 
 interface SocketProviderProps {
@@ -19,10 +22,11 @@ const SOCKET_URL = process.env["NEXT_PUBLIC_SOCKET_URL"] || "http://localhost:80
 export const SocketContext = createContext({} as ISocketContext);
 
 export default function SocketProvider({ children }: SocketProviderProps) {
-  const { token } = useContext(AuthContext);
+  const { token, user, instance } = useContext(AuthContext);
   const { openModal, closeModal } = useContext(AppContext);
 
   const socket = useRef(new SocketClient(SOCKET_URL));
+  const activity = useSocketActivity(socket.current, JSON.stringify([instance, user?.CODIGO, !!token]), !!token);
 
   useEffect(() => {
     if (token) {
@@ -83,6 +87,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     <SocketContext.Provider
       value={{
         socket: socket.current,
+        ...activity,
       }}
     >
       {children}

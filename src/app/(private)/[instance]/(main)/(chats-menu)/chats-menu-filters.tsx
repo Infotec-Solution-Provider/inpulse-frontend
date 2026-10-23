@@ -26,6 +26,8 @@ import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "@/app/auth-context";
 import { useAppContext } from "../../app-context";
 import { WhatsappContext } from "../../whatsapp-context";
+import { SocketContext } from "../../socket-context";
+import ConversationSyncStatus from "@/lib/components/conversation-sync-status";
 import { canAccessInternalChats, isExternalOperator } from "@/lib/permissions/operator-access";
 import SchedulesModal from "./(schedules-modal)/schedules-modal";
 import StartChatModal from "./(start-chat-modal)/start-chat-modal";
@@ -42,7 +44,8 @@ const SHOWING_TYPE_TEXT: Record<ShowingMessagesType, string> = {
 export default function ChatsMenuFilters() {
   const { openModal, closeModal } = useAppContext();
   const { user } = useContext(AuthContext);
-  const { changeChatFilters, chatFilters, parameters } = useContext(WhatsappContext);
+  const { changeChatFilters, chatFilters, parameters, messageSync, pullNewMessages } = useContext(WhatsappContext);
+  const { connectionStatus, lastWebSocketAt } = useContext(SocketContext);
   const isExternal = isExternalOperator(user?.NIVEL);
   const canStartInternalChat = canAccessInternalChats(parameters, user?.NIVEL);
 
@@ -227,6 +230,8 @@ export default function ChatsMenuFilters() {
           )}
         </Menu>
       </header>
+      <ConversationSyncStatus connectionStatus={connectionStatus} lastWebSocketAt={lastWebSocketAt}
+        sync={messageSync} onRefresh={pullNewMessages} />
 
       <div className="flex gap-2">
         <TextField
