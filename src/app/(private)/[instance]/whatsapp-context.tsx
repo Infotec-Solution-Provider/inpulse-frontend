@@ -986,6 +986,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     async (chat: WppChat, date: Date) => {
       try {
         await api.current.createSchedule({
+          chatId: chat.id,
           contactId: chat.contactId!,
           scheduledFor: user!.CODIGO,
           sectorId: chat.sectorId!,

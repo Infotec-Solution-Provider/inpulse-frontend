@@ -373,6 +373,7 @@ export interface MonitorChat {
 }
 
 export interface CreateScheduleDTO {
+	chatId?: number;
   contactId: number;
   date: Date;
   scheduledFor: number;
