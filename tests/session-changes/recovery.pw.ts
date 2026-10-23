@@ -126,6 +126,32 @@ test("recovers immediately when returning to the tab without reloading history",
   expect(snapshots).toBe(1);
 });
 
+test("recovers the contacts directory after the reported two-second limit using real SDK errors", async ({ page }) => {
+  await page.clock.install();
+  let contacts = 0;
+  await page.route("**/api/whatsapp/session/chats?**", (route) => route.fulfill({
+    json: { data: { chats: [], messages: [], syncCursor: "initial" } },
+  }));
+  await page.route("**/api/whatsapp/session/changes?**", (route) => route.fulfill({
+    json: { data: { resetRequired: false, hasMore: false, nextCursor: "next", changes: empty } },
+  }));
+  await page.route("**/api/whatsapp/contacts", (route) => {
+    contacts++;
+    if (contacts === 1) return route.fulfill({ status: 429,
+      json: { code: "READ_REQUEST_LIMIT", retryAfterSeconds: 2,
+        message: "Muitos carregamentos seguidos. Aguarde 2 segundos antes de tentar novamente." } });
+    return route.fulfill({ json: { data: [{ id: 10 }] } });
+  });
+  await page.goto("/tests/session-changes/index.html?directory=1");
+  await expect.poll(() => contacts).toBe(1);
+  await expect(page.getByTestId("directory")).toHaveText("Carregando");
+  await page.clock.runFor(1000);
+  expect(contacts).toBe(1);
+  await page.clock.runFor(1100);
+  await expect(page.getByTestId("directory")).toHaveText("Contatos: 1");
+  expect(contacts).toBe(2);
+});
+
 test("discards an old session response even if it arrives after a new login", async ({ page }) => {
   let delayed: Route | undefined;
   let pulls = 0;

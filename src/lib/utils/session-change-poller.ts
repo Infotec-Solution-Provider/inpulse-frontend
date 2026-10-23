@@ -20,7 +20,7 @@ interface PollOptions<S, T> {
 interface SyncErrorResponse {
   status?: number;
   headers?: Record<string, unknown>;
-  data?: { retryAfterSeconds?: number };
+  data?: { code?: string; retryAfterSeconds?: number };
 }
 
 /** The SDK preserves Axios failures as Error.cause. */

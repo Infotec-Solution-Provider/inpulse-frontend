@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ApiClient from "../../src/lib/sdk-local/api-client";
 import useSessionChanges from "../../src/lib/hooks/use-session-changes";
 import { mergeChangedCache, mergeChangedChats } from "../../src/lib/utils/session-change-state";
@@ -9,6 +9,7 @@ import type { DetailedChat } from "../../src/app/(private)/[instance]/whatsapp-c
 import useSocketActivity from "../../src/lib/hooks/use-socket-activity";
 import ConversationSyncStatus from "../../src/lib/components/conversation-sync-status";
 import type { SyncStatus } from "../../src/lib/hooks/use-session-changes";
+import { retryLimitedRead } from "../../src/lib/utils/retry-limited-read";
 import "./harness.css";
 
 const connections = new Set<() => void>();
@@ -29,6 +30,20 @@ const socket = {
   subscribeActivity(callback: (event: string) => void) { activity.add(callback); return () => { activity.delete(callback); }; },
 } as unknown as SocketClient;
 const api = new ApiClient("") as unknown as WhatsappClient;
+function DirectoryHarness({ scope }: { scope: string }) {
+  const [state, setState] = useState("Carregando");
+  useEffect(() => {
+    const controller = new AbortController();
+    void retryLimitedRead(async () => {
+      const { data } = await api.ax.get("/api/whatsapp/contacts", { signal: controller.signal });
+      return data.data;
+    }, controller.signal).then((contacts) => {
+      if (!controller.signal.aborted) setState(`Contatos: ${contacts.length}`);
+    }).catch(() => { if (!controller.signal.aborted) setState("Falhou"); });
+    return () => controller.abort();
+  }, [scope]);
+  return <p data-testid="directory">{state}</p>;
+}
 function Harness() {
   const [scope, setScope] = useState("alpha:2");
   const [chats, setChats] = useState<DetailedChat[]>([]);
@@ -50,6 +65,7 @@ function Harness() {
     },
   });
   return <main>
+    {new URLSearchParams(location.search).has("directory") && <DirectoryHarness scope={scope} />}
     <ConversationSyncStatus {...socketActivity} sync={sync} onRefresh={() => manual.current()} />
     <div data-testid="scope">{scope}</div>
     <button onClick={() => { states.forEach((callback) => callback("connected")); connections.forEach((callback) => callback()); }}>Reconectar</button>

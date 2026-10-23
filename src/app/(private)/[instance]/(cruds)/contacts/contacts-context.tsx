@@ -16,6 +16,7 @@ import { getContactRegistrationConflict } from "@/lib/utils/contact-registration
 import { Logger } from "@in.pulse-crm/utils";
 import { ActionDispatch } from "react";
 import { toast } from "react-toastify";
+import { usePathname } from "next/navigation";
 import { useAppContext } from "../../app-context";
 import useInternalChatContext from "../../internal-context";
 import { useWhatsappContext } from "../../whatsapp-context";
@@ -74,6 +75,7 @@ export const useContactsContext = () => {
 };
 
 export default function ContactsProvider({ children }: IContactsProviderProps) {
+  const contactsPage = usePathname()?.split("/")[2] === "contacts";
   const { token } = useAuthContext();
   const [state, dispatch] = useReducer(contactsReducer, {
     contacts: [],
@@ -306,11 +308,11 @@ export default function ContactsProvider({ children }: IContactsProviderProps) {
   }, [token, wppApi]);
 
   useEffect(() => {
-    if (token) {
+    if (token && contactsPage) {
       loadContacts();
     }
     return () => { loadSequence.current++; };
-  }, [token, state.filters.page, state.filters.perPage, loadContacts]);
+  }, [token, contactsPage, state.filters.page, state.filters.perPage, loadContacts]);
 
   return (
     <ContactsContext.Provider
