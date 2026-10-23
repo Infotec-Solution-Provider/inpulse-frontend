@@ -10,7 +10,8 @@
 }
 .ip-ui .attendance-telephony-toggle {
   display: flex;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 44px;
   flex-shrink: 0;
   align-items: center;
@@ -22,6 +23,24 @@
   text-align: left;
   cursor: pointer;
   transition: background 120ms;
+}
+.ip-ui .attendance-telephony-header {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding-right: 4px;
+}
+.ip-ui .attendance-telephony-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ip-ui .attendance-telephony-actions > .ip-phone-status {
+  margin-inline: 6px;
+}
+.ip-ui .attendance-telephony-actions .MuiIconButton-root {
+  width: 44px;
+  height: 44px;
 }
 .ip-ui .attendance-telephony-toggle:hover {
   background: var(--ip-surface-muted);

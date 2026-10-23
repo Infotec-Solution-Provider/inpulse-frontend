@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import type {} from "./harness";
 import type {} from "./doubles";
 
-const visiblePhone = (page: Page) => page.locator('section[aria-label="Telefone web"]:visible');
+const visiblePhone = (page: Page) => page.locator('section[aria-label="Telefonia e próximas ligações"]:visible, section[aria-label="Telefone web"][data-header-host="false"]:visible');
 const bounds = async (locator: Locator) => {
   const box = await locator.boundingBox();
   expect(box).not.toBeNull();
@@ -11,8 +11,29 @@ const bounds = async (locator: Locator) => {
 async function connect(page: Page) {
   await visiblePhone(page).getByRole("button", { name: "Abrir telefone" }).click();
   await visiblePhone(page).getByRole("button", { name: "Conectar telefonia" }).click();
-  await expect(visiblePhone(page).getByText("Ramal conectado")).toBeVisible();
+  await expect(visiblePhone(page).getByRole("status", { name: "Ramal conectado" })).toBeVisible();
 }
+
+test("header connects directly and keeps status and dial controls available when collapsed", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto("/tests/telephony/index.html");
+  const header = page.locator(".attendance-telephony-header");
+  await expect(header.getByRole("status", { name: "Desconectado" })).toBeVisible();
+  await expect(header.getByText("Desconectado")).toHaveCount(0);
+  await expect(page.getByText("Telefone", { exact: true })).toHaveCount(0);
+  await header.getByRole("button", { name: "Conectar telefonia" }).click();
+  await expect(header.getByRole("status", { name: "Ramal conectado" })).toBeVisible();
+  await expect(page.getByLabel("Telefone ou ramal")).toHaveCount(0);
+  await page.getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true }).click();
+  await header.getByRole("button", { name: "Abrir telefone" }).click();
+  await page.getByLabel("Telefone ou ramal").fill("102");
+  await header.getByRole("button", { name: "Recolher telefone" }).click();
+  await header.getByRole("button", { name: "Abrir telefone" }).click();
+  await expect(page.getByLabel("Telefone ou ramal")).toHaveValue("102");
+  await header.getByRole("button", { name: "Desconectar", exact: true }).click();
+  await expect(header.getByRole("status", { name: "Desconectado" })).toBeVisible();
+  await page.screenshot({ path: "test-results/telephony-header-320.png", fullPage: true });
+});
 
 test("phone, next call, conversation filters and list occupy the left column in order", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -22,7 +43,7 @@ test("phone, next call, conversation filters and list occupy the left column in 
   const filters = page.getByLabel("Filtros de conversas", { exact: true });
   const list = page.getByLabel("Lista de conversas", { exact: true });
   const [phoneBox, nextBox, filtersBox, listBox, columnBox, chatBox] = await Promise.all([
-    bounds(phone), bounds(next), bounds(filters), bounds(list), bounds(page.getByTestId("sidebar-container")), bounds(page.getByLabel("Área da conversa", { exact: true })),
+    bounds(page.locator(".attendance-telephony-header")), bounds(next), bounds(filters), bounds(list), bounds(page.getByTestId("sidebar-container")), bounds(page.getByLabel("Área da conversa", { exact: true })),
   ]);
   expect(phoneBox.y + phoneBox.height).toBeLessThanOrEqual(nextBox.y + 1);
   expect(nextBox.y + nextBox.height).toBeLessThanOrEqual(filtersBox.y + 1);
@@ -70,7 +91,8 @@ test("incoming calls expand the sidebar and preserve answer, mute, DTMF, end and
   await visiblePhone(page).getByRole("button", { name: "Recolher telefone" }).click();
   await expect(visiblePhone(page).getByLabel("Telefone ou ramal")).toHaveCount(0);
   await page.getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true }).click();
-  await expect(visiblePhone(page)).toHaveCount(0);
+  await expect(page.locator(".attendance-telephony-content")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Desconectar", exact: true })).toBeVisible();
   await page.evaluate(() => window.phoneLayoutHarness.incoming());
   await expect(page.getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(visiblePhone(page).getByRole("button", { name: "Atender", exact: true })).toBeVisible();
@@ -115,7 +137,7 @@ test("mobile chat keeps a single visible inline phone and an accessible message 
   await page.getByRole("button", { name: "Voltar às conversas", exact: true }).click();
   await expect(page.getByTestId("sidebar-container")).toBeVisible();
   await expect(visiblePhone(page)).toHaveCount(1);
-  await expect(visiblePhone(page).getByText("Ramal conectado")).toBeVisible();
+  await expect(visiblePhone(page).getByRole("status", { name: "Ramal conectado" })).toBeVisible();
 });
 
 test("landscape and the 768px breakpoint keep call controls and composer reachable", async ({ page }) => {

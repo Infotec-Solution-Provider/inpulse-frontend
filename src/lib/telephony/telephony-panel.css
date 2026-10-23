@@ -1,0 +1,28 @@
+.ip-phone-status {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #94a3b8;
+  box-shadow: 0 0 0 3px rgb(148 163 184 / 12%);
+}
+.ip-phone-status--ready {
+  background: #22c55e;
+}
+.ip-phone-status--connecting,
+.ip-phone-status--busy {
+  background: #f59e0b;
+}
+.ip-phone-status--error {
+  background: #ef4444;
+}
+.ip-attendance-phone[data-header-host="true"][data-controls-visible="false"] {
+  padding: 0 !important;
+  border: 0;
+  box-shadow: none;
+}
+.ip-attendance-phone-heading .MuiIconButton-root {
+  width: 44px;
+  height: 44px;
+}

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Alert, Button, Chip, IconButton, TextField } from "@mui/material";
+import { useContext, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Alert, Button, IconButton, TextField, Tooltip } from "@mui/material";
+import { TelephonyHeaderHost } from "./header-host";
 import { useTelephony } from "./telephony-provider";
 import { callPhaseLabels } from "./types";
 import { UiIcon } from "@/lib/ui-system/icons";
-import { MicOff, PhoneOff } from "lucide-react";
+import { MicOff, PhoneOff, Power, Phone, X } from "lucide-react";
+import "./telephony-panel.css";
 
 /** The attendance area hosts phone controls in its own layout. */
 export function TelephonyPanelSlot({ className }: { className?: string }) {
@@ -20,6 +23,7 @@ export function TelephonyPanelSlot({ className }: { className?: string }) {
 
 export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar" | "floating" }) {
   const phone = useTelephony();
+  const headerHost = useContext(TelephonyHeaderHost);
   const { state, busy } = phone;
   const [expanded, setExpanded] = useState(busy);
   const [number, setNumber] = useState("");
@@ -46,34 +50,66 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
     placement === "floating"
       ? "fixed right-4 top-20 z-[1250] max-h-[calc(100dvh-14rem)] w-[330px] max-w-[calc(100vw-2rem)] shadow-xl"
       : "w-full min-w-0 shadow-sm";
+  const statusLabel = busy ? callPhaseLabels[state.phase] : labels[state.connection];
+  const header = (
+    <>
+      <span
+        role="status"
+        aria-label={statusLabel}
+        title={`${statusLabel}${state.extension ? ` · ${state.extension}` : ""}`}
+        className={`ip-phone-status ip-phone-status--${state.connection}${busy ? "ip-phone-status--busy" : ""}`}
+      />
+      <Tooltip title={state.connection === "ready" ? "Desconectar" : "Conectar telefonia"}>
+        <span>
+          <IconButton
+            size="small"
+            aria-label={state.connection === "ready" ? "Desconectar" : "Conectar telefonia"}
+            disabled={busy || state.connection === "connecting"}
+            onClick={() => {
+              if (state.connection === "ready") phone.disconnect();
+              else {
+                headerHost?.reveal();
+                void phone.connect();
+              }
+            }}
+          >
+            <UiIcon icon={Power} />
+          </IconButton>
+        </span>
+      </Tooltip>
+      <Tooltip title={open ? "Recolher telefone" : "Abrir telefone"}>
+        <IconButton
+          size="small"
+          aria-label={open ? "Recolher telefone" : "Abrir telefone"}
+          aria-expanded={open}
+          onClick={() => {
+            headerHost?.reveal();
+            setExpanded(!expanded);
+          }}
+        >
+          <UiIcon icon={open ? X : Phone} />
+        </IconButton>
+      </Tooltip>
+    </>
+  );
   return (
     <section
       aria-label="Telefone web"
+      data-header-host={!!headerHost}
+      data-controls-visible={
+        !!(open || state.error || error || phone.syncError || phone.audioBlocked)
+      }
       className={`ip-attendance-phone ip-attendance-phone--${placement} ${position} flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white p-3 text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100`}
     >
-      <div className="ip-attendance-phone-heading flex shrink-0 items-center justify-between gap-2">
-        <button
-          type="button"
-          className="flex flex-1 items-center gap-2 text-left text-sm font-semibold"
-          onClick={() => setExpanded(!expanded)}
-          aria-expanded={open}
-        >
-          <UiIcon name="phone" /> Telefone {state.extension && `· ${state.extension}`}
-        </button>
-        <Chip
-          size="small"
-          color={state.connection === "ready" ? "success" : "default"}
-          label={busy ? callPhaseLabels[state.phase] : labels[state.connection]}
-        />
-        <IconButton
-          size="small"
-          onClick={() => setExpanded(!expanded)}
-          aria-label={open ? "Recolher telefone" : "Abrir telefone"}
-        >
-          <UiIcon name="chevronDown" className={open ? "rotate-180" : ""} />
-        </IconButton>
-      </div>
-      {open && (
+      {headerHost ? (
+        headerHost.element && createPortal(header, headerHost.element)
+      ) : (
+        <div className="ip-attendance-phone-heading flex shrink-0 items-center gap-2">
+          <span className="mr-auto text-sm font-semibold">Telefonia</span>
+          {header}
+        </div>
+      )}
+      {(open || state.error || error || phone.syncError || phone.audioBlocked) && (
         <div className="ip-attendance-phone-controls mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
           {(state.error || error) && <Alert severity="error">{error || state.error}</Alert>}
           {phone.syncError && <Alert severity="warning">{phone.syncError}</Alert>}
@@ -126,16 +162,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
             </>
           ) : (
             <>
-              {state.connection !== "ready" ? (
-                <Button
-                  fullWidth
-                  variant="contained"
-                  disabled={state.connection === "connecting"}
-                  onClick={() => void phone.connect()}
-                >
-                  {state.connection === "connecting" ? "Conectando…" : "Conectar telefonia"}
-                </Button>
-              ) : (
+              {state.connection === "ready" && open && (
                 <>
                   <TextField
                     label="Telefone ou ramal"
@@ -157,7 +184,6 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
                     >
                       Ligar
                     </Button>
-                    <Button onClick={phone.disconnect}>Desconectar</Button>
                   </div>
                 </>
               )}
