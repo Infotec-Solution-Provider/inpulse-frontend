@@ -97,7 +97,13 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
       aria-label="Telefone web"
       data-header-host={!!headerHost}
       data-controls-visible={
-        !!(open || state.error || error || phone.syncError || phone.audioBlocked)
+        !!(
+          (open && (busy || state.connection === "ready")) ||
+          state.error ||
+          error ||
+          phone.syncError ||
+          phone.audioBlocked
+        )
       }
       className={`ip-attendance-phone ip-attendance-phone--${placement} ${position} flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white p-3 text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100`}
     >
@@ -109,7 +115,11 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           {header}
         </div>
       )}
-      {(open || state.error || error || phone.syncError || phone.audioBlocked) && (
+      {((open && (busy || state.connection === "ready")) ||
+        state.error ||
+        error ||
+        phone.syncError ||
+        phone.audioBlocked) && (
         <div className="ip-attendance-phone-controls mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
           {(state.error || error) && <Alert severity="error">{error || state.error}</Alert>}
           {phone.syncError && <Alert severity="warning">{phone.syncError}</Alert>}
