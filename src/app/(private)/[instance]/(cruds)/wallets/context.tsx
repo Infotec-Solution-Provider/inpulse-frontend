@@ -34,7 +34,8 @@ interface IWalletsContext {
 export const WalletsContext = createContext<IWalletsContext>({} as IWalletsContext);
 
 export default function WalletsProvider({ children }: IWalletsProviderProps) {
-    const { token } = useAuthContext();
+    const { token, user, instance } = useAuthContext();
+    const scope = `${instance}:${user?.CODIGO ?? "anonymous"}`;
     const [wallets, setWallets] = useState<WppWallet[]>([]);
     const [loading, setLoading] = useState(true);
     const [orderBy, setOrderBy] = useState<keyof WppWallet>('name');
@@ -45,24 +46,35 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         const next = new WalletsClient(WALLETS_URL);
         if (token) next.setAuth(token);
         return next;
-    }, [token]);
+    }, [scope]);
     const api = useRef(client);
     api.current = client;
     const sessionEpoch = useRef(0);
+    const loadedScope = useRef<string | null>(null);
 
     useEffect(() => {
-        const epoch = ++sessionEpoch.current;
-        let active = true;
+        sessionEpoch.current++;
+        loadedScope.current = null;
         setWallets([]);
         setSelectedWallet(null);
         setWalletUsers([]);
+        return () => { sessionEpoch.current++; };
+    }, [scope]);
+
+    useEffect(() => {
+        const epoch = sessionEpoch.current;
+        let active = true;
         if (token) {
             api.current.setAuth(token)
+            if (loadedScope.current === scope) return;
             const loadWallets = async () => {
                 try {
                     setLoading(true);
                     const data = await api.current.getWallets();
-                    if (active && epoch === sessionEpoch.current) setWallets(data);
+                    if (active && epoch === sessionEpoch.current) {
+                        loadedScope.current = scope;
+                        setWallets(data);
+                    }
                 } catch (err) {
                     if (active) toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`);
                 } finally {
@@ -71,8 +83,8 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
             };
             loadWallets();
         } else setLoading(false);
-        return () => { active = false; sessionEpoch.current++; };
-    }, [token]);
+        return () => { active = false; };
+    }, [token, scope]);
 
     const sortedWallets = useMemo(() => {
         return [...wallets].sort((a, b) => {
