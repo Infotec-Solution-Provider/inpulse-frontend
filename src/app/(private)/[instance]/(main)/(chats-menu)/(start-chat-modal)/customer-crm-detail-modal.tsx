@@ -162,6 +162,8 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
   const [tab, setTab] = useState<TabValue>("main");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deactivationReason, setDeactivationReason] = useState("");
+  useEffect(() => { setDeactivationReason(""); }, [customerId, instance]);
   const [detail, setDetail] = useState<CustomerFullDetail | null>(null);
   const [segmentReloadRequired, setSegmentReloadRequired] = useState(false);
 
@@ -522,7 +524,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
     setSaving(true);
     try {
       customersService.setAuth(token);
-      await customersService.updateCustomer(customerId, payload);
+      await customersService.updateCustomer(customerId, { ...payload, ...(payload.ATIVO === "NAO" && detail?.customer.ATIVO !== "NAO" ? { deactivationReason } : {}) });
       toast.success(successMessage);
       await loadDetail();
     } catch (error) {
@@ -1114,6 +1116,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
           <MenuItem value="SIM">SIM</MenuItem>
           <MenuItem value="NAO">NAO</MenuItem>
         </TextField>
+        {mainDraft.ATIVO === "NAO" && detail?.customer.ATIVO !== "NAO" && <TextField label="Motivo da inativação" multiline value={deactivationReason} onChange={event => setDeactivationReason(event.target.value)} disabled={!canEditMain} inputProps={{ maxLength: 4000 }} helperText="Necessário quando o cliente ainda não possui motivo no histórico." />}
         <TextField
           label="Código ERP"
           value={mainDraft.COD_ERP ?? ""}

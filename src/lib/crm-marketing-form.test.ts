@@ -22,6 +22,12 @@ const fields: CrmMarketingField[] = [
   { key: "SQL_CAMPANHA", type: "text", nullable: true, defaultValue: null, readOnly: true },
 ];
 describe("CRM marketing forms", () => {
+  it("normalizes proposal cancellation in the actual payload while preserving independent classifications after disabling it", () => {
+    const flags: CrmMarketingField[] = ["CANCELAPROPOSTA", "EVENDA", "EPEDIDO", "PROPOSTA", "ESUCESSO"].map(key => ({ key, type: "enum", nullable: false, defaultValue: "NAO", values: ["SIM", "NAO"], readOnly: false }));
+    const draft = { CODIGO: "4", CANCELAPROPOSTA: "SIM", EVENDA: "SIM", EPEDIDO: "SIM", PROPOSTA: "SIM", ESUCESSO: "SIM" };
+    expect(crmPayload(flags, draft)).toEqual({ CODIGO: 4, CANCELAPROPOSTA: "SIM", EVENDA: "NAO", EPEDIDO: "NAO", PROPOSTA: "NAO", ESUCESSO: "NAO" });
+    expect(crmPayload(flags, { ...draft, CANCELAPROPOSTA: "NAO" }).EVENDA).toBe("SIM");
+  });
   it("starts a usable new name and nullable date without turning the legacy zero date into a new date", () =>
     expect(crmDraft(fields)).toEqual({
       CODIGO: "",

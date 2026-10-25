@@ -40,6 +40,11 @@ export const crmLabels: Record<string, string> = {
   FUNIL_STAGE: "Etapa do funil",
 };
 export type CrmDraft = Record<string, string | null>;
+export const cancelledProposalFields = ["EVENDA", "EPEDIDO", "PROPOSTA", "ESUCESSO"];
+export function normalizeCancelledProposalDraft(draft: CrmDraft): CrmDraft {
+  if (draft["CANCELAPROPOSTA"] !== "SIM") return draft;
+  return { ...draft, ...Object.fromEntries(cancelledProposalFields.filter(key => Object.hasOwn(draft, key)).map(key => [key, "NAO"])) };
+}
 export function crmDraft(fields: CrmMarketingField[], row?: CrmMarketingRecord): CrmDraft {
   const draft: CrmDraft = { CODIGO: row ? String(row.CODIGO) : "" };
   for (const field of fields) {
@@ -52,7 +57,7 @@ export function crmDraft(fields: CrmMarketingField[], row?: CrmMarketingRecord):
           : field.defaultValue;
     draft[field.key] = value == null ? null : String(value);
   }
-  return draft;
+  return normalizeCancelledProposalDraft(draft);
 }
 export function crmExpected(
   fields: CrmMarketingField[],
@@ -65,6 +70,7 @@ export function crmPayload(
   draft: CrmDraft,
   original?: CrmMarketingRecord,
 ) {
+  draft = normalizeCancelledProposalDraft(draft);
   const data: Record<string, CrmMarketingValue> = {};
   if (!original) {
     if (!/^[1-9]\d*$/.test(draft["CODIGO"] ?? "") || Number(draft["CODIGO"]) > 2147483647)

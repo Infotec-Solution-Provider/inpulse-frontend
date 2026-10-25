@@ -408,6 +408,7 @@ export function CustomerCrmEditor({
   const [options, setOptions] = useState<CustomerCrmFormOptions | null>(null),
     [snapshot, setSnapshot] = useState<CustomerCrmSnapshot | null>(null),
     [draft, setDraft] = useState<CustomerCrmDraft>({}),
+    [deactivationReason, setDeactivationReason] = useState(""),
     [errors, setErrors] = useState<Record<string, string>>({});
   const [contacts, setContacts] = useState<CustomerCrmSnapshot[]>([]),
     [brands, setBrands] = useState<CustomerCrmBrandLink[]>([]),
@@ -458,6 +459,7 @@ export function CustomerCrmEditor({
       setOptions(formOptions);
       setSnapshot(loaded);
       setDraft(loaded ? { ...loaded.record } : {});
+      setDeactivationReason("");
       setContacts(loadedContacts);
       setBrands(loadedBrands);
       setErrors({});
@@ -541,18 +543,24 @@ export function CustomerCrmEditor({
   const save = async () => {
     setErrors(parsed.errors);
     if (!parsed.valid || !parsed.hasChanges) return;
+    if (draft.ATIVO === "NAO" && (!snapshot || snapshot.record.ATIVO !== "NAO") && !snapshot?.hasDeactivationHistory && !deactivationReason.trim()) {
+      setMessage("Informe o motivo da inativação.");
+      return;
+    }
     const context = contextKey;
     await mutate(async () => {
       const next =
         customerId === undefined
-          ? await api.createRegistration(parsed.values)
+          ? await api.createRegistration({ ...parsed.values, ...(draft.ATIVO === "NAO" ? { deactivationReason } : {}) })
           : await api.updateRegistration(customerId, {
               changes: parsed.values,
               version: snapshot!.version,
+              ...(parsed.values.ATIVO === "NAO" ? { deactivationReason } : {}),
             });
       if (!active(context)) return;
-      setSnapshot(next);
+      setSnapshot({ ...next, hasDeactivationHistory: next.record.ATIVO === "NAO" || snapshot?.hasDeactivationHistory });
       setDraft({ ...next.record });
+      setDeactivationReason("");
       setErrors({});
       setSuccess("Cadastro salvo.");
       if (customerId === undefined)
@@ -716,7 +724,8 @@ export function CustomerCrmEditor({
               </Tabs>
             )}
             {tab === 0 && (
-              <CrmFields
+              <Stack gap={2}>
+                <CrmFields
                 api={api}
                 fields={fields}
                 draft={draft}
@@ -724,7 +733,13 @@ export function CustomerCrmEditor({
                 errors={errors}
                 disabled={saving || snapshot?.writable === false}
                 original={snapshot?.record}
-              />
+                />
+                {draft.ATIVO === "NAO" && (!snapshot || snapshot.record.ATIVO !== "NAO") && (
+                  snapshot?.hasDeactivationHistory
+                    ? <Alert severity="info">Este cliente já possui um motivo registrado no histórico de inativação.</Alert>
+                    : <TextField label="Motivo da inativação" value={deactivationReason} onChange={event => setDeactivationReason(event.target.value)} multiline minRows={2} required disabled={saving} inputProps={{ maxLength: 4000 }} />
+                )}
+              </Stack>
             )}
             {tab === 1 && (
               <Stack spacing={2}>

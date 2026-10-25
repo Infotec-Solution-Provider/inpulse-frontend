@@ -12,6 +12,9 @@ export interface EditModalProps {
 }
 
 const validateKey: Record<keyof UpdateCustomerDTO, (value: unknown) => boolean> = {
+  AREA1: value => value === null || typeof value === "number" && Number.isInteger(value) && value > 0,
+  FONE1: value => value === null || typeof value === "string" && /^\d+$/.test(value),
+  deactivationReason: value => typeof value === "string" && value.trim().length > 0 && value.length <= 4000,
   RAZAO: (value: unknown) => !!value && typeof value === "string" && value.length <= 100,
   CPF_CNPJ: (value: unknown) =>
     value
@@ -50,9 +53,8 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
     const isValid = validateForm(formRef.current);
 
     if (isValid) {
-      updateCustomer(customer?.CODIGO, formRef.current);
+      if (await updateCustomer(customer?.CODIGO, formRef.current)) closeModal();
     }
-    closeModal();
   };
 
   const validateForm = (data: UpdateCustomerDTO) => {
@@ -93,6 +95,7 @@ export default function EditCustomerModal({ customer }: EditModalProps) {
       </header>
 
       <div className="flex flex-col gap-6">
+        <TextField label="Motivo da inativação (se alterar para inativo)" multiline onChange={event => { formRef.current.deactivationReason = event.target.value; }} inputProps={{ maxLength: 4000 }} />
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <TextField
             fullWidth

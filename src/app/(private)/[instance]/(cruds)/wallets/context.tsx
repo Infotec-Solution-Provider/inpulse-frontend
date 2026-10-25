@@ -1,7 +1,7 @@
 "use client"
 import { useAuthContext } from "@/app/auth-context";
 import { WalletsClient, WppWallet } from "@/lib/sdk-local";
-// import walletsService from "@/lib/services/wallets.service";
+import { WALLETS_URL } from "@/lib/services/wallets.service";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { createContext, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-toastify";
@@ -15,7 +15,7 @@ interface IWalletsContext {
     wallets: WppWallet[]
     createWallet: (name: string) => Promise<boolean>
     deleteWallet: (walletId: number) => Promise<void>
-    updateWalletName: (id: number, newName: string) => Promise<void>
+    updateWalletName: (id: number, newName: string) => Promise<boolean>
     getWalletUsers: (walletId: number) => Promise<number[]>
     getUserWallets: (instance: string, userId: number) => Promise<WppWallet[]>
     addUserToWallet: (userId: number) => Promise<void>
@@ -31,8 +31,6 @@ interface IWalletsContext {
     loadWalletUsers: () => Promise<void>
 }
 
-const WALLETS_URL = process.env["NEXT_PUBLIC_WALLETS_URL"] || "http://localhost:8005";
-
 export const WalletsContext = createContext<IWalletsContext>({} as IWalletsContext);
 
 export default function WalletsProvider({ children }: IWalletsProviderProps) {
@@ -43,24 +41,37 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     const [order, setOrder] = useState<'asc' | 'desc'>('asc');
     const [selectedWallet, setSelectedWallet] = useState<WppWallet | null>(null);
     const [walletUsers, setWalletUsers] = useState<number[]>([]);
-    const api = useRef(new WalletsClient(WALLETS_URL));
+    const client = useMemo(() => {
+        const next = new WalletsClient(WALLETS_URL);
+        if (token) next.setAuth(token);
+        return next;
+    }, [token]);
+    const api = useRef(client);
+    api.current = client;
+    const sessionEpoch = useRef(0);
 
     useEffect(() => {
+        const epoch = ++sessionEpoch.current;
+        let active = true;
+        setWallets([]);
+        setSelectedWallet(null);
+        setWalletUsers([]);
         if (token) {
             api.current.setAuth(token)
             const loadWallets = async () => {
                 try {
                     setLoading(true);
                     const data = await api.current.getWallets();
-                    setWallets(data);
+                    if (active && epoch === sessionEpoch.current) setWallets(data);
                 } catch (err) {
-                    toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`);
+                    if (active) toast.error(`Falha ao carregar as carteiras: ${sanitizeErrorMessage(err)}`);
                 } finally {
-                    setLoading(false);
+                    if (active) setLoading(false);
                 }
             };
             loadWallets();
-        }
+        } else setLoading(false);
+        return () => { active = false; sessionEpoch.current++; };
     }, [token]);
 
     const sortedWallets = useMemo(() => {
@@ -95,9 +106,11 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     };
 
     const createWallet = useCallback(async (name: string) => {
+        const epoch = sessionEpoch.current;
         try {
             setLoading(true);
             const newWallet = await api.current.createWallet(name);
+            if (epoch !== sessionEpoch.current) return false;
             setWallets(prev => [{
                 ...newWallet,
                 userIds: newWallet.userIds || []
@@ -113,9 +126,13 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     }, []);
 
     const deleteWallet = useCallback(async (walletId: number) => {
+        const epoch = sessionEpoch.current;
         try {
             setLoading(true);
-            await api.current.deleteWallet(walletId);
+            const wallet = wallets.find(item => item.id === walletId);
+            if (!wallet?.version) throw new Error("Atualize a lista antes de excluir a carteira.");
+            await api.current.deleteWallet(walletId, wallet.version);
+            if (epoch !== sessionEpoch.current) return;
             setWallets(prev => prev.filter(wallet => wallet.id !== walletId));
             toast.success("Carteira excluida com sucesso!");
         } catch (err) {
@@ -123,24 +140,31 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [wallets]);
 
     const updateWalletName = useCallback(async (id: number, newName: string) => {
+        const epoch = sessionEpoch.current;
         try {
             setLoading(true);
-            // const updatedWallet = await api.current.updateWalletName(id, newName);
+            const wallet = wallets.find(item => item.id === id);
+            if (!wallet?.version) throw new Error("Atualize a lista antes de editar a carteira.");
+            const updatedWallet = await api.current.updateWalletName(id, newName, wallet.version);
+            if (epoch !== sessionEpoch.current) return false;
             setWallets(prev =>
                 prev.map(wallet =>
-                    wallet.id === id ? { ...wallet, name: newName } : wallet
+                    wallet.id === id ? updatedWallet : wallet
                 )
             );
+            setSelectedWallet(current => current?.id === id ? updatedWallet : current);
             toast.success("Carteira atualizada!");
+            return true;
         } catch (err) {
             toast.error(`Falha ao atualizar carteira: ${sanitizeErrorMessage(err)}`);
+            return false;
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [wallets]);
 
     const getWalletUsers = useCallback(async (walletId: number): Promise<number[]> => {
         try {
@@ -162,10 +186,12 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     }, []);
 
     const addUserToWallet = useCallback(async (userId: number) => {
+        const epoch = sessionEpoch.current;
         if (!selectedWallet) return;
         try {
             setLoading(true);
             const updatedWallet = await api.current.addUserToWallet(selectedWallet.id, userId);
+            if (epoch !== sessionEpoch.current) return;
             setWallets(prev => prev.map(w => {
                 if (w.id === selectedWallet.id) {
                     return {
@@ -177,7 +203,8 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
                 }
                 return w;
             }));
-            setWalletUsers(prev => [...(prev || []), userId]);
+            setSelectedWallet(updatedWallet);
+            setWalletUsers(updatedWallet.userIds);
             toast.success("Usuário adicionado com sucesso!");
         } catch (err) {
             toast.error(`Falha ao adicionar usuário: ${sanitizeErrorMessage(err)}`);
@@ -187,17 +214,17 @@ export default function WalletsProvider({ children }: IWalletsProviderProps) {
     }, [selectedWallet]);
 
     const removeUserFromWallet = useCallback(async (userId: number) => {
+        const epoch = sessionEpoch.current;
         if (!selectedWallet) return;
         try {
             setLoading(true);
-            await api.current.removeUserFromWallet(selectedWallet.id, userId);
+            const updatedWallet = await api.current.removeUserFromWallet(selectedWallet.id, userId);
+            if (epoch !== sessionEpoch.current) return;
             setWallets(prev => prev.map(w =>
-                w.id === selectedWallet.id ? {
-                    ...w,
-                    userIds: w.userIds.filter(id => id !== userId)
-                } : w
+                w.id === selectedWallet.id ? updatedWallet : w
             ));
-            setWalletUsers(prev => prev.filter(id => id !== userId));
+            setSelectedWallet(updatedWallet);
+            setWalletUsers(updatedWallet.userIds);
             toast.success("Usuário removido com sucesso!");
         } catch (err) {
             toast.error(`Falha ao remover usuário: ${sanitizeErrorMessage(err)}`);

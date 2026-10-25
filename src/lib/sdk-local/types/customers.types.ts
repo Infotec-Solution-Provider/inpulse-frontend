@@ -65,6 +65,9 @@ export interface Customer {
 }
 
 export interface CreateCustomerDTO {
+  AREA1?: number | null;
+  FONE1?: string | null;
+  deactivationReason?: string;
 	RAZAO: string;
 	CPF_CNPJ?: string | null;
 	FANTASIA?: string | null;

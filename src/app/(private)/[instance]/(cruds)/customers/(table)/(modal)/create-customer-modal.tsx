@@ -20,8 +20,10 @@ export default function CreateCustomerModal() {
       toast.error("Razão Social é obrigatória!");
       return;
     }
-    createCustomer(formRef.current);
-    closeModal();
+    if (!formRef.current.AREA1 || !/^\d+$/.test(formRef.current.FONE1 ?? "") || `${formRef.current.AREA1}${formRef.current.FONE1}`.length < 10) {
+      toast.error("Informe o DDD e o telefone 1 válidos."); return;
+    }
+    if (await createCustomer(formRef.current)) closeModal();
   }
 
   return (
@@ -39,6 +41,11 @@ export default function CreateCustomerModal() {
       </header>
 
       <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <TextField label="DDD do telefone 1" required type="number" onChange={event => { formRef.current.AREA1 = Number(event.target.value); }} />
+          <TextField label="Telefone 1" required onChange={event => { formRef.current.FONE1 = event.target.value.trim(); }} />
+          <TextField label="Motivo da inativação (se cadastrar inativo)" multiline onChange={event => { formRef.current.deactivationReason = event.target.value; }} inputProps={{ maxLength: 4000 }} />
+        </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <TextField
             fullWidth

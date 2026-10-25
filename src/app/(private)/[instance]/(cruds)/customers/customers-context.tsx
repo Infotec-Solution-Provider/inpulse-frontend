@@ -20,7 +20,7 @@ import {
   RequestFilters,
   UpdateCustomerDTO,
 } from "@/lib/sdk-local";
-import { Logger } from "@in.pulse-crm/utils";
+import { Logger, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { toast } from "react-toastify";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import customersReducer, {
@@ -39,8 +39,8 @@ interface ICustomersProviderProps {
 interface ICustomersContext {
   state: CustomersContextState;
   dispatch: ActionDispatch<[action: ChangeCustomersStateAction | MultipleActions]>;
-  updateCustomer: (id: number, data: UpdateCustomerDTO) => void;
-  createCustomer: (data: CreateCustomerDTO) => void;
+  updateCustomer: (id: number, data: UpdateCustomerDTO) => Promise<boolean>;
+  createCustomer: (data: CreateCustomerDTO) => Promise<boolean>;
   loadCustomers: () => void;
   searchCustomers: (
     term: string,
@@ -95,10 +95,13 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
           await api.current.createCustomer(data);
           if (cacheScope) void hybridCache.invalidateResource(cacheScope, "customer-page");
           toast.success("Cliente cadastrado com sucesso!");
+          return true;
         }
+        return false;
       } catch (err) {
         Logger.error("Error creating customer", err as Error);
-        toast.error("Falha ao cadastrar cliente!");
+        toast.error(`Falha ao cadastrar cliente: ${sanitizeErrorMessage(err)}`);
+        return false;
       }
     },
     [cacheScope, token],
@@ -108,7 +111,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
     async (id: number, data: UpdateCustomerDTO) => {
       if (isSystemDefaultCustomer(id)) {
         toast.info("O cliente padrão do sistema não pode ser editado.");
-        return;
+        return false;
       }
 
       try {
@@ -117,10 +120,13 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
           if (cacheScope) void hybridCache.invalidateResource(cacheScope, "customer-page");
           dispatch({ type: "update-customer", id, data });
           toast.success("Cliente atualizado com sucesso!");
+          return true;
         }
+        return false;
       } catch (err) {
         Logger.error("Error updating customer", err as Error);
-        toast.error("Falha ao atualizar cliente!");
+        toast.error(`Falha ao atualizar cliente: ${sanitizeErrorMessage(err)}`);
+        return false;
       }
     },
     [cacheScope, token],

@@ -25,6 +25,7 @@ export interface CustomerCrmSnapshot {
   writable: boolean;
   manualCode: boolean;
   fields: CustomerCrmField[];
+  hasDeactivationHistory?: boolean;
 }
 export interface CustomerCrmFormOptions {
   customer: { fields: CustomerCrmField[]; manualCode: boolean };
@@ -33,6 +34,7 @@ export interface CustomerCrmFormOptions {
 export interface CustomerCrmPatch {
   changes: CustomerCrmRecord;
   version: string;
+  deactivationReason?: string;
 }
 export interface CustomerCrmBrandLink {
   record: CustomerCrmRecord;

@@ -73,6 +73,14 @@ export function crmFormPayload(
       errors[field.name] = "Revise o texto e o limite de caracteres deste campo.";
     else values[field.name] = text;
   }
+  if (fields.some(field => field.name === "AREA1") && fields.some(field => field.name === "FONE1") && (!original || ["AREA1", "FONE1", "AREA2", "FONE2", "AREA3", "FONE3"].some(key => Object.hasOwn(values, key)))) {
+    const merged = { ...original, ...values };
+    for (let index = 1; index <= 3; index++) {
+      const phone = String(merged[`FONE${index}`] ?? ""), area = String(merged[`AREA${index}`] ?? "");
+      if (index > 1 && !phone) continue;
+      if (!/^[1-9]\d*$/.test(area) || !/^\d+$/.test(phone) || (area + phone).length < 10) errors[`FONE${index}`] = "Informe o DDD e o telefone válidos.";
+    }
+  }
   return {
     values,
     errors,

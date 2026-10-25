@@ -298,6 +298,7 @@ export interface WppWallet {
   id: number;
   name: string;
   userIds: number[];
+  version?: string;
 }
 
 // Enums

@@ -5,6 +5,8 @@ import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import {
   crmDraft,
+  cancelledProposalFields,
+  normalizeCancelledProposalDraft,
   crmError,
   crmExpected,
   crmLabels,
@@ -300,7 +302,7 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
     const value = editor.draft[field.key] ?? null,
       change = (next: string | null) =>
         setEditor((current) =>
-          current ? { ...current, draft: { ...current.draft, [field.key]: next } } : null,
+          current ? { ...current, draft: normalizeCancelledProposalDraft({ ...current.draft, [field.key]: next }) } : null,
         );
     return (
       <Box key={field.key} sx={{ gridColumn: field.key === "DESCRICAO" ? "1/-1" : undefined }}>
@@ -311,7 +313,7 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
             field={field}
             value={value}
             onChange={change}
-            disabled={locked}
+            disabled={locked || catalog === "results" && editor.draft["CANCELAPROPOSTA"] === "SIM" && cancelledProposalFields.includes(field.key)}
             label={crmLabels[field.key] ?? field.key}
             error={fieldErrors[field.key]}
             required={!editor.original && field.key === "NOME"}

@@ -27,12 +27,15 @@ export default function WalletManagementModal() {
     addUserToWallet,
     removeUserFromWallet,
     loadWalletUsers,
+    loading,
   } = useContext(WalletsContext);
 
   const [name, setName] = useState("");
   const [userId, setUserId] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+
+  useEffect(() => { setName(selectedWallet?.name ?? ""); setUserId(""); }, [selectedWallet?.id, selectedWallet?.name]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -52,8 +55,7 @@ export default function WalletManagementModal() {
 
   const handleNameSubmit = async () => {
     if (selectedWallet) {
-      await updateWalletName(selectedWallet.id, name);
-      setSelectedWallet(null);
+      if (await updateWalletName(selectedWallet.id, name)) setSelectedWallet(null);
     }
   };
 
@@ -106,7 +108,7 @@ export default function WalletManagementModal() {
           <Button
             variant="contained"
             onClick={handleNameSubmit}
-            disabled={!name}
+            disabled={!name.trim() || loading}
             sx={{ height: "40px", width: "150px", alignSelf: "center" }}
           >
             Salvar
@@ -125,7 +127,7 @@ export default function WalletManagementModal() {
                 <MenuItem value="" disabled>
                   <em>Selecione um usuário</em>
                 </MenuItem>
-                {availableUsers.map((user) => (
+                {availableUsers.filter(user => user.ATIVO === "SIM" && !walletUsers.includes(user.CODIGO)).map((user) => (
                   <MenuItem key={user.CODIGO} value={user.CODIGO.toString()}>
                     {user.NOME}
                   </MenuItem>
@@ -135,7 +137,7 @@ export default function WalletManagementModal() {
             <Button
               variant="contained"
               onClick={handleAddUser}
-              disabled={!userId}
+              disabled={!userId || loading}
               sx={{ minWidth: 120 }}
             >
               Adicionar
@@ -179,6 +181,7 @@ export default function WalletManagementModal() {
                         <Button
                           color="error"
                           size="small"
+                          disabled={loading}
                           onClick={async () => {
                             if (confirm("Tem certeza que deseja remover este usuário?")) {
                               await removeUserFromWallet?.(userId);
