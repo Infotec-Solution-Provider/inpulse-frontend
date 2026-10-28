@@ -302,7 +302,12 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
     const value = editor.draft[field.key] ?? null,
       change = (next: string | null) =>
         setEditor((current) =>
-          current ? { ...current, draft: normalizeCancelledProposalDraft({ ...current.draft, [field.key]: next }) } : null,
+          current
+            ? {
+                ...current,
+                draft: normalizeCancelledProposalDraft({ ...current.draft, [field.key]: next }),
+              }
+            : null,
         );
     return (
       <Box key={field.key} sx={{ gridColumn: field.key === "DESCRICAO" ? "1/-1" : undefined }}>
@@ -313,7 +318,12 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
             field={field}
             value={value}
             onChange={change}
-            disabled={locked || catalog === "results" && editor.draft["CANCELAPROPOSTA"] === "SIM" && cancelledProposalFields.includes(field.key)}
+            disabled={
+              locked ||
+              (catalog === "results" &&
+                editor.draft["CANCELAPROPOSTA"] === "SIM" &&
+                cancelledProposalFields.includes(field.key))
+            }
             label={crmLabels[field.key] ?? field.key}
             error={fieldErrors[field.key]}
             required={!editor.original && field.key === "NOME"}
@@ -353,6 +363,11 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
         </Alert>
       )}
       {mutation.success && <Alert severity="success">{mutation.success}</Alert>}
+      {catalog === "campaigns" && (
+        <Button component={Link} href={`/${instance}/crm-ordering?list=campaigns`}>
+          Organizar prioridades
+        </Button>
+      )}
       <Stack
         component="form"
         direction="row"
@@ -592,6 +607,16 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
             )}
             {editor && (
               <Stack gap={2}>
+                {catalog === "campaigns" && (
+                  <>
+                    <Typography variant="body2">
+                      Posição: {editor?.original?.PRIORIDADE ?? "ao final após cadastrar"}
+                    </Typography>
+                    <Button component={Link} href={`/${instance}/crm-ordering?list=campaigns`}>
+                      Organizar prioridades
+                    </Button>
+                  </>
+                )}
                 <TextField
                   label="Código"
                   required={!editor?.original}

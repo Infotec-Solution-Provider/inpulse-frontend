@@ -1,25 +1,17 @@
 "use client";
-import { CrmToolbar, OperationalIconButton, UiIcon } from "@/lib/ui-system";
+import { UiIcon } from "@/lib/ui-system";
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
-import { useCrmQueryState } from "@/lib/ui-system/query-state";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { CatalogOrderingPanel } from "./catalog-ordering";
+import { VisualOrderList } from "./visual-order-list";
+import { Tabs, Tab } from "@mui/material";
 import { crmError } from "@/lib/crm-marketing-form";
 import type { CrmOrderCriterion, CrmOrdering } from "@/lib/sdk-local/types/crm-marketing.types";
-import {
-  ArrowDownward,
-  ArrowUpward,
-  DeleteOutline,
-  Refresh,
-  SaveOutlined,
-} from "@mui/icons-material";
 import {
   Alert,
   Box,
   Button,
-  IconButton,
   LinearProgress,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   Typography,
@@ -38,9 +30,57 @@ export const orderLabels: Record<CrmOrderCriterion, string> = {
   CADASTRO: "Ordem de cadastro na campanha",
 };
 export default function CrmOrderingPage() {
+  const [tab, setTab] = useState("criteria");
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("list");
+    if (["campaigns", "segments", "states", "cities"].includes(requested ?? "")) setTab(requested!);
+  }, []);
   return (
     <CrmMarketingFrame title="Ordenar campanhas">
-      <OrderingPanel />
+      <Tabs
+        value={tab}
+        onChange={(_, value) => setTab(value)}
+        variant="scrollable"
+        scrollButtons="auto"
+        aria-label="Listas de ordenação"
+      >
+        {[
+          ["criteria", "Critérios"],
+          ["campaigns", "Campanhas"],
+          ["segments", "Segmentos"],
+          ["states", "Estados"],
+          ["cities", "Cidades"],
+        ].map(([value, label]) => (
+          <Tab
+            key={value}
+            id={`ordering-tab-${value}`}
+            aria-controls={`ordering-panel-${value}`}
+            value={value}
+            label={label}
+          />
+        ))}
+      </Tabs>
+      <Box
+        role="tabpanel"
+        id="ordering-panel-criteria"
+        aria-labelledby="ordering-tab-criteria"
+        hidden={tab !== "criteria"}
+        sx={{ pt: 2 }}
+      >
+        <OrderingPanel />
+      </Box>
+      {(["campaigns", "segments", "states", "cities"] as const).map((kind) => (
+        <Box
+          key={kind}
+          role="tabpanel"
+          id={`ordering-panel-${kind}`}
+          aria-labelledby={`ordering-tab-${kind}`}
+          hidden={tab !== kind}
+          sx={{ pt: 2 }}
+        >
+          <CatalogOrderingPanel kind={kind} active={tab === kind} />
+        </Box>
+      ))}
     </CrmMarketingFrame>
   );
 }
@@ -49,15 +89,26 @@ export function OrderingPanel() {
     mutation = useCrmMutation(),
     [original, setOriginal] = useState<CrmOrdering | null>(null),
     [criteria, setCriteria] = useState<CrmOrderCriterion[]>([]),
+    [cityMode, setCityMode] = useState<"S" | "N" | "">(""),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [reload, setReload] = useState(0),
     [explicitReload, setExplicitReload] = useState(false);
+  const modeRef = useRef(cityMode);
+  modeRef.current = cityMode;
+  const dirty = Boolean(
+    original &&
+      (JSON.stringify(criteria) !== JSON.stringify(original.criteria) ||
+        cityMode !== (original.data.ORDENACAO_APENAS_CIDADE ?? "")),
+  );
   const originalRef = useRef(original),
     criteriaRef = useRef(criteria);
   originalRef.current = original;
   criteriaRef.current = criteria;
+  const gateRef = useRef(false);
+  gateRef.current = mutation.gate;
   useEffect(() => {
+    if (gateRef.current && !explicitReload) return;
     let active = true;
     setLoading(true);
     setError("");
@@ -68,10 +119,18 @@ export function OrderingPanel() {
           if (
             explicitReload ||
             !originalRef.current ||
-            JSON.stringify(criteriaRef.current) === JSON.stringify(originalRef.current.criteria)
+            (JSON.stringify(criteriaRef.current) === JSON.stringify(originalRef.current.criteria) &&
+              modeRef.current === (originalRef.current.data.ORDENACAO_APENAS_CIDADE ?? ""))
           ) {
             setOriginal(data);
             setCriteria(data.criteria);
+            setCityMode(
+              data.data.ORDENACAO_APENAS_CIDADE === "S"
+                ? "S"
+                : data.data.ORDENACAO_APENAS_CIDADE === "N"
+                  ? "N"
+                  : "",
+            );
           }
           if (explicitReload) {
             mutation.reconcile();
@@ -92,37 +151,24 @@ export function OrderingPanel() {
   }, [client, reload]);
   async function save() {
     if (!original || !criteria.length) return;
-    const result = await mutation.write(() => client.saveOrdering(criteria, original.data));
+    const result = await mutation.write(() =>
+      client.saveOrdering(criteria, original.data, cityMode || undefined),
+    );
     if (result) {
       setOriginal(result.value);
       setCriteria(result.value.criteria);
+      setCityMode(result.value.data.ORDENACAO_APENAS_CIDADE === "S" ? "S" : "N");
       mutation.setSuccess("Ordem dos critérios salva.");
     }
   }
-  function move(index: number, step: number) {
-    const next = [...criteria],
-      target = index + step;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    setCriteria(next);
-    mutation.setSuccess("");
-  }
   function reloadOrder() {
-    if (
-      original &&
-      JSON.stringify(criteria) !== JSON.stringify(original.criteria) &&
-      !window.confirm("Descartar a ordem ainda não salva e recarregar?")
-    )
+    if (original && dirty && !window.confirm("Descartar a ordem ainda não salva e recarregar?"))
       return;
     setExplicitReload(true);
     setReload((value) => value + 1);
   }
-  useCrmLeaveGuard(
-    Boolean(original && JSON.stringify(criteria) !== JSON.stringify(original.criteria)),
-    mutation.busy,
-    mutation.gate,
-  );
-  const disabled = mutation.busy || mutation.gate || loading,
+  useCrmLeaveGuard(dirty, mutation.busy, mutation.gate);
+  const disabled = mutation.busy || mutation.gate || loading || Boolean(error),
     available = (original?.supportedCriteria ?? []).filter((key) => !criteria.includes(key));
   return (
     <Stack gap={2}>
@@ -139,49 +185,49 @@ export function OrderingPanel() {
         O primeiro critério tem precedência. A identificação do agendamento desempata resultados
         iguais.
       </Typography>
-      <Stack gap={1}>
-        {criteria.map((key, index) => (
-          <Paper
-            variant="outlined"
+      <TextField
+        select
+        label="Modo de cidades"
+        value={cityMode}
+        disabled={disabled}
+        onChange={(event) => setCityMode(event.target.value as "S" | "N")}
+      >
+        <MenuItem value="N">Por estado — cidades organizadas dentro de cada UF</MenuItem>
+        <MenuItem value="S">Ordem nacional — cidades de todas as UFs</MenuItem>
+      </TextField>
+      <VisualOrderList
+        items={criteria.map((key) => ({ id: key, name: orderLabels[key], showId: false }))}
+        disabled={disabled}
+        onChange={(items) => setCriteria(items.map((item) => item.id as CrmOrderCriterion))}
+      />
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {criteria.map((key) => (
+          <Button
             key={key}
-            sx={{
-              p: { xs: 1, md: 1.5 },
-              display: "flex",
-              alignItems: "center",
-              gap: { xs: 0, md: 1 },
-              minWidth: 0,
-            }}
+            disabled={disabled}
+            onClick={() => setCriteria(criteria.filter((value) => value !== key))}
           >
-            <Typography color="text.secondary" sx={{ minWidth: 24 }}>
-              {index + 1}.
-            </Typography>
-            <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13, overflowWrap: "anywhere" }}>
-              {orderLabels[key]}
-            </Typography>
-            <OperationalIconButton
-              label={`Subir ${orderLabels[key]}`}
-              disabled={disabled || index === 0}
-              onClick={() => move(index, -1)}
-            >
-              <UiIcon icon={ArrowUp} scale="row" />
-            </OperationalIconButton>
-            <OperationalIconButton
-              label={`Descer ${orderLabels[key]}`}
-              disabled={disabled || index === criteria.length - 1}
-              onClick={() => move(index, 1)}
-            >
-              <UiIcon icon={ArrowDown} scale="row" />
-            </OperationalIconButton>
-            <OperationalIconButton
-              label={`Remover ${orderLabels[key]}`}
-              disabled={disabled}
-              onClick={() => setCriteria(criteria.filter((value) => value !== key))}
-            >
-              <UiIcon name="delete" scale="row" />
-            </OperationalIconButton>
-          </Paper>
+            Remover {orderLabels[key]}
+          </Button>
         ))}
       </Stack>
+      <Button
+        disabled={disabled || !dirty}
+        onClick={() => {
+          if (original) {
+            setCriteria(original.criteria);
+            setCityMode(
+              original.data.ORDENACAO_APENAS_CIDADE === "S"
+                ? "S"
+                : original.data.ORDENACAO_APENAS_CIDADE === "N"
+                  ? "N"
+                  : "",
+            );
+          }
+        }}
+      >
+        Desfazer movimentos
+      </Button>
       <TextField
         select
         label="Adicionar critério"
@@ -207,10 +253,7 @@ export function OrderingPanel() {
           startIcon={<UiIcon name="finish" scale="row" />}
           variant="contained"
           disabled={
-            disabled ||
-            !original ||
-            !criteria.length ||
-            JSON.stringify(criteria) === JSON.stringify(original.criteria)
+            disabled || !original || !criteria.length || (!dirty && original.managed) || !cityMode
           }
           onClick={() => void save()}
         >

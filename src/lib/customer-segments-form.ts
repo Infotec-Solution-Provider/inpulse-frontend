@@ -27,16 +27,8 @@ export function segmentDraftValidation(draft: SegmentDraft, original?: Segment) 
       ))
       ? "Informe um nome com até 50 caracteres compatíveis com o CRM."
       : "";
-  const orderValue = draft.order.trim();
-  const orderError =
-    orderValue !== "" &&
-    (!/^-?\d+$/.test(orderValue) ||
-      !Number.isSafeInteger(Number(orderValue)) ||
-      Number(orderValue) < -2147483648 ||
-      Number(orderValue) > 2147483647)
-      ? "Informe um número inteiro entre -2147483648 e 2147483647."
-      : "";
-  const order = orderValue === "" ? null : Number(orderValue);
+  const orderError = "";
+  const order = original?.ordem ?? null;
   const unitText =
     draft.unit === undefined ? (original?.COD_UNIDADE?.toString() ?? "") : draft.unit.trim();
   const unit = unitText === "" ? null : Number(unitText);
@@ -47,7 +39,7 @@ export function segmentDraftValidation(draft: SegmentDraft, original?: Segment) 
     (!/^[1-9]\d*$/.test(unitText) || !Number.isSafeInteger(unit) || unit! > 2147483647)
       ? "Selecione uma unidade cadastrada."
       : "";
-  const hasChanges = !original || nameChanged || order !== original.ordem || unitChanged;
+  const hasChanges = !original || nameChanged || unitChanged;
   return {
     name,
     order,
@@ -62,20 +54,18 @@ export function segmentDraftValidation(draft: SegmentDraft, original?: Segment) 
 }
 
 export function createSegmentPayload(draft: SegmentDraft): CreateSegmentRequest {
-  const { name, order, unit } = segmentDraftValidation(draft);
+  const { name, unit } = segmentDraftValidation(draft);
   return {
     NOME: name,
-    ...(draft.order.trim() !== "" ? { ordem: order } : {}),
     ...(draft.unit?.trim() ? { COD_UNIDADE: unit } : {}),
   };
 }
 
 export function updateSegmentPayload(draft: SegmentDraft, original: Segment): UpdateSegmentRequest {
-  const { name, order, unit, unitChanged, nameChanged } = segmentDraftValidation(draft, original);
+  const { name, unit, unitChanged, nameChanged } = segmentDraftValidation(draft, original);
   return {
     changes: {
       ...(nameChanged ? { NOME: name } : {}),
-      ...(order !== original.ordem ? { ordem: order } : {}),
       ...(unitChanged ? { COD_UNIDADE: unit } : {}),
     },
     expected: { NOME: original.NOME, ordem: original.ordem, COD_UNIDADE: original.COD_UNIDADE },

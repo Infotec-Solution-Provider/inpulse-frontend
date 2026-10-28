@@ -100,15 +100,15 @@ export const CRM_CATALOGS: Record<CrmCatalogName, CatalogDefinition> = {
     identity: "CODIGO",
     fields: [
       name(40),
+      { ...order("ORDEM", "Posição no estado"), readOnly: true },
+      { ...order("ORDEMESTADO", "Posição do estado"), readOnly: true },
+      { ...order("ORDEMCIDADE", "Posição nacional"), readOnly: true },
       {
         key: "UF",
         label: "Estado",
         maxLength: 50,
         help: "Selecione um estado cadastrado. Referências históricas são preservadas.",
       },
-      order("ORDEM", "Ordem"),
-      order("ORDEMESTADO", "Ordem do estado"),
-      order("ORDEMCIDADE", "Ordem da cidade"),
     ],
   },
   states: {
@@ -118,7 +118,7 @@ export const CRM_CATALOGS: Record<CrmCatalogName, CatalogDefinition> = {
     identity: "UF",
     fields: [
       name(35),
-      order("ORDEM", "Ordem"),
+      { ...order("ORDEM", "Posição"), readOnly: true },
       {
         key: "FUSOHORARIO",
         label: "Fuso horário CRM",

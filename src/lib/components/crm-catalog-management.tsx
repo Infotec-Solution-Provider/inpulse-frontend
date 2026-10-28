@@ -569,6 +569,11 @@ export function GenericCatalogManagement({
         </Button>
       }
     >
+      {(["cities", "states"] as string[]).includes(catalog) && (
+        <Button component={NextLink} href={`/${instance}/crm-ordering?list=${catalog}`}>
+          Organizar prioridades
+        </Button>
+      )}
       <Stack spacing={2}>
         {success && (
           <Alert severity="success" onClose={() => setSuccess("")}>
@@ -842,6 +847,18 @@ export function GenericCatalogManagement({
           </DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ pt: 1 }}>
+              {(["cities", "states"] as string[]).includes(catalog) && (
+                <>
+                  <Typography variant="body2">
+                    {catalog === "cities"
+                      ? `Posição no estado: ${editor?.original?.ORDEM ?? "ao final após cadastrar"} · Nacional: ${editor?.original?.ORDEMCIDADE ?? "ao final após cadastrar"}`
+                      : `Posição: ${editor?.original?.ORDEM ?? "ao final após cadastrar"}`}
+                  </Typography>
+                  <Button component={NextLink} href={`/${instance}/crm-ordering?list=${catalog}`}>
+                    Organizar prioridades
+                  </Button>
+                </>
+              )}
               {(unitsError || statesError) && (
                 <Alert
                   severity="warning"

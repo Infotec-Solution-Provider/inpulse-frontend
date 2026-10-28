@@ -767,29 +767,12 @@ function SegmentManagement({
               />
               <div className="grid gap-4 rounded-md bg-slate-50 p-4 dark:bg-slate-800/40">
                 <Typography variant="subtitle2">Dados adicionais</Typography>
-                <TextField
-                  label="Ordem"
-                  fullWidth
-                  value={editor?.draft.order ?? ""}
-                  onChange={(event) =>
-                    setEditor(
-                      (current) =>
-                        current && {
-                          ...current,
-                          draft: { ...current.draft, order: event.target.value },
-                        },
-                    )
-                  }
-                  error={Boolean(validation?.orderError)}
-                  helperText={
-                    validation?.orderError ||
-                    (editor?.original
-                      ? "Deixe em branco para ficar sem ordem."
-                      : "Opcional. Em branco, usa a ordem padrão do cadastro.")
-                  }
-                  slotProps={{ htmlInput: { inputMode: "numeric" } }}
-                  disabled={saving || reloadingEditor}
-                />
+                <Typography variant="body2">
+                  Posição: {editor?.original?.ordem ?? "ao final após cadastrar"}
+                </Typography>
+                <Button component={NextLink} href={`/${instance}/crm-ordering?list=segments`}>
+                  Organizar prioridades
+                </Button>
                 <TextField
                   label="Unidade"
                   fullWidth

@@ -93,3 +93,28 @@ export interface CrmCampaignMemberExpected {
   CAMPANHA: number;
   OPERADOR: number | null;
 }
+
+export type CatalogOrderKind = "campaigns" | "segments" | "states" | "cities";
+export interface CatalogOrderItem {
+  id: number | string;
+  name: string | null;
+  position: number;
+  storedOrder: number | null;
+  uf?: string | null;
+  validUf?: boolean;
+  paused?: boolean;
+}
+export interface CatalogOrderSnapshot {
+  kind: CatalogOrderKind;
+  scope: string;
+  revision: string;
+  cityMode: string | null;
+  items: CatalogOrderItem[];
+  states: { id: string; name: string | null }[];
+  invalidUfCount: number;
+}
+export interface CatalogOrderSave {
+  scope: string;
+  ids: (number | string)[];
+  revision: string;
+}

@@ -32,7 +32,7 @@ const schemas: Record<string, any[]> = {
     field("TIPO", "enum", null, true, { values: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"] }),
     field("DATA_INI", "datetime", "0000-00-00 00:00:00"),
     field("MAX_RESPOSTA", "number", 0),
-    field("PRIORIDADE", "number", 0),
+    field("PRIORIDADE", "number", 0, true, { readOnly: true }),
     field("PAUSADA", "enum", null, true, { values: ["SIM", "NAO"] }),
     field("SQL_CAMPANHA", "text", null, true, { readOnly: true }),
     field("GERADO_LISTA", "enum", null, true, { readOnly: true, values: ["SIM", "NAO"] }),
@@ -179,6 +179,49 @@ async function mutate<T>(
   return copy(result);
 }
 const listQueries: any[] = [];
+const orderingLists: Record<string, any> = {};
+function orderedList(instance: string, kind: string, scope: string) {
+  const key = `${instance}:${kind}:${scope}`;
+  if (!orderingLists[key]) {
+    let items: {
+      id: string | number;
+      name: string;
+      uf?: string;
+      validUf?: boolean;
+      paused?: boolean;
+    }[] =
+      kind === "states"
+        ? [
+            { id: "SP", name: "São Paulo" },
+            { id: "RJ", name: "Rio de Janeiro" },
+          ]
+        : Array.from({ length: kind === "campaigns" ? 12 : 1200 }, (_, i) => ({
+            id: i + 1,
+            name: `${kind === "segments" ? "Segmento" : kind === "cities" ? "Cidade" : "Campanha"} ${String(i + 1).padStart(4, "0")}`,
+            ...(kind === "cities" ? { uf: i % 2 ? "SP" : "RJ", validUf: true } : {}),
+            ...(kind === "campaigns" ? { paused: i === 1 } : {}),
+          }));
+    if (kind === "cities" && scope !== "national")
+      items = items.filter((item: any) => item.uf === scope);
+    orderingLists[key] = {
+      kind,
+      scope,
+      revision: "revision-1",
+      cityMode: data[instance].ordering.data.ORDENACAO_APENAS_CIDADE,
+      items: items.map((item: any, i: number) => ({
+        ...item,
+        position: i + 1,
+        storedOrder: i + 1,
+      })),
+      states: [
+        { id: "SP", name: "São Paulo" },
+        { id: "RJ", name: "Rio de Janeiro" },
+      ],
+      invalidUfCount: 0,
+    };
+  }
+  return orderingLists[key];
+}
 export class MarketingClient {
   constructor(
     _url: string,
@@ -381,14 +424,42 @@ export class MarketingClient {
   async ordering() {
     return copy(data[this.instance].ordering);
   }
-  async saveOrdering(criteria: any, expected: any) {
-    return mutate("saveOrdering", this.instance, this.token, { criteria, expected }, () => {
-      data[this.instance].ordering = {
-        ...data[this.instance].ordering,
-        criteria,
-        data: { ...expected, ORDERBY: "new-order", SEQUENCIADEORDENACAO: criteria.join(",") },
-      };
-      return data[this.instance].ordering;
+  async saveOrdering(criteria: any, expected: any, cityMode?: string) {
+    return mutate(
+      "saveOrdering",
+      this.instance,
+      this.token,
+      { criteria, expected, ...(cityMode ? { cityMode } : {}) },
+      () => {
+        data[this.instance].ordering = {
+          ...data[this.instance].ordering,
+          criteria,
+          data: {
+            ...expected,
+            ORDERBY: "new-order",
+            SEQUENCIADEORDENACAO: criteria.join(","),
+            ORDENACAO_APENAS_CIDADE: cityMode ?? expected.ORDENACAO_APENAS_CIDADE,
+          },
+        };
+        return data[this.instance].ordering;
+      },
+    );
+  }
+  async catalogOrdering(kind: string, scope: string) {
+    return copy(orderedList(this.instance, kind, scope));
+  }
+  async saveCatalogOrdering(kind: string, payload: any) {
+    return mutate("saveCatalogOrdering", this.instance, this.token, { kind, ...payload }, () => {
+      const list = orderedList(this.instance, kind, payload.scope);
+      if (payload.revision !== list.revision)
+        throw error(409, "A lista foi alterada. Recarregue os dados.");
+      list.items = payload.ids.map((id: any, i: number) => ({
+        ...list.items.find((item: any) => item.id === id),
+        position: i + 1,
+        storedOrder: i + 1,
+      }));
+      list.revision = `revision-${Number(list.revision.split("-")[1]) + 1}`;
+      return list;
     });
   }
 }

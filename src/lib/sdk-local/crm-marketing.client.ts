@@ -1,3 +1,8 @@
+import type {
+  CatalogOrderKind,
+  CatalogOrderSnapshot,
+  CatalogOrderSave,
+} from "./types/crm-marketing.types";
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 import type {
   CrmMarketingCatalog,
@@ -165,16 +170,38 @@ export default class CrmMarketingClient {
     ).data.data;
   }
   async campaignMembers(id: number) {
-    return (await this.ax.get<{ data: CrmCampaignMember[] }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members`, this.pinned())).data;
+    return (
+      await this.ax.get<{ data: CrmCampaignMember[] }>(
+        `${this.root}/campaigns/${encodeURIComponent(id)}/members`,
+        this.pinned(),
+      )
+    ).data;
   }
   async campaignMemberOptions(id: number, search = "", page = 1) {
-    return (await this.ax.get<{ data: CrmCampaignMemberOption[]; page: { current: number; hasNext: boolean } }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members/options`, { ...this.pinned(), params: { search, page, perPage: 20 } })).data;
+    return (
+      await this.ax.get<{
+        data: CrmCampaignMemberOption[];
+        page: { current: number; hasNext: boolean };
+      }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members/options`, {
+        ...this.pinned(),
+        params: { search, page, perPage: 20 },
+      })
+    ).data;
   }
   async addCampaignMember(id: number, data: { CODIGO: number; OPERADOR: number }) {
-    return (await this.ax.post<{ data: CrmCampaignMember }>(`${this.root}/campaigns/${encodeURIComponent(id)}/members`, data, this.pinned())).data;
+    return (
+      await this.ax.post<{ data: CrmCampaignMember }>(
+        `${this.root}/campaigns/${encodeURIComponent(id)}/members`,
+        data,
+        this.pinned(),
+      )
+    ).data;
   }
   async removeCampaignMember(id: number, linkId: number, expected: CrmCampaignMemberExpected) {
-    await this.ax.delete(`${this.root}/campaigns/${encodeURIComponent(id)}/members/${encodeURIComponent(linkId)}`, { ...this.pinned(), data: { expected } });
+    await this.ax.delete(
+      `${this.root}/campaigns/${encodeURIComponent(id)}/members/${encodeURIComponent(linkId)}`,
+      { ...this.pinned(), data: { expected } },
+    );
   }
   async preview(criteria: CrmSelectionCriteria) {
     return (
@@ -201,11 +228,31 @@ export default class CrmMarketingClient {
   async ordering() {
     return (await this.ax.get<CrmOrdering>(`${this.root}/ordering`)).data;
   }
-  async saveOrdering(criteria: CrmOrderCriterion[], expected: CrmOrderingSnapshot) {
+  async saveOrdering(
+    criteria: CrmOrderCriterion[],
+    expected: CrmOrderingSnapshot,
+    cityMode?: "S" | "N",
+  ) {
     return (
       await this.ax.patch<CrmOrdering>(
         `${this.root}/ordering`,
-        { criteria, expected },
+        { criteria, expected, ...(cityMode ? { cityMode } : {}) },
+        this.pinned(),
+      )
+    ).data;
+  }
+  async catalogOrdering(kind: CatalogOrderKind, scope = kind === "cities" ? "national" : "all") {
+    return (
+      await this.ax.get<CatalogOrderSnapshot>(`/api/crm/catalog-ordering/${kind}`, {
+        params: { scope },
+      })
+    ).data;
+  }
+  async saveCatalogOrdering(kind: CatalogOrderKind, data: CatalogOrderSave) {
+    return (
+      await this.ax.put<CatalogOrderSnapshot>(
+        `/api/crm/catalog-ordering/${kind}`,
+        data,
         this.pinned(),
       )
     ).data;

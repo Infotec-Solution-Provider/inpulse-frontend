@@ -17,7 +17,7 @@ test("creates a campaign with explicit identity, preserved nullable defaults and
     name: "create",
     instance: "tenant-a",
     token: "token-a",
-    payload: { CODIGO: 12, NOME: "Campanha nova", DATA_INI: null, PRIORIDADE: 0 },
+    payload: { CODIGO: 12, NOME: "Campanha nova", DATA_INI: null },
   });
   expect(calls.at(-1).payload.SQL_CAMPANHA).toBeUndefined();
   await page.screenshot({

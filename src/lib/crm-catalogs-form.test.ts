@@ -71,7 +71,7 @@ describe("CRM catalog drafts", () => {
     };
     expect(
       validateCatalogDraft("cities", { ...catalogDraft("cities", original), ORDEM: "0" }, original),
-    ).toMatchObject({ valid: true, changes: { ORDEM: 0 } });
+    ).toMatchObject({ valid: true, changes: {} });
     expect(
       validateCatalogDraft(
         "cities",
