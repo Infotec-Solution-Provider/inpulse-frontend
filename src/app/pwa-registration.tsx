@@ -10,6 +10,7 @@ export function PwaRegistration() {
 
     const register = async () => {
       try {
+        // Both interfaces share the original worker and push subscription on this origin.
         const registration = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
           updateViaCache: "none",

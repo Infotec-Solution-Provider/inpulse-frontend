@@ -5,6 +5,7 @@ import { FormEventHandler, useContext, useRef } from "react";
 import { AuthContext } from "@/app/auth-context";
 import { Button, TextField, ThemeProvider } from "@mui/material";
 import darkTheme from "@/lib/themes/dark";
+import FrontendVersionSwitch from "@/lib/components/frontend-version-switch";
 
 interface LoginProps {
   params: Promise<{
@@ -63,6 +64,7 @@ export default function Login({ params }: LoginProps) {
           >
             Entrar
           </Button>
+          <FrontendVersionSwitch />
         </form>
       </ThemeProvider>
     </div>
