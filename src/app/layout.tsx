@@ -5,6 +5,7 @@ import type React from "react";
 import { Bounce, ToastContainer } from "react-toastify";
 import { PwaRegistration } from "./pwa-registration";
 import "./globals.css";
+import { frontendAssetPath } from "@/lib/frontend-versions";
 
 const firaSans = Fira_Sans({
   weight: ["400", "500", "600"],
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   title: "InPulse",
   description: "CRM InPulse com atendimento, notificacoes e operacao em tempo real.",
   applicationName: "InPulse",
-  manifest: "/manifest.webmanifest",
+  manifest: frontendAssetPath("/manifest.webmanifest"),
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

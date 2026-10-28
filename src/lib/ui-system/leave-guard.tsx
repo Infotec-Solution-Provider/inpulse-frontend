@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { PilotDesignProvider } from "./provider";
+import { frontendNavigationPath } from "@/lib/frontend-versions";
 type Draft = { dirty: boolean; busy: boolean; review: boolean };
 const Context = createContext<((id: symbol, draft: Draft | null) => void) | null>(null);
 
@@ -26,7 +27,7 @@ export function CrmLeaveGuardProvider({
 }) {
   const registry = useMemo(() => new Map<symbol, Draft>(), [scope]);
   const [, changed] = useState(0);
-  const [target, setTarget] = useState<{ scope: string; url: string } | null>(null);
+  const [target, setTarget] = useState<{ scope: string; url: string; documentNavigation: boolean } | null>(null);
   const register = useMemo(
     () => (id: symbol, draft: Draft | null) => {
       if (draft && (draft.dirty || draft.busy || draft.review)) registry.set(id, draft);
@@ -68,7 +69,7 @@ export function CrmLeaveGuardProvider({
         return;
       event.preventDefault();
       event.stopPropagation();
-      setTarget({ scope, url: url.pathname + url.search + url.hash });
+      setTarget({ scope, url: url.pathname + url.search + url.hash, documentNavigation: link.dataset.documentNavigation === "true" });
     };
     document.addEventListener("click", click, true);
     return () => document.removeEventListener("click", click, true);
@@ -99,9 +100,10 @@ export function CrmLeaveGuardProvider({
                 <Button
                   color="error"
                   onClick={() => {
-                    const url = target.url;
+                    const { url, documentNavigation } = target;
                     setTarget(null);
-                    navigate(url);
+                    if (documentNavigation) window.location.assign(url);
+                    else navigate(frontendNavigationPath(url));
                   }}
                 >
                   Descartar e sair

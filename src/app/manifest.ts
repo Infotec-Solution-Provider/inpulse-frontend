@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
+import { frontendAssetPath } from "@/lib/frontend-versions";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "InPulse",
     short_name: "InPulse",
     description: "CRM InPulse com atendimento, notificacoes e operacao em tempo real.",
-    start_url: "/",
-    scope: "/",
+    start_url: frontendAssetPath("/"),
+    scope: frontendAssetPath("/"),
     display: "standalone",
     background_color: "#020617",
     theme_color: "#0f172a",
@@ -14,19 +15,19 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     icons: [
       {
-        src: "/icon",
+        src: frontendAssetPath("/icon"),
         sizes: "192x192",
         type: "image/png",
         purpose: "maskable",
       },
       {
-        src: "/icon",
+        src: frontendAssetPath("/icon"),
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/apple-icon",
+        src: frontendAssetPath("/apple-icon"),
         sizes: "180x180",
         type: "image/png",
       },

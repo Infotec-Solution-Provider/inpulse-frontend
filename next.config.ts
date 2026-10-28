@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { frontendRouting } from "./frontend-routing.config";
+
+const { versionRewrites, ...versionConfig } = frontendRouting(process.env);
 
 /**
  * Proxy opcional para ambientes sem nginx por caminho (ex.: homologação).
@@ -34,11 +37,13 @@ const authenticatedInternalChatRoutes = [
 ];
 
 const nextConfig: NextConfig = {
-  ...(proxyTargets.length > 0 && {
+  ...versionConfig,
+  ...((proxyTargets.length > 0 || versionRewrites.length > 0) && {
     experimental: { proxyTimeout: 300_000 },
     async rewrites() {
       return {
         beforeFiles: [
+          ...versionRewrites,
           ...proxyTargets.flatMap(([name, target]) =>
             name === "whatsapp"
               ? authenticatedInternalChatRoutes.map((route) => ({
