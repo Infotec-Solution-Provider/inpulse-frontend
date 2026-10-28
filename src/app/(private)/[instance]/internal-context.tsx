@@ -9,6 +9,7 @@ import InternalMessageReactionHandler from "@/lib/event-handlers/internal-messag
 import InternalMessageStatusHandler from "@/lib/event-handlers/internal-message-status";
 import processInternalChatsAndMessages from "@/lib/process-internal-chats-and-messages";
 import usersService from "@/lib/services/users.service";
+import { retryLimitedRead } from "@/lib/utils/retry-limited-read";
 import {
   InternalChat,
   InternalChatClient,
@@ -608,6 +609,7 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const session = liveAuth.current;
     const sessionUser = session.user;
+    const controller = new AbortController();
     let active = true;
     const isCurrent = () => active && liveAuth.current.scope === sessionScope;
     if (
@@ -618,15 +620,6 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
       users.length > 0
     ) {
       api.current.setAuth(session.token);
-      wppApi.current
-        .getContacts()
-        .then((res) => {
-          if (!isCurrent()) return;
-          setContacts(Array.isArray(res) ? res : []);
-        })
-        .catch((error) => {
-          if (isCurrent()) console.error("Falha ao carregar contatos internos", error);
-        });
       api.current
         .getInternalChatsBySession()
         .then((payload) => {
@@ -646,9 +639,22 @@ export function InternalChatProvider({ children }: { children: React.ReactNode }
         })
         .catch((error) => {
           if (isCurrent()) console.error("Falha ao carregar conversas internas", error);
+        })
+        .then(async () => {
+          // Load the directory after chats, leaving capacity for the initial session.
+          if (!isCurrent()) return;
+          try {
+            const res = await retryLimitedRead(
+              () => wppApi.current.getContacts(controller.signal), controller.signal,
+            );
+            if (isCurrent()) setContacts(Array.isArray(res) ? res : []);
+          } catch (error) {
+            if (isCurrent()) console.error("Falha ao carregar contatos internos", error);
+          }
         });
       return () => {
         active = false;
+        controller.abort();
       };
     }
 

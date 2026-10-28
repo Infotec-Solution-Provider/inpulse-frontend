@@ -29,7 +29,10 @@ const EMOJI_STYLE = "facebook" as EmojiStyle;
 const EMOJI_SUGGESTION_MODE = "frequent" as SuggestionMode;
 
 function getDefaultSelectedChannel(currentChatMessages: WppMessage[], channels: WppClient[]) {
-  const lastMessage = currentChatMessages.findLast((msg) => msg.clientId)!!;
+  const lastMessage = currentChatMessages.reduce<WppMessage | null>(
+    (last, message) => (message.clientId && (!last || message.id > last.id) ? message : last),
+    null,
+  );
 
   if (lastMessage?.clientId) {
     return channels.find((ch) => ch.id === lastMessage.clientId) || null;
@@ -87,24 +90,31 @@ export default function ChatSendMessageArea() {
   );
 
   useEffect(() => {
-    if (currentChat && currentChat.chatType === "wpp" && channels.length > 0) {
-      // Check if there's a stored channel for this chat
-      const storedChannelId = chatsChannels.current.get(currentChat.id);
-      if (storedChannelId) {
-        const stored = channels.find((ch) => ch.id === storedChannelId);
-        if (stored) {
-          setSelectedChannel(stored);
-          return;
-        }
-      }
-      // Fall back to deriving from last message's clientId
-      const channel = getDefaultSelectedChannel(currentChatMessages, channels);
-      if (channel) {
-        setSelectedChannel(channel);
-        chatsChannels.current.set(currentChat.id, channel.id);
-      }
-    }
-  }, [currentChat, loaded]);
+    if (!currentChat || currentChat.chatType !== "wpp") return;
+
+    const storedChannelId = chatsChannels.current.get(currentChat.id);
+    const stored = channels.find((channel) => channel.id === storedChannelId);
+    const history = currentChatMessages.filter(
+      (message) => message.contactId === currentChat.contactId,
+    );
+    if (currentChat.lastMessage) history.push(currentChat.lastMessage);
+    const historyChannel = getDefaultSelectedChannel(history, channels);
+    const defaultChannel = channels.find((channel) => channel.id === globalChannel.current?.id);
+    const channel = stored ?? historyChannel ?? defaultChannel ?? channels[0] ?? null;
+
+    // History can arrive after opening, or expand beyond the cached messages.
+    // Only explicit choices and incoming-channel updates belong in chatsChannels;
+    // caching an automatic fallback would prevent the full history from correcting it.
+    setSelectedChannel((current) => (current === channel ? current : channel));
+  }, [
+    currentChat,
+    currentChatMessages,
+    channels,
+    loaded,
+    chatsChannels,
+    globalChannel,
+    setSelectedChannel,
+  ]);
 
   const {
     textWithNames,
