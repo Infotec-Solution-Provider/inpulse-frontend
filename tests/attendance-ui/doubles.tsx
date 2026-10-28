@@ -202,6 +202,7 @@ export const internal = {
 };
 export const AuthContext = createContext<any>(auth);
 export const WhatsappContext = createContext<any>({});
+export const SocketContext = createContext<any>({ connectionStatus: "connected", lastWebSocketAt: null });
 export const InternalChatContext = createContext<any>(internal);
 export const AppContext = createContext<any>({ openModal: () => {}, closeModal: () => {} });
 export const ContactsContext = createContext<any>({ state: { contacts: [] } });
@@ -220,6 +221,8 @@ export function makeWhatsapp(env: ReturnType<typeof useEnvironment>) {
     parameters,
     channels,
     loaded: true,
+    messageSync: { isRefreshing: false, error: false, lastSuccessAt: null },
+    pullNewMessages: () => {},
     globalChannel: null,
     chatsChannels,
     changeChatFilters,
