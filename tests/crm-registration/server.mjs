@@ -9,13 +9,15 @@ const stubs = {
   "@/lib/sdk-local/customer-crm.client": `export { FakeCrmClient as default } from '${doubles}'`,
   "@/lib/cache/hybrid-cache": "export const hybridCache={invalidateResource:async()=>{}}",
   "next/navigation": `export { useRouter } from '${doubles}'`,
+  "next/link": "import React from 'react'; export default function Link({href,children,...props}) { return React.createElement('a',{...props,href},children); }",
 };
 const server = await createServer({
   configFile: false,
   define: { "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture.invalid") },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-crm-registration",
-  resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },
+  resolve: { dedupe: ["react", "react-dom"], alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },
+  optimizeDeps: { entries: ["tests/crm-registration/index.html"] },
   plugins: [
     {
       name: "isolated-registration",

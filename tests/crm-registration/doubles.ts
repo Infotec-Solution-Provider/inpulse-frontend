@@ -126,6 +126,12 @@ const contactFields: CustomerCrmField[] = [
     maxLength: 11,
   },
 ];
+if (query.has("phones")) {
+  for (const index of [1, 2, 3, 4]) {
+    const names = index === 4 ? ["AREAFAX", "FAX", "DESCFAX"] : [`AREA${index}`, `FONE${index}`, `DESC_FONE${index}`, `OBS_FONE${index}`];
+    for (const [part, name] of names.entries()) fields.push({ name, label: part === 0 ? `DDD do telefone ${index}` : part === 1 ? `Telefone ${index}` : part === 2 ? `Descrição do telefone ${index}` : `Observações do telefone ${index}`, group: "phones", type: part === 0 ? "integer" : "text", nullable: true, maxLength: 100 });
+  }
+}
 const snapshot = (record: CustomerCrmRecord, contact = false): CustomerCrmSnapshot => ({
   record,
   version: String(record.RAZAO ?? record.NOME ?? "")
@@ -162,6 +168,7 @@ window.registrationTest = {
       EMAIL: "a@teste.com",
       GRUPO: 0,
       OBS_ADMIN: null,
+      ...(query.has("phones") ? { AREA1: 11, FONE1: "33333333", DESC_FONE1: "Primeiro", OBS_FONE1: "Observação um", AREA2: 21, FONE2: "44444444", DESC_FONE2: "Segundo", OBS_FONE2: "Observação dois", AREA3: null, FONE3: null, DESC_FONE3: null, OBS_FONE3: null, AREAFAX: 31, FAX: "55555555", DESCFAX: "Quarto" } : {}),
     }),
     "tenant-b": snapshot({
       CODIGO: 41,
