@@ -53,3 +53,4 @@ node_modules/
 /test-results-crm-marketing/
 
 /test-results-crm-*/
+/.cache/crm-administration-vite/
