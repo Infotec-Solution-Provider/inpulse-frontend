@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowForward } from "@mui/icons-material";
 import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import type { CrmMarketingRecord } from "@/lib/sdk-local/types/crm-marketing.types";
+import { interactiveCardSx } from './workspace-styles';
 export const cycleLabels: Record<string, string> = {
   ATIVOS: "Clientes ativos",
   INAT_R: "Inativos recentes",
@@ -37,7 +38,7 @@ export function CampaignCard({
 }) {
   const url = `/${instance}/crm-campaigns/${campaign.CODIGO}${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`;
   return (
-    <Paper variant="outlined" sx={{ p: 2, minWidth: 0 }}>
+    <Paper variant="outlined" sx={interactiveCardSx}>
       <Stack
         direction={{ xs: "column", sm: "row" }}
         alignItems={{ sm: "center" }}
@@ -49,6 +50,7 @@ export function CampaignCard({
             component={Link}
             href={url}
             fontWeight={700}
+            variant="subtitle1"
             sx={{
               overflowWrap: "anywhere",
               color: "text.primary",
@@ -58,6 +60,11 @@ export function CampaignCard({
           >
             {String(campaign.NOME ?? "Campanha sem nome")}
           </Typography>
+          {campaign.DESCRICAO && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }}>
+              {String(campaign.DESCRICAO)}
+            </Typography>
+          )}
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {unitName ? `${unitName} · ` : ""}
             {campaignRole(campaign)}

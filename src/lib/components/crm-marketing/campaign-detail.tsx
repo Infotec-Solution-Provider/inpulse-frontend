@@ -20,6 +20,8 @@ import { CrmMarketingFrame, useCrmMutation, useCrmSession } from "./shared";
 import { CampaignStatus, campaignRole } from "./campaign-common";
 import CampaignEditor from "./campaign-editor";
 import { ConfigurationPanel } from "./configuration";
+import { workspaceSx } from './workspace-styles';
+import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 
 export default function CrmCampaignDetailPage({
   campaignId,
@@ -53,6 +55,7 @@ function CampaignDetail({
     [error, setError] = useState(""),
     [editing, setEditing] = useState(false),
     [reload, setReload] = useState(0);
+  const [confirmToggle, setConfirmToggle] = useState(false);
   const current = useRef(client);
   current.current = client;
   useEffect(() => {
@@ -93,14 +96,7 @@ function CampaignDetail({
     const capability =
       campaign.PAUSADA === "SIM" ? context.capabilities.resume : context.capabilities.pause;
     if (!capability.allowed) return;
-    if (
-      !window.confirm(
-        campaign.PAUSADA === "SIM"
-          ? "Retomar esta campanha? Os agendamentos existentes serão preservados."
-          : "Pausar esta campanha? Os agendamentos existentes serão preservados.",
-      )
-    )
-      return;
+    setConfirmToggle(false);
     const result = await mutation.write(async () => {
       const schema = await client.schema("campaigns");
       return client.patch("campaigns", campaign.CODIGO, {
@@ -122,7 +118,18 @@ function CampaignDetail({
         : context.capabilities.pause
       : null;
   return (
-    <Stack gap={3} sx={{ maxWidth: 1120, minWidth: 0 }}>
+    <Stack gap={3} sx={workspaceSx}>
+      <Dialog open={confirmToggle} onClose={() => setConfirmToggle(false)} fullWidth maxWidth="xs" aria-labelledby="campaign-operation-title" aria-describedby="campaign-operation-description">
+        <DialogTitle id="campaign-operation-title">{campaign?.PAUSADA === 'SIM' ? 'Retomar campanha?' : 'Pausar campanha?'}</DialogTitle>
+        <DialogContent>
+          <Typography fontWeight={600} sx={{ mb: 1, overflowWrap: 'anywhere' }}>{String(campaign?.NOME ?? '')}</Typography>
+          <DialogContentText id="campaign-operation-description">Os agendamentos existentes serão preservados. Esta ação não gera novos agendamentos.</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button autoFocus onClick={() => setConfirmToggle(false)}>Cancelar</Button>
+          <Button variant="contained" disabled={loading || mutation.busy || mutation.gate || !pauseAction?.allowed} onClick={() => void toggle()}>{campaign?.PAUSADA === 'SIM' ? 'Retomar campanha' : 'Pausar campanha'}</Button>
+        </DialogActions>
+      </Dialog>
       <Button
         component={Link}
         href={returnTo}
@@ -288,7 +295,7 @@ function CampaignDetail({
                   <Button
                     startIcon={campaign.PAUSADA === "SIM" ? <PlayArrow /> : <Pause />}
                     disabled={loading || mutation.busy || mutation.gate || !pauseAction?.allowed}
-                    onClick={() => void toggle()}
+                    onClick={() => setConfirmToggle(true)}
                     variant="outlined"
                     sx={{ alignSelf: "flex-start" }}
                   >
