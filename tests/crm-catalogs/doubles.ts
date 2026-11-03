@@ -27,6 +27,7 @@ export function useAuthContext() {
   return auth;
 }
 const rows: Record<CrmCatalogName, CatalogRecord[]> = {
+  "phone-areas": [{ CODIGO: "11", DESCRICAO: "São Paulo" }],
   "customer-groups": [{ CODIGO: 1, DESCRICAO: "Grupo inicial" }],
   positions: [{ CODIGO: 1, DESCRICAO: "Cargo inicial" }],
   origins: [{ CODIGO: 1, DESCRICAO: "Origem inicial" }],
@@ -43,6 +44,7 @@ interface State {
   creates: CatalogRecord[];
   updates: { changes: CatalogRecord; expected: CatalogRecord }[];
   deletes: CatalogRecord[];
+  associations: unknown[];
   failure: string;
   delay: number;
   listDelay: number;
@@ -59,6 +61,7 @@ window.catalogTest = {
   creates: [],
   updates: [],
   deletes: [],
+  associations: [],
   failure: "",
   delay: 0,
   listDelay: 0,
@@ -92,6 +95,18 @@ function fail() {
 }
 let activeToken = "";
 export const customersService = {
+  async associateDddCities(ddd: string, data: unknown) {
+    window.catalogTest.associations.push({ ddd, data }); await wait(window.catalogTest.delay); fail();
+    return { data: { added: 1, existing: 0 } };
+  },
+  async reviewDddCities(ddd: string) {
+    await wait(window.catalogTest.delay);
+    fail();
+    return { data: { ddd, uf: "SP", source: "BrasilAPI", catalogCities: [{ CODIGO: 1, NOME: "São Paulo", UF: "SP" }], cities: [
+      { name: "SÃO PAULO", uf: "SP", status: "normalized", candidates: [{ CODIGO: 1, NOME: "São Paulo", UF: "SP" }] },
+      { name: "CIDADE AUSENTE", uf: "SP", status: "missing", candidates: [] },
+    ], existingLinks: params.has("coverage") ? [] : null, associationWrite: { available: params.has("coverage"), reason: "As exceções de discagem serão preservadas. Cobertura gravada separadamente quando disponível." } } };
+  },
   setAuth(token: string) {
     activeToken = token;
   },
