@@ -1,10 +1,6 @@
 "use client";
 import TelephoneSurveyFields from "@/lib/components/telephone-survey-fields";
-import {
-  completeSurvey,
-  surveyPayload,
-  type SurveyQuestion,
-} from "@/lib/satisfaction";
+import { completeSurvey, surveyPayload, type SurveyQuestion } from "@/lib/satisfaction";
 import customersService from "@/lib/services/customers.service";
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
@@ -24,7 +20,11 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
-import type { TelephoneFinishResult, TelephoneQueueItem, TelephoneFinishExtensions } from "./telephone-dialer.types";
+import type {
+  TelephoneFinishResult,
+  TelephoneQueueItem,
+  TelephoneFinishExtensions,
+} from "./telephone-dialer.types";
 import useChatActionScope from "../(chat)/(actions)/use-chat-action-scope";
 import { getCustomerSegmentsError } from "@/lib/customer-segments-error";
 
@@ -65,6 +65,7 @@ export default function TelephoneFinishModal({
         : null,
     [instance, token],
   );
+  // New reads capture current credentials without clearing drafts when the JWT renews.
   const apiRef = useRef(api);
   apiRef.current = api;
   const scope = useChatActionScope();
@@ -211,7 +212,9 @@ export default function TelephoneFinishModal({
         operation.current.id,
         operation.current.finishedAt,
         {
-          ...(surveyState?.required ? { survey: surveyPayload(surveyState.questions, surveyAnswers) } : {}),
+          ...(surveyState?.required
+            ? { survey: surveyPayload(surveyState.questions, surveyAnswers) }
+            : {}),
           ...(requiresProposal ? { proposalValue: proposalValue.replace(",", ".") } : {}),
           ...(requiresCancellation
             ? {

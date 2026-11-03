@@ -46,7 +46,7 @@ for (const width of [1280, 390]) {
       (window as any).fixture.calls.filter((c: any) => c.finish),
     );
     expect(calls).toHaveLength(1);
-    expect(calls[0].finish[4].answers).toEqual([
+    expect(calls[0].finish[4].survey.answers).toEqual([
       { questionId: 1, rating: 5 },
       { questionId: 2, rating: null },
     ]);
@@ -83,4 +83,68 @@ test("changing result clears responses; survey load failure blocks finalization"
     page.getByText("Não foi possível carregar a pesquisa deste resultado.", { exact: false }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Finalizar", exact: true })).toBeDisabled();
+});
+
+for (const width of [1280, 390])
+  test(`combined proposal, cancellation and survey survive JWT renewal and leave in one operation at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/tests/satisfaction/index.html?mode=call");
+    await page.getByRole("combobox", { name: /^Resultado/ }).click();
+    await page
+      .getByRole("option", { name: "Proposta, cancelamento e pesquisa", exact: true })
+      .click();
+    await page.getByLabel("Valor da proposta (R$)").fill("25,50");
+    await page.getByRole("checkbox").check();
+    for (const [question, option] of [
+      ["1", "5 — Muito bom"],
+      ["2", "Nenhum"],
+    ]) {
+      await page.getByRole("combobox", { name: new RegExp("^Avaliação " + question) }).click();
+      await page.getByRole("option", { name: option, exact: true }).click();
+    }
+    await expect(page.locator("[role=listbox]")).toHaveCount(0);
+    await page.screenshot({
+      path: `test-results/satisfaction/combined-${width}.png`,
+      fullPage: true,
+    });
+    await page.evaluate(() => (window as any).fixture.rotateToken());
+    await expect(page.getByLabel("Valor da proposta (R$)")).toHaveValue("25,50");
+    await expect(page.getByRole("checkbox")).toBeChecked();
+    await expect(page.getByRole("combobox", { name: /^Avaliação 1/ })).toContainText("Muito bom");
+    await page.getByRole("button", { name: "Finalizar", exact: true }).click();
+    const finishes = await page.evaluate(() =>
+      (window as any).fixture.calls.filter((c: any) => c.finish),
+    );
+    expect(finishes).toHaveLength(1);
+    expect(finishes[0].finish[4]).toMatchObject({
+      proposalValue: "25.50",
+      cancelProposals: [{ id: 70, version: "a".repeat(64) }],
+      survey: {
+        answers: [
+          { questionId: 1, rating: 5 },
+          { questionId: 2, rating: null },
+        ],
+      },
+    });
+    expect(finishes[0].finish[2]).toMatch(/^[a-f0-9-]{36}$/);
+  });
+test("unknown combined finish stays blocked with fields intact after JWT renewal", async ({
+  page,
+}) => {
+  await page.goto("/tests/satisfaction/index.html?mode=call");
+  await page.getByRole("combobox", { name: /^Resultado/ }).click();
+  await page.getByRole("option", { name: "Sem pesquisa", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Finalizar", exact: true })).toBeEnabled();
+  await page.evaluate(() => ((window as any).fixture.failWrite = true));
+  await page.getByRole("button", { name: "Finalizar", exact: true }).click();
+  await page.evaluate(() => (window as any).fixture.rotateToken());
+  await expect(page.getByRole("button", { name: "Finalizar", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Conferir finalização", exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as any).fixture.calls.filter((c: any) => c.finish).length),
+  ).toBe(1);
 });

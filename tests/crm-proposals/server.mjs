@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url),
 const { createServer } = await import(pathToFileURL(vitestRequire.resolve("vite")).href);
 const doubles = "/tests/crm-proposals/doubles.ts";
 const stubs = {
+  "@/lib/services/customers.service": `export default {async getCallSatisfaction(){return {required:false,questions:[]}}}`,
   "@/app/auth-context": `export {useAuthContext} from '${doubles}'`,
   "@/app/app-context": `export {useAppContext} from '${doubles}'`,
   "@/lib/sdk-local/crm-proposals.client": `export {FakeProposalsClient as default} from '${doubles}'`,

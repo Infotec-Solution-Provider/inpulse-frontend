@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { ImportJob } from "../../src/lib/sdk-local/types/crm-imports.types";
 const path = "/tests/crm-imports/index.html";
-async function fixture(page: Page, uncertain = false, delayed = false) {
+async function fixture(page: Page, uncertain = false, delayed = false, phoneEnabled = false) {
   const writes: { rows: number[]; tenant?: string; authorization?: string }[] = [];
   let job: ImportJob;
   await page.route("**/api/crm-imports/**", async (route) => {
@@ -23,9 +23,11 @@ async function fixture(page: Page, uncertain = false, delayed = false) {
               { name: "RAZAO", label: "Razão social ou nome", type: "text" },
               { name: "CPF_CNPJ", label: "CPF ou CNPJ", type: "text" },
               { name: "COD_ERP", label: "Código ERP", type: "text" },
+              { name: "AREA1", label: "DDD 1", type: "integer" },
+              { name: "FONE1", label: "Telefone 1", type: "text" },
             ],
-            createEnabled: false,
-            phoneWritesEnabled: false,
+            createEnabled: phoneEnabled,
+            phoneWritesEnabled: phoneEnabled,
             createReason: "Integração final N01",
             retention: "Prévias expiram após 30 minutos.",
           },
@@ -42,8 +44,8 @@ async function fixture(page: Page, uncertain = false, delayed = false) {
         rows: [
           {
             row: 2,
-            state: input.mode === "create" ? "blocked" : "ready",
-            errors: input.mode === "create" ? ["Aguardando N01"] : [],
+            state: input.mode === "create" && !phoneEnabled ? "blocked" : "ready",
+            errors: input.mode === "create" && !phoneEnabled ? ["Aguardando N01"] : [],
             values: ["10", "Novo nome"],
             changes: { RAZAO: "Novo nome" },
             before: { CODIGO: 10, RAZAO: "Nome anterior" },
@@ -60,9 +62,9 @@ async function fixture(page: Page, uncertain = false, delayed = false) {
           },
         ],
         counts: {
-          ready: input.mode === "create" ? 0 : 1,
+          ready: input.mode === "create" && !phoneEnabled ? 0 : 1,
           invalid: 1,
-          blocked: input.mode === "create" ? 1 : 0,
+          blocked: input.mode === "create" && !phoneEnabled ? 1 : 0,
           duplicate: 0,
           failed: 0,
           unknown: 0,
@@ -94,20 +96,22 @@ async function fixture(page: Page, uncertain = false, delayed = false) {
   });
   return writes;
 }
-async function upload(page: Page, create = false) {
+async function upload(page: Page, create = false, phones = false) {
   if (!create) {
     await page.getByRole("combobox", { name: /^Operação/ }).click();
     await page.getByRole("option", { name: "Atualizar clientes existentes" }).click();
   } else await page.getByLabel("Código da origem da lista").fill("1");
-  await page
-    .getByLabel("Arquivo CSV")
-    .setInputFiles({
-      name: "clientes.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        create ? "RAZAO;CPF_CNPJ\nCliente;52998224725" : "CODIGO;RAZAO\n10;Novo nome",
-      ),
-    });
+  await page.getByLabel("Arquivo CSV").setInputFiles({
+    name: "clientes.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      create
+        ? phones
+          ? "RAZAO;CPF_CNPJ;AREA1;FONE1\nCliente;52998224725;11;999991234"
+          : "RAZAO;CPF_CNPJ\nCliente;52998224725"
+        : "CODIGO;RAZAO\n10;Novo nome",
+    ),
+  });
   await expect(page.getByText("2. Relacione as colunas")).toBeVisible();
   await page.getByRole("button", { name: "Validar e gerar prévia" }).click();
 }
@@ -171,13 +175,11 @@ test("tenant switch discards old preview even when its request finishes late", a
   await page.goto(path);
   await page.getByRole("combobox", { name: /^Operação/ }).click();
   await page.getByRole("option", { name: "Atualizar clientes existentes" }).click();
-  await page
-    .getByLabel("Arquivo CSV")
-    .setInputFiles({
-      name: "clientes.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from("CODIGO;RAZAO\n10;Novo nome"),
-    });
+  await page.getByLabel("Arquivo CSV").setInputFiles({
+    name: "clientes.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("CODIGO;RAZAO\n10;Novo nome"),
+  });
   await page.getByRole("button", { name: "Validar e gerar prévia" }).click();
   await page.getByRole("button", { name: "Trocar tenant" }).click();
   await expect(page.getByText("1. Escolha a operação e o arquivo")).toBeVisible();
@@ -201,3 +203,20 @@ for (const variant of [
     );
     await page.screenshot({ path: testInfo.outputPath("preview.png"), fullPage: true });
   });
+
+test("Mail List uses N01 capabilities to enable reviewed creation without a fixed frontend gate", async ({
+  page,
+}) => {
+  const writes = await fixture(page, false, false, true);
+  await page.goto(path);
+  await expect(page.getByText(/inclusão aguarda/)).toHaveCount(0);
+  await upload(page, true, true);
+  await expect(
+    page.getByRole("checkbox", { name: "Selecionar linha 2", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("checkbox", { name: "Selecionar linha 2", exact: true }).check();
+  await page.getByRole("checkbox", { name: /Conferi a prévia/ }).check();
+  await page.getByRole("button", { name: "Processar seleção (1)" }).click();
+  await expect(page.getByText("Concluída: 1", { exact: true })).toBeVisible();
+  expect(writes).toEqual([{ rows: [2], tenant: "tenant-a", authorization: "Bearer token-a" }]);
+});

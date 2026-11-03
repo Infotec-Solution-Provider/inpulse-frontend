@@ -87,4 +87,7 @@ export function mapTelephonyScheduleToQueueItem(
   };
 }
 
-export type TelephoneFinishExtensions = Pick<FinishTelephonyScheduleDTO, "proposalValue" | "cancelProposals" | "survey">;
+export type TelephoneFinishExtensions = Pick<
+  FinishTelephonyScheduleDTO,
+  "proposalValue" | "cancelProposals" | "survey"
+>;

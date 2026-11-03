@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 export const context = { instance: "fixture", token: "fixture-token" };
 const initial = [
   { id: 1, description: "Como foi o atendimento?", used: true },
@@ -15,7 +16,43 @@ Object.assign(window, {
     closed: false,
   },
 });
-export const useAuthContext = () => ({ ...context, user: { CODIGO: 7, NIVEL: "ADMIN" } });
+const listeners = new Set<() => void>();
+Object.assign((window as any).fixture, {
+  rotateToken: () => {
+    context.token += "-renewed";
+    listeners.forEach((l) => l());
+  },
+});
+export const useAuthContext = () => {
+  useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+    () => context.token,
+  );
+  return { ...context, user: { CODIGO: 7, NIVEL: "ADMIN" } };
+};
+export class FakeProposalsClient {
+  async results() {
+    return [
+      { id: 9, name: "Com pesquisa", COD_ACAO: 1, PROPOSTA: "NAO", CANCELAPROPOSTA: "NAO" },
+      { id: 10, name: "Sem pesquisa", COD_ACAO: 1, PROPOSTA: "NAO", CANCELAPROPOSTA: "NAO" },
+      {
+        id: 11,
+        name: "Proposta, cancelamento e pesquisa",
+        COD_ACAO: 1,
+        PROPOSTA: "SIM",
+        CANCELAPROPOSTA: "SIM",
+      },
+    ];
+  }
+  async forSchedule() {
+    return [{ id: 70, version: "a".repeat(64), value: "50.00", campaignName: "Ativos" }];
+  }
+}
 export const useAppContext = () => ({
   closeModal: () => {
     (window as any).fixture.closed = true;
@@ -54,8 +91,10 @@ export const customersService = {
     if (delay) await new Promise((r) => setTimeout(r, delay));
     if ((window as any).fixture.failSurvey) throw new Error("offline");
     return {
-      required: resultId === 9,
-      questions: resultId === 9 ? initial.map(({ id, description }) => ({ id, description })) : [],
+      required: [9, 11].includes(resultId),
+      questions: [9, 11].includes(resultId)
+        ? initial.map(({ id, description }) => ({ id, description }))
+        : [],
     };
   },
 };

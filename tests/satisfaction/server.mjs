@@ -6,6 +6,7 @@ const require = createRequire(import.meta.url),
 const { createServer } = await import(pathToFileURL(vr.resolve("vite")).href);
 const doubles = "/tests/satisfaction/doubles.ts";
 const stubs = {
+  "@/lib/sdk-local/crm-proposals.client": `export { FakeProposalsClient as default } from '${doubles}'`,
   "@/app/auth-context": `export { useAuthContext } from '${doubles}'`,
   "@/app/(private)/[instance]/app-context": `export { useAppContext } from '${doubles}'`,
   "@/app/(private)/[instance]/whatsapp-context": `export { useWhatsappContext } from '${doubles}'`,
@@ -16,6 +17,7 @@ const stubs = {
 };
 const server = await createServer({
   configFile: false,
+  define: { "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture.invalid") },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-satisfaction",
   css: {

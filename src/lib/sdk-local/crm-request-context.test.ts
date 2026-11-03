@@ -66,10 +66,21 @@ describe("CRM mutation identity", () => {
     };
     await client.finishTelephonySchedule(
       41,
-      { operationId: "e05cc9ea-5f51-4c7b-a18e-7e74d1607e47", resultId: 9, survey },
+      {
+        operationId: "e05cc9ea-5f51-4c7b-a18e-7e74d1607e47",
+        resultId: 9,
+        survey,
+        proposalValue: "25.50",
+        cancelProposals: [{ id: 70, version: "a".repeat(64) }],
+      },
       context,
     );
-    expect(JSON.parse(adapter.mock.calls[3][0].data).survey).toEqual(survey);
+    expect(adapter).toHaveBeenCalledTimes(4);
+    expect(JSON.parse(adapter.mock.calls[3][0].data)).toMatchObject({
+      survey,
+      proposalValue: "25.50",
+      cancelProposals: [{ id: 70, version: "a".repeat(64) }],
+    });
     for (const [request] of adapter.mock.calls) {
       expect(request.headers.get("Authorization")).toBe("Bearer original-tenant-a-token");
       expect(request.headers.get("x-crm-instance")).toBe("tenant-a");

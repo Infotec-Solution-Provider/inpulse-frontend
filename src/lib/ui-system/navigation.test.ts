@@ -160,3 +160,32 @@ describe("hierarchical application navigation", () => {
     expect(isModernCrmPath("/homolog/reports/dashboard")).toBe(false);
   });
 });
+
+describe("integrated CRM lanes", () => {
+  const paths = [
+    "/crm-units",
+    "/crm-campaigns",
+    "/crm-catalogs/phone-areas",
+    "/crm-email",
+    "/crm-imports",
+    "/crm-proposals",
+    "/crm-satisfaction",
+    "/crm-administration",
+    "/reports/sales",
+  ];
+  it("retains every administrative destination and modern layout after all merges", () => {
+    const admin = routes(UserRole.ADMIN, { feature_sales_reports_enabled: "true" });
+    for (const path of paths) {
+      expect(admin).toContain(path);
+      if (!path.startsWith("/reports/")) expect(isModernCrmPath(`/homolog${path}`)).toBe(true);
+    }
+    expect(new Set(admin).size).toBe(admin.length);
+  });
+  it("does not expose administrative mutations to common or external operators", () => {
+    for (const role of [UserRole.ACTIVE, UserRole.EXTERNAL]) {
+      const available = routes(role);
+      for (const path of paths.filter((p) => p !== "/crm-email" && !p.startsWith("/reports/")))
+        expect(available).not.toContain(path);
+    }
+  });
+});
