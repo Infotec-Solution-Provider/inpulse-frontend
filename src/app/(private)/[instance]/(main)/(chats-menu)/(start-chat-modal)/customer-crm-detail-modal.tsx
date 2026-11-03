@@ -1,5 +1,7 @@
 "use client";
 
+import { crmPhonePayload, crmPhoneSlots } from "@/lib/crm-phone-form";
+import { crmErrorDetails } from "@/lib/crm-customer-form";
 import customersService from "@/lib/services/customers.service";
 import NextLink from "next/link";
 import CustomerSegmentSelector from "@/lib/components/customer-segment-selector";
@@ -521,6 +523,10 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
       return;
     }
 
+    const phoneChanges = Object.fromEntries(Object.entries(payload).filter(([key, value]) => (detail?.customer as unknown as Record<string, unknown>)?.[key] !== value));
+    const phoneFields = crmPhoneSlots.flat().map(name => ({ name, label: name, group: "phones" as const, type: name.startsWith("AREA") ? "integer" as const : "text" as const, nullable: true }));
+    const phoneCheck = crmPhonePayload(phoneFields, phoneChanges, detail?.customer as unknown as Record<string, string | number | null>, false);
+    if (Object.keys(phoneCheck.errors).length) { toast.error(Object.values(phoneCheck.errors)[0]); return; }
     setSaving(true);
     try {
       customersService.setAuth(token);
@@ -528,7 +534,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
       toast.success(successMessage);
       await loadDetail();
     } catch (error) {
-      toast.error("Não foi possível salvar as alterações desta aba.");
+      toast.error(crmErrorDetails(error).message);
       console.error(error);
     } finally {
       setSaving(false);
@@ -1713,19 +1719,19 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
         />
 
         <TextField
-          label="Área Fax"
+          label="DDD do telefone 4"
           value={phonesDraft.AREAFAX ?? ""}
           onChange={(e) => setPhonesDraft((prev) => ({ ...prev, AREAFAX: Number(e.target.value) || null }))}
           InputProps={{ readOnly: !canEditPhones }}
         />
         <TextField
-          label="Fax"
+          label="Telefone 4"
           value={phonesDraft.FAX ?? ""}
           onChange={(e) => setPhonesDraft((prev) => ({ ...prev, FAX: e.target.value }))}
           InputProps={{ readOnly: !canEditPhones }}
         />
         <TextField
-          label="Desc Fax"
+          label="Descrição do telefone 4"
           value={phonesDraft.DESCFAX ?? ""}
           onChange={(e) => setPhonesDraft((prev) => ({ ...prev, DESCFAX: e.target.value }))}
           InputProps={{ readOnly: !canEditPhones }}

@@ -20,6 +20,7 @@ import {
   type CustomerCrmDraft,
 } from "@/lib/crm-customer-form";
 import { hybridCache } from "@/lib/cache/hybrid-cache";
+import { crmPhoneSlots } from "@/lib/crm-phone-form";
 import { createCacheScope } from "@/lib/cache/cache-scope";
 import {
   Add,
@@ -329,6 +330,11 @@ function CrmFields({
       )}
       {CRM_FIELD_GROUPS.map((group) => {
         const groupFields = fields.filter((field) => field.group === group.id);
+        if (group.id === "phones") {
+          const order: readonly string[] = crmPhoneSlots.flat();
+          const position = (name: string) => order.includes(name) ? order.indexOf(name) : order.length;
+          groupFields.sort((left, right) => position(left.name) - position(right.name));
+        }
         if (!groupFields.length) return null;
         return (
           <Accordion
@@ -348,6 +354,23 @@ function CrmFields({
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
+              {group.id === "phones" && fields.some(field => field.name === "FONE1") && (
+                <Stack spacing={1} sx={{ mb: 2 }}>
+                  <Typography variant="body2">Informe DDD e número juntos. Ao salvar, os telefones seguintes ocupam as posições removidas, com suas descrições e observações.</Typography>
+                  <Stack direction="row" useFlexGap flexWrap="wrap" spacing={1}>
+                    {crmPhoneSlots.map((slot, index) => fields.some(field => field.name === slot[1]) && (
+                      <Button key={slot[1]} size="small" disabled={disabled || !draft[slot[1]]} onClick={() => {
+                        const cleared = { ...draft };
+                        for (const name of slot) {
+                          const field = fields.find(field => field.name === name);
+                          if (field) cleared[name] = field.nullable ? null : field.type === "integer" ? 0 : "";
+                        }
+                        setDraft(cleared);
+                      }}>Remover telefone {index + 1}</Button>
+                    ))}
+                  </Stack>
+                </Stack>
+              )}
               <Box
                 sx={{
                   display: "grid",
