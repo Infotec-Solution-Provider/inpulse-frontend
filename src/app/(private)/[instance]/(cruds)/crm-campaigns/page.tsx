@@ -1,2 +1,2 @@
-import CrmCatalogPage from "@/lib/components/crm-marketing/catalogs";
-export default function Page() { return <CrmCatalogPage catalog="campaigns" />; }
+import CrmCampaignsPage from "@/lib/components/crm-marketing/campaigns";
+export default function Page() { return <CrmCampaignsPage />; }

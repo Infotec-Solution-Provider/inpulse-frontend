@@ -22,6 +22,8 @@ export interface CrmMarketingListParams {
   CODIGO?: string;
   NOME?: string;
   TIPO?: string;
+  UNIDADE?: string;
+  PAUSADA?: string;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
 }

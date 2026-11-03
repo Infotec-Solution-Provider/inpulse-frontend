@@ -205,6 +205,8 @@ export interface CustomerScheduleDetail {
 }
 
 export interface CustomerTelephonySchedule extends CustomerScheduleDetail {
+  FONE4?: string | null;
+  DESC_FONE4?: string | null;
 	CAMPANHA_NOME: string | null;
 	OPERADOR_NOME: string | null;
 	OPERADOR_LIGACAO_NOME: string | null;

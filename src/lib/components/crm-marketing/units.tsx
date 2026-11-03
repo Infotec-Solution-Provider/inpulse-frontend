@@ -1,421 +1,493 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Add, ArrowBack, ArrowForward, EditOutlined } from "@mui/icons-material";
 import {
   Alert,
+  Box,
   Button,
-  Checkbox,
-  FormControlLabel,
+  Chip,
   LinearProgress,
+  Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
-  Box,
 } from "@mui/material";
-import Link from "next/link";
 import { CrmMarketingFrame, useCrmMutation, useCrmSession } from "./shared";
 import { crmError } from "@/lib/crm-marketing-form";
-import {
-  crmCampaignTypes,
-  type CrmCampaignType,
-  type CrmUnit,
-  type CrmUnitDetail,
-  type CrmUnitList,
-} from "@/lib/sdk-local/types/crm-units.types";
+import type { CrmUnitDetail, CrmUnitList } from "@/lib/sdk-local/types/crm-units.types";
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
+import { CampaignCard, cycleLabels } from "./campaign-common";
+import CampaignEditor from "./campaign-editor";
 
-type DraftCampaign = { TIPO: CrmCampaignType; CODIGO: string; NOME: string; MAX_RESPOSTA: string };
-type Draft = {
-  CODIGO: string;
-  DESCRICAO: string;
-  INATIVOS_RECENTES: string;
-  INATIVOS_ANTIGOS: string;
-  campaigns: DraftCampaign[];
-};
-const empty = (): Draft => ({
-  CODIGO: "",
-  DESCRICAO: "",
-  INATIVOS_RECENTES: "",
-  INATIVOS_ANTIGOS: "",
-  campaigns: [],
-});
-export default function CrmUnitsPage() {
+export default function CrmUnitsPage({
+  unitId,
+  create = false,
+}: {
+  unitId?: number;
+  create?: boolean;
+}) {
   return (
-    <CrmMarketingFrame title="Unidades">
-      <UnitsPanel />
+    <CrmMarketingFrame title="Unidades e campanhas">
+      <UnitsPanel key={unitId ?? (create ? "new" : "list")} unitId={unitId} create={create} />
     </CrmMarketingFrame>
   );
 }
-function UnitsPanel() {
+function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
   const { client, instance } = useCrmSession(),
-    mutation = useCrmMutation();
-  const [list, setList] = useState<CrmUnitList["data"]>([]),
-    [selected, setSelected] = useState<CrmUnitDetail | null>(null);
-  const [draft, setDraft] = useState<Draft | null>(null),
+    mutation = useCrmMutation(),
+    router = useRouter(),
+    searchParams = useSearchParams();
+  const base = `/${instance}/crm-units`,
+    [list, setList] = useState<CrmUnitList["data"]>([]),
+    [selected, setSelected] = useState<CrmUnitDetail | null>(null),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
-  const [dirty, setDirty] = useState(false),
-    [add, setAdd] = useState<DraftCampaign | null>(null);
-  const sequence = useRef(0),
-    alive = useRef(true);
-  const locked = loading || mutation.busy || mutation.gate;
+    [error, setError] = useState(""),
+    [editing, setEditing] = useState(create),
+    [adding, setAdding] = useState(false),
+    [tab, setTab] = useState(searchParams.get("tab") === "rules" ? 1 : 0),
+    [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [draft, setDraft] = useState({ name: "", recent: "", old: "" }),
+    [saved, setSaved] = useState(draft),
+    [reload, setReload] = useState(0);
+  const version = useRef(0),
+    current = useRef(client);
+  current.current = client;
+  const dirty = editing && JSON.stringify(draft) !== JSON.stringify(saved),
+    locked = loading || mutation.busy || mutation.gate;
   useCrmLeaveGuard(dirty, mutation.busy, mutation.gate);
   useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-      sequence.current++;
-    };
-  }, []);
-  async function load(id?: number) {
-    const version = ++sequence.current;
+    const request = ++version.current,
+      started = client;
     setLoading(true);
     setError("");
-    try {
-      const result = await client.units();
-      const detail =
-        id === undefined || !result.data.some((u) => u.CODIGO === id)
-          ? null
-          : await client.unit(id);
-      if (!alive.current || version !== sequence.current) return;
-      setList(result.data);
-      setSelected(detail);
-      setDraft(
-        detail
-          ? {
-              ...empty(),
-              ...Object.fromEntries(
-                Object.entries(detail.data).map(([k, v]) => [k, v == null ? "" : String(v)]),
-              ),
-            }
-          : null,
-      );
-      setAdd(null);
-      setDirty(false);
-      mutation.reconcile();
-    } catch (failure) {
-      if (alive.current && version === sequence.current) setError(crmError(failure).message);
-    } finally {
-      if (alive.current && version === sequence.current) setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void load();
-  }, [instance]); // Token renewal preserves drafts; the frame remounts on tenant/user changes.
-  function change(key: keyof Omit<Draft, "campaigns">, value: string) {
-    setDraft((d) => d && { ...d, [key]: value });
-    setDirty(true);
-  }
-  function number(value: string) {
-    if (!/^[1-9]\d*$/.test(value) || Number(value) > 2147483647)
-      throw new Error("Informe códigos, limites e períodos inteiros positivos.");
-    return Number(value);
-  }
-  function campaign(c: DraftCampaign) {
-    if (!c.NOME.trim()) throw new Error("Informe o nome de cada campanha.");
-    return {
-      CODIGO: number(c.CODIGO),
-      NOME: c.NOME.trim(),
-      TIPO: c.TIPO,
-      MAX_RESPOSTA: number(c.MAX_RESPOSTA),
-      PAUSADA: "SIM",
+    void (unitId === undefined ? client.units() : client.unit(unitId))
+      .then((result) => {
+        if (request !== version.current || started !== current.current) return;
+        if ("campaigns" in result) {
+          const detail = result as CrmUnitDetail;
+          setSelected(detail);
+          if (!dirty) {
+            const value = {
+              name: detail.data.DESCRICAO ?? "",
+              recent: String(detail.data.INATIVOS_RECENTES ?? ""),
+              old: String(detail.data.INATIVOS_ANTIGOS ?? ""),
+            };
+            setDraft(value);
+            setSaved(value);
+          }
+        } else setList((result as CrmUnitList).data);
+      })
+      .catch((f) => {
+        if (request === version.current) setError(crmError(f).message);
+      })
+      .finally(() => {
+        if (request === version.current) setLoading(false);
+      });
+    return () => {
+      version.current++;
     };
+  }, [client, unitId, reload]);
+  const back = searchParams.get("returnTo"),
+    returnTo = back?.startsWith(`/${instance}/crm-units`) ? back : base;
+  function field(key: keyof typeof draft, value: string) {
+    setDraft((d) => ({ ...d, [key]: value }));
   }
   async function save() {
-    if (!draft) return;
-    try {
-      if (!draft.DESCRICAO.trim()) throw new Error("Informe a descrição da unidade.");
-      if (selected) {
-        const result = await mutation.write(() =>
-          client.patchUnit(
-            selected.data.CODIGO,
-            { DESCRICAO: draft.DESCRICAO.trim() },
-            selected.data,
-          ),
-        );
-        if (result) {
-          await load(selected.data.CODIGO);
-          mutation.setSuccess("Unidade atualizada.");
-        }
-      } else {
-        const fields: CrmUnit = {
-          CODIGO: number(draft.CODIGO),
-          DESCRICAO: draft.DESCRICAO.trim(),
-          INATIVOS_RECENTES: number(draft.INATIVOS_RECENTES),
-          INATIVOS_ANTIGOS: number(draft.INATIVOS_ANTIGOS),
-        };
-        if (fields.INATIVOS_RECENTES! >= fields.INATIVOS_ANTIGOS!)
-          throw new Error("O início dos inativos antigos deve ser maior que o dos recentes.");
-        const campaigns = draft.campaigns.map(campaign);
-        if (new Set(campaigns.map((c) => c.CODIGO)).size !== campaigns.length)
-          throw new Error("Use códigos diferentes para cada campanha.");
-        const result = await mutation.write(() => client.createUnit({ fields, campaigns }));
-        if (result) {
-          await load(result.value.CODIGO);
-          mutation.setSuccess("Unidade e campanhas gravadas. As novas campanhas estão pausadas.");
-        }
-      }
-    } catch (failure) {
-      mutation.setError((failure as Error).message);
+    if (!draft.name.trim()) {
+      mutation.setError("Informe o nome da unidade.");
+      return;
     }
-  }
-  async function include() {
-    if (!selected || !add) return;
-    try {
-      const payload = { ...campaign(add), UNIDADE: selected.data.CODIGO };
-      const result = await mutation.write(() => client.create("campaigns", payload));
+    if (selected) {
+      const result = await mutation.write(() =>
+        client.patchUnit(selected.data.CODIGO, { DESCRICAO: draft.name.trim() }, selected.data),
+      );
       if (result) {
-        await load(selected.data.CODIGO);
-        mutation.setSuccess("Campanha incluída e pausada.");
+        setSaved(draft);
+        setEditing(false);
+        setReload((r) => r + 1);
+        mutation.setSuccess("Dados da unidade atualizados.");
       }
-    } catch (failure) {
-      mutation.setError((failure as Error).message);
+    } else {
+      const recent = Number(draft.recent),
+        old = Number(draft.old);
+      if (
+        !/^[1-9]\d*$/.test(draft.recent) ||
+        !/^[1-9]\d*$/.test(draft.old) ||
+        recent >= old ||
+        old > 2147483647
+      ) {
+        mutation.setError(
+          "Informe períodos inteiros positivos. Os inativos antigos devem começar depois dos recentes.",
+        );
+        return;
+      }
+      const result = await mutation.write(() =>
+        client.createUnit({
+          fields: {
+            DESCRICAO: draft.name.trim(),
+            INATIVOS_RECENTES: recent,
+            INATIVOS_ANTIGOS: old,
+          },
+          campaigns: [],
+        }),
+      );
+      if (result) {
+        setSaved(draft);
+        router.replace(`${base}/${result.value.CODIGO}?created=1`);
+      }
     }
   }
-  function campaignEditor(c: DraftCampaign, update: (next: DraftCampaign) => void) {
-    return (
-      <Stack key={c.TIPO} gap={1} sx={{ border: 1, borderColor: "divider", p: 2, borderRadius: 1 }}>
-        <Typography fontWeight={600}>{c.TIPO}</Typography>
-        <TextField
-          label={`Código ${c.TIPO}`}
-          value={c.CODIGO}
-          onChange={(e) => update({ ...c, CODIGO: e.target.value })}
-          disabled={locked}
-        />
-        <TextField
-          label={`Nome ${c.TIPO}`}
-          value={c.NOME}
-          onChange={(e) => update({ ...c, NOME: e.target.value })}
-          disabled={locked}
-          inputProps={{ maxLength: 150 }}
-        />
-        <TextField
-          label={`Limite de respostas ${c.TIPO}`}
-          value={c.MAX_RESPOSTA}
-          onChange={(e) => update({ ...c, MAX_RESPOSTA: e.target.value })}
-          disabled={locked}
-        />
-      </Stack>
-    );
+  function cancel() {
+    if (dirty && !window.confirm("Descartar alterações da unidade?")) return;
+    setDraft(saved);
+    if (create) router.push(returnTo);
+    else setEditing(false);
   }
+  function switchTab(next: number) {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set("tab", "rules");
+    else params.delete("tab");
+    router.replace(`${base}/${unitId}?${params}`, { scroll: false });
+  }
+  const queryUrl = `${base}${search ? `?q=${encodeURIComponent(search)}` : ""}`;
+  const renameReason = selected?.data.capabilities?.rename?.reasons.map((r) => r.message).join(" ");
   return (
-    <Stack gap={2} sx={{ maxWidth: 1050 }}>
-      <Alert severity="info">
-        O nome identifica a campanha; o tipo mantém a regra de público. Novas campanhas são criadas
-        pausadas. Composições incompletas não podem ser ativadas até a definição da distribuição e
-        recompra.
-      </Alert>
+    <Stack gap={3} sx={{ maxWidth: 1120, minWidth: 0 }}>
+      {loading && <LinearProgress aria-label="Carregando unidades" />}
       {(error || mutation.error) && <Alert severity="error">{error || mutation.error}</Alert>}
       {mutation.success && <Alert severity="success">{mutation.success}</Alert>}
       {mutation.gate && (
         <Alert severity="warning">
-          Confira os dados antes de gravar novamente. O rascunho foi mantido.
+          Confira os dados gravados antes de continuar.{" "}
+          <Button
+            disabled={mutation.busy}
+            onClick={() => {
+              mutation.reconcile();
+              setReload((r) => r + 1);
+            }}
+          >
+            Conferir unidade
+          </Button>
         </Alert>
       )}
-      <Stack direction="row" gap={1} flexWrap="wrap">
-        <Button
-          disabled={locked || dirty}
-          onClick={() => {
-            setSelected(null);
-            setDraft(empty());
-            setAdd(null);
-          }}
-        >
-          Nova unidade
-        </Button>
-        <Button
-          disabled={mutation.busy}
-          onClick={() => {
-            if (!dirty || window.confirm("Descartar o rascunho e conferir os dados gravados?"))
-              void load(
-                selected?.data.CODIGO ??
-                  (draft?.CODIGO && /^\d+$/.test(draft.CODIGO) ? Number(draft.CODIGO) : undefined),
-              );
-          }}
-        >
-          Recarregar unidades
-        </Button>
-        <Button component={Link} href={`/${instance}/crm-campaigns`}>
-          Editar campanhas e situação
-        </Button>
-        <Button component={Link} href={`/${instance}/crm-ordering`}>
-          Organizar prioridades
-        </Button>
-      </Stack>
-      {loading && <LinearProgress aria-label="Carregando unidades" />}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "280px minmax(0,1fr)" },
-          gap: 3,
-        }}
-      >
-        <Stack gap={1}>
-          {list.map((unit) => (
+      {unitId === undefined && !create ? (
+        <>
+          <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
+            <Box>
+              <Typography variant="h5" component="h2">
+                Organize suas campanhas por unidade
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                Abra uma unidade para configurar suas campanhas, públicos e operação.
+              </Typography>
+            </Box>
             <Button
-              sx={{ justifyContent: "start", textAlign: "left" }}
-              key={unit.CODIGO}
-              disabled={locked || dirty}
-              variant={selected?.data.CODIGO === unit.CODIGO ? "contained" : "outlined"}
-              onClick={() => void load(unit.CODIGO)}
+              variant="contained"
+              component={Link}
+              href={`${base}/new?returnTo=${encodeURIComponent(queryUrl)}`}
+              startIcon={<Add />}
+              sx={{ alignSelf: { sm: "flex-start" }, whiteSpace: "nowrap" }}
             >
-              {unit.CODIGO} · {unit.DESCRICAO ?? "Sem descrição"} ({unit.campaignCount})
+              Nova unidade
             </Button>
-          ))}
-          {!loading && !list.length && <Typography>Nenhuma unidade cadastrada.</Typography>}
-        </Stack>
-        {draft && (
-          <Stack gap={2}>
-            <Typography variant="h6">{selected ? "Editar unidade" : "Nova unidade"}</Typography>
-            <TextField
-              label="Código da unidade"
-              value={draft.CODIGO}
-              disabled={Boolean(selected) || locked}
-              onChange={(e) => change("CODIGO", e.target.value)}
-            />
-            <TextField
-              label="Descrição da unidade"
-              value={draft.DESCRICAO}
-              disabled={locked}
-              onChange={(e) => change("DESCRICAO", e.target.value)}
-              inputProps={{ maxLength: 50 }}
-            />
-            <TextField
-              label="Inativos recentes a partir de (dias)"
-              value={draft.INATIVOS_RECENTES}
-              disabled={Boolean(selected) || locked}
-              onChange={(e) => change("INATIVOS_RECENTES", e.target.value)}
-            />
-            <TextField
-              label="Inativos antigos a partir de (dias)"
-              value={draft.INATIVOS_ANTIGOS}
-              disabled={Boolean(selected) || locked}
-              onChange={(e) => change("INATIVOS_ANTIGOS", e.target.value)}
-            />
-            {!selected && (
-              <>
-                <Typography>
-                  Campanhas iniciais: {draft.campaigns.length}. Escolha somente os tipos
-                  necessários.
+          </Stack>
+          <Tabs value={0} aria-label="Visão das campanhas">
+            <Tab label="Por unidade" />
+            <Tab label="Todas as campanhas" component={Link} href={`/${instance}/crm-campaigns`} />
+          </Tabs>
+          <TextField
+            label="Buscar unidade pelo nome"
+            size="small"
+            value={search}
+            sx={{ maxWidth: 480 }}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              router.replace(`${base}${value ? `?q=${encodeURIComponent(value)}` : ""}`, {
+                scroll: false,
+              });
+            }}
+          />
+          <Stack gap={1.5}>
+            {list
+              .filter((unit) =>
+                (unit.DESCRICAO ?? "").toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+              )
+              .map((unit) => (
+                <Paper key={unit.CODIGO} variant="outlined" sx={{ p: 2 }}>
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    justifyContent="space-between"
+                    gap={1.5}
+                    alignItems={{ sm: "center" }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        component={Link}
+                        href={`${base}/${unit.CODIGO}?returnTo=${encodeURIComponent(queryUrl)}`}
+                        fontWeight={700}
+                        sx={{
+                          color: "text.primary",
+                          textDecoration: "none",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {unit.DESCRICAO ?? "Unidade sem nome"}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" mt={0.5}>
+                        {unit.campaignCount} {unit.campaignCount === 1 ? "campanha" : "campanhas"} ·{" "}
+                        {unit.campaignCount
+                          ? "Ciclo de compra e campanhas por público"
+                          : "Adicione a primeira campanha"}
+                      </Typography>
+                    </Box>
+                    <Button
+                      component={Link}
+                      href={`${base}/${unit.CODIGO}?returnTo=${encodeURIComponent(queryUrl)}`}
+                      endIcon={<ArrowForward />}
+                    >
+                      Abrir unidade
+                    </Button>
+                  </Stack>
+                </Paper>
+              ))}
+          </Stack>
+          {!loading && !list.length && (
+            <Paper variant="outlined" sx={{ p: 4, textAlign: "center" }}>
+              <Typography variant="h6">Crie sua primeira unidade</Typography>
+              <Typography color="text.secondary" mt={1}>
+                A unidade reúne campanhas relacionadas. Configure o público de cada campanha depois
+                de criá-la.
+              </Typography>
+            </Paper>
+          )}
+          {!loading &&
+            list.length > 0 &&
+            !list.some((unit) =>
+              (unit.DESCRICAO ?? "").toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+            ) && <Typography>Nenhuma unidade encontrada para “{search}”.</Typography>}
+        </>
+      ) : (
+        <>
+          <Button
+            component={Link}
+            href={returnTo}
+            startIcon={<ArrowBack />}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            Unidades e campanhas
+          </Button>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            gap={2}
+            justifyContent="space-between"
+            alignItems={{ sm: "center" }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h5" component="h2" sx={{ overflowWrap: "anywhere" }}>
+                {create ? "Nova unidade" : (selected?.data.DESCRICAO ?? "Unidade")}
+              </Typography>
+              {selected && (
+                <Typography variant="body2" color="text.secondary">
+                  Código {selected.data.CODIGO} · {selected.campaigns.length} campanhas
                 </Typography>
-                {crmCampaignTypes.map((type) => (
-                  <Box key={type}>
-                    <FormControlLabel
-                      label={`Incluir ${type}`}
-                      control={
-                        <Checkbox
-                          checked={draft.campaigns.some((c) => c.TIPO === type)}
-                          disabled={locked}
-                          onChange={(_, checked) => {
-                            setDirty(true);
-                            setDraft(
-                              (d) =>
-                                d && {
-                                  ...d,
-                                  campaigns: checked
-                                    ? [
-                                        ...d.campaigns,
-                                        { TIPO: type, CODIGO: "", NOME: "", MAX_RESPOSTA: "300" },
-                                      ]
-                                    : d.campaigns.filter((c) => c.TIPO !== type),
-                                },
+              )}
+            </Box>
+            {!editing && selected && (
+              <Button startIcon={<EditOutlined />} onClick={() => setEditing(true)}>
+                Editar dados
+              </Button>
+            )}
+          </Stack>
+          {searchParams.get("created") === "1" && !editing && (
+            <Alert severity="success">
+              Unidade criada. Adicione a primeira campanha para continuar.
+            </Alert>
+          )}
+          {editing ? (
+            <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 }, maxWidth: 760 }}>
+              <Stack
+                component="form"
+                gap={2}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void save();
+                }}
+              >
+                <Typography variant="h6">
+                  {create ? "Dados da unidade" : "Editar identificação"}
+                </Typography>
+                <TextField
+                  required
+                  autoFocus
+                  label="Nome da unidade"
+                  value={draft.name}
+                  disabled={locked || Boolean(renameReason)}
+                  onChange={(e) => field("name", e.target.value)}
+                  inputProps={{ maxLength: 50 }}
+                  helperText={renameReason}
+                />
+                {create && (
+                  <>
+                    <Typography variant="body2" color="text.secondary">
+                      Defina os períodos do ciclo de compra. Campanhas por público também podem ser
+                      adicionadas à unidade.
+                    </Typography>
+                    <TextField
+                      required
+                      type="number"
+                      label="Inativos recentes a partir de (dias)"
+                      value={draft.recent}
+                      disabled={locked}
+                      onChange={(e) => field("recent", e.target.value)}
+                      inputProps={{ min: 1, max: 2147483647 }}
+                    />
+                    <TextField
+                      required
+                      type="number"
+                      label="Inativos antigos a partir de (dias)"
+                      value={draft.old}
+                      disabled={locked}
+                      onChange={(e) => field("old", e.target.value)}
+                      inputProps={{ min: 1, max: 2147483647 }}
+                    />
+                  </>
+                )}
+                {dirty && <Typography variant="caption">Alterações não salvas</Typography>}
+                <Stack direction="row" gap={1} justifyContent="flex-end">
+                  <Button onClick={cancel} disabled={mutation.busy}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" variant="contained" disabled={locked || !draft.name.trim()}>
+                    {mutation.busy ? "Salvando…" : create ? "Criar unidade" : "Salvar alterações"}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Paper>
+          ) : (
+            selected && (
+              <>
+                <Tabs
+                  value={tab}
+                  onChange={(_, value) => switchTab(value)}
+                  aria-label="Seções da unidade"
+                >
+                  <Tab label="Campanhas" />
+                  <Tab label="Regras da unidade" />
+                </Tabs>
+                {tab === 0 ? (
+                  <>
+                    {!adding ? (
+                      <>
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                          gap={1}
+                        >
+                          <Typography variant="h6">Campanhas</Typography>
+                          <Button
+                            startIcon={<Add />}
+                            variant="contained"
+                            onClick={() => setAdding(true)}
+                            disabled={locked}
+                          >
+                            Adicionar campanha
+                          </Button>
+                        </Stack>
+                        <Stack gap={1.5}>
+                          {selected.campaigns.map((c) => (
+                            <CampaignCard
+                              key={c.CODIGO}
+                              campaign={{
+                                ...c,
+                                OPERATION_MODE: selected.campaignModes?.[String(c.CODIGO)] ?? null,
+                              }}
+                              instance={instance}
+                              returnTo={`${base}/${unitId}?returnTo=${encodeURIComponent(returnTo)}`}
+                            />
+                          ))}
+                        </Stack>
+                        {!selected.campaigns.length && (
+                          <Typography color="text.secondary">
+                            Nenhuma campanha nesta unidade. Adicione uma campanha e configure seu
+                            público.
+                          </Typography>
+                        )}
+                      </>
+                    ) : (
+                      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+                        <Typography variant="h6" mb={2}>
+                          Adicionar campanha
+                        </Typography>
+                        <CampaignEditor
+                          unitId={selected.data.CODIGO}
+                          unitName={selected.data.DESCRICAO}
+                          usedTypes={selected.campaigns.map((c) => String(c.TIPO))}
+                          onCancel={() => setAdding(false)}
+                          onSaved={(c) => {
+                            setAdding(false);
+                            router.push(
+                              `/${instance}/crm-campaigns/${c.CODIGO}?returnTo=${encodeURIComponent(`${base}/${unitId}`)}`,
                             );
                           }}
                         />
-                      }
-                    />
-                    {draft.campaigns
-                      .filter((c) => c.TIPO === type)
-                      .map((c) =>
-                        campaignEditor(c, (next) => {
-                          setDirty(true);
-                          setDraft(
-                            (d) =>
-                              d && {
-                                ...d,
-                                campaigns: d.campaigns.map((old) =>
-                                  old.TIPO === type ? next : old,
-                                ),
-                              },
-                          );
-                        }),
-                      )}
-                  </Box>
-                ))}
-              </>
-            )}
-            <Button
-              variant="contained"
-              disabled={locked || Boolean(add)}
-              onClick={() => void save()}
-            >
-              Salvar unidade
-            </Button>
-            {selected && (
-              <>
-                <Typography variant="h6">Campanhas desta unidade</Typography>
-                <Typography variant="caption">
-                  Períodos existentes são preservados. A alteração da regra e a exclusão de
-                  campanhas vinculadas dependem da definição de redistribuição.
-                </Typography>
-                {selected.campaigns.map((c) => (
-                  <Stack key={c.CODIGO} gap={1} sx={{ border: 1, borderColor: "divider", p: 2 }}>
-                    <Typography>
-                      {c.CODIGO} · {c.NOME} · {c.TIPO} ·{" "}
-                      {c.PAUSADA === "SIM"
-                        ? "Pausada"
-                        : c.PAUSADA === "NAO"
-                          ? "Ativa"
-                          : "Situação legada"}
-                    </Typography>
-                    <Button
-                      component={Link}
-                      href={`/${instance}/crm-campaigns/${c.CODIGO}/configure`}
-                    >
-                      Configurar público de {c.NOME}
-                    </Button>
-                  </Stack>
-                ))}
-                <Stack direction="row" flexWrap="wrap" gap={1}>
-                  {crmCampaignTypes
-                    .filter((t) => !selected.campaigns.some((c) => c.TIPO === t))
-                    .map((t) => (
-                      <Button
-                        key={t}
-                        disabled={locked || dirty}
-                        onClick={() => {
-                          setAdd({ TIPO: t, CODIGO: "", NOME: "", MAX_RESPOSTA: "300" });
-                          setDirty(true);
-                        }}
-                      >
-                        Adicionar {t}
-                      </Button>
-                    ))}
-                </Stack>
-                {add && (
-                  <>
-                    {campaignEditor(add, (next) => {
-                      setAdd(next);
-                      setDirty(true);
-                    })}
-                    <Button disabled={locked} onClick={() => void include()}>
-                      Salvar nova campanha
-                    </Button>
-                    <Button
-                      disabled={mutation.busy}
-                      onClick={() => {
-                        setAdd(null);
-                        setDirty(false);
-                      }}
-                    >
-                      Cancelar campanha
-                    </Button>
+                      </Paper>
+                    )}
                   </>
+                ) : (
+                  <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+                    <Stack gap={2}>
+                      <Typography variant="h6">Ciclo de compra</Typography>
+                      <Typography>
+                        Inativos recentes: a partir de{" "}
+                        {selected.data.INATIVOS_RECENTES ?? "não definido"} dias. Inativos antigos:
+                        a partir de {selected.data.INATIVOS_ANTIGOS ?? "não definido"} dias.
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Os períodos existentes são preservados. A edição exige definir os efeitos
+                        sobre clientes e agendamentos em andamento.
+                      </Typography>
+                      <Typography fontWeight={600}>Composição do ciclo</Typography>
+                      <Stack direction="row" flexWrap="wrap" gap={1}>
+                        {Object.entries(cycleLabels).map(([type, label]) => (
+                          <Chip
+                            key={type}
+                            variant="outlined"
+                            color={
+                              selected.campaigns.some((c) => c.TIPO === type)
+                                ? "success"
+                                : "default"
+                            }
+                            label={`${label}: ${selected.campaigns.some((c) => c.TIPO === type) ? "configurada" : "a configurar"}`}
+                          />
+                        ))}
+                      </Stack>
+                      <Typography variant="body2">
+                        Campanhas adicionais por público têm geração manual. Elas complementam o
+                        ciclo; um cliente pode participar de campanhas diferentes. Mudanças no
+                        público afetam as próximas gerações.
+                      </Typography>
+                      <Button
+                        component={Link}
+                        href={`/${instance}/crm-ordering?list=campaigns`}
+                        sx={{ alignSelf: "flex-start" }}
+                      >
+                        Organizar prioridade global das campanhas
+                      </Button>
+                    </Stack>
+                  </Paper>
                 )}
               </>
-            )}
-          </Stack>
-        )}
-      </Box>
+            )
+          )}
+        </>
+      )}
     </Stack>
   );
 }

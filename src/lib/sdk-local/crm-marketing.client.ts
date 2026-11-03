@@ -4,7 +4,13 @@ import type {
   CatalogOrderSave,
 } from "./types/crm-marketing.types";
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
-import type { CrmUnit, CrmUnitList, CrmUnitDetail, CrmUnitCreate } from "./types/crm-units.types";
+import type {
+  CrmUnit,
+  CrmUnitList,
+  CrmUnitDetail,
+  CrmUnitCreate,
+  CrmCampaignContext,
+} from "./types/crm-units.types";
 import type {
   CrmMarketingCatalog,
   CrmMarketingField,
@@ -60,13 +66,40 @@ export default class CrmMarketingClient {
     return (await this.ax.get<CrmUnitList>(`${this.root}/units`, this.pinned())).data;
   }
   async unit(id: number): Promise<CrmUnitDetail> {
-    return (await this.ax.get<CrmUnitDetail>(`${this.root}/units/${encodeURIComponent(id)}`, this.pinned())).data;
+    return (
+      await this.ax.get<CrmUnitDetail>(
+        `${this.root}/units/${encodeURIComponent(id)}`,
+        this.pinned(),
+      )
+    ).data;
+  }
+  async campaignContext(id: number): Promise<CrmCampaignContext> {
+    return (
+      await this.ax.get<{ data: CrmCampaignContext }>(
+        `${this.root}/campaigns/${encodeURIComponent(id)}/context`,
+        this.pinned(),
+      )
+    ).data.data;
   }
   async createUnit(data: CrmUnitCreate) {
-    return (await this.ax.post<{ data: { CODIGO: number } }>(`${this.root}/units`, data, this.pinned())).data.data;
+    return (
+      await this.ax.post<{ data: { CODIGO: number } }>(`${this.root}/units`, data, this.pinned())
+    ).data.data;
   }
   async patchUnit(id: number, changes: { DESCRICAO: string }, expected: CrmUnit) {
-    return (await this.ax.patch<{ data: CrmUnit }>(`${this.root}/units/${encodeURIComponent(id)}`, { changes, expected }, this.pinned())).data.data;
+    const snapshot = {
+      CODIGO: expected.CODIGO,
+      DESCRICAO: expected.DESCRICAO,
+      INATIVOS_RECENTES: expected.INATIVOS_RECENTES,
+      INATIVOS_ANTIGOS: expected.INATIVOS_ANTIGOS,
+    };
+    return (
+      await this.ax.patch<{ data: CrmUnit }>(
+        `${this.root}/units/${encodeURIComponent(id)}`,
+        { changes, expected: snapshot },
+        this.pinned(),
+      )
+    ).data.data;
   }
   async list(catalog: CrmMarketingCatalog, params: CrmMarketingListParams = {}) {
     return (
@@ -201,7 +234,7 @@ export default class CrmMarketingClient {
       })
     ).data;
   }
-  async addCampaignMember(id: number, data: { CODIGO: number; OPERADOR: number }) {
+  async addCampaignMember(id: number, data: { CODIGO?: number; OPERADOR: number }) {
     return (
       await this.ax.post<{ data: CrmCampaignMember }>(
         `${this.root}/campaigns/${encodeURIComponent(id)}/members`,

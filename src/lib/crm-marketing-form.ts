@@ -9,7 +9,7 @@ export const crmLabels: Record<string, string> = {
   NOME: "Nome",
   TIPO: "Tipo",
   DATA_INI: "Data de início",
-  MAX_RESPOSTA: "Limite de respostas",
+  MAX_RESPOSTA: "Tempo para finalizar chamada (segundos)",
   DESCRICAO: "Descrição",
   PRIORIDADE: "Prioridade",
   SQL_CAMPANHA: "Seleção da campanha",

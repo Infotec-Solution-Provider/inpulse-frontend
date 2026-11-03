@@ -39,7 +39,6 @@ import { useCrmSession } from "./shared";
 export default function CampaignMembers({ campaignId }: { campaignId: number }) {
   const { client } = useCrmSession();
   const [members, setMembers] = useState<CrmCampaignMember[]>([]),
-    [code, setCode] = useState(""),
     [selected, setSelected] = useState<CrmCampaignMemberOption | null>(null),
     [open, setOpen] = useState(false),
     [search, setSearch] = useState(""),
@@ -61,7 +60,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
     epoch = useRef(0),
     sequence = useRef(0);
   current.current = client;
-  useCrmLeaveGuard(Boolean(code || selected), busy, blocked && epoch.current > 0);
+  useCrmLeaveGuard(Boolean(selected), busy, blocked && epoch.current > 0);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -136,18 +135,13 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
       clearTimeout(timer);
     };
   }, [client, campaignId, open, search, page, optionRetry, busy, blocked]);
-  const invalidCode =
-    Boolean(code) &&
-    (!/^[1-9]\d*$/.test(code) || !Number.isSafeInteger(Number(code)) || Number(code) > 2147483647);
-  const duplicate =
-    Boolean(code && members.some((item) => item.CODIGO === Number(code))) ||
-    Boolean(selected && members.some((item) => item.OPERADOR === selected.CODIGO));
+  const duplicate = Boolean(selected && members.some((item) => item.OPERADOR === selected.CODIGO));
   const mutate = async (target?: CrmCampaignMember) => {
     if (
       writing.current ||
       blocked ||
       loading ||
-      (!target && (!selected || !code || invalidCode || duplicate)) ||
+      (!target && (!selected || duplicate)) ||
       (target && !target.writable)
     )
       return;
@@ -165,7 +159,6 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
         });
       else
         await started.addCampaignMember(campaignId, {
-          CODIGO: Number(code),
           OPERADOR: selected!.CODIGO,
         });
       epoch.current += 1;
@@ -177,7 +170,6 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
       }
       setRemoving(null);
       if (!target) {
-        setCode("");
         setSelected(null);
         setSearch("");
         setPage(1);
@@ -223,7 +215,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
         <Stack direction={{ xs: "column", sm: "row" }} gap={1} justifyContent="space-between">
           <Box>
             <Typography id="campaign-members-title" variant="h6">
-              Usuários vinculados à campanha
+              Equipe vinculada à campanha
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Mantenha os vínculos usados no CRM. A geração continua usando o usuário escolhido em
@@ -251,24 +243,11 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
           onSubmit={submit}
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "minmax(150px,1fr) minmax(220px,2fr) auto" },
+            gridTemplateColumns: { xs: "1fr", md: "minmax(220px,2fr) auto" },
             gap: 2,
             alignItems: "start",
           }}
         >
-          <TextField
-            label="Código do vínculo"
-            value={code}
-            disabled={disabled}
-            onChange={(event) => setCode(event.target.value)}
-            error={invalidCode}
-            helperText={
-              invalidCode
-                ? "Informe um inteiro positivo até 2147483647."
-                : "Informe o código do vínculo utilizado no CRM."
-            }
-            slotProps={{ htmlInput: { inputMode: "numeric" } }}
-          />
           <Autocomplete<CrmCampaignMemberOption>
             open={open}
             onOpen={() => {
@@ -352,7 +331,7 @@ export default function CampaignMembers({ campaignId }: { campaignId: number }) 
             type="submit"
             variant="outlined"
             startIcon={<UiIcon name="add" scale="row" />}
-            disabled={disabled || !selected || !code || invalidCode || duplicate}
+            disabled={disabled || !selected || duplicate}
           >
             Vincular usuário
           </Button>

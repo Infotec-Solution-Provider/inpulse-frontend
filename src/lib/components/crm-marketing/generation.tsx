@@ -160,15 +160,14 @@ export default function GenerationPanel({
       if (alive.current && version === sequence.current) setReading(false);
     }
   }
-  const blocked =
-    disabled || mutation.busy || mutation.gate || !configuration?.managed || knownGenerated;
+  const blocked = disabled || mutation.busy || mutation.gate || !configuration?.managed;
   return (
     <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
       <Stack gap={2}>
         <Typography variant="h6">Gerar agendamentos</Typography>
         <Typography color="text.secondary" variant="body2">
-          Escolha o usuário responsável e a data/hora dos novos agendamentos. Clientes já vinculados
-          a esta campanha são preservados.
+          Escolha o responsável e a data/hora dos novos agendamentos. Clientes já vinculados a esta
+          campanha são preservados.
         </Typography>
         {!configuration?.managed && (
           <Alert severity="info">
@@ -177,8 +176,8 @@ export default function GenerationPanel({
         )}
         {knownGenerated && (
           <Alert severity="info">
-            Lista marcada como gerada. Para acrescentar novos clientes elegíveis, confira e salve os
-            critérios novamente.
+            Uma geração já foi concluída. Prepare uma nova prévia para acrescentar clientes
+            elegíveis; os vínculos existentes serão preservados.
           </Alert>
         )}
         {mutation.error && <Alert severity="error">{mutation.error}</Alert>}
@@ -187,7 +186,7 @@ export default function GenerationPanel({
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
           <CrmLookup
             kind="operators"
-            label="Usuário dos agendamentos"
+            label="Responsável pelos novos agendamentos"
             value={operator}
             disabled={blocked}
             onChange={(value) => {
@@ -210,11 +209,45 @@ export default function GenerationPanel({
           />
         </Box>
         {preview && (
-          <Alert severity="info">
-            {preview.eligibleCount.toLocaleString("pt-BR")} novos agendamentos elegíveis.{" "}
-            {preview.alreadyLinkedCount.toLocaleString("pt-BR")} clientes já vinculados.
-            {` Próximo lote: ${preview.batchCount.toLocaleString("pt-BR")} agendamentos, até ${preview.limit.toLocaleString("pt-BR")} por vez.`}
-          </Alert>
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            <Stack gap={1}>
+              <Typography fontWeight={700}>Revisão do próximo lote</Typography>
+              {preview.selectedCount !== undefined && (
+                <Typography variant="body2">
+                  Público correspondente: {preview.selectedCount.toLocaleString("pt-BR")} clientes
+                </Typography>
+              )}
+              <Typography variant="body2">
+                Novos elegíveis: {preview.eligibleCount.toLocaleString("pt-BR")}
+              </Typography>
+              <Typography variant="body2">
+                Já vinculados{" "}
+                {preview.alreadyLinkedInSelectionCount === undefined
+                  ? "à campanha"
+                  : "neste público"}
+                :{" "}
+                {(
+                  preview.alreadyLinkedInSelectionCount ?? preview.alreadyLinkedCount
+                ).toLocaleString("pt-BR")}
+              </Typography>
+              {preview.withoutDialablePhoneCount !== undefined && (
+                <Typography variant="body2">
+                  Sem telefone válido neste público:{" "}
+                  {preview.withoutDialablePhoneCount.toLocaleString("pt-BR")}
+                </Typography>
+              )}
+              <Typography fontWeight={700}>
+                Este lote: {preview.batchCount.toLocaleString("pt-BR")} agendamentos
+              </Typography>
+              <Typography variant="caption">
+                Limite de {preview.limit.toLocaleString("pt-BR")} por lote. Data e hora no CRM:{" "}
+                {preview.scheduledAt}.
+              </Typography>
+              {preview.batchCount === 0 && (
+                <Alert severity="info">Nenhum novo cliente elegível para gerar agora.</Alert>
+              )}
+            </Stack>
+          </Paper>
         )}
         <Stack direction={{ xs: "column", sm: "row" }} gap={1}>
           {mutation.gate && (

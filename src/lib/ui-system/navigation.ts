@@ -207,8 +207,8 @@ export function getNavigationItems(
         "campaigns",
         "Campanhas",
         [
-          link("campaigns-register", "Cadastro", "/crm-campaigns"),
-          link("units", "Unidades", "/crm-units"),
+          link("units", "Unidades e campanhas", "/crm-units"),
+          link("campaigns-register", "Todas as campanhas", "/crm-campaigns"),
           link("results", "Resultados", "/crm-results"),
           link("ordering", "Ordenação", "/crm-ordering"),
           group("exceptions", "Exceções", [

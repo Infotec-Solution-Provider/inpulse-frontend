@@ -43,12 +43,21 @@ export default function CrmConfigurationPage({ campaignId }: { campaignId: numbe
     </CrmMarketingFrame>
   );
 }
-export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
+export function ConfigurationPanel({
+  campaignId,
+  sectionOverride,
+  hideTabs = false,
+}: {
+  campaignId: number;
+  sectionOverride?: number;
+  hideTabs?: boolean;
+}) {
   const { client } = useCrmSession(),
     current = useRef(client),
     mutation = useCrmMutation();
   current.current = client;
-  const [section, setSection] = useState(0);
+  const [localSection, setSection] = useState(0),
+    section = sectionOverride ?? localSection;
   const [original, setOriginal] = useState<CrmCampaignConfiguration | null>(null),
     [criteria, setCriteria] = useState<CrmSelectionCriteria>(initialSelection),
     [preview, setPreview] = useState<CrmSelectionPreview | null>(null),
@@ -159,7 +168,7 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
   useCrmLeaveGuard(
     Boolean(
       original &&
-        JSON.stringify(criteria) !== JSON.stringify(original.criteria ?? initialSelection),
+      JSON.stringify(criteria) !== JSON.stringify(original.criteria ?? initialSelection),
     ),
     mutation.busy,
     mutation.gate,
@@ -173,7 +182,7 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
       { key: "segmentIds", kind: "segments", label: "Segmentos" },
       { key: "groupIds", kind: "groups", label: "Grupos de clientes" },
       { key: "originIds", kind: "origins", label: "Origens" },
-      { key: "operatorIds", kind: "operators", label: "Usuários responsáveis" },
+      { key: "operatorIds", kind: "operators", label: "Responsável atual do cliente" },
     ];
   if (!Number.isSafeInteger(campaignId) || campaignId < -2147483648 || campaignId > 2147483647)
     return <Alert severity="error">Código de campanha inválido.</Alert>;
@@ -189,22 +198,24 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
           salvar. Confira a prévia do público.
         </Alert>
       )}
-      <Tabs
-        value={section}
-        onChange={(_, value) => setSection(value)}
-        variant="scrollable"
-        allowScrollButtonsMobile
-        aria-label="Configuração da campanha"
-      >
-        {["Público", "Usuários", "Geração"].map((label, index) => (
-          <Tab
-            key={label}
-            label={label}
-            id={`campaign-section-${index}`}
-            aria-controls={`campaign-panel-${index}`}
-          />
-        ))}
-      </Tabs>
+      {!hideTabs && (
+        <Tabs
+          value={section}
+          onChange={(_, value) => setSection(value)}
+          variant="scrollable"
+          allowScrollButtonsMobile
+          aria-label="Configuração da campanha"
+        >
+          {["Público", "Equipe", "Operação"].map((label, index) => (
+            <Tab
+              key={label}
+              label={label}
+              id={`campaign-section-${index}`}
+              aria-controls={`campaign-panel-${index}`}
+            />
+          ))}
+        </Tabs>
+      )}
       <Box
         role="tabpanel"
         id="campaign-panel-0"
@@ -234,7 +245,7 @@ export function ConfigurationPanel({ campaignId }: { campaignId: number }) {
               </TextField>
               <CrmLookup
                 kind="units"
-                label="Unidade"
+                label="Unidade dos clientes"
                 value={criteria.unitId === null ? null : String(criteria.unitId)}
                 disabled={disabled}
                 onChange={(value) =>

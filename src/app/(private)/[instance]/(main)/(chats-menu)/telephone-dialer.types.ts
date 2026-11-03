@@ -2,7 +2,7 @@ import type { FinishTelephonyScheduleDTO } from "@/lib/sdk-local/types/customers
 import { CustomerTelephonySchedule } from "@/lib/sdk-local";
 
 export interface TelephoneQueuePhoneOption {
-  key: "FONE1" | "FONE2" | "FONE3";
+  key: "FONE1" | "FONE2" | "FONE3" | "FONE4";
   phone: string;
   description: string | null;
 }
@@ -57,9 +57,10 @@ export function mapTelephonyScheduleToQueueItem(
       phone: cleanPhone(schedule.FONE3),
       description: schedule.DESC_FONE3,
     },
+    { key: "FONE4", phone: cleanPhone(schedule.FONE4), description: schedule.DESC_FONE4 ?? null },
   ] as TelephoneQueuePhoneOption[];
 
-  const availablePhoneOptions = phoneOptions.filter((item) => Boolean(item.phone));
+  const availablePhoneOptions = phoneOptions.filter((item, index, items) => Boolean(item.phone) && !items.slice(0, index).some(previous => previous.phone === item.phone));
 
   const mainPhone = availablePhoneOptions[0]?.phone || "";
   const customerName = schedule.CLIENTE_RAZAO || schedule.CLIENTE_FANTASIA || null;

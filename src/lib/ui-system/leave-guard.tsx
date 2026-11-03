@@ -36,6 +36,15 @@ export function CrmLeaveGuardProvider({
     [registry],
   );
   useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!registry.size) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [registry]);
+  useEffect(() => {
     const click = (event: MouseEvent) => {
       if (
         event.defaultPrevented ||

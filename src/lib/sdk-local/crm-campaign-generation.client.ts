@@ -10,6 +10,9 @@ export interface CrmGenerationInput {
   scheduledAt: string;
 }
 export interface CrmGenerationPreview extends CrmGenerationInput {
+  selectedCount?: number;
+  withoutDialablePhoneCount?: number;
+  alreadyLinkedInSelectionCount?: number;
   eligibleCount: number;
   batchCount: number;
   alreadyLinkedCount: number;
