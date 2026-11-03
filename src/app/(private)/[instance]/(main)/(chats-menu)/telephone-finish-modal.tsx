@@ -1,4 +1,12 @@
 "use client";
+import TelephoneSurveyFields from "@/lib/components/telephone-survey-fields";
+import {
+  completeSurvey,
+  surveyPayload,
+  type CallSurvey,
+  type SurveyQuestion,
+} from "@/lib/satisfaction";
+import customersService from "@/lib/services/customers.service";
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { useAuthContext } from "@/app/auth-context";
@@ -19,6 +27,7 @@ interface TelephoneFinishModalProps {
     scheduleDate: string | undefined,
     operationId: string,
     finishedAt: string,
+    survey?: CallSurvey,
   ) => Promise<void>;
   onCheckConfirmation: (operationId: string) => Promise<"applied" | "not_confirmed">;
 }
@@ -37,13 +46,21 @@ export default function TelephoneFinishModal({
   onCheckConfirmation,
 }: TelephoneFinishModalProps) {
   const { closeModal } = useAppContext();
-  const { token } = useAuthContext();
+  const { token, instance } = useAuthContext();
   const { wppApi } = useWhatsappContext();
   const scope = useChatActionScope();
   const [resultId, setResultId] = useState<number | null>(null);
   const [scheduleDate, setScheduleDate] = useState<string>("");
   const [results, setResults] = useState<TelephoneFinishResult[]>([]);
   const [loadingResults, setLoadingResults] = useState(true);
+  const [surveyState, setSurveyState] = useState<{
+    resultId: number;
+    required: boolean;
+    questions: SurveyQuestion[];
+  } | null>(null);
+  const [surveyAnswers, setSurveyAnswers] = useState<Record<number, string>>({});
+  const [surveyError, setSurveyError] = useState("");
+  const [surveyReload, setSurveyReload] = useState(0);
   const [saving, setSaving] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -93,10 +110,35 @@ export default function TelephoneFinishModal({
     };
   }, [token, wppApi]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setSurveyState(null);
+    setSurveyAnswers({});
+    setSurveyError("");
+    if (!resultId || !token) return;
+    customersService
+      .getCallSatisfaction(appointment.id, resultId, { instance, token })
+      .then((data) => {
+        if (!cancelled) setSurveyState({ resultId, ...data });
+      })
+      .catch(() => {
+        if (!cancelled)
+          setSurveyError(
+            "Não foi possível carregar a pesquisa deste resultado. Recarregue a pesquisa para tentar.",
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resultId, token, instance, appointment.id, surveyReload]);
+  const surveyReady =
+    surveyState?.resultId === resultId &&
+    (!surveyState.required || completeSurvey(surveyState.questions, surveyAnswers));
   const requiresScheduleDate = selectedResult?.COD_ACAO === 2;
 
   const handleConfirm = async () => {
-    if (!selectedResult || blocked || submitting.current || !scope.isActive()) return;
+    if (!surveyReady || !selectedResult || blocked || submitting.current || !scope.isActive())
+      return;
     if (requiresScheduleDate && !scheduleDate) return;
 
     submitting.current = true;
@@ -110,6 +152,7 @@ export default function TelephoneFinishModal({
         requiresScheduleDate ? scheduleDate : undefined,
         operation.current.id,
         operation.current.finishedAt,
+        surveyState?.required ? surveyPayload(surveyState.questions, surveyAnswers) : undefined,
       );
       if (scope.isActive()) closeModal();
     } catch (failure) {
@@ -155,7 +198,7 @@ export default function TelephoneFinishModal({
   };
   if (!scope.valid) return null;
   return (
-    <div className="w-[24rem] max-w-[calc(100vw-2rem)] rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white">
+    <div className="max-h-[90vh] w-[24rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white">
       <header className="flex items-center justify-between pb-5">
         <div>
           <h1 className="text-lg font-semibold">Finalizar atendimento</h1>
@@ -204,6 +247,28 @@ export default function TelephoneFinishModal({
           </TextField>
         )}
 
+        {resultId && !surveyState && !surveyError && (
+          <CircularProgress size={20} aria-label="Carregando pesquisa" />
+        )}
+        {surveyError && (
+          <Alert severity="error">
+            {surveyError}
+            <Button
+              disabled={saving || blocked}
+              onClick={() => setSurveyReload((value) => value + 1)}
+            >
+              Recarregar pesquisa
+            </Button>
+          </Alert>
+        )}
+        {surveyState?.resultId === resultId && surveyState.required && (
+          <TelephoneSurveyFields
+            questions={surveyState.questions}
+            answers={surveyAnswers}
+            disabled={saving || blocked}
+            onChange={(id, value) => setSurveyAnswers((current) => ({ ...current, [id]: value }))}
+          />
+        )}
         {requiresScheduleDate && (
           <TextField
             type="datetime-local"
@@ -240,6 +305,7 @@ export default function TelephoneFinishModal({
               saving ||
               blocked ||
               !selectedResult ||
+              !surveyReady ||
               (requiresScheduleDate && !scheduleDate)
             }
           >

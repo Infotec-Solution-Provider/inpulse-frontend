@@ -40,6 +40,42 @@ describe("CRM mutation identity", () => {
       expect(request).toMatchObject({ skipAuthInjection: true, skipAuthRefresh: true });
     }
   });
+  it("pins satisfaction reads/writes and forwards answers with the same finalization", async () => {
+    authSession.configure({ instance: "tenant-b", refresh: vi.fn(), onInvalid: vi.fn() });
+    authSession.setAccessToken("different-session");
+    const client = new CustomersClient("http://localhost:8002");
+    const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => ({
+      config,
+      data: { data: [] },
+      headers: {},
+      status: 200,
+      statusText: "OK",
+    }));
+    client.ax.defaults.adapter = adapter;
+    await client.listSatisfactionQuestions(context);
+    await client.getCallSatisfaction(41, 9, context);
+    await client.writeSatisfactionQuestion(
+      "update",
+      1,
+      { description: "Nova", expectedDescription: "Anterior" },
+      context,
+    );
+    const survey = {
+      questions: [{ id: 1, description: "Pergunta" }],
+      answers: [{ questionId: 1, rating: 5 }],
+    };
+    await client.finishTelephonySchedule(
+      41,
+      { operationId: "e05cc9ea-5f51-4c7b-a18e-7e74d1607e47", resultId: 9, survey },
+      context,
+    );
+    expect(JSON.parse(adapter.mock.calls[3][0].data).survey).toEqual(survey);
+    for (const [request] of adapter.mock.calls) {
+      expect(request.headers.get("Authorization")).toBe("Bearer original-tenant-a-token");
+      expect(request.headers.get("x-crm-instance")).toBe("tenant-a");
+      expect(request).toMatchObject({ skipAuthInjection: true, skipAuthRefresh: true });
+    }
+  });
   it("does not refresh or repeat a rejected telephony finalization", async () => {
     const refresh = vi.fn();
     authSession.configure({ instance: "tenant-b", refresh, onInvalid: vi.fn() });

@@ -221,6 +221,7 @@ export function getNavigationItems(
         link("cities", "Cidades", "/crm-catalogs/cities"),
         link("states", "Estados", "/crm-catalogs/states"),
         link("medias", "Mídias", "/crm-catalogs/medias"),
+        link("satisfaction", "Pesquisa da ligação", "/crm-satisfaction"),
       ]),
     );
   }

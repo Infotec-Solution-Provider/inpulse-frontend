@@ -143,6 +143,7 @@ export default function TelephoneDialerCard() {
     scheduleDate: string | undefined,
     operationId: string,
     finishedAt: string,
+    survey?: import("@/lib/satisfaction").CallSurvey,
   ) => {
     if (!nextAppointment) return;
     if (phone.busy) throw new Error("Desligue a chamada antes de finalizar o atendimento.");
@@ -159,6 +160,7 @@ export default function TelephoneDialerCard() {
         nextAppointment.id,
         {
           operationId,
+          survey,
           resultId,
           scheduleDate,
           startedAt: startedAt || undefined,

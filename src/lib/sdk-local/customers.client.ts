@@ -1,3 +1,4 @@
+import type { SatisfactionQuestion, SurveyQuestion } from "@/lib/satisfaction";
 import ApiClient from "./api-client";
 import { crmMutationConfig, type CrmRequestContext } from "./crm-request-context";
 import type { CrmCatalogName, CrmCatalogRecords, CrmCatalogExpected, CrmCatalogListParams, CreateCrmCatalogRequest, UpdateCrmCatalogRequest, CrmUnitOption, CrmStateOption } from "./types/crm-catalogs.types";
@@ -19,6 +20,36 @@ import {
 } from "./types/customers.types";
 
 class CustomersClient extends ApiClient {
+	public async getCallSatisfaction(
+		scheduleId: number,
+		resultId: number,
+		context: CrmRequestContext,
+	): Promise<{ required: boolean; questions: SurveyQuestion[] }> {
+		const response = await this.ax.get(
+			`/api/customers/schedules/telephony/${scheduleId}/satisfaction`,
+			{ ...crmMutationConfig(context), params: { resultId } },
+		);
+		return response.data.data;
+	}
+
+	public async listSatisfactionQuestions(context: CrmRequestContext): Promise<SatisfactionQuestion[]> {
+		const response = await this.ax.get("/api/crm-satisfaction/questions", crmMutationConfig(context));
+		return response.data.data;
+	}
+
+	public async writeSatisfactionQuestion(
+		method: "create" | "update" | "delete",
+		id: number,
+		data: { description?: string; expectedDescription?: string },
+		context: CrmRequestContext,
+	): Promise<void> {
+		const url = `/api/crm-satisfaction/questions${method === "create" ? "" : `/${id}`}`;
+		await this.ax.request({
+			...crmMutationConfig(context), url,
+			method: method === "create" ? "POST" : method === "update" ? "PATCH" : "DELETE", data,
+		});
+	}
+
 	public async listCrmCatalog<K extends CrmCatalogName>(catalog: K, params?: CrmCatalogListParams, context?: CrmRequestContext): Promise<PaginatedResponse<CrmCatalogRecords[K]>> {
 		const query = new URLSearchParams();
 		for (const [key, value] of Object.entries(params ?? {})) {
