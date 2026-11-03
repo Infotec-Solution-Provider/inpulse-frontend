@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "../../src/lib/components/goal-assignments.tsx",
+    "../../src/lib/services/goal-assignments.service.ts",
+    "./*.ts",
+    "./*.tsx",
+    "../goals.config.ts"
+  ],
+  "exclude": []
+}
