@@ -2,9 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Add, ArrowBack, ArrowForward, EditOutlined } from "@mui/icons-material";
+import { Add, ArrowBack, ArrowForward, EditOutlined, ExpandMore } from "@mui/icons-material";
 import {
   Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
   Box,
   Button,
   Chip,
@@ -76,8 +79,8 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
         if (request !== version.current || started !== current.current) return;
         if ("campaigns" in result) {
           const detail = result as CrmUnitDetail;
-          setSelected(detail);
           if (!dirty) {
+            setSelected(detail);
             const value = {
               name: detail.data.DESCRICAO ?? "",
               recent: String(detail.data.INATIVOS_RECENTES ?? ""),
@@ -121,11 +124,13 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
     } else {
       const recent = Number(draft.recent),
         old = Number(draft.old);
+      const customPeriods = Boolean(draft.recent || draft.old);
       if (
-        !/^[1-9]\d*$/.test(draft.recent) ||
-        !/^[1-9]\d*$/.test(draft.old) ||
-        recent >= old ||
-        old > 2147483647
+        customPeriods &&
+        (!/^[1-9]\d*$/.test(draft.recent) ||
+          !/^[1-9]\d*$/.test(draft.old) ||
+          recent >= old ||
+          old > 2147483647)
       ) {
         mutation.setError(
           "Informe períodos inteiros positivos. Os inativos antigos devem começar depois dos recentes.",
@@ -136,8 +141,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
         client.createUnit({
           fields: {
             DESCRICAO: draft.name.trim(),
-            INATIVOS_RECENTES: recent,
-            INATIVOS_ANTIGOS: old,
+            ...(customPeriods ? { INATIVOS_RECENTES: recent, INATIVOS_ANTIGOS: old } : {}),
           },
           campaigns: [],
         }),
@@ -151,7 +155,15 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
   function cancel() {
     if (mutation.gate) return;
     if (dirty && !window.confirm("Descartar alterações da unidade?")) return;
-    setDraft(saved);
+    const value = selected
+      ? {
+          name: selected.data.DESCRICAO ?? "",
+          recent: String(selected.data.INATIVOS_RECENTES ?? ""),
+          old: String(selected.data.INATIVOS_ANTIGOS ?? ""),
+        }
+      : saved;
+    setDraft(value);
+    setSaved(value);
     if (create) router.push(returnTo);
     else setEditing(false);
   }
@@ -171,8 +183,9 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
           (unit) =>
             !list.some((before) => before.CODIGO === unit.CODIGO) &&
             unit.DESCRICAO === draft.name.trim() &&
-            unit.INATIVOS_RECENTES === Number(draft.recent) &&
-            unit.INATIVOS_ANTIGOS === Number(draft.old),
+            (!(draft.recent || draft.old) ||
+              (unit.INATIVOS_RECENTES === Number(draft.recent) &&
+                unit.INATIVOS_ANTIGOS === Number(draft.old))),
         );
         setCandidates(matches);
         mutation.setSuccess(
@@ -342,7 +355,20 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
               )}
             </Box>
             {!editing && selected && (
-              <Button startIcon={<EditOutlined />} onClick={() => setEditing(true)}>
+              <Button
+                startIcon={<EditOutlined />}
+                onClick={() => {
+                  const value = {
+                    name: selected.data.DESCRICAO ?? "",
+                    recent: String(selected.data.INATIVOS_RECENTES ?? ""),
+                    old: String(selected.data.INATIVOS_ANTIGOS ?? ""),
+                  };
+                  setDraft(value);
+                  setSaved(value);
+                  setEditing(true);
+                }}
+                disabled={adding}
+              >
                 Editar dados
               </Button>
             )}
@@ -378,27 +404,34 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                 {create && (
                   <>
                     <Typography variant="body2" color="text.secondary">
-                      Defina os períodos do ciclo de compra. Campanhas por público também podem ser
-                      adicionadas à unidade.
+                      A unidade usará os períodos padrão cadastrados no CRM. Personalize-os abaixo
+                      se necessário ou adicione campanhas por público depois de criar.
                     </Typography>
-                    <TextField
-                      required
-                      type="number"
-                      label="Inativos recentes a partir de (dias)"
-                      value={draft.recent}
-                      disabled={locked}
-                      onChange={(e) => field("recent", e.target.value)}
-                      inputProps={{ min: 1, max: 2147483647 }}
-                    />
-                    <TextField
-                      required
-                      type="number"
-                      label="Inativos antigos a partir de (dias)"
-                      value={draft.old}
-                      disabled={locked}
-                      onChange={(e) => field("old", e.target.value)}
-                      inputProps={{ min: 1, max: 2147483647 }}
-                    />
+                    <Accordion disableGutters>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography>Personalizar períodos do ciclo de compra</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Stack gap={2}>
+                          <TextField
+                            type="number"
+                            label="Inativos recentes a partir de (dias)"
+                            value={draft.recent}
+                            disabled={locked}
+                            onChange={(e) => field("recent", e.target.value)}
+                            inputProps={{ min: 1, max: 2147483647 }}
+                          />
+                          <TextField
+                            type="number"
+                            label="Inativos antigos a partir de (dias)"
+                            value={draft.old}
+                            disabled={locked}
+                            onChange={(e) => field("old", e.target.value)}
+                            inputProps={{ min: 1, max: 2147483647 }}
+                          />
+                        </Stack>
+                      </AccordionDetails>
+                    </Accordion>
                   </>
                 )}
                 {dirty && <Typography variant="caption">Alterações não salvas</Typography>}
@@ -423,70 +456,69 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                   <Tab label="Campanhas" />
                   <Tab label="Regras da unidade" />
                 </Tabs>
-                {tab === 0 ? (
-                  <>
-                    {!adding ? (
-                      <>
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          gap={1}
+                <Box hidden={tab !== 0}>
+                  {!adding ? (
+                    <>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        gap={1}
+                      >
+                        <Typography variant="h6">Campanhas</Typography>
+                        <Button
+                          startIcon={<Add />}
+                          variant="contained"
+                          onClick={() => setAdding(true)}
+                          disabled={locked}
                         >
-                          <Typography variant="h6">Campanhas</Typography>
-                          <Button
-                            startIcon={<Add />}
-                            variant="contained"
-                            onClick={() => setAdding(true)}
-                            disabled={locked}
-                          >
-                            Adicionar campanha
-                          </Button>
-                        </Stack>
-                        <Stack gap={1.5}>
-                          {selected.campaigns.map((c) => (
-                            <CampaignCard
-                              key={c.CODIGO}
-                              campaign={{
-                                ...c,
-                                OPERATION_MODE: selected.campaignModes?.[String(c.CODIGO)] ?? null,
-                              }}
-                              instance={instance}
-                              returnTo={`${base}/${unitId}?returnTo=${encodeURIComponent(returnTo)}`}
-                            />
-                          ))}
-                        </Stack>
-                        {!selected.campaigns.length && (
-                          <Typography color="text.secondary">
-                            Nenhuma campanha nesta unidade. Adicione uma campanha e configure seu
-                            público.
-                          </Typography>
-                        )}
-                      </>
-                    ) : (
-                      <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
-                        <Typography variant="h6" mb={2}>
                           Adicionar campanha
+                        </Button>
+                      </Stack>
+                      <Stack gap={1.5}>
+                        {selected.campaigns.map((c) => (
+                          <CampaignCard
+                            key={c.CODIGO}
+                            campaign={{
+                              ...c,
+                              OPERATION_MODE: selected.campaignModes?.[String(c.CODIGO)] ?? null,
+                            }}
+                            instance={instance}
+                            returnTo={`${base}/${unitId}?returnTo=${encodeURIComponent(returnTo)}`}
+                          />
+                        ))}
+                      </Stack>
+                      {!selected.campaigns.length && (
+                        <Typography color="text.secondary">
+                          Nenhuma campanha nesta unidade. Adicione uma campanha e configure seu
+                          público.
                         </Typography>
-                        <CampaignEditor
-                          unitId={selected.data.CODIGO}
-                          unitName={selected.data.DESCRICAO}
-                          usedTypes={selected.campaigns.map((c) => String(c.TIPO))}
-                          onCancel={() => {
-                            setAdding(false);
-                            setReload((r) => r + 1);
-                          }}
-                          onSaved={(c) => {
-                            setAdding(false);
-                            router.push(
-                              `/${instance}/crm-campaigns/${c.CODIGO}?returnTo=${encodeURIComponent(`${base}/${unitId}`)}`,
-                            );
-                          }}
-                        />
-                      </Paper>
-                    )}
-                  </>
-                ) : (
+                      )}
+                    </>
+                  ) : (
+                    <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
+                      <Typography variant="h6" mb={2}>
+                        Adicionar campanha
+                      </Typography>
+                      <CampaignEditor
+                        unitId={selected.data.CODIGO}
+                        unitName={selected.data.DESCRICAO}
+                        usedTypes={selected.campaigns.map((c) => String(c.TIPO))}
+                        onCancel={() => {
+                          setAdding(false);
+                          setReload((r) => r + 1);
+                        }}
+                        onSaved={(c) => {
+                          setAdding(false);
+                          router.push(
+                            `/${instance}/crm-campaigns/${c.CODIGO}?returnTo=${encodeURIComponent(`${base}/${unitId}`)}`,
+                          );
+                        }}
+                      />
+                    </Paper>
+                  )}
+                </Box>
+                <Box hidden={tab !== 1}>
                   <Paper variant="outlined" sx={{ p: { xs: 2, md: 3 } }}>
                     <Stack gap={2}>
                       <Typography variant="h6">Ciclo de compra</Typography>
@@ -528,7 +560,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                       </Button>
                     </Stack>
                   </Paper>
-                )}
+                </Box>
               </>
             )
           )}

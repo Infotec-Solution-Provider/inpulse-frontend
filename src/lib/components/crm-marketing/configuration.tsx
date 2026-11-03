@@ -47,10 +47,12 @@ export function ConfigurationPanel({
   campaignId,
   sectionOverride,
   hideTabs = false,
+  onChanged,
 }: {
   campaignId: number;
   sectionOverride?: number;
   hideTabs?: boolean;
+  onChanged?: () => void;
 }) {
   const { client } = useCrmSession(),
     current = useRef(client),
@@ -149,6 +151,7 @@ export function ConfigurationPanel({
     );
     if (result) {
       setOriginal(result.value);
+      onChanged?.();
       setCriteria(result.value.criteria ?? criteria);
       mutation.setSuccess("Critérios salvos. A lista está marcada para geração.");
     }
@@ -371,7 +374,10 @@ export function ConfigurationPanel({
             disabled ||
             JSON.stringify(criteria) !== JSON.stringify(original?.criteria ?? initialSelection)
           }
-          onReload={() => setReload((value) => value + 1)}
+          onReload={() => {
+            setReload((value) => value + 1);
+            onChanged?.();
+          }}
         />
       </Box>
     </Stack>

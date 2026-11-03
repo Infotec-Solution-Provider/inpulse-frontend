@@ -266,6 +266,7 @@ function CampaignDetail({
             </Box>
             <Box hidden={section === 0}>
               <ConfigurationPanel
+                onChanged={() => setReload((value) => value + 1)}
                 campaignId={campaignId}
                 sectionOverride={Math.max(0, section - 1)}
                 hideTabs

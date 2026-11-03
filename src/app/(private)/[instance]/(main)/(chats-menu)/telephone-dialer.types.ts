@@ -60,7 +60,7 @@ export function mapTelephonyScheduleToQueueItem(
     { key: "FONE4", phone: cleanPhone(schedule.FONE4), description: schedule.DESC_FONE4 ?? null },
   ] as TelephoneQueuePhoneOption[];
 
-  const availablePhoneOptions = phoneOptions.filter((item, index, items) => Boolean(item.phone) && !items.slice(0, index).some(previous => previous.phone === item.phone));
+  const availablePhoneOptions = phoneOptions.filter((item, index, items) => /^[0-9]{10,12}$/.test(item.phone) && !items.slice(0, index).some(previous => previous.phone === item.phone));
 
   const mainPhone = availablePhoneOptions[0]?.phone || "";
   const customerName = schedule.CLIENTE_RAZAO || schedule.CLIENTE_FANTASIA || null;

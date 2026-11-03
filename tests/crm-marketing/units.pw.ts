@@ -24,6 +24,7 @@ test("unit creation allocates its identity on the server and continues to its de
   await page.getByRole("link", { name: "Nova unidade", exact: true }).click();
   await expect(page.getByLabel("Código da unidade", { exact: true })).toHaveCount(0);
   await page.getByLabel("Nome da unidade", { exact: true }).fill("Equipe varejo");
+  await page.getByRole("button", { name: "Personalizar períodos do ciclo de compra" }).click();
   await page.getByLabel("Inativos recentes a partir de (dias)", { exact: true }).fill("30");
   await page.getByLabel("Inativos antigos a partir de (dias)", { exact: true }).fill("90");
   await page.getByRole("button", { name: "Criar unidade", exact: true }).click();

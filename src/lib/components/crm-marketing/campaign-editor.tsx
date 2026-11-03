@@ -49,6 +49,12 @@ export default function CampaignEditor({
 }) {
   const { client } = useCrmSession(),
     mutation = useCrmMutation();
+  const base = useRef(original).current,
+    currentClient = useRef(client);
+  currentClient.current = client;
+  const attempt = useRef<{ baseline: number[]; name: string; unit: number } | null>(null);
+  const [reconciling, setReconciling] = useState(false),
+    [candidates, setCandidates] = useState<CrmMarketingRecord[]>([]);
   const [fields, setFields] = useState<CrmMarketingField[]>([]),
     [draft, setDraft] = useState<CrmDraft>({}),
     [initial, setInitial] = useState<CrmDraft>({}),
@@ -107,7 +113,7 @@ export default function CampaignEditor({
         if (!active) return;
         setFields(fields);
         if (!seeded.current) {
-          const next = crmDraft(fields, original);
+          const next = crmDraft(fields, base);
           if (!original) {
             next.PAUSADA = "SIM";
             next.UNIDADE = unitId === undefined ? null : String(unitId);
@@ -132,7 +138,7 @@ export default function CampaignEditor({
   const dirty =
       JSON.stringify(draft) !== JSON.stringify(initial) ||
       (!original && mode !== "audience-manual"),
-    locked = loading || mutation.busy || mutation.gate;
+    locked = loading || mutation.busy || mutation.gate || reconciling;
   const selectedUnitName = unitName ?? unitNames[draft.UNIDADE ?? ""],
     canonicalName = selectedUnitName && draft.TIPO ? `${selectedUnitName} - ${draft.TIPO}` : "",
     displayName = !original && mode === "purchase-cycle" ? canonicalName : (draft.NOME ?? "");
@@ -144,7 +150,7 @@ export default function CampaignEditor({
     setDraft((current) => ({ ...current, [key]: value }));
   async function save() {
     try {
-      const payload = crmPayload(fields, { ...draft, NOME: displayName, CODIGO: "1" }, original);
+      const payload = crmPayload(fields, { ...draft, NOME: displayName, CODIGO: "1" }, base);
       delete payload.CODIGO;
       if (!original) {
         if (draft.UNIDADE == null) throw new Error("Selecione a unidade da campanha.");
@@ -160,13 +166,30 @@ export default function CampaignEditor({
         onCancel();
         return;
       }
-      const result = await mutation.write(() =>
+      const result = await mutation.write(async () =>
         original
           ? client.patch("campaigns", original.CODIGO, {
               changes: payload,
-              expected: crmExpected(fields, original),
+              expected: crmExpected(fields, base!),
             })
-          : client.create("campaigns", payload),
+          : (async () => {
+              const before = await client.list("campaigns", {
+                NOME: displayName,
+                UNIDADE: String(draft.UNIDADE),
+                page: 1,
+                perPage: 100,
+              });
+              if (before.page.totalRows > 100)
+                throw new Error(
+                  "Refine o nome da campanha antes de criar; há muitos cadastros com nome semelhante.",
+                );
+              attempt.current = {
+                baseline: before.data.map((row) => row.CODIGO),
+                name: displayName,
+                unit: Number(draft.UNIDADE),
+              };
+              return client.create("campaigns", payload);
+            })(),
       );
       if (result) {
         setInitial(draft);
@@ -174,6 +197,45 @@ export default function CampaignEditor({
       }
     } catch (error) {
       mutation.setError(error instanceof Error ? error.message : "Confira os campos.");
+    }
+  }
+  async function reconcile(candidate?: CrmMarketingRecord) {
+    const started = client;
+    setReconciling(true);
+    try {
+      if (base || candidate) {
+        const record = await client.detail("campaigns", (base ?? candidate)!.CODIGO);
+        if (currentClient.current !== started) return;
+        if (base) onCancel();
+        else onSaved(record);
+      } else if (attempt.current) {
+        const snapshot = attempt.current;
+        const response = await client.list("campaigns", {
+          NOME: snapshot.name,
+          UNIDADE: String(snapshot.unit),
+          page: 1,
+          perPage: 100,
+        });
+        if (currentClient.current !== started) return;
+        const matches = response.data.filter(
+          (row) => !snapshot.baseline.includes(row.CODIGO) && row.NOME === snapshot.name,
+        );
+        setCandidates(matches);
+        mutation.setError(
+          matches.length
+            ? "Confira abaixo o cadastro encontrado. A criação permanece bloqueada até abrir o resultado."
+            : "O resultado ainda não foi localizado. A criação permanece bloqueada para evitar repetição.",
+        );
+      } else
+        mutation.setError(
+          "Não foi possível identificar a solicitação. Confira os cadastros gravados antes de iniciar uma nova criação.",
+        );
+    } catch (error) {
+      mutation.setError(
+        error instanceof Error ? error.message : "Não foi possível conferir o resultado.",
+      );
+    } finally {
+      setReconciling(false);
     }
   }
   const advanced = fields.filter(
@@ -211,9 +273,21 @@ export default function CampaignEditor({
       {mutation.gate && (
         <Alert severity="warning">
           Confira a campanha gravada antes de tentar novamente. Seu texto foi preservado.{" "}
-          <Button onClick={onCancel}>Conferir campanha</Button>
+          <Button disabled={reconciling} onClick={() => void reconcile()}>
+            Conferir campanha
+          </Button>
         </Alert>
       )}
+      {candidates.map((record) => (
+        <Button
+          key={record.CODIGO}
+          variant="outlined"
+          disabled={reconciling}
+          onClick={() => void reconcile(record)}
+        >
+          Abrir resultado: {record.NOME} · código {record.CODIGO}
+        </Button>
+      ))}
       {unitName && <Typography color="text.secondary">Unidade: {unitName}</Typography>}
       <TextField
         required

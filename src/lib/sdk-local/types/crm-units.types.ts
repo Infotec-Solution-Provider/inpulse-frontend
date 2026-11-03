@@ -24,7 +24,8 @@ export interface CrmUnitDetail {
   campaignModes?: Record<string, string>;
 }
 export interface CrmUnitCreate {
-  fields: Omit<CrmUnit, "CODIGO"> & { CODIGO?: number };
+  fields: Pick<CrmUnit, "DESCRICAO"> &
+    Partial<Pick<CrmUnit, "CODIGO" | "INATIVOS_RECENTES" | "INATIVOS_ANTIGOS">>;
   campaigns: Record<string, CrmMarketingValue>[];
 }
 export type CrmCampaignAction = { allowed: boolean; reasons: { code: string; message: string }[] };

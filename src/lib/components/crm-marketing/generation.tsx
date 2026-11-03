@@ -62,8 +62,13 @@ export default function GenerationPanel({
     current = useRef(api);
   current.current = api;
   const initialDate = useRef(date);
+  const confirmedInput = useRef({ operator: null as string | null, date: initialDate.current });
   useCrmLeaveGuard(
-    !knownGenerated && Boolean(operator || date !== initialDate.current),
+    Boolean(
+      preview ||
+      operator !== confirmedInput.current.operator ||
+      date !== confirmedInput.current.date,
+    ),
     mutation.busy,
     mutation.gate,
   );
@@ -132,6 +137,10 @@ export default function GenerationPanel({
       }),
     );
     if (result) {
+      confirmedInput.current = {
+        operator: String(preview.operatorId),
+        date: preview.scheduledAt.replace(" ", "T"),
+      };
       setPreview(null);
       setKnownGenerated(result.value.GERADO_LISTA === "SIM");
       mutation.setSuccess(

@@ -268,7 +268,7 @@ export class MarketingClient {
       const code =
         payload.fields.CODIGO ??
         Math.max(0, ...data[this.instance].units.map((u: any) => u.CODIGO)) + 1;
-      data[this.instance].units.push({ ...copy(payload.fields), CODIGO: code });
+      data[this.instance].units.push({ INATIVOS_RECENTES: 90, INATIVOS_ANTIGOS: 180, ...copy(payload.fields), CODIGO: code });
       data[this.instance].campaigns.push(
         ...payload.campaigns.map((c: any) => ({ ...c, UNIDADE: payload.fields.CODIGO })),
       );
