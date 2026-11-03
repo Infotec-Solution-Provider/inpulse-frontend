@@ -219,6 +219,7 @@ export function getNavigationItems(
     items.push(
       group("general", "Outros", [
         link("cities", "Cidades", "/crm-catalogs/cities"),
+        link("phone-areas", "Áreas telefônicas e DDD", "/crm-catalogs/phone-areas"),
         link("states", "Estados", "/crm-catalogs/states"),
         link("medias", "Mídias", "/crm-catalogs/medias"),
       ]),

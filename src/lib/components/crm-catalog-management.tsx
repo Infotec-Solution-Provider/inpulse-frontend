@@ -1,5 +1,6 @@
 "use client";
 import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
+import { DddCitiesReviewPanel } from "./ddd-cities-review";
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import {
   CrmPage,
@@ -771,10 +772,10 @@ export function GenericCatalogManagement({
                             </IconButton>
                           </span>
                         </Tooltip>
-                        <Tooltip title="Excluir">
+                        <Tooltip title={definition.deleteUnavailable ?? "Excluir"}>
                           <span>
                             <IconButton
-                              disabled={reconcileRequired || Number(row.ID_COUNT ?? 1) > 1}
+                              disabled={Boolean(definition.deleteUnavailable) || reconcileRequired || Number(row.ID_COUNT ?? 1) > 1}
                               aria-label={`Excluir ${row[definition.identity]}`}
                               color="error"
                               onClick={() => {
@@ -1119,6 +1120,7 @@ export function CatalogManagement({
       instance={instance}
       definition={CRM_CATALOGS[catalog]}
       api={api}
+      extraContent={catalog === "phone-areas" ? <DddCitiesReviewPanel token={token} instance={instance} /> : undefined}
     />
   );
 }

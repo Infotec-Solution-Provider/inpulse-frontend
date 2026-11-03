@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { catalogDraft, catalogExpected, validateCatalogDraft } from "./crm-catalogs-form";
 
 describe("CRM catalog drafts", () => {
+  it("keeps DDD identity textual, validates the new two-digit code and preserves historical keys", () => {
+    expect(validateCatalogDraft("phone-areas", { CODIGO: "11", DESCRICAO: "São Paulo" })).toMatchObject({ valid: true, changes: { CODIGO: "11", DESCRICAO: "São Paulo" } });
+    for (const code of ["011", "00", "ab", "1/"]) expect(validateCatalogDraft("phone-areas", { CODIGO: code, DESCRICAO: "A" }).valid).toBe(false);
+    const original = { CODIGO: "0011", DESCRICAO: null };
+    expect(validateCatalogDraft("phone-areas", { CODIGO: "0011", DESCRICAO: "Legado" }, original)).toMatchObject({ valid: true, changes: { DESCRICAO: "Legado" } });
+    expect(catalogExpected("phone-areas", original)).toEqual({ DESCRICAO: null });
+  });
   it("preserves untouched historical labels, zero, null and unsupported bytes", () => {
     const original = { CODIGO: -1, NOME: "Nome\u0080 ", PRIORIDADE: null, COD_UNIDADE: 0 };
     const draft = { ...catalogDraft("medias", original), PRIORIDADE: "3" };

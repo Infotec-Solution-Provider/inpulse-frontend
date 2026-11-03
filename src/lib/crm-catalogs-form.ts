@@ -22,6 +22,8 @@ export interface CatalogDefinition {
   identity: string;
   identityKind?: "text";
   identityMaxLength?: number;
+  identityPattern?: string;
+  deleteUnavailable?: string;
   expectedIncludesIdentity?: boolean;
   sortable?: boolean;
   autoId?: boolean;
@@ -49,6 +51,14 @@ const order = (key: string, label: string): CatalogField => ({
 });
 
 export const CRM_CATALOGS: Record<CrmCatalogName, CatalogDefinition> = {
+  "phone-areas": {
+    title: "Áreas telefônicas e DDD",
+    singular: "DDD",
+    description: "Mantenha a descrição dos DDDs e consulte as cidades na BrasilAPI. O código preserva a identidade e os vínculos existentes.",
+    identity: "CODIGO", identityKind: "text", identityMaxLength: 2, identityPattern: "^[1-9]\\d$",
+    deleteUnavailable: "Exclusão indisponível até validar os vínculos telefônicos do tenant.",
+    fields: [description(20)],
+  },
   "customer-groups": {
     title: "Grupos de clientes",
     singular: "grupo",
@@ -196,6 +206,7 @@ export function validateCatalogDefinition(
         errors[definition.identity] =
           `Informe um código com até ${definition.identityMaxLength ?? 50} caracteres compatíveis com o CRM.`;
       changes[definition.identity] = value;
+      if (definition.identityPattern && !new RegExp(definition.identityPattern).test(value)) errors[definition.identity] = "Informe um DDD de dois dígitos, sem zero ou prefixo.";
     } else if (definition.identity === "UF") {
       if (!/^[A-Z]{2}$/.test(value)) errors.UF = "Informe uma sigla com duas letras maiúsculas.";
       changes.UF = value;

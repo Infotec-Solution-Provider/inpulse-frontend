@@ -1,4 +1,5 @@
 import ApiClient from "./api-client";
+import type { DddCitiesReview, DddCitiesAssociationRequest } from "./types/crm-catalogs.types";
 import { crmMutationConfig, type CrmRequestContext } from "./crm-request-context";
 import type { CrmCatalogName, CrmCatalogRecords, CrmCatalogExpected, CrmCatalogListParams, CreateCrmCatalogRequest, UpdateCrmCatalogRequest, CrmUnitOption, CrmStateOption } from "./types/crm-catalogs.types";
 import { DataResponse, MessageResponse, PaginatedResponse, RequestFilters } from "./types";
@@ -19,6 +20,14 @@ import {
 } from "./types/customers.types";
 
 class CustomersClient extends ApiClient {
+  public async associateDddCities(ddd: string, data: DddCitiesAssociationRequest, context: CrmRequestContext): Promise<DataResponse<{ added: number; existing: number }>> {
+    const response = await this.ax.post<DataResponse<{ added: number; existing: number }>>(`/api/crm-catalogs/phone-areas/${encodeURIComponent(ddd)}/cities`, data, crmMutationConfig(context));
+    return response.data;
+  }
+  public async reviewDddCities(ddd: string, context: CrmRequestContext): Promise<DataResponse<DddCitiesReview>> {
+    const response = await this.ax.get<DataResponse<DddCitiesReview>>(`/api/crm-catalogs/phone-areas/${encodeURIComponent(ddd)}/cities`, crmMutationConfig(context));
+    return response.data;
+  }
 	public async listCrmCatalog<K extends CrmCatalogName>(catalog: K, params?: CrmCatalogListParams, context?: CrmRequestContext): Promise<PaginatedResponse<CrmCatalogRecords[K]>> {
 		const query = new URLSearchParams();
 		for (const [key, value] of Object.entries(params ?? {})) {

@@ -5,6 +5,24 @@ import { describe, expect, it, vi } from "vitest";
 import CustomersClient from "./customers.client";
 
 describe("CRM catalog transport", () => {
+  it("sends explicit reviewed mappings with pinned tenant and never retries an uncertain coverage write", async () => {
+    const client = new CustomersClient("http://localhost:8002");
+    const input = { uf: "SP", reviewed: true as const, links: [{ cityId: 1, expectedName: "São Paulo", providerCity: "SÃO PAULO" }] };
+    const post = vi.spyOn(client.ax, "post").mockResolvedValue({ data: { data: { added: 1, existing: 0 } } });
+    await client.associateDddCities("11", input, context);
+    expect(post).toHaveBeenCalledExactlyOnceWith("/api/crm-catalogs/phone-areas/11/cities", input, crmMutationConfig(context));
+    post.mockRestore();
+    const adapter = vi.fn(async (config: InternalAxiosRequestConfig) => { throw new AxiosError("timeout", AxiosError.ECONNABORTED, config); });
+    client.ax.defaults.adapter = adapter;
+    await expect(client.associateDddCities("11", input, context)).rejects.toBeInstanceOf(Error);
+    expect(adapter).toHaveBeenCalledTimes(1);
+  });
+  it("pins review credentials and encodes DDD as a single path segment", async () => {
+    const client = new CustomersClient("http://localhost:8002");
+    const get = vi.spyOn(client.ax, "get").mockResolvedValue({ data: { data: {} } });
+    await client.reviewDddCities("11/../../x", context);
+    expect(get).toHaveBeenCalledExactlyOnceWith("/api/crm-catalogs/phone-areas/11%2F..%2F..%2Fx/cities", crmMutationConfig(context));
+  });
   it("encodes literal search and textual state keys without selecting a tenant", async () => {
     const client = new CustomersClient("http://localhost:8002");
     const get = vi
