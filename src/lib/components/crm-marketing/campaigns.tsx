@@ -22,6 +22,7 @@ import type { CrmUnit } from "@/lib/sdk-local/types/crm-units.types";
 import { crmError } from "@/lib/crm-marketing-form";
 import { CampaignCard } from "./campaign-common";
 import CampaignEditor from "./campaign-editor";
+import { workspaceSx } from './workspace-styles';
 
 export default function CrmCampaignsPage({ create = false }: { create?: boolean }) {
   return (
@@ -121,14 +122,14 @@ function CampaignsPanel({ create }: { create: boolean }) {
       </Stack>
     );
   return (
-    <Stack gap={3} sx={{ maxWidth: 1120, minWidth: 0 }}>
+    <Stack gap={3} sx={workspaceSx}>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
         <Box>
           <Typography variant="h5" component="h2">
             Todas as campanhas
           </Typography>
           <Typography color="text.secondary" mt={1}>
-            Localize campanhas de qualquer unidade e abra a mesma ficha de configuração.
+            Busque por nome ou filtre por unidade e situação.
           </Typography>
         </Box>
         <Button
@@ -141,7 +142,7 @@ function CampaignsPanel({ create }: { create: boolean }) {
           Nova campanha
         </Button>
       </Stack>
-      <Tabs value={1} aria-label="Visão das campanhas">
+      <Tabs value={1} variant="scrollable" allowScrollButtonsMobile aria-label="Visão das campanhas">
         <Tab label="Por unidade" component={Link} href={`/${instance}/crm-units`} />
         <Tab label="Todas as campanhas" />
       </Tabs>
@@ -154,7 +155,7 @@ function CampaignsPanel({ create }: { create: boolean }) {
             e.preventDefault();
             query({ q: draft, page: "" });
           }}
-          sx={{ flex: 2, minWidth: 0 }}
+          sx={{ flex: 2, minWidth: 0, width: { xs: '100%', md: 'auto' } }}
         >
           <TextField
             label="Buscar campanha pelo nome"
@@ -195,6 +196,7 @@ function CampaignsPanel({ create }: { create: boolean }) {
           <MenuItem value="SIM">Pausadas</MenuItem>
         </TextField>
       </Stack>
+      {(params.get('q') || unit || paused) && <Button sx={{ alignSelf: 'flex-start' }} onClick={() => { setDraft(''); query({ q: '', unit: '', paused: '', page: '' }); }}>Limpar filtros</Button>}
       {loading && <LinearProgress aria-label="Carregando campanhas" />}
       {error && <Alert severity="error">{error}</Alert>}
       <Typography variant="body2" color="text.secondary">

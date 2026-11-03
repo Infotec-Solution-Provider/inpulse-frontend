@@ -25,6 +25,9 @@ import type { CrmUnitDetail, CrmUnitList } from "@/lib/sdk-local/types/crm-units
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { CampaignCard, cycleLabels } from "./campaign-common";
 import CampaignEditor from "./campaign-editor";
+import { workspaceSx, interactiveCardSx, formActionsSx } from './workspace-styles';
+import { InputAdornment, IconButton } from '@mui/material';
+import { Search, Close } from '@mui/icons-material';
 const unitModeLabels: Record<string, string> = {
   unconfigured: "Sem campanhas",
   "audience-manual": "Públicos definidos · geração manual",
@@ -210,7 +213,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
   const queryUrl = `${base}${search ? `?q=${encodeURIComponent(search)}` : ""}`;
   const renameReason = selected?.data.capabilities?.rename?.reasons.map((r) => r.message).join(" ");
   return (
-    <Stack gap={3} sx={{ maxWidth: 1120, minWidth: 0 }}>
+    <Stack gap={3} sx={workspaceSx}>
       {loading && <LinearProgress aria-label="Carregando unidades" />}
       {(error || mutation.error) && <Alert severity="error">{error || mutation.error}</Alert>}
       {mutation.success && <Alert severity="success">{mutation.success}</Alert>}
@@ -236,10 +239,10 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
             <Box>
               <Typography variant="h5" component="h2">
-                Organize suas campanhas por unidade
+                Suas unidades
               </Typography>
               <Typography color="text.secondary" sx={{ mt: 1 }}>
-                Abra uma unidade para configurar suas campanhas, públicos e operação.
+                Escolha uma unidade para gerenciar campanhas e públicos.
               </Typography>
             </Box>
             <Button
@@ -252,7 +255,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
               Nova unidade
             </Button>
           </Stack>
-          <Tabs value={0} aria-label="Visão das campanhas">
+          <Tabs value={0} variant="scrollable" allowScrollButtonsMobile aria-label="Visão das campanhas">
             <Tab label="Por unidade" />
             <Tab label="Todas as campanhas" component={Link} href={`/${instance}/crm-campaigns`} />
           </Tabs>
@@ -260,7 +263,8 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
             label="Buscar unidade pelo nome"
             size="small"
             value={search}
-            sx={{ maxWidth: 480 }}
+            sx={{ width: '100%', maxWidth: 480 }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>, endAdornment: search ? <InputAdornment position="end"><IconButton size="small" aria-label="Limpar busca de unidades" onClick={() => { setSearch(''); router.replace(base, { scroll: false }); }}><Close fontSize="small" /></IconButton></InputAdornment> : undefined }}
             onChange={(e) => {
               const value = e.target.value;
               setSearch(value);
@@ -275,7 +279,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                 (unit.DESCRICAO ?? "").toLocaleLowerCase().includes(search.toLocaleLowerCase()),
               )
               .map((unit) => (
-                <Paper key={unit.CODIGO} variant="outlined" sx={{ p: 2 }}>
+                <Paper key={unit.CODIGO} variant="outlined" sx={interactiveCardSx}>
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     justifyContent="space-between"
@@ -435,7 +439,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                   </>
                 )}
                 {dirty && <Typography variant="caption">Alterações não salvas</Typography>}
-                <Stack direction="row" gap={1} justifyContent="flex-end">
+                <Stack direction="row" gap={1} justifyContent="flex-end" sx={formActionsSx}>
                   <Button onClick={cancel} disabled={mutation.busy || mutation.gate}>
                     Cancelar
                   </Button>

@@ -28,6 +28,7 @@ import type {
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { CrmLookup, NullableCrmField, useCrmMutation, useCrmSession } from "./shared";
 import { cycleLabels } from "./campaign-common";
+import { formActionsSx } from './workspace-styles';
 
 /** The same editor serves the unit and the cross-unit entry point. */
 export default function CampaignEditor({
@@ -398,7 +399,7 @@ export default function CampaignEditor({
           Alterações não salvas
         </Typography>
       )}
-      <Stack direction="row" gap={1} justifyContent="flex-end" flexWrap="wrap">
+      <Stack direction="row" gap={1} justifyContent="flex-end" flexWrap="wrap" sx={formActionsSx}>
         <Button
           disabled={mutation.busy || mutation.gate}
           onClick={() => {
