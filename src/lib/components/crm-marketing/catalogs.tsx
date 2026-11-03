@@ -320,6 +320,7 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
             onChange={change}
             disabled={
               locked ||
+              (catalog === "campaigns" && Boolean(editor.original) && ["TIPO", "UNIDADE"].includes(field.key)) ||
               (catalog === "results" &&
                 editor.draft["CANCELAPROPOSTA"] === "SIM" &&
                 cancelledProposalFields.includes(field.key))
@@ -414,7 +415,7 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
           disabled={locked || !fields.length}
           onClick={() => {
             mutation.setError("");
-            setEditor({ draft: crmDraft(fields) });
+            setEditor({ draft: { ...crmDraft(fields), ...(catalog === "campaigns" ? { PAUSADA: "SIM" } : {}) } });
           }}
         >
           {catalog === "campaigns" ? "Nova campanha" : "Novo resultado"}
@@ -609,6 +610,8 @@ export function CatalogPanel({ catalog }: { catalog: CrmMarketingCatalog }) {
               <Stack gap={2}>
                 {catalog === "campaigns" && (
                   <>
+                    <Alert severity="info">Nomes não alteram a regra do público. Tipo e unidade existentes são preservados. Inclua novas campanhas pausadas; composições incompletas aguardam regra de ativação.</Alert>
+                    <Button component={Link} href={`/${instance}/crm-units`}>Gerenciar unidades e campanhas vinculadas</Button>
                     <Typography variant="body2">
                       Posição: {editor?.original?.PRIORIDADE ?? "ao final após cadastrar"}
                     </Typography>

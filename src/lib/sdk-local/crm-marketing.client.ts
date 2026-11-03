@@ -4,6 +4,7 @@ import type {
   CatalogOrderSave,
 } from "./types/crm-marketing.types";
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
+import type { CrmUnit, CrmUnitList, CrmUnitDetail, CrmUnitCreate } from "./types/crm-units.types";
 import type {
   CrmMarketingCatalog,
   CrmMarketingField,
@@ -54,6 +55,18 @@ export default class CrmMarketingClient {
     return (
       await this.ax.get<{ data: { fields: CrmMarketingField[] } }>(`${this.root}/${catalog}/schema`)
     ).data.data;
+  }
+  async units(): Promise<CrmUnitList> {
+    return (await this.ax.get<CrmUnitList>(`${this.root}/units`, this.pinned())).data;
+  }
+  async unit(id: number): Promise<CrmUnitDetail> {
+    return (await this.ax.get<CrmUnitDetail>(`${this.root}/units/${encodeURIComponent(id)}`, this.pinned())).data;
+  }
+  async createUnit(data: CrmUnitCreate) {
+    return (await this.ax.post<{ data: { CODIGO: number } }>(`${this.root}/units`, data, this.pinned())).data.data;
+  }
+  async patchUnit(id: number, changes: { DESCRICAO: string }, expected: CrmUnit) {
+    return (await this.ax.patch<{ data: CrmUnit }>(`${this.root}/units/${encodeURIComponent(id)}`, { changes, expected }, this.pinned())).data.data;
   }
   async list(catalog: CrmMarketingCatalog, params: CrmMarketingListParams = {}) {
     return (
