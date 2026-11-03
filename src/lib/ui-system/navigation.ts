@@ -47,6 +47,7 @@ export const crudsRoutes = (
   if (isAdmin) {
     arr.push({ title: "Clientes · Cadastros auxiliares", href: "/crm-catalogs" });
     arr.push({ title: "Clientes · Segmentos", href: "/customer-segments" });
+    arr.push({ title: "Clientes · Administração", href: "/crm-administration" });
     arr.push({ title: "Parâmetros", href: "/parameters" });
     arr.push({ title: "Usuários", href: "/users" });
     arr.push({ title: "Usuários · Cadastros auxiliares", href: "/user-catalogs" });
