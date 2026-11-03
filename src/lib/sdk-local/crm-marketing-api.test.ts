@@ -7,6 +7,30 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("pinned CRM marketing SDK", () => {
+  it("pins units reads and writes, carries the complete snapshot and never refreshes an uncertain write", async () => {
+    const client = new CrmMarketingClient("http://crm.test", "token-a", "tenant-a");
+    let fail = false;
+    const adapter = vi.fn(async (config: any) => {
+      if (fail) throw new AxiosError("Lost", "ERR_NETWORK", config);
+      return { status: 200, statusText: "OK", headers: {}, config, data: { data: { CODIGO: 2 } } };
+    });
+    client.ax.defaults.adapter = adapter;
+    client.ax.defaults.headers.common.Authorization = "Bearer token-b";
+    client.ax.defaults.headers.common["x-crm-instance"] = "tenant-b";
+    const fields = { CODIGO: 2, DESCRICAO: "Loja", INATIVOS_RECENTES: 30, INATIVOS_ANTIGOS: 90 };
+    await client.units(); await client.unit(2);
+    await client.createUnit({ fields, campaigns: [] });
+    await client.patchUnit(2, { DESCRICAO: "Loja revisada" }, fields);
+    expect(JSON.parse(adapter.mock.calls[3][0].data)).toEqual({ changes: { DESCRICAO: "Loja revisada" }, expected: fields });
+    for (const [config] of adapter.mock.calls) {
+      expect(config.headers.get("Authorization")).toBe("Bearer token-a");
+      expect(config.headers.get("x-crm-instance")).toBe("tenant-a");
+      expect(config.skipAuthInjection).toBe(true); expect(config.skipAuthRefresh).toBe(true);
+    }
+    fail = true;
+    await expect(client.createUnit({ fields, campaigns: [] })).rejects.toBeInstanceOf(AxiosError);
+    expect(adapter).toHaveBeenCalledTimes(5);
+  });
   it("preserves campaign membership identity, active lookup paging and complete removal snapshot", async () => {
     const client = new CrmMarketingClient("http://crm.test", "member-token-a", "tenant-a");
     const member = {

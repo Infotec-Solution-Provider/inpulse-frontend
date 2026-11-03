@@ -228,6 +228,28 @@ export class MarketingClient {
     private token: string,
     private instance: string,
   ) {}
+  async units() {
+    const units = data[this.instance].units ??= [{ CODIGO: 1, DESCRICAO: this.instance === "tenant-a" ? "Matriz" : "Filial B", INATIVOS_RECENTES: 90, INATIVOS_ANTIGOS: 180 }];
+    return { data: copy(units.map((u: any) => ({ ...u, campaignCount: data[this.instance].campaigns.filter((c: any) => c.UNIDADE === u.CODIGO).length, activationAvailable: false }))), supportedTypes: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"] };
+  }
+  async unit(id: number) {
+    const row = data[this.instance].units.find((u: any) => u.CODIGO === id);
+    if (!row) throw error(404, "Unidade não encontrada");
+    return { data: copy(row), campaigns: copy(data[this.instance].campaigns.filter((c: any) => c.UNIDADE === id)), supportedTypes: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"] };
+  }
+  async createUnit(payload: any) {
+    return mutate("createUnit", this.instance, this.token, payload, () => {
+      data[this.instance].units.push(copy(payload.fields));
+      data[this.instance].campaigns.push(...payload.campaigns.map((c: any) => ({ ...c, UNIDADE: payload.fields.CODIGO })));
+      return { CODIGO: payload.fields.CODIGO };
+    });
+  }
+  async patchUnit(id: number, changes: any, expected: any) {
+    return mutate("patchUnit", this.instance, this.token, { id, changes, expected }, () => {
+      const row = data[this.instance].units.find((u: any) => u.CODIGO === id);
+      Object.assign(row, changes); return row;
+    });
+  }
   async schema(catalog: string) {
     return { fields: copy(schemas[catalog]) };
   }

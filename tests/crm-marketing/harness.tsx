@@ -7,6 +7,7 @@ import CrmCatalogPage from "../../src/lib/components/crm-marketing/catalogs";
 import CrmExceptionsPage from "../../src/lib/components/crm-marketing/exceptions";
 import CrmOrderingPage from "../../src/lib/components/crm-marketing/ordering";
 import CrmConfigurationPage from "../../src/lib/components/crm-marketing/configuration";
+import CrmUnitsPage from "../../src/lib/components/crm-marketing/units";
 import { navigate } from "../monitor/navigation-doubles";
 import { switchAuth } from "./doubles";
 const params = new URLSearchParams(location.search),
@@ -21,7 +22,7 @@ createRoot(document.getElementById("root")!).render(
           <button onClick={() => switchAuth("tenant-b", "token-b")}>Trocar tenant</button>
           <button onClick={() => switchAuth("tenant-a", "refreshed-token")}>Renovar sessão</button>
         </div>
-        {panel === "exceptions" ? (
+        {panel === "units" ? <CrmUnitsPage /> : panel === "exceptions" ? (
           <CrmExceptionsPage />
         ) : panel === "ordering" ? (
           <CrmOrderingPage />

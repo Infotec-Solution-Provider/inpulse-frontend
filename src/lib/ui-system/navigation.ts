@@ -204,6 +204,7 @@ export function getNavigationItems(
         "Campanhas",
         [
           link("campaigns-register", "Cadastro", "/crm-campaigns"),
+          link("units", "Unidades", "/crm-units"),
           link("results", "Resultados", "/crm-results"),
           link("ordering", "Ordenação", "/crm-ordering"),
           group("exceptions", "Exceções", [
@@ -357,6 +358,7 @@ export function isModernCrmPath(pathname: string): boolean {
     "user-catalogs",
     "crm-purchases",
     "crm-campaigns",
+    "crm-units",
     "crm-results",
     "crm-exceptions",
     "crm-ordering",
