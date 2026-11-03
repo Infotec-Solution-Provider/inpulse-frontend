@@ -227,6 +227,7 @@ export function getNavigationItems(
     );
   }
   const communication: NavigationItem[] = [];
+  if (!isExternalOperator(role)) communication.push(link("crm-email", "Email do CRM", "/crm-email"));
   if (!isExternalOperator(role) && parameters.disable_contacts_crud !== "true")
     communication.push(link("contacts", "Contatos", "/contacts"));
   if (canAccessInternalGroups(parameters, role))
@@ -360,6 +361,7 @@ export function isModernCrmPath(pathname: string): boolean {
     "crm-purchases",
     "crm-campaigns",
     "crm-units",
+    "crm-email",
     "crm-results",
     "crm-exceptions",
     "crm-ordering",
