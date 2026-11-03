@@ -23,7 +23,9 @@
     "test:crm-marketing:e2e": "playwright test --config tests/crm-marketing.config.ts",
     "check:performance-budgets": "node scripts/check-performance-budgets.mjs",
     "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
-    "test:e2e": "playwright test --project=chromium"
+    "test:e2e": "playwright test --project=chromium",
+    "test:goals:e2e": "playwright test --config tests/goals.config.ts",
+    "test:goals:types": "tsc --noEmit --project tests/goals/tsconfig.json"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.7",

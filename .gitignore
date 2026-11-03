@@ -53,3 +53,6 @@ node_modules/
 /test-results-crm-marketing/
 
 /test-results-crm-*/
+
+# Local G07 browser artifacts
+/test-results-goals/
