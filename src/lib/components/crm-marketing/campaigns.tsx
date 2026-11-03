@@ -26,7 +26,7 @@ import { workspaceSx } from './workspace-styles';
 
 export default function CrmCampaignsPage({ create = false }: { create?: boolean }) {
   return (
-    <CrmMarketingFrame title="Unidades e campanhas">
+    <CrmMarketingFrame title="Campanhas">
       <CampaignsPanel create={create} />
     </CrmMarketingFrame>
   );

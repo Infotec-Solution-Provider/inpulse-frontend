@@ -71,7 +71,7 @@ export function CrmMarketingFrame({
         title={title}
         breadcrumbs={[
           { label: "Campanhas" },
-          { label: title },
+          ...(title === "Campanhas" ? [] : [{ label: title }]),
           ...(section ? [{ label: section }] : []),
         ]}
       >

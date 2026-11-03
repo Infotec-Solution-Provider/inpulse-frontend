@@ -43,7 +43,7 @@ export default function CrmUnitsPage({
   create?: boolean;
 }) {
   return (
-    <CrmMarketingFrame title="Unidades e campanhas">
+    <CrmMarketingFrame title="Campanhas">
       <UnitsPanel key={unitId ?? (create ? "new" : "list")} unitId={unitId} create={create} />
     </CrmMarketingFrame>
   );
@@ -340,7 +340,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
             startIcon={<ArrowBack />}
             sx={{ alignSelf: "flex-start" }}
           >
-            Unidades e campanhas
+            Por unidade
           </Button>
           <Stack
             direction={{ xs: "column", sm: "row" }}

@@ -66,7 +66,7 @@ describe("shared navigation authorization", () => {
         "/reports/goals-dashboard",
         "/reports/team-goals",
         "/user-catalogs/user-groups",
-        "/crm-campaigns",
+        "/crm-units",
       ]),
     );
     expect(routes(UserRole.ADMIN)).not.toContain("/reports/goals-dashboard");
@@ -162,9 +162,20 @@ describe("hierarchical application navigation", () => {
 });
 
 describe("integrated CRM lanes", () => {
+  it("uses one management entry for both campaign views and their details", () => {
+    const tree = getNavigationItems({}, UserRole.ADMIN, 'homolog');
+    const leaves = navigationLeaves(tree);
+    const management = leaves.filter(item => item.href === '/crm-units' || item.href === '/crm-campaigns');
+    expect(management).toHaveLength(1);
+    expect(management[0]).toMatchObject({ id: 'units', title: 'Gerenciar', href: '/crm-units', aliases: ['/crm-campaigns'] });
+    for (const path of ['/crm-units', '/crm-units/2', '/crm-units/new', '/crm-campaigns', '/crm-campaigns/9', '/crm-campaigns/9/configure', '/crm-campaigns/new']) {
+      expect(activeNavigationPath(tree, '/homolog' + path, 'homolog').map(item => item.id)).toEqual(['campaigns', 'units']);
+    }
+    expect(activeNavigationPath(tree, '/homolog/crm-campaigns-old', 'homolog')).toEqual([]);
+    expect(activeNavigationPath(tree, '/homolog/crm-ordering', 'homolog').at(-1)?.id).not.toBe('units');
+  });
   const paths = [
     "/crm-units",
-    "/crm-campaigns",
     "/crm-catalogs/phone-areas",
     "/crm-email",
     "/crm-imports",
