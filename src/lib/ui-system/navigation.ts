@@ -225,6 +225,7 @@ export function getNavigationItems(
         link("phone-areas", "Áreas telefônicas e DDD", "/crm-catalogs/phone-areas"),
         link("states", "Estados", "/crm-catalogs/states"),
         link("medias", "Mídias", "/crm-catalogs/medias"),
+        link("satisfaction", "Pesquisa da ligação", "/crm-satisfaction"),
       ]),
     );
   }

@@ -213,6 +213,7 @@ export interface CustomerTelephonySchedule extends CustomerScheduleDetail {
 }
 
 export interface FinishTelephonyScheduleDTO {
+	survey?: import("@/lib/satisfaction").CallSurvey;
 	operationId: string;
 	resultId: number;
 	scheduleDate?: string;

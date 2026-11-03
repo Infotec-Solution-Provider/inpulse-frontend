@@ -1,3 +1,4 @@
+import type { FinishTelephonyScheduleDTO } from "@/lib/sdk-local/types/customers.types";
 import { CustomerTelephonySchedule } from "@/lib/sdk-local";
 
 export interface TelephoneQueuePhoneOption {
@@ -85,3 +86,5 @@ export function mapTelephonyScheduleToQueueItem(
     raw: schedule,
   };
 }
+
+export type TelephoneFinishExtensions = Pick<FinishTelephonyScheduleDTO, "proposalValue" | "cancelProposals" | "survey">;
