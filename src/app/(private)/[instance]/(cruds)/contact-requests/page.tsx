@@ -93,9 +93,9 @@ export default function ContactRequestsPage() {
 
   return (
     <CrmPage
-      title="Solicitações de contatos"
+      title="Desativações"
       description="Analise solicitações de exclusão e reativação e consulte contatos desativados."
-      breadcrumbs={[{ label: "Comunicação" }, { label: "Solicitações de contatos" }]}
+      breadcrumbs={[{ label: "Comunicação" }, { label: "Desativações" }]}
     >
       <Paper className="overflow-hidden">
         <Tabs

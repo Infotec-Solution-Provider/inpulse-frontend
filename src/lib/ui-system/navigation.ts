@@ -57,7 +57,7 @@ export const crudsRoutes = (
     arr.push({ title: "Mensagens prontas", href: "/ready-messages" });
     arr.push({ title: "Resposta automática", href: "/auto-response" });
     arr.push({ title: "Identificar remetentes", href: "/whatsapp-senders" });
-    arr.push({ title: "Solicitações de contatos", href: "/contact-requests" });
+    arr.push({ title: "Desativações", href: "/contact-requests" });
   }
 
   if (canAccessInternalGroups(params, role)) {
@@ -234,7 +234,7 @@ export function getNavigationItems(
       link("ready-messages", "Mensagens prontas", "/ready-messages"),
       link("auto-response", "Resposta automática", "/auto-response"),
       link("senders", "Identificar remetentes", "/whatsapp-senders"),
-      link("contact-requests", "Solicitações de contatos", "/contact-requests"),
+      link("contact-requests", "Desativações", "/contact-requests"),
     );
   if (communication.length)
     items.push(group("communication", "Comunicação", communication, "communication"));
