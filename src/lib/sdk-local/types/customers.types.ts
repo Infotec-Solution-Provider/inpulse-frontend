@@ -219,6 +219,8 @@ export interface FinishTelephonyScheduleDTO {
 	startedAt?: string;
 	finishedAt?: string;
 	dialedPhone?: string;
+	proposalValue?: string;
+	cancelProposals?: {id:number;version:string}[];
 }
 
 export interface CustomerCallHistoryDetail {

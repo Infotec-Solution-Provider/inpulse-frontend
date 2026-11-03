@@ -143,6 +143,7 @@ export default function TelephoneDialerCard() {
     scheduleDate: string | undefined,
     operationId: string,
     finishedAt: string,
+    extensions?: { proposalValue?: string; cancelProposals?: { id: number; version: string }[] },
   ) => {
     if (!nextAppointment) return;
     if (phone.busy) throw new Error("Desligue a chamada antes de finalizar o atendimento.");
@@ -164,6 +165,7 @@ export default function TelephoneDialerCard() {
           startedAt: startedAt || undefined,
           finishedAt: (matchesCall && phone.state.endedAt) || finishedAt,
           dialedPhone: selectedPhone || nextAppointment.phone,
+          ...extensions,
         },
         { instance, token },
       );

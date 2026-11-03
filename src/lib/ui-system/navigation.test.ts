@@ -33,6 +33,7 @@ describe("shared navigation authorization", () => {
         "/parameters",
         "/users",
         "/crm-purchases",
+        "/crm-proposals",
         "/reports/dashboard",
         "/changelog",
       ]),

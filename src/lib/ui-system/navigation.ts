@@ -193,6 +193,7 @@ export function getNavigationItems(
           link("pauses", "Motivos de pausa", "/user-catalogs/pause-reasons"),
           group("sales", "Vendas", [
             link("purchases", "Lançamentos", "/crm-purchases"),
+            link("proposals", "Propostas", "/crm-proposals"),
             link("sales-types", "Catálogo de vendas", "/user-catalogs/sales-types"),
           ]),
         ],
@@ -361,6 +362,7 @@ export function isModernCrmPath(pathname: string): boolean {
     "crm-catalogs",
     "user-catalogs",
     "crm-purchases",
+    "crm-proposals",
     "crm-campaigns",
     "crm-units",
     "crm-email",
