@@ -229,25 +229,57 @@ export class MarketingClient {
     private instance: string,
   ) {}
   async units() {
-    const units = data[this.instance].units ??= [{ CODIGO: 1, DESCRICAO: this.instance === "tenant-a" ? "Matriz" : "Filial B", INATIVOS_RECENTES: 90, INATIVOS_ANTIGOS: 180 }];
-    return { data: copy(units.map((u: any) => ({ ...u, campaignCount: data[this.instance].campaigns.filter((c: any) => c.UNIDADE === u.CODIGO).length, activationAvailable: false }))), supportedTypes: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"] };
+    const units = (data[this.instance].units ??= [
+      {
+        CODIGO: 1,
+        DESCRICAO: this.instance === "tenant-a" ? "Matriz" : "Filial B",
+        INATIVOS_RECENTES: 90,
+        INATIVOS_ANTIGOS: 180,
+      },
+    ]);
+    return {
+      data: copy(
+        units.map((u: any) => ({
+          ...u,
+          campaignCount: data[this.instance].campaigns.filter((c: any) => c.UNIDADE === u.CODIGO)
+            .length,
+          activationAvailable: false,
+        })),
+      ),
+      supportedTypes: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"],
+    };
   }
   async unit(id: number) {
+    await this.units();
     const row = data[this.instance].units.find((u: any) => u.CODIGO === id);
     if (!row) throw error(404, "Unidade não encontrada");
-    return { data: copy(row), campaigns: copy(data[this.instance].campaigns.filter((c: any) => c.UNIDADE === id)), supportedTypes: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"] };
+    return {
+      data: copy(row),
+      campaigns: copy(
+        data[this.instance].campaigns.filter(
+          (c: any) => c.UNIDADE === id || c.organizationalUnitId === id,
+        ),
+      ),
+      supportedTypes: ["ATIVOS", "INAT_R", "INAT_A", "PROSPE"],
+    };
   }
   async createUnit(payload: any) {
     return mutate("createUnit", this.instance, this.token, payload, () => {
-      data[this.instance].units.push(copy(payload.fields));
-      data[this.instance].campaigns.push(...payload.campaigns.map((c: any) => ({ ...c, UNIDADE: payload.fields.CODIGO })));
-      return { CODIGO: payload.fields.CODIGO };
+      const code =
+        payload.fields.CODIGO ??
+        Math.max(0, ...data[this.instance].units.map((u: any) => u.CODIGO)) + 1;
+      data[this.instance].units.push({ ...copy(payload.fields), CODIGO: code });
+      data[this.instance].campaigns.push(
+        ...payload.campaigns.map((c: any) => ({ ...c, UNIDADE: payload.fields.CODIGO })),
+      );
+      return { CODIGO: code };
     });
   }
   async patchUnit(id: number, changes: any, expected: any) {
     return mutate("patchUnit", this.instance, this.token, { id, changes, expected }, () => {
       const row = data[this.instance].units.find((u: any) => u.CODIGO === id);
-      Object.assign(row, changes); return row;
+      Object.assign(row, changes);
+      return row;
     });
   }
   async schema(catalog: string) {
@@ -268,11 +300,33 @@ export class MarketingClient {
     if (!row) throw error(404, "Não encontrado");
     return copy(row);
   }
+  async campaignContext(id: number) {
+    const campaign = await this.detail("campaigns", id);
+    const unitId = campaign.organizationalUnitId ?? campaign.UNIDADE;
+    const units = await this.units();
+    const allowed = { allowed: true, reasons: [] };
+    return {
+      campaign,
+      unit: units.data.find((u: any) => u.CODIGO === unitId) ?? null,
+      operationMode: campaign.operationMode ?? "purchase-cycle",
+      capabilities: {
+        edit: allowed,
+        rename: allowed,
+        pause: allowed,
+        resume: allowed,
+        generate: allowed,
+      },
+    };
+  }
   async create(catalog: string, payload: any) {
     return mutate("create", this.instance, this.token, payload, () => {
       const row = {
         ...Object.fromEntries(schemas[catalog].map((field) => [field.key, field.defaultValue])),
         ...payload,
+        CODIGO:
+          payload.CODIGO ??
+          Math.max(0, ...data[this.instance][catalog].map((row: any) => row.CODIGO)) + 1,
+        ...(payload.operationMode ? { organizationalUnitId: payload.organizationalUnitId } : {}),
       };
       data[this.instance][catalog].push(row);
       return row;
@@ -330,6 +384,7 @@ export class MarketingClient {
     return mutate("createException", this.instance, this.token, payload, () => {
       const row = {
         ...payload,
+        CODIGO: payload.CODIGO ?? 81,
         ...(kind === "segments" ? { CODIGO: 5, SEGMENTO_NOME: "Varejo" } : {}),
         occurrences: 1,
       };

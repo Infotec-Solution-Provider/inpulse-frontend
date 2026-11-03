@@ -51,6 +51,7 @@ export default function GenerationPanel({
     ),
     mutation = useCrmMutation();
   const [confirm, setConfirm] = useState(false);
+  const [operatorName, setOperatorName] = useState<string | null>(null);
   const [operator, setOperator] = useState<string | null>(null),
     [date, setDate] = useState(localCivil),
     [preview, setPreview] = useState<CrmGenerationPreview | null>(null),
@@ -187,6 +188,7 @@ export default function GenerationPanel({
           <CrmLookup
             kind="operators"
             label="Responsável pelos novos agendamentos"
+            onLabelChange={setOperatorName}
             value={operator}
             disabled={blocked}
             onChange={(value) => {
@@ -212,6 +214,9 @@ export default function GenerationPanel({
           <Paper variant="outlined" sx={{ p: 2 }}>
             <Stack gap={1}>
               <Typography fontWeight={700}>Revisão do próximo lote</Typography>
+              <Typography variant="body2">
+                Responsável: {operatorName ?? `Usuário ${operator}`}
+              </Typography>
               {preview.selectedCount !== undefined && (
                 <Typography variant="body2">
                   Público correspondente: {preview.selectedCount.toLocaleString("pt-BR")} clientes

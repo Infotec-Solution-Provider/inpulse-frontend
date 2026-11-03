@@ -10,7 +10,7 @@ const stubs = {
   auth: `export { useAuthContext } from '${doubles}'`,
   client: `export { MarketingClient as default } from '${doubles}'`,
   generation: `export { GenerationClient as default } from '${doubles}'`,
-  link: "import React from 'react'; export default function Link(props) { return React.createElement('a', props); }",
+  link: "export {TestLink as default} from '/tests/monitor/navigation-doubles.tsx';",
 };
 const server = await createServer({
   configFile: false,

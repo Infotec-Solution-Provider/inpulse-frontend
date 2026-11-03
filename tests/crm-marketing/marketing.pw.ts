@@ -175,8 +175,8 @@ test("generation previews a responsible user and sends only the guarded eligible
   page,
 }) => {
   await page.goto(`${base}?panel=configuration`);
-  await page.getByRole("tab", { name: "Geração", exact: true }).click();
-  await page.getByLabel("Usuário dos agendamentos", { exact: true }).fill("Ana");
+  await page.getByRole("tab", { name: "Operação", exact: true }).click();
+  await page.getByLabel("Responsável pelos novos agendamentos", { exact: true }).fill("Ana");
   await page.getByRole("option", { name: "Ana (7)", exact: true }).click();
   await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:00");
   await page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }).click();
@@ -219,8 +219,8 @@ test("generation handles larger audiences as explicit batches and never replays 
 }) => {
   await page.goto(`${base}?panel=configuration`);
   await page.evaluate(() => (window as any).crmHarness.setGenerationRemaining(4001));
-  await page.getByRole("tab", { name: "Geração", exact: true }).click();
-  await page.getByLabel("Usuário dos agendamentos", { exact: true }).fill("Ana");
+  await page.getByRole("tab", { name: "Operação", exact: true }).click();
+  await page.getByLabel("Responsável pelos novos agendamentos", { exact: true }).fill("Ana");
   await page.getByRole("option", { name: "Ana (7)", exact: true }).click();
   await page.getByLabel("Data e hora no CRM", { exact: true }).fill("2026-10-20T09:00");
   await page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }).click();
@@ -261,10 +261,10 @@ test("generation handles larger audiences as explicit batches and never replays 
     ),
   ).toHaveLength(3);
   await page.getByRole("button", { name: "Conferir geração", exact: true }).click();
-  await expect(page.getByText(/Lista marcada como gerada/)).toBeVisible();
+  await expect(page.getByText(/Uma geração já foi concluída/)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Prévia dos agendamentos", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
 });
 test("mobile and dark editors keep controls inside the viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

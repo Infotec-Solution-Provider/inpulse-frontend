@@ -8,11 +8,28 @@ import CrmExceptionsPage from "../../src/lib/components/crm-marketing/exceptions
 import CrmOrderingPage from "../../src/lib/components/crm-marketing/ordering";
 import CrmConfigurationPage from "../../src/lib/components/crm-marketing/configuration";
 import CrmUnitsPage from "../../src/lib/components/crm-marketing/units";
-import { navigate } from "../monitor/navigation-doubles";
+import CrmCampaignDetailPage from "../../src/lib/components/crm-marketing/campaign-detail";
+import CrmCampaignsPage from "../../src/lib/components/crm-marketing/campaigns";
+import { navigate, usePathname } from "../monitor/navigation-doubles";
 import { switchAuth } from "./doubles";
 const params = new URLSearchParams(location.search),
   panel = params.get("panel") ?? "campaigns";
-navigate("/tenant-a/crm-exceptions" + location.search);
+navigate(
+  (panel === "units" ? "/tenant-a/crm-units" : "/tenant-a/crm-exceptions") + location.search,
+);
+function UnitsRoute() {
+  const path = usePathname();
+  if (path.includes("/crm-campaigns/"))
+    return <CrmCampaignDetailPage campaignId={Number(path.split("/").at(-1))} />;
+  if (path.endsWith("/crm-campaigns")) return <CrmCampaignsPage />;
+  const tail = path.split("/").at(-1);
+  return (
+    <CrmUnitsPage
+      create={tail === "new"}
+      unitId={tail && /^\d+$/.test(tail) ? Number(tail) : undefined}
+    />
+  );
+}
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider theme={params.has("dark") ? darkTheme : lightTheme}>
     <CssBaseline />
@@ -22,7 +39,9 @@ createRoot(document.getElementById("root")!).render(
           <button onClick={() => switchAuth("tenant-b", "token-b")}>Trocar tenant</button>
           <button onClick={() => switchAuth("tenant-a", "refreshed-token")}>Renovar sessão</button>
         </div>
-        {panel === "units" ? <CrmUnitsPage /> : panel === "exceptions" ? (
+        {panel === "units" ? (
+          <UnitsRoute />
+        ) : panel === "exceptions" ? (
           <CrmExceptionsPage />
         ) : panel === "ordering" ? (
           <CrmOrderingPage />

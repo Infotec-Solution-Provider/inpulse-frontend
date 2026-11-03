@@ -162,6 +162,7 @@ export function CrmLookup({
   onChange,
   multiple = false,
   disabled = false,
+  onLabelChange,
 }: {
   kind: LookupKind;
   label: string;
@@ -169,6 +170,7 @@ export function CrmLookup({
   onChange: (value: string | string[] | null) => void;
   multiple?: boolean;
   disabled?: boolean;
+  onLabelChange?: (label: string | null) => void;
 }) {
   const { client } = useCrmSession(),
     [options, setOptions] = useState<{ id: string; label: string | null }[]>([]),
@@ -241,9 +243,14 @@ export function CrmLookup({
             setPage(1);
           }
         }}
-        onChange={(_event, option) =>
-          onChange(Array.isArray(option) ? option.map((item) => item.id) : (option?.id ?? null))
-        }
+        onChange={(_event, option) => {
+          onChange(Array.isArray(option) ? option.map((item) => item.id) : (option?.id ?? null));
+          onLabelChange?.(
+            Array.isArray(option)
+              ? option.map((item) => item.label).join(", ")
+              : (option?.label ?? null),
+          );
+        }}
         renderInput={(params) => (
           <TextField {...params} label={label} error={!!error} helperText={error || undefined} />
         )}

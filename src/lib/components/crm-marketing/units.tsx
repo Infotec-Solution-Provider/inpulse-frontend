@@ -22,6 +22,12 @@ import type { CrmUnitDetail, CrmUnitList } from "@/lib/sdk-local/types/crm-units
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { CampaignCard, cycleLabels } from "./campaign-common";
 import CampaignEditor from "./campaign-editor";
+const unitModeLabels: Record<string, string> = {
+  unconfigured: "Sem campanhas",
+  "audience-manual": "Públicos definidos · geração manual",
+  "purchase-cycle": "Ciclo de compra",
+  mixed: "Ciclo de compra e públicos definidos",
+};
 
 export default function CrmUnitsPage({
   unitId,
@@ -53,6 +59,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
   const [draft, setDraft] = useState({ name: "", recent: "", old: "" }),
     [saved, setSaved] = useState(draft),
     [reload, setReload] = useState(0);
+  const [candidates, setCandidates] = useState<CrmUnitList["data"]>([]);
   const version = useRef(0),
     current = useRef(client);
   current.current = client;
@@ -142,10 +149,43 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
     }
   }
   function cancel() {
+    if (mutation.gate) return;
     if (dirty && !window.confirm("Descartar alterações da unidade?")) return;
     setDraft(saved);
     if (create) router.push(returnTo);
     else setEditing(false);
+  }
+  async function reconcile() {
+    setLoading(true);
+    try {
+      if (unitId !== undefined) {
+        const detail = await client.unit(unitId);
+        setSelected(detail);
+        mutation.reconcile();
+        mutation.setSuccess(
+          "Dados gravados conferidos. Revise suas alterações antes de salvar novamente.",
+        );
+      } else {
+        const result = await client.units();
+        const matches = result.data.filter(
+          (unit) =>
+            !list.some((before) => before.CODIGO === unit.CODIGO) &&
+            unit.DESCRICAO === draft.name.trim() &&
+            unit.INATIVOS_RECENTES === Number(draft.recent) &&
+            unit.INATIVOS_ANTIGOS === Number(draft.old),
+        );
+        setCandidates(matches);
+        mutation.setSuccess(
+          matches.length
+            ? "Há unidades compatíveis com a solicitação. Abra o cadastro para conferir o resultado."
+            : "Nenhuma nova unidade correspondente foi localizada. A criação continua bloqueada para evitar repetição.",
+        );
+      }
+    } catch (failure) {
+      setError(crmError(failure).message);
+    } finally {
+      setLoading(false);
+    }
   }
   function switchTab(next: number) {
     setTab(next);
@@ -164,17 +204,20 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
       {mutation.gate && (
         <Alert severity="warning">
           Confira os dados gravados antes de continuar.{" "}
-          <Button
-            disabled={mutation.busy}
-            onClick={() => {
-              mutation.reconcile();
-              setReload((r) => r + 1);
-            }}
-          >
+          <Button disabled={mutation.busy || loading} onClick={() => void reconcile()}>
             Conferir unidade
           </Button>
         </Alert>
       )}
+      {candidates.map((unit) => (
+        <Button
+          key={unit.CODIGO}
+          variant="outlined"
+          onClick={() => router.replace(`${base}/${unit.CODIGO}`)}
+        >
+          Conferir {unit.DESCRICAO} · código {unit.CODIGO}
+        </Button>
+      ))}
       {unitId === undefined && !create ? (
         <>
           <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2}>
@@ -242,7 +285,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                       <Typography variant="body2" color="text.secondary" mt={0.5}>
                         {unit.campaignCount} {unit.campaignCount === 1 ? "campanha" : "campanhas"} ·{" "}
                         {unit.campaignCount
-                          ? "Ciclo de compra e campanhas por público"
+                          ? (unitModeLabels[unit.mode ?? ""] ?? "Campanhas do CRM")
                           : "Adicione a primeira campanha"}
                       </Typography>
                     </Box>
@@ -360,7 +403,7 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                 )}
                 {dirty && <Typography variant="caption">Alterações não salvas</Typography>}
                 <Stack direction="row" gap={1} justifyContent="flex-end">
-                  <Button onClick={cancel} disabled={mutation.busy}>
+                  <Button onClick={cancel} disabled={mutation.busy || mutation.gate}>
                     Cancelar
                   </Button>
                   <Button type="submit" variant="contained" disabled={locked || !draft.name.trim()}>
@@ -429,7 +472,10 @@ function UnitsPanel({ unitId, create }: { unitId?: number; create: boolean }) {
                           unitId={selected.data.CODIGO}
                           unitName={selected.data.DESCRICAO}
                           usedTypes={selected.campaigns.map((c) => String(c.TIPO))}
-                          onCancel={() => setAdding(false)}
+                          onCancel={() => {
+                            setAdding(false);
+                            setReload((r) => r + 1);
+                          }}
                           onSaved={(c) => {
                             setAdding(false);
                             router.push(

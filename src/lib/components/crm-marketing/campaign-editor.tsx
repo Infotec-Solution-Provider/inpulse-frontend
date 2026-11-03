@@ -57,7 +57,31 @@ export default function CampaignEditor({
   const errorRef = useRef<HTMLDivElement>(null),
     seeded = useRef(false);
   const [mode, setMode] = useState("audience-manual");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const occupiedTypes = unitId === undefined ? selectedTypes : usedTypes;
   const [unitNames, setUnitNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (original || unitId !== undefined || !draft.UNIDADE) return;
+    let active = true;
+    void client
+      .unit(Number(draft.UNIDADE))
+      .then((detail) => {
+        if (!active) return;
+        const types = detail.campaigns.map((c) => String(c.TIPO));
+        setSelectedTypes(types);
+        setDraft((current) =>
+          types.includes(current.TIPO ?? "")
+            ? { ...current, TIPO: Object.keys(cycleLabels).find((t) => !types.includes(t)) ?? null }
+            : current,
+        );
+      })
+      .catch(() => {
+        if (active) setSelectedTypes([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [client, draft.UNIDADE, original, unitId]);
   useEffect(() => {
     let active = true;
     void client
@@ -225,7 +249,10 @@ export default function CampaignEditor({
             onChange={(e) => setMode(e.target.value)}
           >
             <MenuItem value="audience-manual">Público definido · geração manual</MenuItem>
-            <MenuItem value="purchase-cycle" disabled={usedTypes.length >= 4}>
+            <MenuItem
+              value="purchase-cycle"
+              disabled={Object.keys(cycleLabels).every((type) => occupiedTypes.includes(type))}
+            >
               Ciclo de compra
             </MenuItem>
           </TextField>
@@ -239,7 +266,7 @@ export default function CampaignEditor({
               helperText="O papel define o comportamento do ciclo de compra. Cada papel pode aparecer uma vez na unidade."
             >
               {Object.entries(cycleLabels)
-                .filter(([type]) => !usedTypes.includes(type))
+                .filter(([type]) => !occupiedTypes.includes(type))
                 .map(([type, name]) => (
                   <MenuItem key={type} value={type}>
                     {name}
@@ -299,7 +326,7 @@ export default function CampaignEditor({
       )}
       <Stack direction="row" gap={1} justifyContent="flex-end" flexWrap="wrap">
         <Button
-          disabled={mutation.busy}
+          disabled={mutation.busy || mutation.gate}
           onClick={() => {
             if (!dirty || window.confirm("Descartar alterações não salvas?")) onCancel();
           }}
