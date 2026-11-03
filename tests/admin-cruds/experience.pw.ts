@@ -12,7 +12,7 @@ const screens: Record<string, string> = {
   "internal-groups": "Grupos internos",
   "auto-response": "Resposta automática",
   "whatsapp-senders": "Identificar remetentes",
-  "contact-requests": "Solicitações de contatos",
+  "contact-requests": "Desativações",
   "ai-agents": "Agentes",
   "ai-settings": "Configurações de IA",
   "ai-supervisor": "Assistente",
