@@ -169,6 +169,7 @@ export function getNavigationItems(
           ...(isAdmin
             ? [
                 link("customer-groups", "Grupos", "/crm-catalogs/customer-groups"),
+                link("crm-imports", "Mail List e atualização em lote", "/crm-imports"),
                 link("segments", "Segmentos", "/customer-segments"),
                 link("positions", "Cargos", "/crm-catalogs/positions"),
                 link("origins", "Origens", "/crm-catalogs/origins"),
@@ -352,6 +353,7 @@ export function isModernCrmPath(pathname: string): boolean {
     "customers",
     "users",
     "crm-customers",
+    "crm-imports",
     "customer-segments",
     "crm-catalogs",
     "user-catalogs",
