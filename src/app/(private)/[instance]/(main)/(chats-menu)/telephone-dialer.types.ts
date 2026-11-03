@@ -29,6 +29,8 @@ export interface TelephoneFinishResult {
   id: number;
   name: string;
   COD_ACAO?: number | null;
+  PROPOSTA?: string | null;
+  CANCELAPROPOSTA?: string | null;
 }
 
 function cleanPhone(phone?: string | null) {
@@ -60,7 +62,8 @@ export function mapTelephonyScheduleToQueueItem(
 
   const mainPhone = availablePhoneOptions[0]?.phone || "";
   const customerName = schedule.CLIENTE_RAZAO || schedule.CLIENTE_FANTASIA || null;
-  const contactName = schedule.CLIENTE_FANTASIA || schedule.CLIENTE_RAZAO || "Cliente sem identificacao";
+  const contactName =
+    schedule.CLIENTE_FANTASIA || schedule.CLIENTE_RAZAO || "Cliente sem identificacao";
   const notes = availablePhoneOptions.find((item) => item.phone === mainPhone)?.description || null;
 
   return {

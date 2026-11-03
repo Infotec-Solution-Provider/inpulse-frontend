@@ -2,10 +2,19 @@
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { useAuthContext } from "@/app/auth-context";
-import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import CrmProposalsClient, { type Proposal } from "@/lib/sdk-local/crm-proposals.client";
 import { Formatter } from "@in.pulse-crm/utils";
 import CloseIcon from "@mui/icons-material/Close";
-import { Alert, Button, CircularProgress, IconButton, MenuItem, TextField } from "@mui/material";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  TextField,
+} from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { TelephoneFinishResult, TelephoneQueueItem } from "./telephone-dialer.types";
@@ -19,6 +28,7 @@ interface TelephoneFinishModalProps {
     scheduleDate: string | undefined,
     operationId: string,
     finishedAt: string,
+    extensions?: { proposalValue?: string; cancelProposals?: { id: number; version: string }[] },
   ) => Promise<void>;
   onCheckConfirmation: (operationId: string) => Promise<"applied" | "not_confirmed">;
 }
@@ -37,8 +47,17 @@ export default function TelephoneFinishModal({
   onCheckConfirmation,
 }: TelephoneFinishModalProps) {
   const { closeModal } = useAppContext();
-  const { token } = useAuthContext();
-  const { wppApi } = useWhatsappContext();
+  const { token, instance } = useAuthContext();
+  const api = useMemo(
+    () =>
+      token
+        ? new CrmProposalsClient(process.env.NEXT_PUBLIC_CUSTOMERS_URL || "http://localhost:8002", {
+            instance,
+            token,
+          })
+        : null,
+    [instance, token],
+  );
   const scope = useChatActionScope();
   const [resultId, setResultId] = useState<number | null>(null);
   const [scheduleDate, setScheduleDate] = useState<string>("");
@@ -48,6 +67,11 @@ export default function TelephoneFinishModal({
   const [blocked, setBlocked] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+  const [proposalValue, setProposalValue] = useState("");
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [cancelIds, setCancelIds] = useState<number[]>([]);
+  const [loadingProposals, setLoadingProposals] = useState(false);
+  const [proposalError, setProposalError] = useState("");
   const submitting = useRef(false);
   const operation = useRef<{ id: string; finishedAt: string } | null>(null);
 
@@ -63,11 +87,8 @@ export default function TelephoneFinishModal({
       setLoadingResults(true);
 
       try {
-        if (token) {
-          wppApi.current.setAuth(token);
-        }
-
-        const fetchedResults = await wppApi.current.getResults();
+        if (!api) throw new Error("Sessão indisponível.");
+        const fetchedResults = await api.results();
 
         if (!cancelled) {
           setResults(
@@ -91,13 +112,49 @@ export default function TelephoneFinishModal({
     return () => {
       cancelled = true;
     };
-  }, [token, wppApi]);
+  }, [api]);
 
   const requiresScheduleDate = selectedResult?.COD_ACAO === 2;
+  const flagged = (flag: unknown) => flag === "SIM" || flag === "S" || flag === true || flag === 1;
+  const requiresProposal = flagged(selectedResult?.PROPOSTA);
+  const requiresCancellation = flagged(selectedResult?.CANCELAPROPOSTA);
+  useEffect(() => {
+    let cancelled = false;
+    setProposals([]);
+    setCancelIds([]);
+    setProposalError("");
+    setLoadingProposals(requiresCancellation);
+    if (requiresCancellation && api)
+      api
+        .forSchedule(appointment.id)
+        .then((rows) => {
+          if (!cancelled) setProposals(rows);
+        })
+        .catch(() => {
+          if (!cancelled)
+            setProposalError(
+              "Não foi possível carregar propostas deste cliente. Reabra a finalização.",
+            );
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingProposals(false);
+        });
+    return () => {
+      cancelled = true;
+    };
+  }, [requiresCancellation, api, appointment.id]);
+  const validProposal =
+    /^(?:0|[1-9]\d{0,9})(?:[.,]\d{1,2})?$/.test(proposalValue) &&
+    Number(proposalValue.replace(",", ".")) > 0;
 
   const handleConfirm = async () => {
     if (!selectedResult || blocked || submitting.current || !scope.isActive()) return;
     if (requiresScheduleDate && !scheduleDate) return;
+    if (
+      (requiresProposal && !validProposal) ||
+      (requiresCancellation && (!cancelIds.length || loadingProposals || proposalError))
+    )
+      return;
 
     submitting.current = true;
     setSaving(true);
@@ -110,6 +167,16 @@ export default function TelephoneFinishModal({
         requiresScheduleDate ? scheduleDate : undefined,
         operation.current.id,
         operation.current.finishedAt,
+        {
+          ...(requiresProposal ? { proposalValue: proposalValue.replace(",", ".") } : {}),
+          ...(requiresCancellation
+            ? {
+                cancelProposals: proposals
+                  .filter((p) => cancelIds.includes(p.id))
+                  .map((p) => ({ id: p.id, version: p.version })),
+              }
+            : {}),
+        },
       );
       if (scope.isActive()) closeModal();
     } catch (failure) {
@@ -192,6 +259,8 @@ export default function TelephoneFinishModal({
             onChange={(event) => {
               setResultId(Number(event.target.value));
               setScheduleDate("");
+              setProposalValue("");
+              setCancelIds([]);
             }}
             required
             fullWidth
@@ -220,6 +289,56 @@ export default function TelephoneFinishModal({
           />
         )}
 
+        {requiresProposal && (
+          <TextField
+            label="Valor da proposta (R$)"
+            required
+            value={proposalValue}
+            disabled={saving || blocked}
+            onChange={(e) => setProposalValue(e.target.value)}
+            helperText="Valor positivo, com até duas casas decimais."
+            slotProps={{ htmlInput: { inputMode: "decimal" } }}
+          />
+        )}
+        {requiresCancellation && (
+          <div>
+            {loadingProposals ? (
+              <CircularProgress size={20} />
+            ) : proposalError ? (
+              <Alert severity="error">{proposalError}</Alert>
+            ) : proposals.length === 0 ? (
+              <Alert severity="warning">
+                Não há propostas abertas para cancelar. Selecione outro resultado ou revise o
+                cliente.
+              </Alert>
+            ) : (
+              <>
+                <p>Selecione as propostas a cancelar (máximo 20):</p>
+                {proposals.map((p) => (
+                  <FormControlLabel
+                    key={p.id}
+                    label={`#${p.id} · R$ ${p.value} · ${p.campaignName || "Campanha"}`}
+                    control={
+                      <Checkbox
+                        checked={cancelIds.includes(p.id)}
+                        disabled={
+                          saving || blocked || (!cancelIds.includes(p.id) && cancelIds.length >= 20)
+                        }
+                        onChange={(e) =>
+                          setCancelIds(
+                            e.target.checked
+                              ? [...cancelIds, p.id]
+                              : cancelIds.filter((id) => id !== p.id),
+                          )
+                        }
+                      />
+                    }
+                  />
+                ))}
+              </>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-end gap-2 pt-2">
           <Button
             type="button"
@@ -240,6 +359,9 @@ export default function TelephoneFinishModal({
               saving ||
               blocked ||
               !selectedResult ||
+              (requiresProposal && !validProposal) ||
+              (requiresCancellation &&
+                (!cancelIds.length || loadingProposals || !!proposalError)) ||
               (requiresScheduleDate && !scheduleDate)
             }
           >
