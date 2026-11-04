@@ -16,8 +16,11 @@ const server = await createServer({
       enforce: "pre",
       resolveId(source) {
         if (source.endsWith("/auth-context")) return "\0email:auth";
+        if (source === "next/navigation") return "\0email:navigation";
       },
       load(id) {
+        if (id === "\0email:navigation")
+          return `export {usePathname,useSearchParams} from '/tests/monitor/navigation-doubles.tsx';import {navigate} from '/tests/monitor/navigation-doubles.tsx';export function useRouter(){return {push:navigate,replace:navigate}};`;
         if (id === "\0email:auth")
           return "export function useAuthContext(){return {token:'test-token',instance:'tenant-a',user:{NIVEL:'ADMIN'}}}";
       },

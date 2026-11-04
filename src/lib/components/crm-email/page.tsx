@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
   Box,
@@ -47,8 +48,25 @@ export function EmailWorkspace({
   isAdmin: boolean;
 }) {
   const client = useMemo(() => new EmailClient(token, instance), [token, instance]);
-  const [tab, setTab] = useState(0),
-    [settings, setSettings] = useState<Settings | null>(null),
+  const router = useRouter(),
+    pathname = usePathname(),
+    searchParams = useSearchParams();
+  const requestedTab = searchParams?.get("tab");
+  const tab =
+    requestedTab === "tracking"
+      ? 1
+      : requestedTab === "accounts"
+        ? 2
+        : requestedTab === "importer" && isAdmin
+          ? 3
+          : 0;
+  function changeTab(next: number) {
+    const query = new URLSearchParams(searchParams?.toString());
+    if (next === 0) query.delete("tab");
+    else query.set("tab", ["send", "tracking", "accounts", "importer"][next]);
+    router.push(`${pathname}${query.size ? `?${query}` : ""}`, { scroll: false });
+  }
+  const [settings, setSettings] = useState<Settings | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -83,7 +101,7 @@ export function EmailWorkspace({
   const sender = settings?.accounts.find((a) => a.scope === settings.mode && a.active);
   return (
     <Box sx={{ p: { xs: 1, md: 3 }, maxWidth: 1100, width: "100%", mx: "auto", minWidth: 0 }}>
-      <Typography variant="h5">Email do CRM</Typography>
+      <Typography variant="h5">Email</Typography>
       <Typography color="text.secondary">
         Remetente:{" "}
         {sender
@@ -103,13 +121,13 @@ export function EmailWorkspace({
       )}
       <Tabs
         value={tab}
-        onChange={(_, v) => setTab(v)}
+        onChange={(_, v) => changeTab(v)}
         variant="scrollable"
         scrollButtons="auto"
         sx={{ mb: 2 }}
       >
-        <Tab label="Compor" />
-        <Tab label="Acompanhamento" />
+        <Tab label="Enviar" />
+        <Tab label="Acompanhar" />
         <Tab label="Contas" />
         {isAdmin && <Tab label="Importador" />}
       </Tabs>
@@ -123,7 +141,7 @@ export function EmailWorkspace({
             setNotice(
               `${job.kind === "CAMPAIGN" ? "Campanha salva para revisão" : "Envio colocado na fila"}. Remetente: ${job.fromEmail}.`,
             );
-            setTab(1);
+            changeTab(1);
           }}
         />
       )}

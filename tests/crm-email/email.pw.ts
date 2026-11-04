@@ -125,6 +125,36 @@ async function compose(page: Page) {
     .getByLabel("Texto formatado (HTML)", { exact: true })
     .fill("<p>Mensagem <strong>formatada</strong></p>");
 }
+
+test("email section links open the requested screen without submitting anything", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  for (const [query, label] of [
+    ["", "Enviar"],
+    ["?tab=tracking", "Acompanhar"],
+    ["?tab=accounts", "Contas"],
+    ["?tab=importer", "Importador"],
+    ["?tab=invalid", "Enviar"],
+  ]) {
+    await page.goto(`/tests/crm-email/index.html${query}`);
+    await expect(page.getByRole("tab", { name: label, exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByText("Remetente: Empresa", { exact: false })).toBeVisible();
+    if (label === "Enviar") await expect(page.getByLabel("Assunto", { exact: true })).toBeVisible();
+    if (label === "Acompanhar")
+      await expect(
+        page.getByRole("button", { name: "Atualizar acompanhamento", exact: true }),
+      ).toBeVisible();
+    if (label === "Contas")
+      await expect(page.getByLabel("Email remetente", { exact: true })).toBeVisible();
+    if (label === "Importador")
+      await expect(page.getByText("import@example.test", { exact: false })).toBeVisible();
+  }
+  expect(f.calls.filter((call) => call.method !== "GET")).toHaveLength(0);
+});
 test("individual preview shows sender/CC/BCC/attachment, pins session and queues exactly once", async ({
   page,
 }, info) => {
@@ -214,7 +244,11 @@ test("mobile account choice is explicit and legacy importer is read only without
 });
 test("operator cannot access company configuration or campaigns", async ({ page }) => {
   await fixture(page);
-  await page.goto("/tests/crm-email/index.html?operator");
+  await page.goto("/tests/crm-email/index.html?operator&tab=importer");
+  await expect(page.getByRole("tab", { name: "Enviar", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(page.getByLabel("Tipo de envio")).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Importador", exact: true })).toHaveCount(0);
   await page.getByRole("tab", { name: "Contas", exact: true }).click();

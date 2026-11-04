@@ -159,6 +159,21 @@ describe("hierarchical application navigation", () => {
     expect(isModernCrmPath("/homolog/customers-old")).toBe(false);
     expect(isModernCrmPath("/homolog/reports/dashboard")).toBe(false);
   });
+  it("selects the email section and keeps importer restricted to administrators", () => {
+    for (const [query, title] of [
+      ["", "Enviar"],
+      ["tab=tracking", "Acompanhar"],
+      ["tab=accounts", "Contas"],
+      ["tab=importer", "Importador"],
+      ["tab=invalid", "Enviar"],
+    ]) {
+      expect(
+        activeNavigationPath(tree, "/homolog/crm-email", "homolog", query).map(item => item.title),
+      ).toEqual(["Comunicação", "Email", title]);
+    }
+    expect(routes(UserRole.ACTIVE)).toContain("/crm-email?tab=accounts");
+    expect(routes(UserRole.ACTIVE)).not.toContain("/crm-email?tab=importer");
+  });
 });
 
 describe("integrated CRM lanes", () => {

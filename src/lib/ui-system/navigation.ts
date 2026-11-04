@@ -233,7 +233,15 @@ export function getNavigationItems(
     );
   }
   const communication: NavigationItem[] = [];
-  if (!isExternalOperator(role)) communication.push(link("crm-email", "Email do CRM", "/crm-email"));
+  if (!isExternalOperator(role))
+    communication.push(
+      group("crm-email", "Email", [
+        link("crm-email-send", "Enviar", "/crm-email"),
+        link("crm-email-tracking", "Acompanhar", "/crm-email?tab=tracking"),
+        link("crm-email-accounts", "Contas", "/crm-email?tab=accounts"),
+        ...(isAdmin ? [link("crm-email-importer", "Importador", "/crm-email?tab=importer")] : []),
+      ]),
+    );
   const contacts: NavigationItem[] = [];
   if (!isExternalOperator(role) && parameters.disable_contacts_crud !== "true")
     contacts.push(link("contacts", "Cadastro", "/contacts"));
