@@ -170,7 +170,6 @@ export function getNavigationItems(
           ...(isAdmin
             ? [
                 link("customer-groups", "Grupos", "/crm-catalogs/customer-groups"),
-                link("crm-imports", "Mail List e atualização em lote", "/crm-imports"),
                 link("crm-administration", "Administração", "/crm-administration"),
                 link("segments", "Segmentos", "/customer-segments"),
                 link("positions", "Cargos", "/crm-catalogs/positions"),
@@ -184,6 +183,9 @@ export function getNavigationItems(
     );
   }
   if (isAdmin) {
+    items.push(
+      group("imports", "Importar", [link("crm-imports", "Mail List", "/crm-imports")]),
+    );
     items.push(
       group(
         "users",

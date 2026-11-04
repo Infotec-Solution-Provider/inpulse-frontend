@@ -277,7 +277,7 @@ function ImportWorkspace({ instance, token }: { instance: string; token: string 
   }
   return (
     <CrmPage
-      title="Mail List e atualização em lote"
+      title="Mail List"
       description="Revise o arquivo, confira as alterações e selecione os registros antes de processar."
     >
       <Stack spacing={3} sx={{ width: "100%", minWidth: 0 }}>
