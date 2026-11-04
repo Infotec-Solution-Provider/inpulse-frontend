@@ -234,16 +234,23 @@ export function getNavigationItems(
   }
   const communication: NavigationItem[] = [];
   if (!isExternalOperator(role)) communication.push(link("crm-email", "Email do CRM", "/crm-email"));
+  const contacts: NavigationItem[] = [];
   if (!isExternalOperator(role) && parameters.disable_contacts_crud !== "true")
-    communication.push(link("contacts", "Contatos", "/contacts"));
+    contacts.push(link("contacts", "Cadastro", "/contacts"));
+  if (isAdmin) contacts.push(link("contact-requests", "Desativações", "/contact-requests"));
+  if (contacts.length)
+    communication.push(group("communication-contacts", "Contatos", contacts));
+  const internalGroups: NavigationItem[] = [];
   if (canAccessInternalGroups(parameters, role))
-    communication.push(link("internal-groups", "Grupos internos", "/internal-groups"));
+    internalGroups.push(link("internal-groups", "Cadastro", "/internal-groups"));
+  if (isAdmin)
+    internalGroups.push(link("senders", "Identificar Remetentes", "/whatsapp-senders"));
+  if (internalGroups.length)
+    communication.push(group("communication-internal-groups", "Grupos Internos", internalGroups));
   if (isAdmin)
     communication.push(
       link("ready-messages", "Mensagens prontas", "/ready-messages"),
       link("auto-response", "Resposta automática", "/auto-response"),
-      link("senders", "Identificar remetentes", "/whatsapp-senders"),
-      link("contact-requests", "Desativações", "/contact-requests"),
     );
   if (communication.length)
     items.push(group("communication", "Comunicação", communication, "communication"));
