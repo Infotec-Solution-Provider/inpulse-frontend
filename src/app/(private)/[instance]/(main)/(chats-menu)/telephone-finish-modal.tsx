@@ -1,6 +1,8 @@
 "use client";
 import TelephoneSurveyFields from "@/lib/components/telephone-survey-fields";
 import { completeSurvey, surveyPayload, type SurveyQuestion } from "@/lib/satisfaction";
+import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import customersService from "@/lib/services/customers.service";
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
@@ -55,6 +57,9 @@ export default function TelephoneFinishModal({
 }: TelephoneFinishModalProps) {
   const { closeModal } = useAppContext();
   const { token, instance, user } = useAuthContext();
+  const { parameters, wppApi } = useWhatsappContext();
+  const salesEnabled = isFeatureEnabled(parameters, FEATURE_FLAGS.crmSales);
+  const satisfactionEnabled = isFeatureEnabled(parameters, FEATURE_FLAGS.crmSatisfaction);
   const api = useMemo(
     () =>
       token
@@ -107,7 +112,7 @@ export default function TelephoneFinishModal({
       try {
         const current = apiRef.current;
         if (!current) throw new Error("Sessão indisponível.");
-        const fetchedResults = await current.results();
+        const fetchedResults = salesEnabled ? await current.results() : await wppApi.current.getResults();
 
         if (!cancelled) {
           setResults(
@@ -131,14 +136,14 @@ export default function TelephoneFinishModal({
     return () => {
       cancelled = true;
     };
-  }, [instance, user?.CODIGO]);
+  }, [instance, user?.CODIGO, salesEnabled, wppApi]);
 
   useEffect(() => {
     let cancelled = false;
     setSurveyState(null);
     setSurveyAnswers({});
     setSurveyError("");
-    if (!resultId || !token) return;
+    if (!resultId || !token || !satisfactionEnabled) return;
     customersService
       .getCallSatisfaction(appointment.id, resultId, { instance, token })
       .then((data) => {
@@ -153,14 +158,14 @@ export default function TelephoneFinishModal({
     return () => {
       cancelled = true;
     };
-  }, [resultId, instance, appointment.id, surveyReload, user?.CODIGO]);
-  const surveyReady =
+  }, [resultId, instance, appointment.id, surveyReload, user?.CODIGO, satisfactionEnabled]);
+  const surveyReady = !satisfactionEnabled || (
     surveyState?.resultId === resultId &&
-    (!surveyState.required || completeSurvey(surveyState.questions, surveyAnswers));
+    (!surveyState.required || completeSurvey(surveyState.questions, surveyAnswers)));
   const requiresScheduleDate = selectedResult?.COD_ACAO === 2;
   const flagged = (flag: unknown) => flag === "SIM" || flag === "S" || flag === true || flag === 1;
-  const requiresProposal = flagged(selectedResult?.PROPOSTA);
-  const requiresCancellation = flagged(selectedResult?.CANCELAPROPOSTA);
+  const requiresProposal = salesEnabled && flagged(selectedResult?.PROPOSTA);
+  const requiresCancellation = salesEnabled && flagged(selectedResult?.CANCELAPROPOSTA);
   useEffect(() => {
     let cancelled = false;
     setProposals([]);
@@ -212,7 +217,7 @@ export default function TelephoneFinishModal({
         operation.current.id,
         operation.current.finishedAt,
         {
-          ...(surveyState?.required
+          ...(satisfactionEnabled && surveyState?.required
             ? { survey: surveyPayload(surveyState.questions, surveyAnswers) }
             : {}),
           ...(requiresProposal ? { proposalValue: proposalValue.replace(",", ".") } : {}),
@@ -320,10 +325,10 @@ export default function TelephoneFinishModal({
           </TextField>
         )}
 
-        {resultId && !surveyState && !surveyError && (
+        {satisfactionEnabled && resultId && !surveyState && !surveyError && (
           <CircularProgress size={20} aria-label="Carregando pesquisa" />
         )}
-        {surveyError && (
+        {satisfactionEnabled && surveyError && (
           <Alert severity="error">
             {surveyError}
             <Button
@@ -334,7 +339,7 @@ export default function TelephoneFinishModal({
             </Button>
           </Alert>
         )}
-        {surveyState?.resultId === resultId && surveyState.required && (
+        {satisfactionEnabled && surveyState?.resultId === resultId && surveyState.required && (
           <TelephoneSurveyFields
             questions={surveyState.questions}
             answers={surveyAnswers}

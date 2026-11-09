@@ -11,6 +11,11 @@ import {
   sidebarStorageKey,
 } from "./navigation";
 
+const CRM_PARAMETERS: Record<string, string> = Object.fromEntries([
+  "crm_customers", "crm_users", "crm_units_campaigns", "crm_sales", "crm_imports", "crm_email",
+  "crm_satisfaction", "crm_administration", "telephony_monitoring", "contact_requests", "parameter_settings",
+].map(name => [`feature_${name}_enabled`, "true"]));
+
 const routes = (role: UserRole, parameters: Record<string, string> = {}, instance = "homolog") =>
   navigationLeaves(getNavigationItems(parameters, role, instance)).map((item) => item.href);
 
@@ -30,14 +35,12 @@ describe("shared navigation authorization", () => {
       expect.arrayContaining([
         "/monitor",
         "/customers",
-        "/parameters",
         "/users",
-        "/crm-purchases",
-        "/crm-proposals",
         "/reports/dashboard",
         "/changelog",
       ]),
     );
+    for (const path of ["/parameters", "/crm-purchases", "/crm-proposals", "/crm-imports", "/crm-email", "/user-catalogs/user-groups"]) expect(base).not.toContain(path);
     expect(base).not.toContain("/channels");
     expect(base).not.toContain("/sip-config");
     expect(base).not.toContain("/ai-agents");
@@ -60,7 +63,7 @@ describe("shared navigation authorization", () => {
     expect(visible).not.toContain("/internal-groups");
   });
   it("preserves existing goals destinations and their feature and role gates alongside CRM", () => {
-    const enabled = routes(UserRole.ADMIN, { feature_reports_advanced_enabled: "true" });
+    const enabled = routes(UserRole.ADMIN, { ...CRM_PARAMETERS, feature_reports_advanced_enabled: "true" });
     expect(enabled).toEqual(
       expect.arrayContaining([
         "/reports/goals-dashboard",
@@ -101,7 +104,7 @@ describe("pilot route and scoped navigation preferences", () => {
 });
 
 describe("hierarchical application navigation", () => {
-  const tree = getNavigationItems({}, UserRole.ADMIN, "homolog");
+  const tree = getNavigationItems(CRM_PARAMETERS, UserRole.ADMIN, "homolog");
   it("uses unique stable identities, expandable groups and direct catalog destinations", () => {
     const ids: string[] = [];
     const inspect = (nodes: typeof tree) =>
@@ -171,14 +174,14 @@ describe("hierarchical application navigation", () => {
         activeNavigationPath(tree, "/homolog/crm-email", "homolog", query).map(item => item.title),
       ).toEqual(["Comunicação", "Email", title]);
     }
-    expect(routes(UserRole.ACTIVE)).toContain("/crm-email?tab=accounts");
+    expect(routes(UserRole.ACTIVE, CRM_PARAMETERS)).toContain("/crm-email?tab=accounts");
     expect(routes(UserRole.ACTIVE)).not.toContain("/crm-email?tab=importer");
   });
 });
 
 describe("integrated CRM lanes", () => {
   it("uses one management entry for both campaign views and their details", () => {
-    const tree = getNavigationItems({}, UserRole.ADMIN, 'homolog');
+    const tree = getNavigationItems(CRM_PARAMETERS, UserRole.ADMIN, 'homolog');
     const leaves = navigationLeaves(tree);
     const management = leaves.filter(item => item.href === '/crm-units' || item.href === '/crm-campaigns');
     expect(management).toHaveLength(1);
@@ -200,7 +203,7 @@ describe("integrated CRM lanes", () => {
     "/reports/sales",
   ];
   it("retains every administrative destination and modern layout after all merges", () => {
-    const admin = routes(UserRole.ADMIN, { feature_sales_reports_enabled: "true" });
+    const admin = routes(UserRole.ADMIN, { ...CRM_PARAMETERS, feature_sales_reports_enabled: "true" });
     for (const path of paths) {
       expect(admin).toContain(path);
       if (!path.startsWith("/reports/")) expect(isModernCrmPath(`/homolog${path}`)).toBe(true);
@@ -209,7 +212,7 @@ describe("integrated CRM lanes", () => {
   });
   it("does not expose administrative mutations to common or external operators", () => {
     for (const role of [UserRole.ACTIVE, UserRole.EXTERNAL]) {
-      const available = routes(role);
+      const available = routes(role, CRM_PARAMETERS);
       for (const path of paths.filter((p) => p !== "/crm-email" && !p.startsWith("/reports/")))
         expect(available).not.toContain(path);
     }

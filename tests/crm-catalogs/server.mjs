@@ -13,6 +13,7 @@ const stubs = {
     "import React from 'react'; export default function Link(props) { return React.createElement('a', props); }",
 };
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-crm-catalogs",

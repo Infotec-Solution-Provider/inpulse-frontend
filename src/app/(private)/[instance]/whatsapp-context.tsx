@@ -51,6 +51,7 @@ import {
 import { toast } from "react-toastify";
 import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
+import type { TenantUiPolicy } from "@/lib/tenant-ui-policy";
 import { WhatsappSessionContext } from "./whatsapp-session-context";
 import { WhatsappChatListContext } from "./whatsapp-chat-list-context";
 import filesService from "../../../lib/services/files.service";
@@ -175,6 +176,7 @@ interface IWhatsappContext {
   refreshNotificationPreferences: () => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
+  tenantPolicy: TenantUiPolicy | null;
   refreshParameters: () => Promise<void>;
   loadChatMessages: (chat: DetailedChat) => Promise<WppMessage[]>;
   globalChannel: React.RefObject<WppClient | null>;
@@ -314,10 +316,14 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
   const [parameters, setParameters] = useState<Record<string, string>>({});
+  const [tenantPolicy, setTenantPolicy] = useState<TenantUiPolicy | null>(null);
   const refreshParameters = useCallback(async () => {
     const scope = liveAuth.current.scope;
-    const response = await api.current.ax.get<{ parameters: Record<string, string> }>("/api/whatsapp/session/parameters");
-    if (scope === liveAuth.current.scope) setParameters(response.data.parameters);
+    const response = await api.current.ax.get<{ parameters: Record<string, string>; tenantPolicy?: TenantUiPolicy | null }>("/api/whatsapp/session/parameters");
+    if (scope === liveAuth.current.scope) {
+      setParameters(response.data.parameters);
+      setTenantPolicy(response.data.tenantPolicy ?? null);
+    }
   }, []);
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
   const sendScope = JSON.stringify([instance, user?.CODIGO, !!token]);
@@ -1124,6 +1130,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               if (!isCurrent()) return;
               const parameters: Record<string, string> = parametersResponse.data["parameters"];
               setParameters(parameters);
+              setTenantPolicy(parametersResponse.data.tenantPolicy ?? null);
               console.log("Loaded parameters:", parameters);
 
               setChannels(channelsData);
@@ -1164,6 +1171,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setMessages([]);
         setTemplates([]);
         setParameters({});
+        setTenantPolicy(null);
         setNotifications([]);
         setNotificationPreferences(createDefaultNotificationPreferences());
         setLoaded(false);
@@ -1366,6 +1374,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         markAllAsReadNotification,
         templates,
         parameters,
+        tenantPolicy,
         refreshParameters,
         loadChatMessages,
         notificationPreferences,

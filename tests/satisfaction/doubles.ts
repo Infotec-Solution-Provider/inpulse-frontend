@@ -37,6 +37,7 @@ export const useAuthContext = () => {
 };
 export class FakeProposalsClient {
   async results() {
+    calls.push({ kind: "proposal-results" });
     return [
       { id: 9, name: "Com pesquisa", COD_ACAO: 1, PROPOSTA: "NAO", CANCELAPROPOSTA: "NAO" },
       { id: 10, name: "Sem pesquisa", COD_ACAO: 1, PROPOSTA: "NAO", CANCELAPROPOSTA: "NAO" },
@@ -50,6 +51,7 @@ export class FakeProposalsClient {
     ];
   }
   async forSchedule() {
+    calls.push({ kind: "proposal-list" });
     return [{ id: 70, version: "a".repeat(64), value: "50.00", campaignName: "Ativos" }];
   }
 }
@@ -58,11 +60,14 @@ export const useAppContext = () => ({
     (window as any).fixture.closed = true;
   },
 });
+const off = new URLSearchParams(location.search).has("flags-off");
 const whatsapp = {
+  parameters: { feature_crm_sales_enabled: off ? "false" : "true", feature_crm_satisfaction_enabled: off ? "false" : "true" },
   wppApi: {
     current: {
       setAuth() {},
       async getResults() {
+        calls.push({ kind: "basic-results" });
         return [
           { id: 9, name: "Com pesquisa", COD_ACAO: 1 },
           { id: 10, name: "Sem pesquisa", COD_ACAO: 1 },

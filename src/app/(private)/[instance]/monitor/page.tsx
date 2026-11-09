@@ -49,11 +49,12 @@ function ScopedMonitorPage({ scope }: { scope: string }) {
       </p>
     );
 
+  const visibleTab = allowTelephony ? tab : "conversations";
   return (
     <div className="flex min-h-full w-full min-w-0 flex-col lg:h-full lg:min-h-0">
       <Tabs
         aria-label="Canal da monitoria"
-        value={allowTelephony ? tab : "conversations"}
+        value={visibleTab}
         onChange={(_event, value: "conversations" | "telephony") => setTab(value)}
         className="ip-channel-tabs"
       >
@@ -76,8 +77,8 @@ function ScopedMonitorPage({ scope }: { scope: string }) {
       </Tabs>
       <div
         role="tabpanel"
-        id={`monitor-panel-${tab}`}
-        aria-labelledby={`monitor-tab-${tab}`}
+        id={`monitor-panel-${visibleTab}`}
+        aria-labelledby={`monitor-tab-${visibleTab}`}
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         {tab === "conversations" || !allowTelephony ? (

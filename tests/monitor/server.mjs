@@ -25,7 +25,7 @@ const server = await createServer({
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-monitor",
-  define: {
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""),
     "process.env.NEXT_PUBLIC_WHATSAPP_URL": JSON.stringify("http://127.0.0.1:4185"),
     "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://127.0.0.1:4185"),
   },

@@ -8,7 +8,7 @@ const server = await createServer({
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-crm-email",
   optimizeDeps: { entries: ["tests/crm-email/index.html"] },
-  define: { "process.env.NEXT_PUBLIC_MARKETING_URL": JSON.stringify("http://email.fixture") },
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_MARKETING_URL": JSON.stringify("http://email.fixture") },
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },
   plugins: [
     {

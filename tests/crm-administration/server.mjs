@@ -14,7 +14,7 @@ const server = await createServer({
   configFile: false,
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: ".cache/crm-administration-vite",
-  define: { "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://127.0.0.1:4198") },
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://127.0.0.1:4198") },
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },
   plugins: [
     {

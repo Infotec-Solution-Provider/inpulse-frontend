@@ -18,6 +18,7 @@ const stubs = {
   "emoji-picker-react": `export default () => null; export const Theme = {}; export const EmojiStyle = {}; export const SuggestionMode = {}`,
 };
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false,
   root,
   esbuild: { jsx: "automatic" },

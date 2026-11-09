@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url),
 const { createServer } = await import(pathToFileURL(vitestRequire.resolve("vite")).href);
 const server = await createServer({
   configFile: false,
-  define: { "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://127.0.0.1:4196") },
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://127.0.0.1:4196") },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-crm-imports",
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },

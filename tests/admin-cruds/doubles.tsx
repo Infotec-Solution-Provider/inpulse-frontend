@@ -171,6 +171,7 @@ export const WhatsappContext = createContext({
   monitorChats: [],
   currentChat: null,
   parameters: {
+    feature_crm_users_enabled: "true",
     feature_ai_enabled: "true",
     feature_ai_supervisor_enabled: "true",
     feature_ai_agents_enabled: "true",

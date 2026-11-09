@@ -6,6 +6,7 @@ const { createServer } = await import(pathToFileURL(vitestRequire.resolve("vite"
 const root = fileURLToPath(new URL("../../", import.meta.url));
 process.chdir(root);
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false, root, cacheDir: "node_modules/.vite-session-changes",
   esbuild: { jsx: "automatic" },
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },

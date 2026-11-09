@@ -97,13 +97,15 @@ test("edits changed fields with full original precondition including unit", asyn
   await page.getByRole("button", { name: "Editar segmento Atacado", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("combobox", { name: /^Unidade/ })).toContainText("Matriz (#12)");
-  await dialog.getByRole("textbox", { name: "Ordem", exact: true }).fill("");
+  await expect(dialog.getByText("Posição: 7", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "Organizar prioridades" })).toHaveAttribute("href", "/local-fixture/crm-ordering?list=segments");
+  await dialog.getByRole("textbox", { name: "Nome", exact: true }).fill("Atacado revisado");
   await dialog.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   expect(await page.evaluate(() => window.segmentTest.updates)).toEqual([
     {
       id: 1,
-      data: { changes: { ordem: null }, expected: { NOME: "Atacado", ordem: 7, COD_UNIDADE: 12 } },
+      data: { changes: { NOME: "Atacado revisado" }, expected: { NOME: "Atacado", ordem: 7, COD_UNIDADE: 12 } },
     },
   ]);
 });
@@ -176,19 +178,14 @@ for (const failure of ["SEGMENT_WRITE_UNKNOWN", "NETWORK_ERROR"]) {
   });
 }
 
-test("validates order and confirms discarding unsaved changes", async ({ page }) => {
+test("uses the priority workspace and confirms discarding unsaved name changes", async ({ page }) => {
   await page.getByRole("button", { name: "Editar segmento Atacado", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "Editar segmento" });
-  await editor.getByRole("textbox", { name: "Ordem", exact: true }).fill("2147483648");
-  await expect(
-    editor.getByText("Informe um número inteiro entre -2147483648 e 2147483647."),
-  ).toBeVisible();
-  await expect(editor.getByRole("button", { name: "Salvar", exact: true })).toBeDisabled();
+  await expect(editor.getByRole("link", { name: "Organizar prioridades" })).toHaveAttribute("href", "/local-fixture/crm-ordering?list=segments");
+  await editor.getByRole("textbox", { name: "Nome", exact: true }).fill("Rascunho não salvo");
   await editor.getByRole("button", { name: "Cancelar", exact: true }).click();
   await page.getByRole("button", { name: "Continuar editando", exact: true }).click();
-  await expect(editor.getByRole("textbox", { name: "Ordem", exact: true })).toHaveValue(
-    "2147483648",
-  );
+  await expect(editor.getByRole("textbox", { name: "Nome", exact: true })).toHaveValue("Rascunho não salvo");
   await editor.getByRole("button", { name: "Cancelar", exact: true }).click();
   await page.getByRole("button", { name: "Descartar", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);

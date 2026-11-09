@@ -54,7 +54,7 @@ const pendingAction = (type: string, chatId: number) =>
   });
 const currentChat = { id: 999, chatType: "wpp" } as DetailedChat;
 const whatsapp = {
-  parameters: {} as Record<string, string>,
+  parameters: { feature_telephony_monitoring_enabled: new URLSearchParams(location.search).has("telephony-off") ? "false" : "true" } as Record<string, string>,
   sectors: [{ id: 1, name: "Atendimento" }],
   currentChat,
   setCurrentChat: () => undefined,

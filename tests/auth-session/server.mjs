@@ -16,6 +16,7 @@ const stubs = {
 };
 
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false,
   root,
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },

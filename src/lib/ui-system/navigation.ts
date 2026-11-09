@@ -308,7 +308,7 @@ export function getNavigationItems(
     );
     items.push({ ...link("news", "Novidades", "/changelog"), icon: "news" });
   }
-  const visible = (nodes: NavigationItem[]): NavigationItem[] => nodes.flatMap(item => {
+  const visible = (nodes: NavigationItem[]): NavigationItem[] => nodes.flatMap<NavigationItem>(item => {
     if (item.kind === "link") return canAccessFeaturePath(parameters, item.href) ? [item] : [];
     const routes = visible(item.routes);
     return routes.length ? [{ ...item, routes }] : [];

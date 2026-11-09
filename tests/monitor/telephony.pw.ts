@@ -497,3 +497,16 @@ test("chips limitados a três abrem todos os filtros e mantêm o rascunho ao can
   ).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+
+test("disabled telephony monitoring ignores a restored tab and performs no telephony reads", async ({ page }) => {
+  let reads = 0;
+  await page.addInitScript(() => localStorage.setItem("monitor_tab:v1:tenant-a:1", "telephony"));
+  await page.route("**/api/customers/monitor/telephony/**", route => { reads++; return route.fulfill({ json: { data: {} } }); });
+  await page.route("**/api/whatsapp/monitor/**", route => route.fulfill({ json: { data: { items: [], totalCount: 0, page: 1, pageSize: 20 } } }));
+  await page.goto("/tests/monitor/index.html?telephony-off=1");
+  await expect(page.getByRole("tab", { name: "Conversas", exact: true })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: "Telefonia", exact: true })).toHaveCount(0);
+  expect(reads).toBe(0);
+  expect(await page.evaluate(() => localStorage.getItem("monitor_tab:v1:tenant-a:1"))).toBe("conversations");
+});

@@ -4,8 +4,7 @@ import AppProvider from "@/app/(private)/[instance]/app-context";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
-import { canAccessFeaturePath, featureRoute } from "@/lib/module-feature-access";
-import { canAccessPrivatePathForRole } from "@/lib/permissions/operator-access";
+import RouteFeatureGate from "@/lib/components/module-route-gate";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactElement, ReactNode, useContext, useState } from "react";
 import ContactsProvider from "./(cruds)/contacts/contacts-context";
@@ -14,11 +13,11 @@ import ReadyMessagesProvider from "./(cruds)/ready-messages/ready-messages-conte
 import { InternalChatProvider } from "./internal-context";
 import WhatsappProvider from "./whatsapp-context";
 import ChatProvider from "./(main)/(chat)/chat-context";
-import { useWhatsappContext } from "./whatsapp-context";
 import InternalGroupsProvider from "./(cruds)/internal-groups/internal-groups-context";
 import { AuthContext } from "@/app/auth-context";
 import { TelephonyProvider } from "@/lib/telephony/telephony-provider";
 import CacheWarmup from "./cache-warmup";
+import FrontendSessionGate from "@/lib/components/frontend-session-gate";
 import { CrmQueryProvider, PilotDesignProvider } from "@/lib/ui-system";
 import MonitorShell from "@/lib/ui-system/monitor-shell";
 import { isModernCrmPath } from "@/lib/ui-system/navigation";
@@ -47,48 +46,6 @@ function AppModal({
       <div className={modern ? "ip-crud-modal-host" : undefined}>{modal as ReactElement}</div>
     </Modal>
   );
-}
-
-function RouteFeatureGate({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const { user, instance } = useContext(AuthContext);
-  const { loaded, parameters } = useWhatsappContext();
-  const routeConfig = featureRoute(pathname, instance);
-
-  const hasRoleAccess =
-    routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
-
-  if (!hasRoleAccess) {
-    return (
-      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500 dark:text-slate-300">
-        Perfil sem acesso a esta funcionalidade.
-      </div>
-    );
-  }
-
-  if (!routeConfig) {
-    return <>{children}</>;
-  }
-
-  if (!loaded) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500 dark:text-slate-300">
-        Carregando permissões...
-      </div>
-    );
-  }
-
-  const isAllowed = canAccessFeaturePath(parameters, pathname, instance);
-
-  if (!isAllowed) {
-    return (
-      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500 dark:text-slate-300">
-        Funcionalidade indisponível para esta instância.
-      </div>
-    );
-  }
-
-  return <>{children}</>;
 }
 
 function AppFrame({
@@ -133,6 +90,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
           <WhatsappProvider>
+            <FrontendSessionGate>
             <CacheWarmup />
             <ContactsProvider>
               <InternalChatProvider>
@@ -154,6 +112,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </InternalGroupsProvider>
               </InternalChatProvider>
             </ContactsProvider>
+            </FrontendSessionGate>
           </WhatsappProvider>
         </SocketProvider>
       </AppProvider>

@@ -1,5 +1,7 @@
 "use client";
 import { useAuthContext } from "@/app/auth-context";
+import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { useRouter } from "next/navigation";
 import { UiIcon } from "@/lib/ui-system";
 import { TableHead } from "@mui/material";
@@ -27,6 +29,8 @@ import ClientTableHeader from "./table-header";
 import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
+  const { parameters } = useWhatsappContext();
+  const fullRegistration = isFeatureEnabled(parameters, FEATURE_FLAGS.crmCustomers);
   const { user, instance } = useAuthContext();
   const router = useRouter();
   const { openModal } = useContext(AppContext);
@@ -38,12 +42,12 @@ export default function CustomersTable() {
       return;
     }
 
-    if (user?.NIVEL === "ADMIN") router.push(`/${instance}/crm-customers/${customer.CODIGO}`);
+    if (user?.NIVEL === "ADMIN" && fullRegistration) router.push(`/${instance}/crm-customers/${customer.CODIGO}`);
     else openModal(<EditCustomerModal customer={customer} />);
   }
 
   function openCreateCustomerModal() {
-    if (user?.NIVEL === "ADMIN") router.push(`/${instance}/crm-customers/new`);
+    if (user?.NIVEL === "ADMIN" && fullRegistration) router.push(`/${instance}/crm-customers/new`);
     else openModal(<CreateCustomerModal />);
   }
 

@@ -1,56 +1,98 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-// Only isolated candidate processes. Authentication is rejected locally by the browser mock.
-// No customer credentials, session, messages, or database writes are used.
-test.beforeEach(async ({ page }) => {
-  await page.route(/\/api\/auth\//, (route) => route.fulfill({ status: 401, contentType: "application/json", body: '{"message":"synthetic anonymous session"}' }));
-});
-
-for (const width of [1440, 390, 320]) {
-  test(`the old UI remains the default and both versions can be reached at ${width}px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 900 });
-    const errors: string[] = [];
-    const assets: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
-    page.on("response", (response) => {
-      if (response.url().includes("/_next/") && response.status() >= 400) assets.push(`${response.status()} ${new URL(response.url()).pathname}`);
-    });
-    await page.goto("/transition-fixture/login");
-    await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
-    const enterNew = page.getByRole("link", { name: "Experimentar nova versão", exact: true });
-    await expect(enterNew).toHaveAttribute("href", "/nova/transition-fixture");
-    await expect(page).toHaveURL(/\/transition-fixture\/login$/);
-    await enterNew.click();
-    await expect(page).toHaveURL(/\/nova\/transition-fixture\/login$/);
-    await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
-    const returnOld = page.getByRole("link", { name: "Voltar à versão anterior", exact: true });
-    await expect(returnOld).toHaveAttribute("href", "/transition-fixture");
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await returnOld.click();
-    await expect(page).toHaveURL(/\/transition-fixture\/login$/);
-    await expect(enterNew).toBeVisible();
-    await page.reload();
-    await expect(enterNew).toBeVisible();
-    expect(errors).toEqual([]);
-    expect(assets).toEqual([]);
+const user = { CODIGO: 23, NOME: "Operador sintético", NOME_EXIBICAO: "Operador sintético", NIVEL: "ADMIN", SETOR: 1, LOGIN: "fixture", ATIVO: "SIM" };
+const token = `fixture.${Buffer.from(JSON.stringify({ exp: 4102444800, instance: "odim", userId: 23 })).toString("base64url")}.fixture`;
+async function fixtures(page: Page, parameters: Record<string, string>, authenticated = true, historyChat = false) {
+  const errors: string[] = [], failedAssets: string[] = [], calls: string[] = [];
+  const chat = { id: 41, instance: "odim", contactId: 149, userId: 23, sectorId: 1, type: "ACTIVE", priority: "NORMAL", isFinished: false, startedAt: "2026-11-09T12:00:00Z", isSchedule: false, contact: { id: 149, name: "Contato sintético", phone: "5511999999999", instance: "odim", isBlocked: false, isOnlyAdmin: false }, customer: null, schedule: null };
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("response", response => { if (response.url().includes("/_next/") && response.status() >= 400) failedAssets.push(response.url()); });
+  await page.route("**/*", async route => {
+    const request = route.request(), url = new URL(request.url());
+    const path = url.pathname;
+    if (path.includes("/_fixture/") || /localhost:80(00|01|02|03|04|05|06|07|08)/.test(url.host)) {
+      calls.push(`${request.method()} ${path}`);
+      const send = (data: unknown, status = 200) => route.fulfill({ status, json: data });
+      if (request.method() === "OPTIONS") return send({});
+      if (/\/api\/auth\/(refresh|login)$/.test(path)) return authenticated ? send({ data: { token, user } }) : send({ message: "Fixture anonymous" }, 401);
+      if (path.endsWith("/api/auth/session")) return send({ data: { userId: 23, instance: "odim", sectorId: 1, role: "ADMIN" } });
+      if (path.endsWith("/session/parameters")) return send({ parameters, tenantPolicy: null });
+      if (path.endsWith("/sectors")) return send({ data: [{ id: 1, name: "Atendimento sintético", defaultClientId: null }] });
+      if (/\/sector\/1\/clients$/.test(path)) return send({ data: [] });
+      if (path.includes("notification-preferences")) return send({ data: {} });
+      if (path.includes("notifications")) return send({ data: { notifications: [], totalCount: 0 } });
+      if (path.endsWith("/session/changes")) return send({ data: { chats: [], messages: [], removedChatIds: [], removedMessageIds: [], nextCursor: "fixture-cursor", hasMore: false } });
+      if (path.endsWith("/session/chats")) return send({ data: { chats: historyChat && path.includes("/whatsapp/") ? [chat] : [], messages: [], syncCursor: "fixture-cursor" } });
+      if (path.endsWith("/chats/41/legacy-history")) return send({ data: { entries: [{ id: 100, body: "Registro antigo preservado", occurredAt: "2026-11-08T12:00:00Z" }], nextBeforeId: null } });
+      if (path.endsWith("/chats/41")) return send({ data: { chat, messages: [] } });
+      if (path.endsWith("/contacts") || path.endsWith("/customers") || path.endsWith("/users")) return send({ data: [], page: { totalRows: 0, current: 1, totalPages: 1 } });
+      return send({ data: [] });
+    }
+    if (url.origin !== "http://127.0.0.1:13011") return route.abort("blockedbyclient");
+    return route.continue();
   });
+  return { errors, failedAssets, calls };
 }
 
-test("assets and install metadata remain inside the new namespace", async ({ page, request }) => {
-  await page.goto("/nova/transition-fixture/login");
-  await expect(page.getByRole("link", { name: "Voltar à versão anterior" })).toBeVisible();
-  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/nova/manifest.webmanifest");
-  const manifest = await request.get("/nova/manifest.webmanifest");
-  expect(manifest.status()).toBe(200);
-  const data = await manifest.json();
-  expect(data.start_url).toBe("/nova/");
-  expect(data.scope).toBe("/nova/");
-  for (const icon of data.icons) {
-    expect(icon.src).toMatch(/^\/nova\//);
-    const response = await request.get(icon.src);
-    expect(response.status()).toBe(200);
+for (const next of [false, true]) for (const switching of [false, true])
+  test(`two Next processes: new=${next}, switch=${switching}`, async ({ page }) => {
+    const proof = await fixtures(page, { feature_new_frontend_enabled: String(next), feature_frontend_switch_enabled: String(switching) });
+    await page.goto("/odim");
+    await expect(page.locator(".chats-menu")).toBeVisible();
+    await expect(page).toHaveURL(next ? /\/nova\/odim$/ : /\/odim$/);
+    const toggle = page.getByRole("link", { name: next ? "Voltar à versão anterior" : "Experimentar nova versão", exact: true });
+    if (switching) {
+      await expect(toggle).toBeVisible();
+      await toggle.click();
+      await expect(page.locator(".chats-menu")).toBeVisible();
+      await expect(page).toHaveURL(next ? /\/odim$/ : /\/nova\/odim$/);
+      expect(await page.evaluate(() => sessionStorage.getItem("@inpulse/frontend-choice:v1:odim:23"))).toBe(next ? "legacy" : "new");
+      await page.reload();
+      await expect(page.locator(".chats-menu")).toBeVisible();
+      await expect(page).toHaveURL(next ? /\/odim$/ : /\/nova\/odim$/);
+    } else await expect(toggle).toHaveCount(0);
+    expect(proof.calls.some(call => call.endsWith("/api/auth/refresh"))).toBe(true);
+    expect(proof.errors).toEqual([]);
+    expect(proof.failedAssets).toEqual([]);
+  });
+
+test("both public logins have no version switch and the nova manifest/assets use their namespace", async ({ page, request }) => {
+  const proof = await fixtures(page, {}, false);
+  for (const path of ["/odim/login", "/nova/odim/login"]) {
+    await page.goto(path);
+    await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Experimentar nova versão|Voltar à versão anterior/ })).toHaveCount(0);
   }
-  const scripts = await page.locator("script[src]").evaluateAll((elements) => elements.map((element) => new URL((element as HTMLScriptElement).src).pathname));
-  expect(scripts.length).toBeGreaterThan(0);
-  expect(scripts.every((src) => src.startsWith("/nova/_next/"))).toBe(true);
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", "/nova/manifest.webmanifest");
+  const response = await request.get("/nova/manifest.webmanifest");
+  expect(response.status()).toBe(200);
+  const manifest = await response.json();
+  expect(manifest.start_url).toBe("/nova/");
+  expect(manifest.scope).toBe("/nova/");
+  for (const icon of manifest.icons) expect((await request.get(icon.src)).status()).toBe(200);
+  expect(proof.errors).toEqual([]);
+  expect(proof.failedAssets).toEqual([]);
+});
+
+test("direct nova CRM URL follows session selection and rejects a disabled module before API reads", async ({ page }) => {
+  const proof = await fixtures(page, { feature_new_frontend_enabled: "true", feature_frontend_switch_enabled: "true" });
+  await page.goto("/nova/odim/crm-email?tab=accounts");
+  await expect(page.getByText("Funcionalidade indisponível para esta instância.")).toBeVisible();
+  expect(proof.calls.some(call => /crm-email|email\/(settings|accounts|jobs)/.test(call))).toBe(false);
+  expect(proof.errors).toEqual([]);
+});
+
+
+for (const next of [false, true]) test(`legacy history has a working entry in the ${next ? "new" : "current"} Next application`, async ({ page }) => {
+  const proof = await fixtures(page, { feature_new_frontend_enabled: String(next) }, true, true);
+  await page.goto("/odim");
+  await page.getByText("Contato sintético", { exact: true }).click();
+  if (next) {
+    await page.getByRole("button", { name: "Ações da conversa com Contato sintético", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Histórico do sistema antigo", exact: true }).click();
+  } else await page.getByRole("button", { name: "Histórico do sistema antigo", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Histórico do sistema antigo", exact: true })).toBeVisible();
+  await expect(page.getByText("Registro antigo preservado", { exact: true })).toBeVisible();
+  expect(proof.calls.some(call => call.endsWith("/chats/41/legacy-history"))).toBe(true);
+  expect(proof.errors).toEqual([]);
 });
