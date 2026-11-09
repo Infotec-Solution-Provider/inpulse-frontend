@@ -5,6 +5,8 @@ import { MessagesSquare, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuthContext } from "@/app/auth-context";
 import { MonitorProvider } from "./context";
+import { useWhatsappContext } from "../whatsapp-context";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import ConversationMonitor from "./conversations";
 import TelephonyMonitor from "./telephony/components/telephony-monitor";
 
@@ -15,17 +17,19 @@ export default function MonitorPage() {
 }
 
 function ScopedMonitorPage({ scope }: { scope: string }) {
+  const { parameters } = useWhatsappContext();
+  const allowTelephony = isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyMonitoring);
   const storageKey = `monitor_tab:v1:${scope}`;
   const [tab, setTab] = useState<"conversations" | "telephony">("conversations");
   const [ready, setReady] = useState(false);
   useEffect(() => {
     try {
-      setTab(localStorage.getItem(storageKey) === "telephony" ? "telephony" : "conversations");
+      setTab(allowTelephony && localStorage.getItem(storageKey) === "telephony" ? "telephony" : "conversations");
     } catch {
       setTab("conversations");
     }
     setReady(true);
-  }, [storageKey]);
+  }, [storageKey, allowTelephony]);
 
   useEffect(() => {
     if (!ready || scope === "anonymous") return;
@@ -49,7 +53,7 @@ function ScopedMonitorPage({ scope }: { scope: string }) {
     <div className="flex min-h-full w-full min-w-0 flex-col lg:h-full lg:min-h-0">
       <Tabs
         aria-label="Canal da monitoria"
-        value={tab}
+        value={allowTelephony ? tab : "conversations"}
         onChange={(_event, value: "conversations" | "telephony") => setTab(value)}
         className="ip-channel-tabs"
       >
@@ -61,14 +65,14 @@ function ScopedMonitorPage({ scope }: { scope: string }) {
           icon={<MessagesSquare size={16} aria-hidden="true" />}
           iconPosition="start"
         />
-        <Tab
+        {allowTelephony && <Tab
           id="monitor-tab-telephony"
           aria-controls="monitor-panel-telephony"
           value="telephony"
           label="Telefonia"
           icon={<Phone size={16} aria-hidden="true" />}
           iconPosition="start"
-        />
+        />}
       </Tabs>
       <div
         role="tabpanel"
@@ -76,7 +80,7 @@ function ScopedMonitorPage({ scope }: { scope: string }) {
         aria-labelledby={`monitor-tab-${tab}`}
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {tab === "conversations" ? (
+        {tab === "conversations" || !allowTelephony ? (
           <MonitorProvider>
             <ConversationMonitor />
           </MonitorProvider>

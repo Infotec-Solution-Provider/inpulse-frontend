@@ -4,7 +4,7 @@ import AppProvider from "@/app/(private)/[instance]/app-context";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
 import { Modal } from "@mui/material";
-import { FEATURE_FLAGS, FeatureFlag, isFeatureEnabled } from "@/lib/feature-flags";
+import { canAccessFeaturePath, featureRoute } from "@/lib/module-feature-access";
 import { canAccessPrivatePathForRole } from "@/lib/permissions/operator-access";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactElement, ReactNode, useContext, useState } from "react";
@@ -49,34 +49,11 @@ function AppModal({
   );
 }
 
-const ROUTE_FEATURE_FLAGS: Array<{ segment: string; flags: FeatureFlag[] }> = [
-  { segment: "/channels", flags: [FEATURE_FLAGS.whatsappSessionMonitoring] },
-  { segment: "/ai-supervisor", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiSupervisor] },
-  { segment: "/ai-agents", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiAgents] },
-  { segment: "/ai-settings", flags: [FEATURE_FLAGS.ai, FEATURE_FLAGS.aiSettings] },
-  { segment: "/funnel", flags: [FEATURE_FLAGS.funnels] },
-  { segment: "/sip-config", flags: [FEATURE_FLAGS.sipConfig] },
-  { segment: "/tools/mass-messages", flags: [FEATURE_FLAGS.massMessages] },
-  { segment: "/reports/operators", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/goals-dashboard", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/team-goals", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/lead-origin-quality", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/lost-reasons", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/operator-performance", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/sales", flags: [FEATURE_FLAGS.salesReports] },
-  { segment: "/reports/dashboards", flags: [FEATURE_FLAGS.reportsDashboards] },
-  { segment: "/reports/metrics", flags: [FEATURE_FLAGS.reportsDashboards] },
-  { segment: "/reports/report-generator", flags: [FEATURE_FLAGS.reportsDashboards] },
-  { segment: "/reports/mailing-analysis", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/regua-carteira-sintetico-whatsapp", flags: [FEATURE_FLAGS.reportsAdvanced] },
-  { segment: "/reports/chats", flags: [FEATURE_FLAGS.chatExport] },
-];
-
 function RouteFeatureGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user } = useContext(AuthContext);
+  const { user, instance } = useContext(AuthContext);
   const { loaded, parameters } = useWhatsappContext();
-  const routeConfig = ROUTE_FEATURE_FLAGS.find(({ segment }) => pathname.includes(segment));
+  const routeConfig = featureRoute(pathname, instance);
 
   const hasRoleAccess =
     routeConfig?.segment === "/channels" || canAccessPrivatePathForRole(pathname, user?.NIVEL);
@@ -101,7 +78,7 @@ function RouteFeatureGate({ children }: { children: ReactNode }) {
     );
   }
 
-  const isAllowed = routeConfig.flags.every((flag) => isFeatureEnabled(parameters, flag));
+  const isAllowed = canAccessFeaturePath(parameters, pathname, instance);
 
   if (!isAllowed) {
     return (
