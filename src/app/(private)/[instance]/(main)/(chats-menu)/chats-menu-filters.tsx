@@ -16,6 +16,9 @@ import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "@/app/auth-context";
 import { useAppContext } from "../../app-context";
 import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
+import { WhatsappContext } from "../../whatsapp-context";
+import { SocketContext } from "../../socket-context";
+import ConversationSyncStatus from "@/lib/components/conversation-sync-status";
 import { canAccessInternalChats, isExternalOperator } from "@/lib/permissions/operator-access";
 import { OperationalIconButton } from "@/lib/ui-system/actions";
 import { OperationalPanel } from "@/lib/ui-system/components";
@@ -50,6 +53,8 @@ export default function ChatsMenuFilters() {
   const { openModal, closeModal } = useAppContext();
   const { user } = useContext(AuthContext);
   const { changeChatFilters, chatFilters, parameters } = useWhatsappChatList();
+  const { messageSync, pullNewMessages } = useContext(WhatsappContext);
+  const { connectionStatus, lastWebSocketAt } = useContext(SocketContext);
   const isExternal = isExternalOperator(user?.NIVEL);
   const canStartInternalChat = canAccessInternalChats(parameters, user?.NIVEL);
   const [newChatMenuAnchorEl, setNewChatMenuAnchorEl] = useState<HTMLElement | null>(null);
@@ -119,6 +124,8 @@ export default function ChatsMenuFilters() {
           )}
         </div>
       </header>
+      <ConversationSyncStatus connectionStatus={connectionStatus} lastWebSocketAt={lastWebSocketAt}
+        sync={messageSync} onRefresh={pullNewMessages} />
 
       <TextField
         id="chats-search"

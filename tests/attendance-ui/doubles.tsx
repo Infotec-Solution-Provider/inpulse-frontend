@@ -202,6 +202,7 @@ export const internal = {
 };
 export const AuthContext = createContext<any>(auth);
 export const WhatsappContext = createContext<any>({});
+export const SocketContext = createContext<any>({ connectionStatus: "connected", lastWebSocketAt: null });
 export const InternalChatContext = createContext<any>(internal);
 export const AppContext = createContext<any>({ openModal: () => {}, closeModal: () => {} });
 export const ContactsContext = createContext<any>({ state: { contacts: [] } });
@@ -212,6 +213,11 @@ export const useWhatsappSession = useWhatsappContext;
 export const useInternalChatContext = () => useContext(InternalChatContext);
 export const useAppContext = () => useContext(AppContext);
 export const useContactsContext = () => useContext(ContactsContext);
+const globalChannel = { current: channels[0] };
+const setSelectedChannel = (input: (typeof channels)[number] | ((previous: (typeof channels)[number]) => (typeof channels)[number])) => {
+  const selectedChannel = typeof input === "function" ? input(snapshot.selectedChannel) : input;
+  if (snapshot.selectedChannel !== selectedChannel) update({ selectedChannel });
+};
 export function makeWhatsapp(env: ReturnType<typeof useEnvironment>) {
   return {
     ...env,
@@ -220,14 +226,16 @@ export function makeWhatsapp(env: ReturnType<typeof useEnvironment>) {
     parameters,
     channels,
     loaded: true,
-    globalChannel: null,
+    messageSync: { isRefreshing: false, error: false, lastSuccessAt: null },
+    pullNewMessages: () => {},
+    globalChannel,
     chatsChannels,
     changeChatFilters,
     openChat,
     setCurrentChat,
     sendMessage,
     isReadOnlyMode: false,
-    setSelectedChannel: (selectedChannel: (typeof channels)[number]) => update({ selectedChannel }),
+    setSelectedChannel,
     updateChatPreference: preferences,
     lookupMessageAttempt: async (...args: unknown[]) => {
       state.lookups.push(args);

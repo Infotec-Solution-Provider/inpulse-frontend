@@ -147,8 +147,8 @@ test("compact telephony can hide without unmounting and reopens when the call be
   const section = page.getByRole("region", { name: "Telefonia e próximas ligações", exact: true });
   const phone = page.locator('section[aria-label="Telefone web"]');
   const expanded = (await section.boundingBox())!.height;
-  await phone.getByRole("button", { name: "Abrir telefone", exact: true }).click();
-  await phone.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
+  await section.getByRole("button", { name: "Abrir telefone", exact: true }).click();
+  await section.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
   await phone.getByLabel("Telefone ou ramal", { exact: true }).fill("102");
   await page
     .getByRole("button", { name: "Ocultar telefonia e próxima ligação", exact: true })
@@ -161,7 +161,7 @@ test("compact telephony can hide without unmounting and reopens when the call be
   await page
     .getByRole("button", { name: "Mostrar telefonia e próxima ligação", exact: true })
     .click();
-  await expect(phone.getByText("Ramal conectado", { exact: true })).toBeVisible();
+  await expect(section.getByRole("status", { name: "Ramal conectado", exact: true })).toBeVisible();
   await expect(phone.getByLabel("Telefone ou ramal", { exact: true })).toHaveValue("102");
   await phone.getByRole("button", { name: "Ligar", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.phoneHarness.session !== null)).toBe(true);
@@ -407,8 +407,9 @@ test("an active phone leaves the real composer reachable on desktop and mobile",
   const errors = await open(page, 1280, 540);
   await selectAna(page);
   const phone = page.locator('section[aria-label="Telefone web"]:visible');
-  await phone.getByRole("button", { name: "Abrir telefone", exact: true }).click();
-  await phone.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
+  const section = page.getByRole("region", { name: "Telefonia e próximas ligações", exact: true });
+  await section.getByRole("button", { name: "Abrir telefone", exact: true }).click();
+  await section.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
   await phone.getByLabel("Telefone ou ramal", { exact: true }).fill("102");
   await phone.getByRole("button", { name: "Ligar", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.phoneHarness.session !== null)).toBe(true);

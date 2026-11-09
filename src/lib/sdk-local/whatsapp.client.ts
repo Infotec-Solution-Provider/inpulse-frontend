@@ -355,9 +355,9 @@ export default class WhatsappClient extends ApiClient {
     return res.data;
   }
 
-  public async getContacts() {
+  public async getContacts(signal?: AbortSignal) {
     const url = `/api/whatsapp/contacts`;
-    const { data: res } = await this.ax.get<DataResponse<WppContact[]>>(url);
+    const { data: res } = await this.ax.get<DataResponse<WppContact[]>>(url, { signal });
     return res.data;
   }
 
