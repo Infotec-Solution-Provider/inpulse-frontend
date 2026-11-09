@@ -1,6 +1,7 @@
 "use client";
 import { useCrmQueryState } from "@/lib/ui-system/query-state";
 import { AuthContext } from "@/app/auth-context";
+import { assertCrmSectorSelection, crmSectorOptions, resolveSectorNamespace, SECTOR_MAPPING_ERROR } from "@/lib/sector-namespace";
 import { CreateUserDTO, UpdateUserDTO, User, UsersClient, RequestFilters } from "@/lib/sdk-local";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import {
@@ -10,6 +11,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -51,8 +53,8 @@ export const useUsersContext = () => {
 };
 
 export default function UsersProvider({ children }: IUsersProviderProps) {
-  const { wppApi } = useContext(WhatsappContext);
-  const { token } = useContext(AuthContext);
+  const { sectors: whatsappSectors, tenantPolicy, loaded } = useContext(WhatsappContext);
+  const { token, instance, user: actor } = useContext(AuthContext);
   const [query, setQuery] = useCrmQueryState<RequestFilters<User>>("users:list", {
     page: "1",
     perPage: "10",
@@ -64,7 +66,9 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
     isLoading: false,
   });
   const [modal, setModal] = useState<ReactNode>(null);
-  const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
+  const namespace = useMemo(() => resolveSectorNamespace(instance, actor?.SETOR, tenantPolicy), [instance, actor?.SETOR, tenantPolicy]);
+  const sectors = useMemo(() => loaded ? crmSectorOptions(namespace, whatsappSectors) : [], [loaded, namespace, whatsappSectors]);
+  useEffect(() => { setModal(null); }, [instance, actor?.CODIGO, !!token]);
   const apiRef = useRef(new UsersClient(USERS_URL));
   const alive = useRef(true),
     requestSequence = useRef(0),
@@ -84,6 +88,8 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   const createUser = useCallback(
     async (data: CreateUserDTO) => {
       try {
+        if (!token || !loaded) throw new Error(SECTOR_MAPPING_ERROR);
+        assertCrmSectorSelection(namespace, data.SETOR);
         const res = await apiRef.current.createUser(data);
         dispatch({ type: "add-user", data: res });
         toast.success("Usuário criado com sucesso!");
@@ -94,12 +100,14 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         loadUsers();
       }
     },
-    [token],
+    [token, loaded, namespace],
   );
 
   const updateUser = useCallback(
     async (userId: number, data: UpdateUserDTO) => {
       try {
+        if (!token || !loaded) throw new Error(SECTOR_MAPPING_ERROR);
+        if (data.SETOR !== undefined) assertCrmSectorSelection(namespace, data.SETOR);
         await apiRef.current.updateUser(String(userId), data);
         toast.success("Usuário atualizado com sucesso!");
         closeModal();
@@ -109,7 +117,7 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
         loadUsers();
       }
     },
-    [token],
+    [token, loaded, namespace],
   );
 
   const openUserModal = useCallback((user?: User) => {
@@ -149,24 +157,6 @@ export default function UsersProvider({ children }: IUsersProviderProps) {
   useEffect(() => {
     void loadUsers();
   }, [token, JSON.stringify(state.filters)]);
-  useEffect(() => {
-    let active = true;
-    if (wppApi.current && token) {
-      wppApi.current.setAuth(token);
-      void wppApi.current
-        .getSectors()
-        .then((data) => {
-          if (active && alive.current && currentToken.current === token) setSectors(data);
-        })
-        .catch(() => {
-          if (active) setSectors([]);
-        });
-    }
-    return () => {
-      active = false;
-    };
-  }, [wppApi, token]);
-
   return (
     <UsersContext.Provider
       value={{

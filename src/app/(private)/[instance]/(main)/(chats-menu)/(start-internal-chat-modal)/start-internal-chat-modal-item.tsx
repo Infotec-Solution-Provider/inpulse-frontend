@@ -1,4 +1,6 @@
 import { User } from "@/lib/sdk-local";
+import { useAuthContext } from "@/app/auth-context";
+import { crmSectorOptions, resolveSectorNamespace } from "@/lib/sector-namespace";
 import { Button } from "@mui/material";
 import { useContext, useState } from "react";
 import { InternalChatContext } from "../../../internal-context";
@@ -15,7 +17,8 @@ export default function StartInternalChatModalItem({
   isStarted = false,
   onSelect,
 }: StartChatModalItemProps) {
-  const { sectors } = useContext(WhatsappContext);
+  const { sectors, tenantPolicy } = useContext(WhatsappContext);
+  const { instance, user: actor } = useAuthContext();
   const { startDirectChat } = useContext(InternalChatContext);
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +29,7 @@ export default function StartInternalChatModalItem({
     onSelect();
   };
 
-  const sector = sectors.find((s) => s.id === user.SETOR);
+  const sector = crmSectorOptions(resolveSectorNamespace(instance, actor?.SETOR, tenantPolicy), sectors).find((s) => s.id === user.SETOR);
 
   return (
     <li className="flex w-full items-center justify-between gap-2 rounded-md bg-gray-300 p-2 text-gray-700 dark:bg-slate-700 dark:text-gray-100">

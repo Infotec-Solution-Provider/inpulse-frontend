@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import { resolveSectorNamespace, SECTOR_MAPPING_ERROR } from "@/lib/sector-namespace";
 import { CreateReadyMessageDto } from "@/lib/sdk-local";
 import {
   Button,
@@ -26,7 +27,9 @@ interface Props {
 export default function CreateReadyMessageModal({ onSubmit }: Props) {
   const { closeModal } = useAppContext();
   const { user, instance } = useContext(AuthContext);
-  const { sectors } = useWhatsappContext();
+  const { sectors, tenantPolicy, whatsappSectorId } = useWhatsappContext();
+  const namespace = resolveSectorNamespace(instance, user?.SETOR, tenantPolicy);
+  const defaultSector = namespace.mode === "legacy" ? user?.SETOR : whatsappSectorId;
   const { variables = [] } = useReadyMessagesContext() || {};
 
   const [title, setTitle] = useState("");
@@ -93,7 +96,9 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await onSubmit({ title, message, sectorId }, selectedFile);
+      const selected = namespace.mode === "legacy" ? sectorId : sectorId ?? whatsappSectorId;
+      if (namespace.mode !== "legacy" && (!selected || !namespace.crmByWhatsapp.has(selected))) throw new Error(SECTOR_MAPPING_ERROR);
+      await onSubmit({ title, message, sectorId: selected }, selectedFile);
 
       toast.success("Mensagem rápida criada com sucesso!");
       closeModal();
@@ -125,7 +130,7 @@ export default function CreateReadyMessageModal({ onSubmit }: Props) {
             label="Setor"
             fullWidth
             disabled={!(instance === "nunes" && user?.SETOR === 3)}
-            value={sectorId ?? user?.SETOR ?? ""}
+            value={sectorId ?? defaultSector ?? ""}
             onChange={(e) => setSectorId(e.target.value === "" ? null : Number(e.target.value))}
           >
             <MenuItem value="">Nenhum</MenuItem>

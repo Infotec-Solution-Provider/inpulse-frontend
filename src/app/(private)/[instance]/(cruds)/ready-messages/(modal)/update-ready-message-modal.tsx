@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import { resolveSectorNamespace, SECTOR_MAPPING_ERROR } from "@/lib/sector-namespace";
 import filesService from "@/lib/services/files.service";
 import { ReadyMessage, UpdateReadyMessageDto } from "@/lib/sdk-local";
 import {
@@ -27,9 +28,10 @@ interface Props {
 
 export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Props) {
   const { closeModal } = useAppContext();
-  const { sectors } = useWhatsappContext();
+  const { sectors, tenantPolicy, whatsappSectorId } = useWhatsappContext();
   const { variables = [] } = useReadyMessagesContext() || {};
   const { user, instance } = useContext(AuthContext);
+  const namespace = resolveSectorNamespace(instance, user?.SETOR, tenantPolicy);
   const [title, setTitle] = useState(readyMessage.title || "");
   const [text, setText] = useState(readyMessage.message || "");
   const [sector, setSector] = useState<number | null>(readyMessage.sectorId || null);
@@ -99,6 +101,10 @@ export default function UpdateReadyMessageModal({ readyMessage, onSubmit }: Prop
   );
 
   const handleSubmit = async () => {
+    if (namespace.mode !== "legacy" && (!whatsappSectorId || !sector || !namespace.crmByWhatsapp.has(sector))) {
+      toast.error(SECTOR_MAPPING_ERROR);
+      return;
+    }
     if (title.length < 6) {
       toast.error("Título deve ter pelo menos 6 caracteres");
       return;

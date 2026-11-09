@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const user = { CODIGO: 23, NOME: "Operador sintético", NOME_EXIBICAO: "Operador sintético", NIVEL: "ADMIN", SETOR: 1, LOGIN: "fixture", ATIVO: "SIM" };
 const token = `fixture.${Buffer.from(JSON.stringify({ exp: 4102444800, instance: "odim", userId: 23 })).toString("base64url")}.fixture`;
-async function fixtures(page: Page, parameters: Record<string, string>, authenticated = true, historyChat = false, legacyContacts = false) {
+async function fixtures(page: Page, parameters: Record<string, string>, authenticated = true, historyChat = false, legacyContacts = false, mappedSectors = false) {
   const errors: string[] = [], failedAssets: string[] = [], calls: string[] = [];
   const chat = { id: 41, instance: "odim", contactId: 149, userId: 23, sectorId: 1, type: "ACTIVE", priority: "NORMAL", isFinished: false, startedAt: "2026-11-09T12:00:00Z", isSchedule: false, contact: { id: 149, name: "Contato sintético", phone: "5511999999999", instance: "odim", isBlocked: false, isOnlyAdmin: false }, customer: null, schedule: null };
   page.on("pageerror", error => errors.push(error.message));
@@ -16,9 +16,10 @@ async function fixtures(page: Page, parameters: Record<string, string>, authenti
       if (request.method() === "OPTIONS") return send({});
       if (/\/api\/auth\/(refresh|login)$/.test(path)) return authenticated ? send({ data: { token, user } }) : send({ message: "Fixture anonymous" }, 401);
       if (path.endsWith("/api/auth/session")) return send({ data: { userId: 23, instance: "odim", sectorId: 1, role: "ADMIN" } });
-      if (path.endsWith("/session/parameters")) return send({ parameters, tenantPolicy: null });
-      if (path.endsWith("/sectors")) return send({ data: [{ id: 1, name: "Atendimento sintético", defaultClientId: null }] });
+      if (path.endsWith("/session/parameters")) return send({ parameters, tenantPolicy: mappedSectors ? { revision: "fixture-reviewed-v2", sharedUserIds: [], excludedOperatorIds: [], canTransferAttendance: true, canUseAdminTransferTarget: false, crmSectorId: 1, whatsappSectorId: 12, crmSectorByWhatsappSector: { "12": 1 } } : null });
+      if (path.endsWith("/sectors")) return send({ data: mappedSectors ? [{ id: 1, name: "INFOTEC foreign", defaultClientId: null }, { id: 12, name: "ODIM aprovado", defaultClientId: null }] : [{ id: 1, name: "Atendimento sintético", defaultClientId: null }] });
       if (/\/sector\/1\/clients$/.test(path)) return send({ data: [] });
+      if (/\/sector\/12\/clients$/.test(path)) return send({ data: [] });
       if (path.includes("notification-preferences")) return send({ data: {} });
       if (path.includes("notifications")) return send({ data: { notifications: [], totalCount: 0 } });
       if (path.endsWith("/session/changes")) return send({ data: { chats: [], messages: [], removedChatIds: [], removedMessageIds: [], nextCursor: "fixture-cursor", hasMore: false } });
@@ -121,5 +122,16 @@ for (const next of [false, true]) test(`contact legacy messages open without an 
   await expect(page.getByText("Mensagem antiga sem atendimento", { exact: true })).toBeVisible();
   expect(proof.calls.some(call => call.endsWith("/contacts/149/legacy-messages"))).toBe(true);
   expect(proof.calls.some(call => /^(POST|PUT|PATCH|DELETE) /.test(call) && !call.includes("/api/auth/"))).toBe(false);
+  expect(proof.errors).toEqual([]);
+});
+
+for (const next of [false, true]) test(`CRM sector 1 boots through approved WA sector 12 in the ${next ? "new" : "current"} application`, async ({ page }) => {
+  const proof = await fixtures(page, { feature_new_frontend_enabled: String(next) }, true, false, false, true);
+  await page.goto("/odim");
+  await expect(page.locator(".chats-menu")).toBeVisible();
+  await expect(page).toHaveURL(next ? /\/nova\/odim$/ : /\/odim$/);
+  expect(proof.calls.some(call => call.endsWith("/sector/12/clients"))).toBe(true);
+  expect(proof.calls.some(call => call.endsWith("/sector/1/clients"))).toBe(false);
+  expect(proof.calls.findIndex(call => call.endsWith("/session/parameters"))).toBeLessThan(proof.calls.findIndex(call => call.endsWith("/sector/12/clients")));
   expect(proof.errors).toEqual([]);
 });

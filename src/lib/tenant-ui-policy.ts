@@ -5,6 +5,9 @@ export interface TenantUiPolicy {
   canTransferAttendance: boolean;
   canUseAdminTransferTarget: boolean;
   excludedOperatorIds: number[];
+  crmSectorId?: number;
+  whatsappSectorId?: number;
+  crmSectorByWhatsappSector?: Record<string, number>;
 }
 
 export function canTransferTo(policy: TenantUiPolicy | null | undefined, targetUserId: number): boolean {

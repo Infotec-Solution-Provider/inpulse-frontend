@@ -1,4 +1,5 @@
 import type { User } from "@/lib/sdk-local";
+import { whatsappSectorForCrm, type SectorNamespace } from "@/lib/sector-namespace";
 import filesService from "@/lib/services/files.service";
 import toDateString from "@/lib/utils/date-string";
 import { Formatter } from "@in.pulse-crm/utils";
@@ -15,6 +16,7 @@ export default function getMonitorCardProps(
   chat: MonitorItem,
   users: User[],
   sectors: { id: number; name: string }[],
+  namespace?: SectorNamespace,
 ) {
   const isSchedule = !("chatType" in chat);
   const internal = !isSchedule && chat.chatType === "internal" ? chat : null;
@@ -26,7 +28,7 @@ export default function getMonitorCardProps(
       ? chat.creatorId
       : chat.userId;
   const owner = users.find((user) => user.CODIGO === ownerId);
-  const sectorId = chat.sectorId ?? owner?.SETOR;
+  const sectorId = chat.sectorId ?? (namespace ? whatsappSectorForCrm(namespace, owner?.SETOR) : owner?.SETOR);
   const title = internal
     ? internal.isGroup
       ? internal.groupName || "Grupo interno"

@@ -1,5 +1,7 @@
 "use client";
 import { useAuthContext } from "@/app/auth-context";
+import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { assertCrmSectorSelection, resolveSectorNamespace, SECTOR_MAPPING_ERROR } from "@/lib/sector-namespace";
 import AvatarInput from "@/lib/components/avatar-input";
 import filesService from "@/lib/services/files.service";
 import { CreateUserDTO, FileDirType, User, UserRole } from "@/lib/sdk-local";
@@ -16,7 +18,9 @@ interface UserModalProps {
 }
 
 export default function LegacyUserModal({ user }: UserModalProps) {
-  const { instance } = useAuthContext();
+  const { instance, user: actor } = useAuthContext();
+  const { tenantPolicy, loaded } = useWhatsappContext();
+  const namespace = resolveSectorNamespace(instance, actor?.SETOR, tenantPolicy);
   const { closeModal, createUser, updateUser, modal, sectors } = useUsersContext();
   const [formData, setFormData] = useState<CreateUserDTO>({
     NOME: user?.NOME || "",
@@ -44,6 +48,8 @@ export default function LegacyUserModal({ user }: UserModalProps) {
 
   async function handleSubmit() {
     try {
+      if (namespace.mode !== "legacy" && !loaded) throw new Error(SECTOR_MAPPING_ERROR);
+      assertCrmSectorSelection(namespace, formData.SETOR);
       let AVATAR_ID: number | null = user?.AVATAR_ID ?? null;
 
       if (avatar) {
