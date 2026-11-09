@@ -99,7 +99,8 @@ export default function ChatHeader({
     (!!(currentChat as { agentId?: number | null }).agentId || hasAgentMessages) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
-  const canOpenLegacyHistory = currentChat?.chatType === "wpp" && Boolean(currentChat.id);
+  const canOpenLegacyHistory = currentChat?.chatType === "wpp" && Boolean(currentChat.id) &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.legacyHistory);
   const hasMobileActions =
     canOpenLegacyHistory ||
     canOpenCustomerDetail ||

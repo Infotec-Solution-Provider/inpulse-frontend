@@ -4,6 +4,7 @@ import { Alert, Button, CircularProgress, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAuthContext } from "@/app/auth-context";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 
 interface Entry { id: number; body: string; occurredAt: string }
 interface HistoryPage { entries: Entry[]; nextBeforeId: number | null }
@@ -11,8 +12,8 @@ interface HistoryPage { entries: Entry[]; nextBeforeId: number | null }
 /** Immutable legacy records remain plain text; no author is inferred from their body. */
 export default function LegacyChatHistoryModal({ chatId, onClose }: { chatId: number; onClose: () => void }) {
   const { instance, user, token } = useAuthContext();
-  const { wppApi } = useWhatsappContext();
-  const scope = JSON.stringify([instance, user?.CODIGO]);
+  const { wppApi, parameters } = useWhatsappContext();
+  const scope = JSON.stringify([instance, user?.CODIGO, chatId]);
   const openedScope = useRef(scope).current;
   const close = useRef(onClose);
   close.current = onClose;
@@ -22,7 +23,8 @@ export default function LegacyChatHistoryModal({ chatId, onClose }: { chatId: nu
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
-  const valid = openedScope === scope && Boolean(token);
+  const valid = openedScope === scope && Boolean(token) && isFeatureEnabled(parameters, FEATURE_FLAGS.legacyHistory);
+  const live = useRef(valid); live.current = valid;
 
   useEffect(() => { if (!valid) close.current(); }, [valid]);
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function LegacyChatHistoryModal({ chatId, onClose }: { chatId: nu
     };
     void wppApi.current.ax.get<{ data: HistoryPage }>(`/api/whatsapp/chats/${chatId}/legacy-history`, config)
       .then(response => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || !live.current) return;
         const page = response.data.data;
         if (!Array.isArray(page?.entries) || !(page.nextBeforeId === null || Number.isSafeInteger(page.nextBeforeId))) throw new Error("Invalid history response");
         setEntries(previous => {
@@ -48,8 +50,8 @@ export default function LegacyChatHistoryModal({ chatId, onClose }: { chatId: nu
         });
         setNext(page.nextBeforeId);
       })
-      .catch(() => { if (!controller.signal.aborted) setError(true); })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+      .catch(() => { if (!controller.signal.aborted && live.current) setError(true); })
+      .finally(() => { if (!controller.signal.aborted && live.current) setLoading(false); });
     return () => controller.abort();
   }, [before, chatId, instance, retry, token, user?.CODIGO, valid, wppApi]);
 

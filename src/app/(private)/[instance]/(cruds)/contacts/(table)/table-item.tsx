@@ -8,6 +8,7 @@ import { Edit as EditIcon } from "@/lib/ui-system/crm-icons";
 import { Button, IconButton, TableCell, TableRow, Tooltip, Chip } from "@mui/material";
 import { CONTACTS_TABLE_COLUMNS } from "./table-config";
 import { useContactsContext } from "../contacts-context";
+import LegacyContactHistoryAction from "@/lib/components/legacy-contact-history-action";
 
 interface ContactWithExtras extends WppContact {
   customerId?: number;
@@ -100,6 +101,7 @@ export default function ContactsTableItem({
         align="right"
       >
         <div className="flex items-center justify-end gap-1">
+          <LegacyContactHistoryAction contactId={contact.id} />
           <Tooltip title="Editar" aria-label="Editar">
             <IconButton
               aria-label="Editar"

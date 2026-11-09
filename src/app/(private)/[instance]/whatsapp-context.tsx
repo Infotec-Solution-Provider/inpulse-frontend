@@ -1,4 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
+import { DEFAULT_FEATURE_PARAMETERS } from "@/lib/feature-flags";
 import { MessageSendStageError, type SendStage } from "@/lib/utils/message-send-diagnostics";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { SendTemplateData } from "@/lib/components/send-template-modal";
@@ -315,13 +316,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
-  const [parameters, setParameters] = useState<Record<string, string>>({});
+  const [parameters, setParameters] = useState<Record<string, string>>(DEFAULT_FEATURE_PARAMETERS);
   const [tenantPolicy, setTenantPolicy] = useState<TenantUiPolicy | null>(null);
   const refreshParameters = useCallback(async () => {
     const scope = liveAuth.current.scope;
     const response = await api.current.ax.get<{ parameters: Record<string, string>; tenantPolicy?: TenantUiPolicy | null }>("/api/whatsapp/session/parameters");
     if (scope === liveAuth.current.scope) {
-      setParameters(response.data.parameters);
+      setParameters({ ...DEFAULT_FEATURE_PARAMETERS, ...response.data.parameters });
       setTenantPolicy(response.data.tenantPolicy ?? null);
     }
   }, []);
@@ -1129,7 +1130,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
               );
               if (!isCurrent()) return;
               const parameters: Record<string, string> = parametersResponse.data["parameters"];
-              setParameters(parameters);
+              setParameters({ ...DEFAULT_FEATURE_PARAMETERS, ...parameters });
               setTenantPolicy(parametersResponse.data.tenantPolicy ?? null);
               console.log("Loaded parameters:", parameters);
 
@@ -1170,7 +1171,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setChats([]);
         setMessages([]);
         setTemplates([]);
-        setParameters({});
+        setParameters(DEFAULT_FEATURE_PARAMETERS);
         setTenantPolicy(null);
         setNotifications([]);
         setNotificationPreferences(createDefaultNotificationPreferences());

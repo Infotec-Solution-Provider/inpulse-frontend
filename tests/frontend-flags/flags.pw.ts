@@ -72,6 +72,7 @@ test("canceling an active call unload does not persist a frontend choice", async
 
 
 test("legacy chat history preserves plain text and paginates by cursor without inferring an author", async ({ page }) => {
+  await parameters(page, { feature_legacy_history_enabled: "true" });
   await page.goto("/odim?mode=history");
   await expect(page.getByText("<img src=x onerror=alert(1)>\n  Texto com espaços", { exact: true })).toBeVisible();
   await expect(page.locator("article img")).toHaveCount(0);
@@ -86,6 +87,7 @@ test("legacy chat history preserves plain text and paginates by cursor without i
 });
 
 test("legacy history distinguishes backend failure from an empty archive and retries explicitly", async ({ page }) => {
+  await parameters(page, { feature_legacy_history_enabled: "true" });
   await page.goto("/odim?mode=history&history-error=1");
   await expect(page.getByText("Não foi possível carregar o histórico antigo.", { exact: false })).toBeVisible();
   await expect(page.getByText("Não há registros do sistema antigo para esta conversa.")).toHaveCount(0);
@@ -97,6 +99,7 @@ test("legacy history distinguishes backend failure from an empty archive and ret
 });
 
 test("legacy history closes on identity change and ignores a delayed response", async ({ page }) => {
+  await parameters(page, { feature_legacy_history_enabled: "true" });
   await page.goto("/odim?mode=history&history-delay=500");
   await expect.poll(() => page.evaluate(() => (window as any).flagTest.state.historyCalls.length)).toBe(1);
   await page.evaluate(() => (window as any).flagTest.update({ user: { CODIGO: 24, NIVEL: "ADMIN" } }));
