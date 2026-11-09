@@ -1,5 +1,5 @@
 import { Customer, WppChatPriority, WppChatType, WppContact, WppMessage } from "@/lib/sdk-local";
-import { Formatter } from "@in.pulse-crm/utils";
+import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { IconButton, Avatar, Tooltip, Chip } from "@mui/material";
 import { useCallback, useContext, useMemo } from "react";
 import { DetailedChat, WhatsappContext } from "../../../whatsapp-context";
@@ -52,7 +52,7 @@ export default function StartChatModalItem({
 
   const isCustomerDetailEnabled = parameters["customer_detail_modal_enabled"] === "true";
 
-  const handleClickStart = useCallback(() => {
+  const handleClickStart = useCallback(async () => {
     prepareReadOnlyOpen(false);
 
     if (parameters["is_official"] === "true") {
@@ -60,10 +60,14 @@ export default function StartChatModalItem({
         openModal(
           <SendTemplateModal
             onClose={closeModal}
-            onSendTemplate={(data) => {
+            onSendTemplate={async (data) => {
               prepareReadOnlyOpen(false);
-              startChatByContactId(contact.id, data);
-              closeModal();
+              try {
+                await startChatByContactId(contact.id, data);
+                closeModal();
+              } catch (error) {
+                toast.error(sanitizeErrorMessage(error) || "Não foi possível iniciar a conversa.");
+              }
             }}
             contact={contact}
             customer={customer}
@@ -71,8 +75,12 @@ export default function StartChatModalItem({
         );
       }, 1000); // delay de 1000 ms (1 segundo)
     } else {
-      startChatByContactId(contact.id);
-      onSelect();
+      try {
+        await startChatByContactId(contact.id);
+        onSelect();
+      } catch (error) {
+        toast.error(sanitizeErrorMessage(error) || "Não foi possível iniciar a conversa.");
+      }
     }
   }, [
     contact.id,

@@ -15,6 +15,7 @@
     "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
     "test:e2e": "playwright test --project=chromium",
     "test:chat-preferences:e2e": "playwright test --config tests/chat-preferences.config.ts",
+    "test:chat-start:e2e": "playwright test --config tests/chat-start.config.ts",
     "test:message-sync": "vitest run src/lib/utils/session-change-poller.test.ts src/lib/utils/session-change-state.test.ts",
     "test:message-sync:e2e": "playwright test --config tests/session-changes.config.ts"
   },

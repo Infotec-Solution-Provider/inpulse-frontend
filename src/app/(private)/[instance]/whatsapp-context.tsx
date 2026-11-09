@@ -75,6 +75,7 @@ import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
 import useSessionChanges, { type SyncStatus } from "@/lib/hooks/use-session-changes";
 import { mergeChangedCache, mergeChangedChats, mergeChangedMessages } from "@/lib/utils/session-change-state";
+import { startUserChat } from "@/lib/utils/start-user-chat";
 import {
   canReactToWhatsappMessage,
   MessageReactionTarget,
@@ -248,6 +249,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const globalChannel = useRef<WppClient | null>(null);
   const chatsChannels = useRef(new Map<number, number>());
   const userInitiatedChatContactId = useRef<number | null>(null);
+  const latestStartChatRequest = useRef(0);
   const [chats, setChatsState] = useState<DetailedChat[]>([]);
   const setChats = useCallback((update: SetStateAction<DetailedChat[]>) => {
     setChatsState((previous) =>
@@ -1037,9 +1039,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     async (contactId: number, template?: SendTemplateData) => {
       api.current.setAuth(token || "");
       pendingReadOnlyOpenRef.current = false;
-      // Marca que o usuário iniciou este chat manualmente
-      userInitiatedChatContactId.current = contactId;
-      return api.current.startChatByContactId(contactId, template);
+      return startUserChat(userInitiatedChatContactId, latestStartChatRequest, contactId, () =>
+        api.current.startChatByContactId(contactId, template),
+      );
     },
     [api, token],
   );

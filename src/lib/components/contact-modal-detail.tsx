@@ -18,7 +18,7 @@ import BusinessIcon from "@mui/icons-material/Business";
 import ArticleIcon from "@mui/icons-material/Article";
 import BadgeIcon from "@mui/icons-material/Badge";
 import { WppChatWithDetailsAndMessages, WppContact } from "@/lib/sdk-local";
-import { Formatter } from "@in.pulse-crm/utils";
+import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { useMemo, useState, useEffect } from "react";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { useTheme } from "@mui/material/styles";
@@ -91,7 +91,7 @@ export default function ContactModal({
           }
         } catch (err) {
           console.error("Erro ao criar e iniciar conversa:", err);
-          toast.error("Não foi possível criar/iniciar a conversa.");
+          toast.error(sanitizeErrorMessage(err) || "Não foi possível criar/iniciar a conversa.");
         }
       }
       return;
@@ -107,7 +107,7 @@ export default function ContactModal({
       onClose();
     } catch (err) {
       console.error("Erro ao iniciar conversa:", err);
-      toast.error("Falha ao iniciar conversa. Veja o console para detalhes.");
+      toast.error(sanitizeErrorMessage(err) || "Não foi possível iniciar a conversa.");
     }
   };
 
@@ -130,7 +130,7 @@ export default function ContactModal({
         onClose();
       } catch (err) {
         console.error("Erro ao iniciar conversa após criar contato:", err);
-        toast.error("Contato criado, mas não foi possível iniciar a conversa.");
+        toast.error(sanitizeErrorMessage(err) || "Contato criado, mas não foi possível iniciar a conversa.");
       }
     } else {
       console.warn("[ContactModal] createContact did not return id", created);
