@@ -231,6 +231,7 @@ export interface WppChatTransferEventData {
 	chatId: number;
 }
 export interface WppContactMessagesReadEventData {
+	userId?: number;
 	contactId: number;
 }
 export interface WppMessageEventData {

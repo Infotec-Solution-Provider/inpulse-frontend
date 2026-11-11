@@ -15,6 +15,8 @@
     "test:monitor": "vitest run monitor socket-subscriptions",
     "test:monitor:e2e": "playwright test --config tests/monitor.config.ts",
     "test:channels:e2e": "playwright test --config tests/channels.config.ts",
+    "test:message-sync": "vitest run src/lib/utils/session-change-poller.test.ts src/lib/utils/session-change-state.test.ts",
+    "test:message-sync:e2e": "playwright test --config tests/session-changes.config.ts",
     "test:parameters:e2e": "playwright test --config tests/parameters.config.ts",
     "test:customer-segments:e2e": "playwright test --config tests/customer-segments.config.ts",
     "test:crm-catalogs:e2e": "playwright test --config tests/crm-catalogs.config.ts",

@@ -98,7 +98,7 @@ export default function ReceiveMessageHandler(
             if (chat.contactId === message.contactId) {
               const isCurrentWppChat = x?.chatType === "wpp" && x.contactId === message.contactId;
               const isFromMe = message.from.startsWith("me");
-              const isUnread = !isCurrentWppChat && !isFromMe;
+              const isUnread = !isCurrentWppChat && (chat.isUnread || !isFromMe);
 
               return {
                 ...chat,

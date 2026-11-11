@@ -34,7 +34,7 @@ export default function ChatStartedHandler(
         if (!latest) return current;
         return Number(latest.timestamp) > Number(current.timestamp) ? latest : current;
       }, null);
-      const isUnread = lastMessage ? !lastMessage.from.startsWith("me") : false;
+      const isUnread = userInitiatedChatContactId.current !== chat.contactId;
       const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage, chatType: "wpp" };
 
       socket.joinRoom(`chat:${chat.id}`);
@@ -72,6 +72,9 @@ export default function ChatStartedHandler(
                 isUnread: existingChat.isUnread,
               }
             : parsedChat;
+        if (existingChat.userId === parsedChat.userId) {
+          next[existingIndex] = { ...next[existingIndex]!, isUnread: existingChat.isUnread };
+        }
         return next;
       });
 
