@@ -20,6 +20,8 @@ O artefato é `dist-admin/`, incluindo a fonte Inter, CSS e JavaScript. O proxy 
 
 O frontend não guarda JWT, credenciais ou rascunhos em storage. Segredos começam vazios, vazio preserva a credencial e remoção é explícita. Somente identificadores de operações pendentes ficam no `sessionStorage`, vinculados ao ator e destino, para permitir conferência após recarga. Mutações não são repetidas automaticamente; falhas incertas exigem consulta do recibo. Conflito de revisão exige descartar e recarregar antes de salvar novamente.
 
+Quando uma operação permanece `UNKNOWN`, “Encerrar acompanhamento” permite confirmar o encerramento somente local: remove o bookmark, descarta o rascunho e recarrega os valores atuais. O histórico continua indeterminado e nenhuma operação é reenviada ou marcada como concluída. Uma nova alteração exige revisão atual e uma nova ação explícita com outro identificador; navegação e logout ficam liberados.
+
 A sessão HttpOnly dura 30 minutos e a SPA tenta renová-la a cada cinco minutos. A renovação revalida o ator no users-service. Se a autenticação estiver indisponível, a sessão original continua até expirar; após isso, a recuperação é via SSH.
 
 ## Validação local

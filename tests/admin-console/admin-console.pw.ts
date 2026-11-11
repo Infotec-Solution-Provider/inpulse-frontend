@@ -214,3 +214,57 @@ test("loads tenant-wide AI and discovers resource selectors from snapshots", asy
     );
   }
 });
+
+test("acknowledges a permanently unknown operation locally without replay or backend status changes", async ({
+  page,
+  request,
+}) => {
+  await request.post("/__fixture/permanent", { data: {} });
+  await page
+    .getByRole("textbox", { name: "Chave do provedor", exact: true })
+    .fill("discard-this-secret");
+  await page.getByRole("checkbox", { name: "Inteligência artificial", exact: true }).check();
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar salvamento" }).click();
+  await expect(page.getByText("Resultado a conferir", { exact: false })).toBeVisible();
+  const first = (await (await request.get("/__fixture/state")).json()).calls[0];
+  const originalId = first.body.operationId;
+  await page.getByRole("button", { name: "Encerrar acompanhamento", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("continua indeterminado no histórico");
+  await expect(dialog).not.toContainText("discard-this-secret");
+  await dialog.getByRole("button", { name: "Encerrar acompanhamento", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Chave do provedor", exact: true })).toHaveValue(
+    "",
+  );
+  await expect(page.getByRole("status")).toContainText("Nenhuma alteração pendente");
+  expect(await page.evaluate(() => JSON.stringify({ ...sessionStorage }))).not.toContain(
+    originalId,
+  );
+  await page.screenshot({ path: "test-results/admin-console-unknown-ack.png", fullPage: true });
+  const tenant = page.getByRole("combobox", { name: "Tenant de destino", exact: true });
+  await tenant.fill("Cliente");
+  await page.getByRole("option", { name: "Cliente (cliente)", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Nome de exibição", exact: true })).toHaveValue(
+    "cliente · Empresa",
+  );
+  await page.getByRole("spinbutton", { name: "Tempo de espera", exact: true }).fill("3");
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar salvamento" }).click();
+  await expect(page.getByRole("status")).toContainText("Nenhuma alteração pendente");
+  const calls = (await (await request.get("/__fixture/state")).json()).calls;
+  expect(calls).toHaveLength(2);
+  expect(calls[1].body.operationId).not.toBe(originalId);
+  expect(calls[1].body.revision).not.toBe(first.body.revision);
+  expect(calls[1].body.changes).toEqual([{ key: "timeout", action: "set", value: 3 }]);
+  const original = await (
+    await page.request.get(`/infotec/admin/api/operations/${originalId}`)
+  ).json();
+  expect(original.state).toBe("UNKNOWN");
+  await page.getByRole("button", { name: "Servidor", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Servidor", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Sair", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Acesso administrativo", exact: true }),
+  ).toBeVisible();
+});

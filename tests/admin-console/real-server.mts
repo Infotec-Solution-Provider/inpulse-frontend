@@ -55,6 +55,7 @@ class BrowserMemoryStore extends MemoryStore {
 let revision = 1,
   authOnline = true,
   uncertain = false,
+  permanent = false,
   calls: any[] = [],
   status = "online";
 const receipts = new Map<string, any>();
@@ -184,6 +185,10 @@ const adapters = {
       snapshot: snapshot(command),
       changes,
     };
+    if (permanent) {
+      permanent = false;
+      throw new AdapterUncertainError();
+    }
     receipts.set(command.operationId, result);
     if (uncertain) {
       uncertain = false;
@@ -289,6 +294,7 @@ app.use("/__fixture", async (req: any, res: any) => {
     revision = 1;
     authOnline = !data.anonymous;
     uncertain = false;
+    permanent = false;
     calls = [];
     status = "online";
     values.feature_ai_enabled = false;
@@ -300,6 +306,7 @@ app.use("/__fixture", async (req: any, res: any) => {
   }
   if (req.path === "/advance") revision++;
   if (req.path === "/uncertain") uncertain = true;
+  if (req.path === "/permanent") permanent = true;
   if (req.path === "/reconcile") await operations.recover();
   res.json({ calls });
 });

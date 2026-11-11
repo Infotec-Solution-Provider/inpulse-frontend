@@ -7,6 +7,7 @@ const api = "/infotec/admin/api";
 let revision = 1,
   anonymous = false,
   uncertain = false,
+  permanent = false,
   calls = [],
   operations = new Map(),
   state = "online";
@@ -103,12 +104,14 @@ http
           values.feature_ai_enabled = false;
           anonymous = !!body.anonymous;
           uncertain = false;
+          permanent = false;
           calls = [];
           operations = new Map();
           state = "online";
         }
         if (url.pathname.endsWith("/advance")) revision++;
         if (url.pathname.endsWith("/uncertain")) uncertain = true;
+        if (url.pathname.endsWith("/permanent")) permanent = true;
         return json(res, 200, { calls });
       }
       if (url.pathname.startsWith(api)) {
@@ -238,6 +241,11 @@ http
           if (body.changes?.length) revision++;
           if (body.action === "stop") state = "stopped";
           if (["start", "restart"].includes(body.action)) state = "online";
+          if (permanent) {
+            permanent = false;
+            operations.set(body.operationId, { operationId: body.operationId, state: "UNKNOWN" });
+            return json(res, 202, { operationId: body.operationId, state: "UNKNOWN" });
+          }
           operations.set(body.operationId, {
             operationId: body.operationId,
             state: "COMMITTED",

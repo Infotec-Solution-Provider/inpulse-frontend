@@ -211,8 +211,8 @@ a {
   flex-wrap: wrap;
 }
 .admin-savebar {
-  position: sticky;
-  bottom: 12px;
+  position: relative;
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   gap: 14px;

@@ -50,8 +50,9 @@ export function ConfigEditor(props: EditorProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [noticeKind, setNoticeKind] = useState<"success" | "warning">("success");
   const [operation, setOperation] = useState<Operation | null>(null);
-  const [confirmation, setConfirmation] = useState<"save" | "apply" | null>(null);
+  const [confirmation, setConfirmation] = useState<"save" | "apply" | "release" | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [filter, setFilter] = useState("all");
@@ -115,6 +116,7 @@ export function ConfigEditor(props: EditorProps) {
     if (!mounted.current) return;
     setOperation(next);
     if (next.state === "COMMITTED") {
+      setNoticeKind("success");
       try {
         sessionStorage.removeItem(pendingKey);
       } catch {
@@ -173,7 +175,7 @@ export function ConfigEditor(props: EditorProps) {
   }, [operation]);
 
   const execute = async () => {
-    if (!snapshot || !confirmation || busy) return;
+    if (!snapshot || !confirmation || confirmation === "release" || busy) return;
     const action = confirmation;
     setConfirmation(null);
     setSending(true);
@@ -215,6 +217,24 @@ export function ConfigEditor(props: EditorProps) {
       if (mounted.current) setSending(false);
     }
   };
+  const releaseTracking = async () => {
+    if (sending || operation?.state !== "UNKNOWN") return;
+    setConfirmation(null);
+    try {
+      sessionStorage.removeItem(pendingKey);
+    } catch {
+      /* Local bookmark only. */
+    }
+    setDrafts({});
+    setSnapshot(null);
+    setOperation(null);
+    setError("");
+    setNoticeKind("warning");
+    setNotice(
+      "Acompanhamento local encerrado. A operação continua indeterminada no histórico. Revise os valores recarregados antes de outra alteração.",
+    );
+    await load();
+  };
 
   const visible =
     snapshot?.catalog.filter(
@@ -239,7 +259,7 @@ export function ConfigEditor(props: EditorProps) {
     <div className="admin-stack">
       {error && <Alert severity="error">{error}</Alert>}
       {notice && (
-        <Alert severity="success" onClose={() => setNotice("")}>
+        <Alert severity={noticeKind} onClose={() => setNotice("")}>
           {notice}
         </Alert>
       )}
@@ -247,9 +267,20 @@ export function ConfigEditor(props: EditorProps) {
         <Alert
           severity={operation.state === "UNKNOWN" ? "warning" : "info"}
           action={
-            <Button disabled={sending} color="inherit" onClick={() => void reconcile()}>
-              Conferir resultado
-            </Button>
+            <div className="admin-actions">
+              <Button disabled={sending} color="inherit" onClick={() => void reconcile()}>
+                Conferir resultado
+              </Button>
+              {operation.state === "UNKNOWN" && (
+                <Button
+                  disabled={sending}
+                  color="inherit"
+                  onClick={() => setConfirmation("release")}
+                >
+                  Encerrar acompanhamento
+                </Button>
+              )}
+            </div>
           }
         >
           {operation.state === "UNKNOWN" ? "Resultado a conferir" : "Operação em andamento"} ·{" "}
@@ -398,11 +429,22 @@ export function ConfigEditor(props: EditorProps) {
       )}
       <Dialog open={!!confirmation} onClose={() => setConfirmation(null)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {confirmation === "save" ? "Salvar alterações?" : "Aplicar versão salva?"}
+          {confirmation === "release"
+            ? "Encerrar acompanhamento?"
+            : confirmation === "save"
+              ? "Salvar alterações?"
+              : "Aplicar versão salva?"}
         </DialogTitle>
         <DialogContent>
           <p>{props.label}</p>
-          {confirmation === "save" ? (
+          {confirmation === "release" ? (
+            <p>
+              O resultado continua indeterminado no histórico. Esta ação encerra somente o
+              acompanhamento local e descarta o rascunho, incluindo credenciais digitadas. Nenhuma
+              operação será reenviada. Os valores atuais serão recarregados e devem ser revisados
+              antes de outra alteração.
+            </p>
+          ) : confirmation === "save" ? (
             <ul className="admin-diff">
               {compiled.changes.map((change) => (
                 <li key={change.key}>
@@ -427,8 +469,13 @@ export function ConfigEditor(props: EditorProps) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmation(null)}>Cancelar</Button>
-          <Button variant="contained" onClick={() => void execute()}>
-            Confirmar {confirmation === "save" ? "salvamento" : "aplicação"}
+          <Button
+            variant="contained"
+            onClick={() => void (confirmation === "release" ? releaseTracking() : execute())}
+          >
+            {confirmation === "release"
+              ? "Encerrar acompanhamento"
+              : `Confirmar ${confirmation === "save" ? "salvamento" : "aplicação"}`}
           </Button>
         </DialogActions>
       </Dialog>

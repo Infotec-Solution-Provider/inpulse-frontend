@@ -314,6 +314,7 @@ export function ServerScreen({
     action: "start" | "stop" | "restart" | "apply";
   } | null>(null);
   const [operation, setOperation] = useState<Operation | null>(null);
+  const [confirmRelease, setConfirmRelease] = useState(false);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const pendingKey = `inpulse-admin-server-operation:${actorId}:${env}`;
@@ -463,19 +464,26 @@ export function ServerScreen({
               severity={operation.state === "COMMITTED" ? "success" : "warning"}
               action={
                 active ? (
-                  <Button
-                    disabled={sending}
-                    onClick={() => {
-                      setSending(true);
-                      api
-                        .operation(operation.operationId)
-                        .then(finish)
-                        .catch((err) => setError(message(err)))
-                        .finally(() => setSending(false));
-                    }}
-                  >
-                    Conferir resultado
-                  </Button>
+                  <div className="admin-actions">
+                    <Button
+                      disabled={sending}
+                      onClick={() => {
+                        setSending(true);
+                        api
+                          .operation(operation.operationId)
+                          .then(finish)
+                          .catch((err) => setError(message(err)))
+                          .finally(() => setSending(false));
+                      }}
+                    >
+                      Conferir resultado
+                    </Button>
+                    {operation.state === "UNKNOWN" && (
+                      <Button disabled={sending} onClick={() => setConfirmRelease(true)}>
+                        Encerrar acompanhamento
+                      </Button>
+                    )}
+                  </div>
                 ) : undefined
               }
             >
@@ -602,6 +610,42 @@ export function ServerScreen({
             onClick={() => void execute()}
           >
             Confirmar ação
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={confirmRelease}
+        onClose={() => setConfirmRelease(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Encerrar acompanhamento?</DialogTitle>
+        <DialogContent>
+          <p>
+            O resultado da operação continua indeterminado no histórico. Apenas o acompanhamento
+            local será encerrado. Nenhuma ação será reenviada. Confira o estado atualizado dos
+            processos antes de outro comando.
+          </p>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmRelease(false)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            disabled={sending}
+            onClick={() => {
+              if (operation?.state !== "UNKNOWN") return;
+              try {
+                sessionStorage.removeItem(pendingKey);
+              } catch {
+                /* Local bookmark only. */
+              }
+              setConfirmRelease(false);
+              setOperation(null);
+              setError("");
+              services.reload();
+            }}
+          >
+            Encerrar acompanhamento
           </Button>
         </DialogActions>
       </Dialog>
