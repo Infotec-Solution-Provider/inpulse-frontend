@@ -74,7 +74,7 @@ export class SessionChangePoller<S, T> {
     this.wakeAgain = false;
     this.controller = new AbortController();
     const signal = this.controller.signal;
-    const timeout = setTimeout(() => this.controller?.abort(), 20000);
+    const timeout = setTimeout(() => this.controller?.abort(), 60000);
     let delay = 120000;
     try {
       if (this.resetRequested) { this.cursor = null; this.resetRequested = false; }
