@@ -1,5 +1,6 @@
 "use client";
 import { AuthContext } from "@/app/auth-context";
+import { AdminConsoleEntry } from "@/lib/admin/admin-console-entry";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
 import LazyNotificationsDropdown from "@/lib/components/lazy-notifications-dropdown";
@@ -197,6 +198,7 @@ const MobileMenu = ({
           )}
           <Divider sx={{ my: 2 }} />
 
+          <AdminConsoleEntry menu />
           {/* Logout */}
           <ListItem>
             <ListItemButton onClick={signOut}>
@@ -324,6 +326,7 @@ export default function Header() {
           </div>
 
           <div className="hidden items-center gap-2 md:flex">
+            <AdminConsoleEntry />
             <ThemeToggleButton />
 
             <LazyNotificationsDropdown />

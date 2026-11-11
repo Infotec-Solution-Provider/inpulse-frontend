@@ -28,7 +28,12 @@
     "test:mentions": "vitest run src/lib/utils/message-mentions.test.ts src/lib/event-handlers/message-mentions.test.ts src/lib/components/message-mention-text.test.tsx",
     "test:e2e": "playwright test --project=chromium",
     "test:goals:e2e": "playwright test --config tests/goals.config.ts",
-    "test:goals:types": "tsc --noEmit --project tests/goals/tsconfig.json"
+    "test:goals:types": "tsc --noEmit --project tests/goals/tsconfig.json",
+    "dev:admin": "vite --config vite.admin.config.mts",
+    "build:admin": "vite build --config vite.admin.config.mts",
+    "typecheck:admin": "tsc --noEmit --project tsconfig.admin.json",
+    "test:admin": "vitest run admin-console src/lib/admin",
+    "test:admin:e2e": "pnpm build:admin && playwright test --config tests/admin-console.config.ts"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.7",
@@ -82,6 +87,7 @@
     "prettier-plugin-tailwindcss": "^0.6.11",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
+    "vite": "8.2.2",
     "vitest": "^4.1.10"
   },
   "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"

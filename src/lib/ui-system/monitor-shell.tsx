@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthContext } from "@/app/auth-context";
+import { AdminConsoleEntry } from "@/lib/admin/admin-console-entry";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { useThemeContext } from "@/app/theme-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
@@ -498,6 +499,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               </Typography>
             </Box>
             <Divider />
+            <AdminConsoleEntry menu />
             <MenuItem
               onClick={() => {
                 setUserAnchor(null);

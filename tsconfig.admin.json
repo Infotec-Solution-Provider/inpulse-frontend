@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "plugins": [], "incremental": false, "types": ["vite/client", "node"] },
+  "include": [
+    "admin-console/**/*.ts",
+    "admin-console/**/*.tsx",
+    "vite.admin.config.mts",
+    "src/lib/admin/**/*.ts",
+    "src/lib/admin/**/*.tsx"
+  ],
+  "exclude": ["node_modules", "admin-console/**/*.test.ts", "src/lib/admin/**/*.test.ts"]
+}

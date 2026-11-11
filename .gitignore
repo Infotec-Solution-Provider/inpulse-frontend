@@ -57,3 +57,5 @@ node_modules/
 # Local G07 browser artifacts
 /test-results-goals/
 /.cache/crm-administration-vite/
+/dist-admin/
+/.cache/admin-console-vite/
