@@ -104,6 +104,7 @@ export const whatsapp = {
   }),
   editMessage: (id: string, text: string) => recordSend("edit", id, { text } as Payload),
   isReadOnlyMode: false,
+  currentChatMessages: [] as WppMessage[],
   messages: { 101: [quotedMessage] } as Record<number, WppMessage[]>,
 };
 export const internal = {
