@@ -30,9 +30,11 @@ export default function ChatStartedHandler(
     
     const lastMessage = messages?.reduce((prev, current) => {
       return +prev.timestamp > +current.timestamp ? prev : current;
-    }, messages[0]);
+    }, messages?.[0]);
     
-    const isUnread = !lastMessage.from.startsWith("me");
+    const initiatedByUser = userInitiatedChatContactId.current === chat.contactId;
+    // Arrival belongs to the recipient, regardless of who sent/read the last message.
+    const isUnread = !initiatedByUser;
     socket.joinRoom(`chat:${chat.id}`);
 
     notify?.({
@@ -42,7 +44,7 @@ export default function ChatStartedHandler(
       isChatFocused: false,
     });
 
-    const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage, chatType: "wpp" };
+    const parsedChat: DetailedChat = { ...chat, isUnread, lastMessage: lastMessage ?? null, chatType: "wpp" };
 
     setMessages((prev) => {
       const newMessages = { ...prev };
