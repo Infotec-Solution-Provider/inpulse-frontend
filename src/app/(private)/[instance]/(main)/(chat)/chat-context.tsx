@@ -100,6 +100,7 @@ function ScopedChatProvider({
   const {
     sendMessage,
     currentChat,
+    currentChatMessages,
     messages: whatsappMsgs,
     editMessage,
     isReadOnlyMode,
@@ -107,7 +108,7 @@ function ScopedChatProvider({
     lookupMessageAttempt,
   } = useContext(WhatsappContext);
   const { sendInternalMessage, messages: internalMsgs } = useContext(InternalChatContext);
-  const { token, user } = useContext(AuthContext);
+  const { instance, token, user } = useContext(AuthContext);
   const activeSession = !!token && !!user;
   const [state, setState] = useState(initialState);
   const stateRef = useRef(state);
@@ -510,9 +511,17 @@ function ScopedChatProvider({
         return internalMsgs[contextId]?.find((msg) => msg.id === id) || null;
       }
 
-      return whatsappMsgs[contextId]?.find((msg) => msg.id === id) || null;
+      const matchesScope = (msg: WppMessage) =>
+        msg.id === id && msg.contactId === contextId && msg.instance === instance;
+      // Opening a chat loads its history independently of the session cache.
+      // Prefer that history, including originals from earlier chats of this contact.
+      if (currentChat?.chatType === "wpp" && currentChat.contactId === contextId) {
+        const original = currentChatMessages.find(matchesScope);
+        if (original) return original;
+      }
+      return whatsappMsgs[contextId]?.find(matchesScope) || null;
     },
-    [whatsappMsgs, internalMsgs],
+    [currentChat, currentChatMessages, instance, whatsappMsgs, internalMsgs],
   );
 
   const handleQuoteMessage = useCallback(
