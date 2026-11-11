@@ -1159,7 +1159,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     if (socket) {
       socket.on(
         SocketEventType.WppContactMessagesRead,
-        ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages),
+        ReadChatHandler(currentChatRef, setChats, setMessages, setUniqueCurrentChatMessages, user?.CODIGO),
       );
       socket.on(
         SocketEventType.WppChatStarted,
@@ -1252,7 +1252,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         socket.off(SocketEventType.WppMessageDelete);
       };
     }
-  }, [socket, chats, currentChat, emitPolicyNotification]);
+  }, [socket, chats, currentChat, emitPolicyNotification, user?.CODIGO]);
 
   useSessionChanges({
     scope: sessionScope,

@@ -5,6 +5,7 @@ import { Dispatch, RefObject, SetStateAction } from "react";
 
 interface ReadChatCallback {
   contactId: number;
+  userId?: number;
 }
 
 export default function ReadChatHandler(
@@ -12,8 +13,9 @@ export default function ReadChatHandler(
   setChats: Dispatch<SetStateAction<DetailedChat[]>>,
   setMessages: Dispatch<SetStateAction<Record<number, WppMessage[]>>>,
   setCurrentChatMessages: Dispatch<SetStateAction<WppMessage[]>>,
+  currentUserId?: number,
 ) {
-  return ({ contactId }: ReadChatCallback) => {
+  return ({ contactId, userId }: ReadChatCallback) => {
     setMessages((prev) => {
       if (prev[contactId]) {
         prev[contactId] = prev[contactId].map((m) => {
@@ -31,7 +33,7 @@ export default function ReadChatHandler(
 
     setChats((prev) =>
       prev.map((chat) => {
-        if (chat.contactId === contactId) {
+        if (chat.contactId === contactId && (userId == null || currentUserId == null || userId === currentUserId)) {
           return {
             ...chat,
             isUnread: false,
