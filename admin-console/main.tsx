@@ -170,7 +170,7 @@ function App() {
     ? { environment, actorId: session.actor.userId, onDirty: setDirty, onBusy: setBusy, canLeave }
     : null;
   const remaining = session
-    ? Math.max(0, Math.ceil((new Date(session.expiresAt).getTime() - now) / 60_000))
+    ? Math.min(30, Math.max(0, Math.ceil((new Date(session.expiresAt).getTime() - now) / 60_000)))
     : 0;
   return (
     <ThemeProvider theme={createPilotTheme(mode)}>

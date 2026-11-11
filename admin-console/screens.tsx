@@ -32,6 +32,19 @@ const message = (error: unknown) =>
 const environmentName = (env: Environment) => (env === "production" ? "Produção" : "Homologação");
 const date = (value?: string) => (value ? new Date(value).toLocaleString("pt-BR") : "—");
 const bytes = (value: number) => `${Math.round(value / 1024 / 1024)} MB`;
+const configurationStatusLabels: Record<string, string> = {
+  applied: "Aplicada",
+  unknown: "Não confirmada",
+  pending: "Pendente",
+  build_required: "Requer compilação",
+  unavailable: "Indisponível",
+};
+const healthStatusLabels: Record<string, string> = {
+  limited: "Verificação limitada",
+  healthy: "Saudável",
+  unhealthy: "Não saudável",
+  unknown: "Não verificada",
+};
 
 export function useRead<T>(read: (signal: AbortSignal) => Promise<T>, dependencies: unknown[]) {
   const [data, setData] = useState<T | null>(null),
@@ -524,10 +537,13 @@ export function ServerScreen({
                       {bytes(service.memory)}
                     </td>
                     <td>
-                      {service.health.status}
+                      {healthStatusLabels[service.health.status] ?? service.health.status}
                       <div className="admin-metadata">{service.health.message}</div>
                     </td>
-                    <td>{service.configuration.state}</td>
+                    <td>
+                      {configurationStatusLabels[service.configuration.state] ??
+                        service.configuration.state}
+                    </td>
                     <td>
                       <div className="admin-actions">
                         <Button
