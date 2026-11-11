@@ -129,6 +129,7 @@ export function ConfigEditor(props: EditorProps) {
       else await load();
       if (mounted.current) setOperation(null);
     } else if (next.state === "NOT_COMMITTED") {
+      if (next.result?.error?.statusCode === 409) setConflicted(true);
       try {
         sessionStorage.removeItem(pendingKey);
       } catch {

@@ -80,7 +80,7 @@ export interface TargetOption {
 export interface Operation {
   operationId: string;
   state: "ACCEPTED" | "RUNNING" | "COMMITTED" | "NOT_COMMITTED" | "UNKNOWN";
-  result?: { snapshot?: Snapshot; message?: string };
+  result?: { snapshot?: Snapshot; message?: string; error?: { statusCode: number } };
   message?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -112,7 +112,7 @@ export interface AuditEntry {
   environment: Environment;
   tenant?: string;
   source: string;
-  resource?: string;
+  resource?: Json;
   action: string;
   state: string;
   changes?: {

@@ -100,25 +100,17 @@ export function TenantScreen({
           null,
       );
   }, [sources.data]);
-  const resourceSource = !!source && ["channels", "ai-agent"].includes(source.id);
   const canScope = !!source && ["whatsapp", "smtp"].includes(source.id);
   const effectiveScope = source?.id === "sip-user" ? "USER" : scope;
   const options = useRead(
     async (signal) => {
-      if (!tenant || !source || (!resourceSource && effectiveScope === "INSTANCE"))
+      if (!tenant || !source || effectiveScope === "INSTANCE")
         return { targets: [] as TargetOption[] };
       await new Promise<void>((resolve) => setTimeout(resolve, 250));
       if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-      return api.targets(
-        env,
-        tenant.id,
-        source.id,
-        resourceSource ? "INSTANCE" : effectiveScope,
-        search,
-        signal,
-      );
+      return api.targets(env, tenant.id, source.id, effectiveScope, search, signal);
     },
-    [env, tenant?.id, source?.id, effectiveScope, resourceSource, search],
+    [env, tenant?.id, source?.id, effectiveScope, search],
   );
   const target: Target = {
     scope: effectiveScope,
@@ -126,11 +118,7 @@ export function TenantScreen({
     ...(effectiveScope === "SECTOR" && targetOption ? { sectorId: Number(targetOption.id) } : {}),
     ...(resource ? { resourceId: resource.id } : {}),
   };
-  const ready =
-    tenant &&
-    source?.available &&
-    (effectiveScope === "INSTANCE" || targetOption) &&
-    (!resourceSource || resource);
+  const ready = tenant && source?.available && (effectiveScope === "INSTANCE" || targetOption);
   const clearTarget = () => {
     setScope("INSTANCE");
     setTargetOption(null);
@@ -234,11 +222,11 @@ export function TenantScreen({
             <MenuItem value="USER">Usuário</MenuItem>
           </TextField>
         )}
-        {tenant && source && (effectiveScope !== "INSTANCE" || resourceSource) && (
+        {tenant && source && effectiveScope !== "INSTANCE" && (
           <Autocomplete
             sx={{ flex: 1, minWidth: 230 }}
             options={options.data?.targets ?? []}
-            value={resourceSource ? resource : targetOption}
+            value={targetOption}
             loading={options.loading}
             filterOptions={(items) => items}
             getOptionLabel={(item) => `${item.label}${item.active === false ? " · Inativo" : ""}`}
@@ -248,22 +236,19 @@ export function TenantScreen({
             }}
             onChange={(_, item) => {
               if (canLeave()) {
-                if (resourceSource) setResource(item);
-                else setTargetOption(item);
+                setTargetOption(item);
               }
             }}
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={
-                  resourceSource ? "Registro" : effectiveScope === "USER" ? "Usuário" : "Setor"
-                }
+                label={effectiveScope === "USER" ? "Usuário" : "Setor"}
                 size="small"
               />
             )}
           />
         )}
-        {!resourceSource && resources.length > 0 && (
+        {resources.length > 0 && (
           <Autocomplete
             sx={{ flex: 1, minWidth: 230 }}
             options={resources}
@@ -881,7 +866,9 @@ export function AuditScreen({ environment: env }: { environment: Environment }) 
                   {entry.tenant || "Servidor"}
                   <div className="admin-metadata">
                     {entry.source}
-                    {entry.resource ? ` · ${entry.resource}` : ""}
+                    {entry.resource
+                      ? ` · ${typeof entry.resource === "string" ? entry.resource : JSON.stringify(entry.resource)}`
+                      : ""}
                   </div>
                 </td>
                 <td>

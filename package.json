@@ -33,7 +33,8 @@
     "build:admin": "vite build --config vite.admin.config.mts",
     "typecheck:admin": "tsc --noEmit --project tsconfig.admin.json",
     "test:admin": "vitest run admin-console src/lib/admin",
-    "test:admin:e2e": "pnpm build:admin && playwright test --config tests/admin-console.config.ts"
+    "test:admin:e2e": "pnpm build:admin && playwright test --config tests/admin-console.config.ts",
+    "test:admin:integration": "pnpm build:admin && playwright test --config tests/admin-console-real.config.ts"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.7",

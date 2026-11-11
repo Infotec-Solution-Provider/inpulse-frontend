@@ -136,6 +136,14 @@ http
             sources: [
               { id: "whatsapp", label: "WhatsApp", category: "Atendimento", available: true },
               { id: "openai", label: "OpenAI", category: "IA", available: true },
+              { id: "ai-agent", label: "Agente padrão", category: "IA", available: true },
+              {
+                id: "channels",
+                label: "Canais e provedores",
+                category: "WhatsApp",
+                available: true,
+              },
+              { id: "storage", label: "Armazenamento", category: "Integrações", available: true },
             ],
           });
         if (route.includes("/targets/"))
@@ -208,7 +216,16 @@ http
           });
         if (req.method === "GET" && (route.includes("/settings/") || route.endsWith("/config"))) {
           const parts = route.split("/");
-          return json(res, 200, snapshot(parts[4], parts.at(-1)));
+          const data = snapshot(parts[4], parts.at(-1));
+          if (["channels", "storage"].includes(parts.at(-1))) {
+            data.resources = [{ id: 5, label: "Recurso comercial" }];
+            if (!url.searchParams.has("resourceId")) {
+              data.catalog = [];
+              data.values = {};
+              data.unavailableReason = "Selecione um registro para consultar.";
+            }
+          }
+          return json(res, 200, data);
         }
         if (["PATCH", "POST"].includes(req.method)) {
           const body = await read(req);

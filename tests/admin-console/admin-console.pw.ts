@@ -2,6 +2,17 @@ import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ request, page }) => {
   await request.post("/__fixture/reset", { data: {} });
+  if (process.env.ADMIN_REAL_API === "1") {
+    const bootstrap = await page.request.post("/infotec/admin/api/session", {
+      headers: {
+        origin: "http://127.0.0.1:4194",
+        authorization: "Bearer fixture-admin",
+        "Content-Type": "application/json",
+      },
+      data: {},
+    });
+    expect(bootstrap.status()).toBe(200);
+  }
   await page.goto("/infotec/admin/");
   await expect(page.getByRole("heading", { name: "Parâmetros dos tenants" })).toBeVisible();
   await expect(
@@ -70,6 +81,15 @@ test("searches keys, saves typed changes and clears write-only secrets", async (
     page.getByRole("checkbox", { name: "Inteligência artificial", exact: true }),
   ).toBeChecked();
   await expect(page.getByTestId("setting-timeout")).toHaveCount(0);
+  await page.getByRole("button", { name: "Histórico", exact: true }).click();
+  await expect(page.locator("tbody")).not.toContainText("[object Object]");
+  await page
+    .getByRole("row")
+    .filter({ hasText: "2 campo(s)" })
+    .getByRole("button", { name: "Ver detalhes" })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("Credencial substituída");
+  await expect(page.getByRole("dialog")).not.toContainText("fixture-new-secret");
 });
 
 test("retains drafts on revision conflict and requires refresh before resaving", async ({
@@ -96,6 +116,7 @@ test("reconciles an uncertain save without replaying the mutation", async ({ pag
   await page.getByRole("button", { name: "Confirmar salvamento" }).click();
   await expect(page.getByText("Resultado a conferir", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Salvar alterações", exact: true })).toBeDisabled();
+  if (process.env.ADMIN_REAL_API === "1") await request.post("/__fixture/reconcile", { data: {} });
   await page.getByRole("button", { name: "Conferir resultado", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Nenhuma alteração pendente");
   expect((await (await request.get("/__fixture/state")).json()).calls).toHaveLength(1);
@@ -171,4 +192,25 @@ test("keeps the current session when renewal is temporarily unavailable", async 
   await expect(page.getByRole("textbox", { name: "Nome de exibição", exact: true })).toHaveValue(
     "infotec · Empresa",
   );
+});
+
+test("loads tenant-wide AI and discovers resource selectors from snapshots", async ({ page }) => {
+  const source = page.getByRole("combobox", { name: /^Configurações/ });
+  await source.click();
+  await page.getByRole("option", { name: "Agente padrão", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "Nome de exibição", exact: true })).toHaveValue(
+    "infotec · Empresa",
+  );
+  await expect(page.getByRole("combobox", { name: "Registro", exact: true })).toHaveCount(0);
+  for (const label of ["Canais e provedores", "Armazenamento"]) {
+    await source.click();
+    await page.getByRole("option", { name: label, exact: true }).click();
+    const resource = page.getByRole("combobox", { name: "Registro", exact: true });
+    await expect(resource).toBeVisible();
+    await resource.click();
+    await page.getByRole("option", { name: "Recurso comercial", exact: true }).click();
+    await expect(page.getByRole("textbox", { name: "Nome de exibição", exact: true })).toHaveValue(
+      "infotec · Empresa",
+    );
+  }
 });
