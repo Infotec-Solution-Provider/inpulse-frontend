@@ -23,6 +23,8 @@ export interface User {
 	CODIGO: number;
 	/** Indica se o usuário está ativo */
 	ATIVO: "SIM" | "NAO" | null;
+	/** Oculta o usuário das opções do WhatsApp, quando habilitado no CRM. */
+	DESATIVAR_EXIBICAO_WHATS?: boolean | number | string | null;
 	/** Nome do usuário */
 	NOME: string;
 	/** Login do usuário */
