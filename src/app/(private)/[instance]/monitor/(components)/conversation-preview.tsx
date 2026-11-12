@@ -16,6 +16,7 @@ import Message from "../../(main)/(chat)/message";
 import GroupMessage from "../../(main)/(chat)/group-message";
 import { getMonitorParticipants } from "../(functions)/get-card-props";
 import { loadMonitorHistory, monitorMessageDate } from "../history";
+import { mergeMonitorHistoryMessages } from "../history-state";
 import { MonitorRequestGate } from "../request-gate";
 import type { MonitorOperational } from "../types";
 import { lastMessageChannelLabel } from "../channel-label";
@@ -79,11 +80,9 @@ export default function MonitorConversationPreview({
     void loadMonitorHistory(chat.chatType, chat.id, requestedCursor, controller.signal)
       .then((result) => {
         if (!isCurrent()) return;
-        setMessages((previous) => {
-          const merged = new Map(result.messages.map((message) => [message.id, message]));
-          if (requestedCursor) for (const message of previous) merged.set(message.id, message);
-          return [...merged.values()].sort((a, b) => a.id - b.id);
-        });
+        setMessages((previous) =>
+          mergeMonitorHistoryMessages(requestedCursor ? previous : [], result.messages),
+        );
         setNextCursor(result.nextCursor);
         setQuotedMessages((previous) =>
           requestedCursor
