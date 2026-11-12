@@ -50,7 +50,7 @@ export default function TransferChatModal() {
           <MenuItem key={`admin:-1`} value={-1}>
             Todos os supervisores
           </MenuItem>
-          {users?.map((user) => (
+          {users?.filter((user) => user.ATIVO !== "NAO").map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
               {user.NOME_EXIBICAO || user.NOME}
             </MenuItem>
