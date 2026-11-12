@@ -386,9 +386,13 @@ test("transferência com falha mantém modal e troca de tenant fecha ação anti
   await page.getByRole("menuitem", { name: /Transferir.*Contato 1$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Transferir conversa" });
   await dialog.getByRole("combobox", { name: "Usuário" }).click();
-  await expect(page.getByRole("option", { name: "Usuário desativado", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Usuário desativado", exact: true })).toHaveCount(
+    0,
+  );
   await expect(page.getByRole("option", { name: "Supervisor", exact: true })).toBeVisible();
-  await expect(page.getByRole("option", { name: "Todos os supervisores", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("option", { name: "Todos os supervisores", exact: true }),
+  ).toBeVisible();
   await page.getByRole("option", { name: "Ana", exact: true }).click();
   await dialog.getByRole("button", { name: "Transferir", exact: true }).click();
   await page.evaluate(() => window.monitorHarness.fail());
@@ -413,6 +417,58 @@ test("visualiza histórico sem leitura automática e só abre envio por ação e
   await dialog.getByRole("button", { name: "Responder nesta conversa" }).click();
   await expect(dialog.getByRole("textbox", { name: "Mensagem" })).toBeVisible();
   expect(await page.evaluate(() => window.monitorHarness.opened())).toEqual([false]);
+  expect(errors).toEqual([]);
+});
+
+test("histórico preserva cronologia e cursor entre páginas com IDs fora de ordem", async ({
+  page,
+}) => {
+  const { errors } = await setup(page);
+  const cursors: (string | null)[] = [];
+  await page.route("**/api/whatsapp/monitor/chats/wpp/1/messages**", async (route) => {
+    const cursor = new URL(route.request().url()).searchParams.get("beforeId");
+    cursors.push(cursor);
+    const message = (id: number, body: string, timestamp: string) => ({
+      id,
+      body,
+      timestamp,
+      sentAt: "2026-11-12T14:00:00.000Z",
+      from: "customer",
+      type: "chat",
+      status: "RECEIVED",
+    });
+    await route.fulfill({
+      json: {
+        data: cursor
+          ? {
+              messages: [
+                message(12, "Mais antiga", "1794495540"),
+                message(9, "Anterior", "1794495600000"),
+              ],
+              nextCursor: null,
+            }
+          : {
+              messages: [
+                message(1, "Mais recente", "1794495720000"),
+                message(9, "Anterior", "1794495600"),
+              ],
+              nextCursor: 9,
+            },
+      },
+    });
+  });
+  await expect(page.getByRole("article")).toHaveCount(20);
+  await page.getByRole("button", { name: /Visualizar.*Contato 1$/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Contato 1", exact: true });
+  await expect(dialog.getByRole("listitem")).toHaveText(["Anterior", "Mais recente"]);
+  await dialog.getByRole("button", { name: "Carregar mensagens anteriores" }).click();
+  await expect(dialog.getByRole("listitem")).toHaveText([
+    "Mais antiga",
+    "Anterior",
+    "Mais recente",
+  ]);
+  expect(cursors).toEqual([null, "9"]);
+  expect(await page.evaluate(() => window.monitorHarness.opened())).toEqual([]);
   expect(errors).toEqual([]);
 });
 

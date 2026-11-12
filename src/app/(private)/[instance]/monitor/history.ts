@@ -1,6 +1,8 @@
 import type { InternalMessage, WppMessage } from "@/lib/sdk-local";
 import monitorService from "@/lib/services/monitor.service";
 
+export { monitorMessageDate } from "./history-state";
+
 export interface MonitorHistoryPage {
   messages: (InternalMessage | WppMessage)[];
   quotedMessages?: (InternalMessage | WppMessage)[];
@@ -20,10 +22,4 @@ export async function loadMonitorHistory(
   const page = response.data.data;
   if (!page || !Array.isArray(page.messages)) throw new Error("Histórico inválido.");
   return page;
-}
-
-export function monitorMessageDate(message: InternalMessage | WppMessage): Date {
-  if ("sentAt" in message && message.sentAt) return new Date(message.sentAt);
-  const timestamp = Number(message.timestamp);
-  return new Date(timestamp < 1e12 ? timestamp * 1000 : timestamp);
 }
