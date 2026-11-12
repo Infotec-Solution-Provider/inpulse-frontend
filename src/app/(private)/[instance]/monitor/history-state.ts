@@ -4,8 +4,8 @@ type MonitorMessage = InternalMessage | WppMessage;
 
 export function monitorMessageDate(message: MonitorMessage): Date {
   const timestamp = Number(message.timestamp);
-  if (Number.isFinite(timestamp) && timestamp > 0) {
-    return new Date(timestamp < 1e12 ? timestamp * 1000 : timestamp);
+  if (/^\d+$/.test(String(message.timestamp)) && Number.isFinite(timestamp) && timestamp > 0) {
+    return new Date(timestamp < 1e11 ? timestamp * 1000 : timestamp);
   }
   if ("sentAt" in message && message.sentAt) {
     const sentAt = new Date(message.sentAt);

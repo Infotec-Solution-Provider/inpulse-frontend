@@ -42,4 +42,12 @@ describe("monitor history chronology", () => {
       mergeMonitorHistoryMessages([internal], [message(2, "1794495540000")]).map((item) => item.id),
     ).toEqual([2, 3]);
   });
+
+  it("matches the API units boundary and rejects nonnumeric timestamp formats", () => {
+    expect(monitorMessageDate(message(1, "100000000000")).getTime()).toBe(100000000000);
+    expect(monitorMessageDate(message(1, "99999999999")).getTime()).toBe(99999999999000);
+    expect(monitorMessageDate(message(1, "1e9", "2026-11-12T07:00:00.000Z")).toISOString()).toBe(
+      "2026-11-12T07:00:00.000Z",
+    );
+  });
 });
