@@ -4,6 +4,7 @@ import { useContext, useRef, useState } from "react";
 import { AppContext } from "../../../app-context";
 import { WhatsappContext } from "../../../whatsapp-context";
 import { InternalChatContext } from "../../../internal-context";
+import { canTransferTo } from "@/lib/tenant-ui-policy";
 import useChatActionScope from "./use-chat-action-scope";
 
 interface TransferChatModalProps {
@@ -14,7 +15,7 @@ interface TransferChatModalProps {
 export default function TransferChatModal({ chatId, onSuccess }: TransferChatModalProps = {}) {
   const scope = useChatActionScope();
   const { closeModal } = useContext(AppContext);
-  const { currentChat, transferAttendance } = useContext(WhatsappContext);
+  const { currentChat, transferAttendance, tenantPolicy } = useContext(WhatsappContext);
   const { users } = useContext(InternalChatContext);
 
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
@@ -24,7 +25,7 @@ export default function TransferChatModal({ chatId, onSuccess }: TransferChatMod
 
   const handleTransfer = async () => {
     const targetId = chatId ?? currentChat?.id;
-    if (!selectedUser || !targetId || submitting.current || !scope.isActive()) return;
+    if (!selectedUser || !targetId || submitting.current || !scope.isActive() || !canTransferTo(tenantPolicy, selectedUser)) return;
     submitting.current = true;
     setIsSubmitting(true);
     setError(null);
@@ -45,6 +46,7 @@ export default function TransferChatModal({ chatId, onSuccess }: TransferChatMod
   };
 
   if (!scope.valid) return null;
+  if (tenantPolicy?.canTransferAttendance === false) return <Alert severity="warning">Seu perfil não permite transferir atendimentos.</Alert>;
   return (
     <div
       role="dialog"
@@ -82,10 +84,10 @@ export default function TransferChatModal({ chatId, onSuccess }: TransferChatMod
             },
           }}
         >
-          <MenuItem key={`admin:-1`} value={-1}>
+          {canTransferTo(tenantPolicy, -1) && <MenuItem key={`admin:-1`} value={-1}>
             Todos os supervisores
-          </MenuItem>
-          {users?.map((user) => (
+          </MenuItem>}
+          {users?.filter(user => canTransferTo(tenantPolicy, user.CODIGO)).map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
               {user.NOME_EXIBICAO || user.NOME}
             </MenuItem>
@@ -107,7 +109,7 @@ export default function TransferChatModal({ chatId, onSuccess }: TransferChatMod
             variant="contained"
             color="primary"
             className="w-32"
-            disabled={!selectedUser || isSubmitting}
+            disabled={!selectedUser || isSubmitting || !canTransferTo(tenantPolicy, selectedUser)}
             onClick={handleTransfer}
           >
             {isSubmitting ? "Transferindo..." : "Transferir"}

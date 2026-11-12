@@ -12,6 +12,8 @@ import { authSession } from "@/lib/auth-session";
 import authService from "../lib/services/auth.service";
 import usersService from "../lib/services/users.service";
 
+import { activateSessionFrontendScope, clearSessionFrontendChoices } from "@/lib/frontend-selection";
+
 const LAST_TENANT_STORAGE_KEY = "@inpulse/last-tenant";
 const REFRESH_RETRY_DELAYS_MS = [0, 1_000, 2_000];
 
@@ -47,6 +49,7 @@ export default function AuthProvider({ children }: ProviderProps) {
   const [refreshRetryPending, setRefreshRetryPending] = useState(false);
 
   const clearLocalSession = useCallback((redirect = true) => {
+    clearSessionFrontendChoices();
     sessionEpochRef.current += 1;
     refreshAbortRef.current?.abort();
     refreshAbortRef.current = null;
@@ -67,6 +70,7 @@ export default function AuthProvider({ children }: ProviderProps) {
   }, [router]);
 
   const applySession = useCallback((session: { token: string; user: User }) => {
+    activateSessionFrontendScope(instanceRef.current, session.user.CODIGO);
     tokenRef.current = session.token;
     authSession.setAccessToken(session.token);
     setToken(session.token);

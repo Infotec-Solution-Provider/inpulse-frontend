@@ -16,7 +16,7 @@ const server = await createServer({
   esbuild: { jsx: "automatic" },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: ".next/proposals-vite",
-  define: {
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""),
     "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture.invalid"),
     "process.env.NEXT_PUBLIC_REPORTS_URL": JSON.stringify("http://fixture.invalid"),
   },

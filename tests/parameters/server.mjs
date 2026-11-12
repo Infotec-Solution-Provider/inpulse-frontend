@@ -12,6 +12,7 @@ const stubs = {
   "@/lib/services/parameter-settings.service": `export { parameterSettingsService as default } from '${doubles}'`,
 };
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-parameters",

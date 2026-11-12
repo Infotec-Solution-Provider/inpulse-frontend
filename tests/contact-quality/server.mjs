@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 process.chdir(root);
 const doubles = "/tests/contact-quality/doubles.ts";
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false, root, cacheDir: "node_modules/.vite-contact-quality",
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },
   plugins: [{ name: "contact-quality-fixtures", enforce: "pre",

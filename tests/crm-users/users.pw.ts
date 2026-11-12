@@ -259,3 +259,14 @@ test("dark mobile registration keeps actions visible", async ({ page }) => {
     animations: "disabled",
   });
 });
+
+
+test("users module off preserves the basic user form without loading the new CRM schema", async ({ page }) => {
+  await page.goto(`${url}?legacy-modal&flags-off=1`);
+  await expect(page.getByRole("heading", { name: "Editar Usuário", exact: true })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /^Nome Completo/ })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: /^Login/ })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Editar usuário #42" })).toHaveCount(0);
+  expect(await page.evaluate(() => window.userTest.reads.filter((read) => read === "registration"))).toEqual([]);
+  expect(await page.evaluate(() => window.userTest.writes)).toEqual([]);
+});

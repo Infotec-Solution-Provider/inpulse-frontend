@@ -2,6 +2,8 @@
 import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
 import { useAuthContext } from "@/app/auth-context";
+import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { assertCrmSectorSelection, resolveSectorNamespace, SECTOR_MAPPING_ERROR } from "@/lib/sector-namespace";
 import { getCustomerSegmentsError } from "@/lib/customer-segments-error";
 import {
   userRegistrationDraft,
@@ -46,6 +48,8 @@ export default function CrmUserRegistrationDialog({
   onSaved: () => void;
 }) {
   const { instance, user, token } = useAuthContext();
+  const { tenantPolicy, loaded: sectorReady } = useWhatsappContext();
+  const sectorNamespace = resolveSectorNamespace(instance, user?.SETOR, tenantPolicy);
   const admin = user?.NIVEL === "ADMIN";
   const [managedUserId, setManagedUserId] = useState(userId);
   const [fields, setFields] = useState<CrmUserRegistrationField[]>([]);
@@ -165,6 +169,10 @@ export default function CrmUserRegistrationDialog({
     )
       return;
     const auth = token;
+    try {
+      if (sectorNamespace.mode !== "legacy" && !sectorReady) throw new Error(SECTOR_MAPPING_ERROR);
+      if (fields.some(field => field.name === "SETOR")) assertCrmSectorSelection(sectorNamespace, Number(draft["SETOR"]));
+    } catch { setError(SECTOR_MAPPING_ERROR); return; }
     writing.current = true;
     setSaving(true);
     setError("");

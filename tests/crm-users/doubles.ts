@@ -190,6 +190,8 @@ export function useAppContext() {
   return app;
 }
 const whatsapp = {
+  loaded: true,
+  parameters: { feature_crm_users_enabled: new URLSearchParams(location.search).has("flags-off") ? "false" : "true" },
   currentChat: { id: 42 },
   wppApi: {
     current: {
@@ -213,6 +215,9 @@ export function useWhatsappContext() {
 }
 export function useUsersContext() {
   return {
+    modal: true,
+    createUser() { throw new Error("Basic user write not configured in this read fixture"); },
+    updateUser() { throw new Error("Basic user write not configured in this read fixture"); },
     sectors: [{ id: 2, name: "Atendimento" }],
     closeModal: () => {
       state.closed += 1;

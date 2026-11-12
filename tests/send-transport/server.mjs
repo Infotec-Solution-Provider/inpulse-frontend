@@ -16,7 +16,7 @@ const stubs = {
 const server = await createServer({
   configFile: false, root,
   cacheDir: "node_modules/.vite-send-transport",
-  define: {
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""),
     "process.env.NEXT_PUBLIC_WHATSAPP_URL": JSON.stringify("http://127.0.0.1:4182"),
     "process.env.NEXT_PUBLIC_FILES_URL": JSON.stringify("http://127.0.0.1:4182"),
     "process.env.NEXT_PUBLIC_USERS_URL": JSON.stringify("http://127.0.0.1:4182"),

@@ -13,6 +13,7 @@ const names = {
   "whatsapp-context": "WhatsappContext",
 };
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-channels",

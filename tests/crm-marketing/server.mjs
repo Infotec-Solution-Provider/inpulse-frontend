@@ -16,7 +16,7 @@ const server = await createServer({
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-crm-marketing",
-  define: {
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""),
     "process.env.NEXT_PUBLIC_MARKETING_URL": JSON.stringify("http://fixture-marketing"),
     "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture-customers"),
   },

@@ -79,12 +79,11 @@ const INTERNAL_BASE_URL = process.env["NEXT_PUBLIC_WHATSAPP_URL"] || "http://loc
 export default function ReadyMessagesProvider({ children }: IReadyMessagesProviderProps) {
   const { token, user, instance } = useContext(AuthContext);
   const cacheScope = user ? createCacheScope(instance, user.CODIGO) : null;
-  const { wppApi } = useContext(WhatsappContext);
+  const { sectors } = useContext(WhatsappContext);
 
   const api = useRef(new ReadyMessageClient(INTERNAL_BASE_URL));
 
   const [readyMessages, setReadyMessages] = useState<ReadyMessage[]>([]);
-  const [sectors, setSectors] = useState<Array<{ id: number; name: string }>>([]);
 
   const [state, dispatch] = useReducer(readyMessagesReducer, {
     readyMessages: [],
@@ -242,23 +241,6 @@ export default function ReadyMessagesProvider({ children }: IReadyMessagesProvid
       loadReadyMessages();
     }
   }, [cacheScope, loadReadyMessages, token]);
-
-  useEffect(() => {
-    if (wppApi.current && token) {
-      wppApi.current.setAuth(token);
-      if (cacheScope) {
-        void hybridCache
-          .get<Array<{ id: number; name: string }>>(cacheScope, "sectors")
-          .then((cached) => {
-            if (cached) setSectors(cached);
-          });
-      }
-      wppApi.current.getSectors().then((loadedSectors) => {
-        setSectors(loadedSectors);
-        if (cacheScope) void hybridCache.set(cacheScope, "sectors", loadedSectors);
-      });
-    }
-  }, [cacheScope, wppApi, token]);
 
   useEffect(() => {
     loadReadyMessages();

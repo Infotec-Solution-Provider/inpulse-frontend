@@ -1,4 +1,7 @@
 import { AuthContext } from "@/app/auth-context";
+import { DEFAULT_FEATURE_PARAMETERS } from "@/lib/feature-flags";
+import { loadWhatsappSectorSession, readWhatsappSessionMetadata } from "@/lib/whatsapp-sector-bootstrap";
+import { approvedWhatsappSectors, resolveSectorNamespace, sectorNamespaceKey } from "@/lib/sector-namespace";
 import { MessageSendStageError, type SendStage } from "@/lib/utils/message-send-diagnostics";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import { SendTemplateData } from "@/lib/components/send-template-modal";
@@ -51,6 +54,7 @@ import {
 import { toast } from "react-toastify";
 import { DetailedInternalChat } from "./internal-context";
 import { SocketContext } from "./socket-context";
+import type { TenantUiPolicy } from "@/lib/tenant-ui-policy";
 import { WhatsappSessionContext } from "./whatsapp-session-context";
 import { WhatsappChatListContext } from "./whatsapp-chat-list-context";
 import filesService from "../../../lib/services/files.service";
@@ -77,7 +81,7 @@ import {
 } from "@/lib/utils/reliable-message-send";
 import compareMessageStatus from "@/lib/utils/compare-message-status";
 import { useConfirmedReaction } from "@/lib/hooks/use-confirmed-reaction";
-import useSessionChanges from "@/lib/hooks/use-session-changes";
+import useSessionChanges, { type SyncStatus } from "@/lib/hooks/use-session-changes";
 import { mergeChangedCache, mergeChangedChats, mergeChangedMessages } from "@/lib/utils/session-change-state";
 import {
   canReactToWhatsappMessage,
@@ -134,6 +138,8 @@ interface TracedSendMessageOptions extends SendMessageOptions {
 }
 
 interface IWhatsappContext {
+  messageSync: SyncStatus;
+  pullNewMessages: () => void;
   mentionDirectoryRef: React.RefObject<MentionDirectory>;
   wppApi: React.RefObject<WhatsappClient>;
   chats: DetailedChat[];
@@ -173,6 +179,8 @@ interface IWhatsappContext {
   refreshNotificationPreferences: () => Promise<void>;
   templates: MessageTemplate[];
   parameters: Record<string, string>;
+  tenantPolicy: TenantUiPolicy | null;
+  whatsappSectorId: number | null;
   refreshParameters: () => Promise<void>;
   loadChatMessages: (chat: DetailedChat) => Promise<WppMessage[]>;
   globalChannel: React.RefObject<WppClient | null>;
@@ -236,8 +244,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     user?.ATIVO,
     !!token,
   ]);
-  const liveAuth = useRef({ token, user, scope: sessionScope });
-  liveAuth.current = { token, user, scope: sessionScope };
+  const liveAuth = useRef({ token, user, instance, scope: sessionScope });
+  liveAuth.current = { token, user, instance, scope: sessionScope };
   const { socket } = useContext(SocketContext);
   const mentionDirectoryRef = useRef<MentionDirectory>(EMPTY_MENTION_DIRECTORY);
   const mentionScope = `${instance}:${user?.CODIGO ?? ""}`;
@@ -300,6 +308,9 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [sectors, setSectors] = useState<SectorData[]>([]);
   const api = useRef(new WhatsappClient(WPP_BASE_URL));
   const refreshSyncRef = useRef<() => void>(() => {});
+  const manualSyncRef = useRef<() => void>(() => {});
+  const [messageSync, setMessageSync] = useState<SyncStatus>({ isRefreshing: false, error: false, lastSuccessAt: null });
+  useEffect(() => { setMessageSync({ isRefreshing: false, error: false, lastSuccessAt: null }); }, [sessionScope]);
   useEffect(() => {
     api.current.setAuth(token || "");
     if (token) usersService.setAuth(token);
@@ -308,11 +319,22 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const [monitorSchedules, setMonitorSchedules] = useState<DetailedSchedule[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [templates, setTemplates] = useState<Array<MessageTemplate>>([]);
-  const [parameters, setParameters] = useState<Record<string, string>>({});
+  const [parameters, setParameters] = useState<Record<string, string>>(DEFAULT_FEATURE_PARAMETERS);
+  const [tenantPolicy, setTenantPolicy] = useState<TenantUiPolicy | null>(null);
+  const [sectorSessionScope, setSectorSessionScope] = useState("");
+  const sectorSnapshotKey = useRef("");
+  const [sectorReload, setSectorReload] = useState(0);
   const refreshParameters = useCallback(async () => {
     const scope = liveAuth.current.scope;
-    const response = await api.current.ax.get<{ parameters: Record<string, string> }>("/api/whatsapp/session/parameters");
-    if (scope === liveAuth.current.scope) setParameters(response.data.parameters);
+    const response = await api.current.ax.get<{ parameters: Record<string, string>; tenantPolicy?: TenantUiPolicy | null }>("/api/whatsapp/session/parameters");
+    if (scope === liveAuth.current.scope) {
+      const metadata = readWhatsappSessionMetadata(liveAuth.current.instance, response.data);
+      setParameters({ ...DEFAULT_FEATURE_PARAMETERS, ...metadata.parameters });
+      setTenantPolicy(metadata.tenantPolicy);
+      if (sectorSnapshotKey.current !== sectorNamespaceKey(liveAuth.current.instance, liveAuth.current.user?.SETOR, metadata.tenantPolicy)) {
+        setSectorReload(value => value + 1);
+      }
+    }
   }, []);
   const [selectedChannel, setSelectedChannel] = useState<WppClient | null>(null);
   const sendScope = JSON.stringify([instance, user?.CODIGO, !!token]);
@@ -347,6 +369,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const pendingReadOnlyOpenRef = useRef(false);
 
   const [loaded, setLoaded] = useState(false);
+  const sectorNamespace = resolveSectorNamespace(instance, user?.SETOR, tenantPolicy);
+  const scopedSectors = sectorSessionScope === sessionScope ? approvedWhatsappSectors(sectorNamespace, sectors) : [];
+  const workspaceReady = loaded && sectorSessionScope === sessionScope &&
+    sectorSnapshotKey.current === sectorNamespaceKey(instance, user?.SETOR, tenantPolicy) && sectorNamespace.mode !== "blocked" &&
+    (sectorNamespace.mode !== "mapped" || scopedSectors.some(sector => sector.id === sectorNamespace.whatsappSectorId));
+  const whatsappSectorId = workspaceReady ? sectorNamespace.whatsappSectorId : null;
 
   const updateChatPreference = useCallback(
     async (
@@ -1081,91 +1109,54 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       api.current.setAuth(session.token);
       usersService.setAuth(session.token);
       refreshNotificationPreferences();
-      api.current
-        .getSectors()
-        .then((res) => {
-          if (!isCurrent()) return;
-          const secs = Array.isArray(res)
-            ? (res as SectorData[])
-            : Array.isArray((res as { data?: SectorData[] })?.data)
-              ? ((res as { data: SectorData[] }).data ?? [])
-              : [];
-
-          setSectors(secs);
-
-          const sector = secs.find((s) => s.id === sessionUser.SETOR);
-
-          api.current.ax
-            .get(`/api/whatsapp/sector/${sessionUser.SETOR}/clients`)
-            .then(async (res) => {
-              if (!isCurrent()) return;
-              const channelsPayload = res?.data;
-              const channelsData: WppClient[] = Array.isArray(
-                (channelsPayload as { data?: WppClient[] })?.data,
-              )
-                ? ((channelsPayload as { data: WppClient[] }).data ?? [])
-                : Array.isArray(channelsPayload)
-                  ? (channelsPayload as WppClient[])
-                  : [];
-              const defaultChannel = channelsData.find((ch) => ch.id === sector?.defaultClientId);
-              const activeChannel = defaultChannel || channelsData[0] || null;
-
-              globalChannel.current = activeChannel;
-              setSelectedChannel((current) => current ?? activeChannel);
-
-              const parametersResponse = await api.current.ax.get(
-                "/api/whatsapp/session/parameters",
-              );
-              if (!isCurrent()) return;
-              const parameters: Record<string, string> = parametersResponse.data["parameters"];
-              setParameters(parameters);
-              console.log("Loaded parameters:", parameters);
-
-              setChannels(channelsData);
-              setLoaded(true);
-
-              // An unavailable channel must not hide the session's parameters and features.
-              if (parameters["is_official"] === "true" && activeChannel?.id) {
-                try {
-                  const templatesResponse = await api.current.ax.get(
-                    `/api/whatsapp/${activeChannel.id}/templates`,
-                  );
-                  if (!isCurrent()) return;
-                  setTemplates(templatesResponse.data.templates ?? []);
-                } catch (error) {
-                  if (!isCurrent()) return;
-                  console.error("Falha ao carregar templates do canal", error);
-                  setTemplates([]);
-                }
-              } else {
-                setTemplates([]);
-              }
-            })
-            .catch((error) => {
-              if (isCurrent()) console.error("Falha ao carregar canais da sessão", error);
-            });
-
-          void getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }).catch((error) => {
-            if (isCurrent()) console.error("Falha ao carregar notificações", error);
-          });
-        })
-        .catch((error) => {
-          if (isCurrent()) console.error("Falha ao carregar setores", error);
-        });
-
+      void loadWhatsappSectorSession<WppClient>(api.current.ax, {
+        instance, crmSectorId: sessionUser.SETOR, token: session.token, isCurrent,
+      }).then(async (snapshot) => {
+        if (!snapshot || !isCurrent()) return;
+        const { channels: channelsData, parameters } = snapshot;
+        const activeChannel = channelsData.find(channel => channel.id === snapshot.defaultClientId) || channelsData[0] || null;
+        setSectors(snapshot.sectors as SectorData[]);
+        setTenantPolicy(snapshot.tenantPolicy);
+        sectorSnapshotKey.current = sectorNamespaceKey(instance, sessionUser.SETOR, snapshot.tenantPolicy);
+        setSectorSessionScope(sessionScope);
+        setParameters({ ...DEFAULT_FEATURE_PARAMETERS, ...parameters });
+        globalChannel.current = activeChannel;
+        setSelectedChannel((current) => current ?? activeChannel);
+        setChannels(channelsData);
+        setLoaded(true);
+        if (parameters["is_official"] === "true" && activeChannel?.id) {
+          try {
+            const response = await api.current.ax.get(`/api/whatsapp/${activeChannel.id}/templates`);
+            if (isCurrent()) setTemplates(response.data.templates ?? []);
+          } catch {
+            if (isCurrent()) setTemplates([]);
+          }
+        } else setTemplates([]);
+        if (isCurrent()) void getNotifications({ page: 1, pageSize: NOTIFICATIONS_PER_PAGE }).catch(() => {});
+      }).catch(() => {
+        if (!isCurrent()) return;
+        setSectors([]); setChannels([]); setSelectedChannel(null); globalChannel.current = null;
+        setSectorSessionScope(""); setLoaded(false);
+        sectorSnapshotKey.current = "";
+        console.error("Não foi possível validar os setores e canais WhatsApp desta sessão.");
+      });
       return () => {
         active = false;
+        setSectors([]); setChannels([]); setSelectedChannel(null); globalChannel.current = null;
+        setSectorSessionScope("");
+        sectorSnapshotKey.current = "";
         setChats([]);
         setMessages([]);
         setTemplates([]);
-        setParameters({});
+        setParameters(DEFAULT_FEATURE_PARAMETERS);
+        setTenantPolicy(null);
         setNotifications([]);
         setNotificationPreferences(createDefaultNotificationPreferences());
         setLoaded(false);
       };
     }
     // Token rotation updates credentials without discarding the current workspace.
-  }, [sessionScope, refreshNotificationPreferences, getNotifications]);
+  }, [sessionScope, sectorReload, refreshNotificationPreferences, getNotifications]);
 
   useEffect(() => {
     if (socket) {
@@ -1266,11 +1257,13 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   }, [socket, chats, currentChat, emitPolicyNotification, user?.CODIGO]);
 
   useSessionChanges({
-    scope: sessionScope,
-    enabled: !!token && !!user,
+    scope: JSON.stringify([sessionScope, sectorSnapshotKey.current]),
+    enabled: !!token && !!user && workspaceReady,
     api: api.current,
     socket,
     refreshRef: refreshSyncRef,
+    manualRefreshRef: manualSyncRef,
+    onSyncStatus: (patch) => setMessageSync((previous) => ({ ...previous, ...patch })),
     activeChat: () => currentChat,
     snapshot: (snapshot) => {
       const { chatsMessages, detailedChats } = processChatsAndMessages(snapshot.chats, snapshot.messages);
@@ -1324,6 +1317,8 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   return (
     <WhatsappContext.Provider
       value={{
+        messageSync,
+        pullNewMessages: () => manualSyncRef.current(),
         mentionDirectoryRef,
         chats,
         messages,
@@ -1343,7 +1338,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         chatFilters,
         changeChatFilters,
         updateChatContact,
-        sectors,
+        sectors: scopedSectors,
         currentChatRef,
         transferAttendance,
         getChatsMonitor,
@@ -1357,6 +1352,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         markAllAsReadNotification,
         templates,
         parameters,
+        tenantPolicy,
         refreshParameters,
         loadChatMessages,
         notificationPreferences,
@@ -1365,11 +1361,12 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         markAsReadNotificationById,
         getChatById,
         chat,
-        channels,
+        channels: workspaceReady ? channels : [],
         globalChannel,
         chatsChannels,
-        loaded,
-        selectedChannel,
+        loaded: workspaceReady,
+        whatsappSectorId,
+        selectedChannel: workspaceReady ? selectedChannel : null,
         setSelectedChannel,
         isReadOnlyMode,
         prepareReadOnlyOpen,

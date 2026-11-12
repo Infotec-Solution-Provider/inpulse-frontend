@@ -74,7 +74,7 @@ const MobileMenu = ({
     FEATURE_FLAGS.whatsappSessionMonitoring,
   );
 
-  const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, userRole);
+  const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, userRole, instance);
 
   const renderMenuItems = (routes: { title: string; href: string }[]) => {
     return routes.map((route) => (
@@ -244,7 +244,7 @@ export default function Header() {
   const isUserAdmin = user?.NIVEL === UserRole.ADMIN;
   const isExternal = isExternalOperator(user?.NIVEL);
 
-  const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, user?.NIVEL);
+  const availableCrudRoutes = crudsRoutes(parameters, isUserAdmin, user?.NIVEL, instance);
   const visibleAiRoutes = aiRoutes(parameters);
   const visibleReportsRoutes = reportsRoutes(parameters, instance);
   const showFunnels = !isExternal && isFeatureEnabled(parameters, FEATURE_FLAGS.funnels);

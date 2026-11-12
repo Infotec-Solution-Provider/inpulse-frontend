@@ -148,3 +148,18 @@ test("unknown combined finish stays blocked with fields intact after JWT renewal
     await page.evaluate(() => (window as any).fixture.calls.filter((c: any) => c.finish).length),
   ).toBe(1);
 });
+
+
+test("disabled modules retain basic finalization without loading or sending new proposal/survey data", async ({ page }) => {
+  await page.goto("/tests/satisfaction/index.html?mode=call&flags-off=1");
+  await page.getByRole("combobox", { name: /^Resultado/ }).click();
+  await page.getByRole("option", { name: "Com pesquisa", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Pesquisa da ligação" })).toHaveCount(0);
+  await expect(page.getByLabel("Valor da proposta (R$)")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Finalizar", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Finalizar", exact: true }).click();
+  const calls = await page.evaluate(() => (window as any).fixture.calls);
+  expect(calls.filter((call: any) => call.kind === "basic-results")).toHaveLength(1);
+  expect(calls.filter((call: any) => call.kind === "proposal-results" || call.kind === "proposal-list" || call.scheduleId)).toEqual([]);
+  expect(calls.find((call: any) => call.finish).finish[4]).toEqual({});
+});

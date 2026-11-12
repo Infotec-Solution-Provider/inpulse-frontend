@@ -11,7 +11,7 @@ const stubs = {
 };
 const server = await createServer({
   configFile: false,
-  define: { "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://localhost:8002") },
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://localhost:8002") },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-crm-purchases",
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },

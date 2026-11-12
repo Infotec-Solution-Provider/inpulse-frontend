@@ -1,6 +1,7 @@
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
 import { UserRole } from "@/lib/sdk-local";
+import { canAccessFeaturePath } from "@/lib/module-feature-access";
 
 export interface NavigationRoute {
   title: string;
@@ -36,6 +37,7 @@ export const crudsRoutes = (
   params: Record<string, string>,
   isAdmin: boolean,
   role: UserRole | null | undefined,
+  instance?: string,
 ) => {
   const isExternal = isExternalOperator(role);
   const arr: { title: string; href: string }[] = [];
@@ -69,7 +71,7 @@ export const crudsRoutes = (
     arr.push({ title: "Contatos", href: "/contacts" });
   }
 
-  return arr;
+  return arr.filter(route => canAccessFeaturePath(params, route.href, instance));
 };
 
 export const aiRoutes = (params: Record<string, string>) => {
@@ -307,7 +309,12 @@ export function getNavigationItems(
     );
     items.push({ ...link("news", "Novidades", "/changelog"), icon: "news" });
   }
-  return items;
+  const visible = (nodes: NavigationItem[]): NavigationItem[] => nodes.flatMap<NavigationItem>(item => {
+    if (item.kind === "link") return canAccessFeaturePath(parameters, item.href, instance) ? [item] : [];
+    const routes = visible(item.routes);
+    return routes.length ? [{ ...item, routes }] : [];
+  });
+  return visible(items);
 }
 
 export function navigationLeaves(

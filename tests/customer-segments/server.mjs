@@ -7,6 +7,7 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 process.chdir(root);
 const doubles = "/tests/customer-segments/doubles.ts";
 const stubs = {
+  "@/app/(private)/[instance]/whatsapp-context": `export const useWhatsappContext = () => ({ parameters: { feature_crm_customers_enabled: "true" } });`,
   "@/app/auth-context": `export { useAuthContext } from '${doubles}'`,
   "@/lib/sdk-local": `export const UserRole = { ADMIN: 'ADMIN' }`,
   "@/lib/services/customers.service": `export { customersService as default } from '${doubles}'`,
@@ -14,6 +15,7 @@ const stubs = {
   "next/link": `import React from 'react'; export default function Link(props) { return React.createElement('a', props); }`,
 };
 const server = await createServer({
+  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify("") },
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-customer-segments",
@@ -24,6 +26,7 @@ const server = await createServer({
       enforce: "pre",
       resolveId(source) {
         if (source in stubs) return `\0segments:${source}`;
+        if (source.endsWith("/whatsapp-context")) return "\0segments:@/app/(private)/[instance]/whatsapp-context";
         if (source.endsWith("/auth-context")) return "\0segments:@/app/auth-context";
         if (source.endsWith("/sdk-local")) return "\0segments:@/lib/sdk-local";
         if (source.endsWith("/customers.service"))

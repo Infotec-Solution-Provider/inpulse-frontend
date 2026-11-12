@@ -1,6 +1,8 @@
 "use client";
 
 import { Alert, Button, Skeleton } from "@mui/material";
+import { useAuthContext } from "@/app/auth-context";
+import { resolveSectorNamespace } from "@/lib/sector-namespace";
 import { MonitorEmptyState } from "@/lib/ui-system";
 import { useContext } from "react";
 import FinishChatModal from "../(main)/(chat)/(actions)/finish-chat-modal";
@@ -29,7 +31,9 @@ export default function ConversationMonitor() {
     resetFilters,
     setActionMenuOpen,
   } = useMonitorContext();
-  const { sectors, setCurrentChat } = useWhatsappContext();
+  const { sectors, setCurrentChat, tenantPolicy } = useWhatsappContext();
+  const { instance, user } = useAuthContext();
+  const sectorNamespace = resolveSectorNamespace(instance, user?.SETOR, tenantPolicy);
   const { users } = useInternalChatContext();
   const { openModal } = useContext(AppContext);
 
@@ -95,7 +99,7 @@ export default function ConversationMonitor() {
                   return (
                     <MonitorCard
                       key={key}
-                      {...getMonitorCardProps(chat, users, sectors)}
+                      {...getMonitorCardProps(chat, users, sectors, sectorNamespace)}
                       compact={viewMode === "compact"}
                       onMenuOpenChange={setActionMenuOpen}
                       handleView={

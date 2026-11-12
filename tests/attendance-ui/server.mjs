@@ -8,6 +8,7 @@ process.chdir(root);
 const doubles = "/tests/attendance-ui/doubles.tsx";
 const stubs = {
   "auth-context": `export {AuthContext,useAuthContext} from '${doubles}'`,
+  "socket-context": `export {SocketContext} from '${doubles}'`,
   "app-context": `export {AppContext,useAppContext} from '${doubles}'`,
   "whatsapp-context": `export {WhatsappContext,useWhatsappContext} from '${doubles}'`,
   "whatsapp-chat-list-context": `export {useWhatsappChatList} from '${doubles}'`,

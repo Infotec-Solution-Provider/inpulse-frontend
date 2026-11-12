@@ -4,6 +4,8 @@ import { crmPhonePayload, crmPhoneSlots } from "@/lib/crm-phone-form";
 import { crmErrorDetails } from "@/lib/crm-customer-form";
 import customersService from "@/lib/services/customers.service";
 import NextLink from "next/link";
+import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
+import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import CustomerSegmentSelector from "@/lib/components/customer-segment-selector";
 import { hybridCache } from "@/lib/cache/hybrid-cache";
 import { createCacheScope } from "@/lib/cache/cache-scope";
@@ -159,6 +161,8 @@ function getUniqueOptions(values: Array<string | null | undefined>) {
 
 export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, presentation = "modal" }: CustomerCrmDetailModalProps) {
   const { token, user, instance } = useAuthContext();
+  const { parameters } = useWhatsappContext();
+  const crmCustomersEnabled = isFeatureEnabled(parameters, FEATURE_FLAGS.crmCustomers);
   const segmentContext = useRef({ instance, customerId, token });
   segmentContext.current = { instance, customerId, token };
   const [tab, setTab] = useState<TabValue>("main");
@@ -1237,7 +1241,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
         <TextField label="Origem" value={detail.origin.description ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Mídia" value={detail.media.name ?? "-"} InputProps={{ readOnly: true }} />
         <TextField label="Operador" value={detail.operator.name ?? "-"} InputProps={{ readOnly: true }} />
-        <CustomerSegmentSelector
+        {crmCustomersEnabled ? <CustomerSegmentSelector
           key={`${instance}:${customerId}`}
           customerId={customerId}
           segmentId={detail.customer.SEGMENTO ?? null}
@@ -1270,7 +1274,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
             if (user) void hybridCache.invalidateResource(createCacheScope(instance, user.CODIGO), "customer-page");
             toast.success("Segmento do cliente atualizado.");
           }}
-        />
+        /> : <TextField label="Segmento" value={detail.segment.name ?? "-"} slotProps={{ input: { readOnly: true } }} />}
         <TextField
           label="Funcionários"
           type="number"
@@ -2081,7 +2085,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
         </div>
       ) : (
         <>
-          {user?.NIVEL === "ADMIN" && <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}><Button component={NextLink} href={`/${instance}/crm-customers/${customerId}`} size="small">Abrir cadastro completo</Button></Box>}
+          {user?.NIVEL === "ADMIN" && crmCustomersEnabled && <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}><Button component={NextLink} href={`/${instance}/crm-customers/${customerId}`} size="small">Abrir cadastro completo</Button></Box>}
           <Tabs
             value={tab}
             onChange={(_, value) => setTab(value)}

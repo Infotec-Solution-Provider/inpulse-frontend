@@ -28,6 +28,7 @@ import FinishInternalChatModal from "./(actions)/finish-internal-chat-modal";
 import ScheduleChatModal from "./(actions)/schedule-chat-modal";
 import TransferChatModal from "./(actions)/transfer-chat-modal";
 import CustomerCrmDetailModal from "../(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
+import LegacyChatHistoryModal from "@/lib/components/legacy-chat-history-modal";
 import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
 import { useAuthContext } from "@/app/auth-context";
 import { chatHasAgentMessages } from "@/lib/utils/ai-agent-labels";
@@ -68,7 +69,7 @@ export default function ChatHeader({
   const { instance, user, token } = useAuthContext();
   const router = useRouter();
   const { openModal, closeModal } = useContext(AppContext);
-  const { currentChat, currentChatMessages, parameters } = useWhatsappContext();
+  const { currentChat, currentChatMessages, parameters, tenantPolicy } = useWhatsappContext();
   const { applySuggestedText, isReadOnlyMode } = useContext(ChatContext);
   const canInteract = !isReadOnlyMode && currentChat?.isFinished === false;
   const userLevel = String(user?.NIVEL ?? "");
@@ -98,7 +99,10 @@ export default function ChatHeader({
     (!!(currentChat as { agentId?: number | null }).agentId || hasAgentMessages) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.ai) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
+  const canOpenLegacyHistory = currentChat?.chatType === "wpp" && Boolean(currentChat.id) &&
+    isFeatureEnabled(parameters, FEATURE_FLAGS.legacyHistory);
   const hasMobileActions =
+    canOpenLegacyHistory ||
     canOpenCustomerDetail ||
     canOpenAIActions ||
     canOpenSupervisorAssistant ||
@@ -196,6 +200,10 @@ export default function ChatHeader({
   };
   const primaryActions: HeaderAction[] = [];
   const extraActions: HeaderAction[] = [];
+  if (canOpenLegacyHistory && currentChat?.id) {
+    const chatId = currentChat.id;
+    extraActions.push({ key: "legacy-history", label: "Histórico do sistema antigo", icon: FileText, run: () => openModal(<LegacyChatHistoryModal chatId={chatId} onClose={closeModal} />) });
+  }
   if (canOpenCustomerDetail)
     primaryActions.push({
       key: "details",
@@ -258,7 +266,7 @@ export default function ChatHeader({
       icon: Download,
       run: () => void exportChat(),
     });
-  const canTransfer = currentChat?.chatType === "wpp" && canInteract;
+  const canTransfer = currentChat?.chatType === "wpp" && canInteract && tenantPolicy?.canTransferAttendance !== false;
   const canFinish =
     canInteract &&
     (currentChat?.chatType === "wpp" ||

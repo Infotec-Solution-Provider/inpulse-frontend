@@ -11,6 +11,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "vitest run src",
+    "test:frontend-flags:e2e": "playwright test --config tests/frontend-flags.config.ts",
+    "build:dual-fixtures": "node scripts/build-dual-fixtures.mjs",
+    "test:dual-frontend:e2e": "playwright test --config tests/dual-frontend.config.ts",
     "test:contact-quality": "vitest run contacts-query && playwright test --config tests/contact-quality.config.ts",
     "test:monitor": "vitest run monitor socket-subscriptions",
     "test:monitor:e2e": "playwright test --config tests/monitor.config.ts",
@@ -34,7 +37,9 @@
     "typecheck:admin": "tsc --noEmit --project tsconfig.admin.json",
     "test:admin": "vitest run admin-console src/lib/admin",
     "test:admin:e2e": "pnpm build:admin && playwright test --config tests/admin-console.config.ts",
-    "test:admin:integration": "pnpm build:admin && playwright test --config tests/admin-console-real.config.ts"
+    "test:admin:integration": "pnpm build:admin && playwright test --config tests/admin-console-real.config.ts",
+    "test:message-sync": "vitest run src/lib/utils/session-change-poller.test.ts src/lib/utils/session-change-state.test.ts",
+    "test:message-sync:e2e": "playwright test --config tests/session-changes.config.ts"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-alpha.7",
