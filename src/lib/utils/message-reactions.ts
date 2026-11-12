@@ -268,7 +268,59 @@ export class ReactionRequestCoordinator {
 }
 
 const unavailableStatuses = new Set(["PENDING", "UNKNOWN", "ERROR", "REVOKED"]);
-export function canReactToWhatsappMessage(message: WppMessage, provider?: string) {
+export interface WhatsappReactionConversation {
+  id: number;
+  chatType: string;
+  isFinished: boolean;
+  wppGroupId?: string | null;
+}
+
+function reactionMessageTime(message: WppMessage): number {
+  const raw: unknown = message.timestamp;
+  const value = typeof raw === "number" ? raw
+    : typeof raw === "string" && /^\d+$/.test(raw) ? Number(raw) : NaN;
+  if (Number.isFinite(value) && value > 0)
+    return value < 100_000_000_000 ? value * 1000 : value;
+  return new Date(message.sentAt).getTime();
+}
+
+function wabaReactionPhone(value: string | undefined): string | null {
+  if (!value || !/^\+?[\d ()-]+$/.test(value)) return null;
+  const digits = value.replace(/\D/g, "");
+  return /^\d{10,15}$/.test(digits) ? digits : null;
+}
+
+export function canReactToWhatsappMessage(
+  message: WppMessage,
+  provider?: string,
+  conversation?: WhatsappReactionConversation | null,
+  now = Date.now(),
+) {
+  if (provider === "WABA") {
+    // The caller resolves the channel by clientId; the API also verifies its own phone.
+    const timestamp = reactionMessageTime(message);
+    const outbound = message.from?.startsWith("me:");
+    const ownSide = outbound ? message.from : message.to;
+    const ownPhone = ownSide?.startsWith("me:") ? wabaReactionPhone(ownSide.slice(3)) : null;
+    const peer = wabaReactionPhone(outbound ? message.to : message.from);
+    const copiedOdim = message.instance === "odim" && ownSide === "me:odim-legacy-copy";
+    const allowedTypes = [
+      "text", "image", "video", "audio", "document", "sticker", "contacts", "vcard",
+      "location", "interactive", "order", ...(copiedOdim ? ["chat"] : []),
+    ];
+    return (
+      Number.isSafeInteger(message.id) && message.id > 0 &&
+      Number.isSafeInteger(message.clientId) && !!message.clientId && message.clientId > 0 &&
+      !!conversation && conversation.chatType === "wpp" && !conversation.isFinished &&
+      !conversation.wppGroupId && conversation.id === message.chatId &&
+      typeof message.wabaId === "string" && message.wabaId.length <= 191 &&
+      /^wamid\.[^\s]+$/.test(message.wabaId) &&
+      !!peer && peer !== ownPhone && (copiedOdim || !!ownPhone) &&
+      allowedTypes.includes(message.type) && ["SENT", "RECEIVED", "READ"].includes(message.status) &&
+      Number.isFinite(timestamp) && timestamp > 0 && Number.isFinite(now) &&
+      timestamp <= now + 5 * 60_000 && now - timestamp <= 30 * 24 * 60 * 60_000
+    );
+  }
   return (
     !!message.clientId &&
     ["REMOTE", "WWEBJS"].includes(provider ?? "") &&

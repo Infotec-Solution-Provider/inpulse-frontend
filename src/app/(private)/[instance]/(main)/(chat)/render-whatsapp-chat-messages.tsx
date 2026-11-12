@@ -43,7 +43,7 @@ export default function RenderWhatsappChatMessages({
   openManualForward,
   isReadOnlyMode,
 }: RenderWhatsappChatMessagesProps) {
-  const { currentChatMessages, reactToMessage, channels } = useWhatsappContext();
+  const { currentChatMessages, reactToMessage, channels, currentChat } = useWhatsappContext();
   const { getMessageById, handleQuoteMessage, handleEditMessage, pendingSends } =
     useContext(ChatContext);
   const { instance } = useContext(AuthContext);
@@ -189,6 +189,7 @@ export default function RenderWhatsappChatMessages({
                 canReactToWhatsappMessage(
                   m,
                   channels.find((channel) => channel.id === m.clientId)?.type,
+                  currentChat,
                 )
                   ? (emoji) => reactToMessage(m, emoji)
                   : undefined
