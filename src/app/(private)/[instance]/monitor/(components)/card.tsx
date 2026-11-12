@@ -7,6 +7,7 @@ import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { useEffect, useId, useRef, useState } from "react";
 import type { MonitorOperational } from "../types";
 import { lastMessageChannelLabel } from "../channel-label";
+import { monitorWaitSeverity, type WaitThresholds } from "../wait-thresholds";
 
 export interface MonitorCardProps {
   type: "external-chat" | "internal-chat" | "internal-group" | "schedule" | "finished-chat";
@@ -28,6 +29,8 @@ export interface MonitorCardProps {
   isFinished?: boolean;
   operational?: MonitorOperational;
   compact?: boolean;
+  waitThresholds: WaitThresholds;
+  now: number;
   handleTransfer?: (() => void) | null;
   handleView?: (() => void) | null;
   handleFinish?: (() => void) | null;
@@ -63,8 +66,8 @@ const deliveryLabels: Record<string, string> = {
   REVOKED: "Mensagem removida",
 };
 
-function elapsedTime(value: string) {
-  const milliseconds = Date.now() - new Date(value).getTime();
+function elapsedTime(value: string, now: number) {
+  const milliseconds = now - new Date(value).getTime();
   if (!Number.isFinite(milliseconds)) return null;
   const minutes = Math.max(0, Math.floor(milliseconds / 60_000));
   if (minutes < 1) return "menos de 1 min";
@@ -105,6 +108,8 @@ export default function MonitorCard({
   groupDescription,
   operational,
   compact = false,
+  waitThresholds,
+  now,
   handleTransfer,
   handleView,
   handleFinish,
@@ -134,7 +139,10 @@ export default function MonitorCard({
   const status = operational?.status;
   const waiting = status === "waiting_agent" || status === "waiting_customer";
   const waitTime =
-    waiting && operational?.waitingSince ? elapsedTime(operational.waitingSince) : null;
+    waiting && operational?.waitingSince ? elapsedTime(operational.waitingSince, now) : null;
+  const waitSeverity = monitorWaitSeverity(operational, waitThresholds, now);
+  const waitLabel = waitSeverity === "critical" ? "Espera crítica"
+    : waitSeverity === "warning" ? "Espera em atenção" : "Espera normal";
   const lastMessageAt = operational?.lastMessageAt ? messageDate(operational.lastMessageAt) : null;
   const unread = operational?.unreadCount ?? 0;
   const unreadLabel = `${unread} ${unread === 1 ? "mensagem não lida" : "mensagens não lidas"}`;
@@ -252,7 +260,13 @@ export default function MonitorCard({
             </p>
             <div className="ip-conversation-activity-meta">
               <p className="ip-conversation-operation">
-                <span className="ip-conversation-status">
+                <span
+                  className={`ip-conversation-status${waitSeverity ? ` ip-conversation-wait ip-conversation-wait--${waitSeverity}` : ""}`}
+                  data-wait-severity={waitSeverity || undefined}
+                  title={waitSeverity ? `${waitLabel}. Atenção a partir de ${waitThresholds.warningMinutes} min; crítica a partir de ${waitThresholds.criticalMinutes} min. A espera começa na primeira mensagem sem resposta do atendente.` : undefined}
+                >
+                  {waitSeverity && <span className="ip-conversation-wait-marker" aria-hidden="true" />}
+                  {waitSeverity && <span className="sr-only">{waitLabel}: </span>}
                   {waitTime && <UiIcon name="clock" scale="metadata" />}
                   {operationalDescription}
                 </span>
