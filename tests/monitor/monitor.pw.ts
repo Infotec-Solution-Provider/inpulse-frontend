@@ -38,7 +38,7 @@ function item(id: number, title: string, waiting = true) {
     },
   };
 }
-async function setup(page: Page, handler?: (route: Route, query: Query) => Promise<boolean>) {
+async function setup(page: Page, handler?: (route: Route, query: Query) => Promise<boolean>, search = "") {
   const queries: Query[] = [];
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -96,10 +96,59 @@ async function setup(page: Page, handler?: (route: Route, query: Query) => Promi
       });
     }
   });
-  await page.goto("/tests/monitor/index.html");
+  await page.goto(`/tests/monitor/index.html${search}`);
   await expect(page.getByRole("heading", { name: "Monitoria de conversas" })).toBeVisible();
   return { queries, errors };
 }
+
+test("marca espera normal/amarela/vermelha e respeita o tema sem colorir espera pelo cliente", async ({ page }) => {
+  const now = Date.now();
+  await setup(page, async (route) => {
+    const items = [29, 30, 1440, 2000].map((minutes, index) => {
+      const chat = item(index + 1, `Espera ${index + 1}`, index !== 3);
+      chat.operational.waitingSince = new Date(now - minutes * 60_000).toISOString();
+      return chat;
+    });
+    await route.fulfill({ json: { data: { items, totalCount: 4, page: 1, pageSize: 20 } } });
+    return true;
+  });
+  const cards = page.getByRole("article");
+  await expect(cards).toHaveCount(4);
+  await expect(cards.nth(0).locator("[data-wait-severity='normal']")).toBeVisible();
+  const warning = cards.nth(1).locator("[data-wait-severity='warning']");
+  const critical = cards.nth(2).locator("[data-wait-severity='critical']");
+  await expect(warning).toHaveCSS("color", cssRgb(uiPalette.light.warning));
+  await expect(critical).toHaveCSS("color", cssRgb(uiPalette.light.danger));
+  await expect(warning).toHaveAttribute("title", /Atenção a partir de 30 min; crítica a partir de 1440 min/);
+  await expect(critical.getByText("Espera crítica:", { exact: true })).toBeAttached();
+  await expect(cards.nth(3).locator("[data-wait-severity]")).toHaveCount(0);
+  await page.screenshot({ path: "test-results/monitor-wait-colors-light.png" });
+  await page.evaluate(() => window.monitorHarness.dark());
+  await expect(warning).toHaveCSS("color", cssRgb(uiPalette.dark.warning));
+  await expect(critical).toHaveCSS("color", cssRgb(uiPalette.dark.danger));
+  await expect(page.locator(".ip-conversation-card").first()).toHaveCSS("background-color", cssRgb(uiPalette.dark.surface));
+  await page.screenshot({ path: "test-results/monitor-wait-colors-dark.png" });
+});
+
+test("usa os parâmetros e atualiza a cor com o relógio mesmo com atualização automática desligada", async ({ page }) => {
+  const now = new Date("2026-11-12T17:00:00Z");
+  await page.clock.install({ time: now });
+  await setup(page, async (route) => {
+    const chat = item(1, "Espera configurada");
+    chat.operational.waitingSince = new Date(now.getTime() - 60_000).toISOString();
+    await route.fulfill({ json: { data: { items: [chat], totalCount: 1, page: 1, pageSize: 20 } } });
+    return true;
+  }, "?wait-warning=2&wait-critical=3");
+  await page.getByRole("button", { name: "Pausar atualização automática" }).click();
+  const card = page.getByRole("article").first();
+  await expect(card.locator("[data-wait-severity='normal']")).toBeVisible();
+  await page.clock.fastForward(60_000);
+  await expect(card.locator("[data-wait-severity='warning']")).toBeVisible();
+  await page.clock.fastForward(60_000);
+  await expect(card.locator("[data-wait-severity='critical']")).toBeVisible();
+  await expect(card.locator("[data-wait-severity='critical']")).toHaveAttribute("title", /Atenção a partir de 2 min; crítica a partir de 3 min/);
+  await page.screenshot({ path: "test-results/monitor-wait-colors-custom.png" });
+});
 
 test("aplica filtros, persiste preferências sem texto e pagina os resultados", async ({ page }) => {
   const { queries, errors } = await setup(page);

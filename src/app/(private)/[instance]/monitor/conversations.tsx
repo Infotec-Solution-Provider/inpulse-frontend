@@ -18,6 +18,8 @@ import MonitorPagination from "./(components)/monitor-pagination";
 import MonitorConversationPreview from "./(components)/conversation-preview";
 import getMonitorCardProps from "./(functions)/get-card-props";
 import useMonitorContext from "./context";
+import { monitorWaitThresholds } from "./wait-thresholds";
+import { useMonitorClock } from "./use-monitor-clock";
 import "./conversation-density.css";
 
 export default function ConversationMonitor() {
@@ -31,7 +33,9 @@ export default function ConversationMonitor() {
     resetFilters,
     setActionMenuOpen,
   } = useMonitorContext();
-  const { sectors, setCurrentChat, tenantPolicy } = useWhatsappContext();
+  const { sectors, setCurrentChat, tenantPolicy, parameters } = useWhatsappContext();
+  const waitThresholds = monitorWaitThresholds(parameters);
+  const now = useMonitorClock();
   const { instance, user } = useAuthContext();
   const sectorNamespace = resolveSectorNamespace(instance, user?.SETOR, tenantPolicy);
   const { users } = useInternalChatContext();
@@ -101,6 +105,8 @@ export default function ConversationMonitor() {
                       key={key}
                       {...getMonitorCardProps(chat, users, sectors, sectorNamespace)}
                       compact={viewMode === "compact"}
+                      waitThresholds={waitThresholds}
+                      now={now}
                       onMenuOpenChange={setActionMenuOpen}
                       handleView={
                         "chatType" in chat

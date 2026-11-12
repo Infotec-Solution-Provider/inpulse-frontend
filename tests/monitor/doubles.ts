@@ -54,10 +54,15 @@ const pendingAction = (type: string, chatId: number) =>
     });
   });
 const currentChat = { id: 999, chatType: "wpp" } as DetailedChat;
+const monitorQuery = new URLSearchParams(location.search);
 const whatsapp = {
-  parameters: new URLSearchParams(location.search).has("homolog-no-flags")
-    ? resolveFeatureParameters("homolog", {})
-    : { feature_telephony_monitoring_enabled: new URLSearchParams(location.search).has("telephony-off") ? "false" : "true" } as Record<string, string>,
+  parameters: {
+    ...(monitorQuery.has("homolog-no-flags")
+      ? resolveFeatureParameters("homolog", {})
+      : { feature_telephony_monitoring_enabled: monitorQuery.has("telephony-off") ? "false" : "true" }),
+    ...(monitorQuery.has("wait-warning") ? { "monitor:wait_warning_minutes": monitorQuery.get("wait-warning")! } : {}),
+    ...(monitorQuery.has("wait-critical") ? { "monitor:wait_critical_minutes": monitorQuery.get("wait-critical")! } : {}),
+  } as Record<string, string>,
   sectors: [{ id: 1, name: "Atendimento" }],
   currentChat,
   setCurrentChat: () => undefined,

@@ -250,6 +250,36 @@
   flex-shrink: 0;
   color: var(--ip-muted);
 }
+.ip-ui .ip-conversation-wait {
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+.ip-ui .ip-conversation-wait-marker {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ip-ui .ip-conversation-wait--normal .ip-conversation-wait-marker {
+  color: var(--ip-muted);
+}
+.ip-ui .ip-conversation-wait--warning {
+  color: var(--ip-warning);
+  background: var(--ip-warning-soft);
+}
+.ip-ui .ip-conversation-wait--critical {
+  color: var(--ip-danger);
+  background: var(--ip-danger-soft);
+}
+.ip-ui .ip-conversation-wait--critical .ip-conversation-wait-marker {
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.ip-ui .ip-conversation-wait--warning svg,
+.ip-ui .ip-conversation-wait--critical svg {
+  color: currentColor;
+}
 .ip-ui .ip-conversation-operation > span + span::before {
   content: "·";
   margin-right: 8px;
