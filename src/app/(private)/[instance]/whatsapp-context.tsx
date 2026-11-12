@@ -886,7 +886,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
   const reactToMessage = useCallback(
     (message: WppMessage, emoji: string) => {
       const channel = channels.find((item) => item.id === message.clientId);
-      if (!canReactToWhatsappMessage(message, channel?.type)) {
+      if (!canReactToWhatsappMessage(message, channel?.type, currentChatRef.current)) {
         return Promise.reject(
           new Error("Reações não estão disponíveis para esta mensagem ou canal."),
         );

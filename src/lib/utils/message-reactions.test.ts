@@ -237,6 +237,41 @@ describe("reaction capabilities", () => {
     }
   });
 
+  it("permits recent WABA messages only in their open individual conversation", () => {
+    const now = Date.parse("2026-11-12T17:00:00Z");
+    const chat = { id: 8, chatType: "wpp", isFinished: false };
+    const inbound = {
+      ...message(), instance: "odim", chatId: 8, type: "chat", wabaId: "wamid.fixture",
+      timestamp: String(now), from: "5511999999999", to: "me:odim-legacy-copy",
+    };
+    expect(canReactToWhatsappMessage(inbound, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage({ ...inbound, from: inbound.to, to: inbound.from }, "WABA", chat, now)).toBe(true);
+    const native = { ...inbound, instance: "tenant", type: "text", to: "me:+55 (11) 98888-7777" };
+    expect(canReactToWhatsappMessage(native, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage({ ...native, from: native.to, to: native.from }, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage({ ...inbound, timestamp: String(now / 1000) }, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage({ ...inbound, timestamp: "invalid", sentAt: new Date(now) }, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage(inbound, "GUPSHUP", chat, now)).toBe(false);
+    expect(canReactToWhatsappMessage(inbound, "WABA", null, now)).toBe(false);
+    expect(canReactToWhatsappMessage(inbound, "WABA", { ...chat, isFinished: true }, now)).toBe(false);
+    expect(canReactToWhatsappMessage(inbound, "WABA", { ...chat, id: 9 }, now)).toBe(false);
+    expect(canReactToWhatsappMessage(inbound, "WABA", { ...chat, chatType: "internal" }, now)).toBe(false);
+    expect(canReactToWhatsappMessage(inbound, "WABA", { ...chat, wppGroupId: "group@g.us" }, now)).toBe(false);
+    for (const patch of [
+      { id: 0 }, { wabaId: null }, { wabaId: "remote-id" }, { wabaId: "wamid. bad" },
+      { wabaId: `wamid.${"x".repeat(191)}` }, { clientId: null }, { clientId: -1 },
+      { from: "system" }, { from: "bot:test" }, { from: "thirdparty" }, { to: "" },
+      { from: "group@g.us" }, { to: "me:3" }, { instance: "other-tenant" },
+      { type: "system" }, { type: "protocol" }, { type: "notification" }, { type: "reaction" },
+      { status: "PENDING" }, { status: "UNKNOWN" }, { status: "ERROR" }, { status: "REVOKED" }, { status: "DELETED" },
+    ]) expect(canReactToWhatsappMessage({ ...inbound, ...patch } as WppMessage, "WABA", chat, now)).toBe(false);
+    const oldest = now - 30 * 24 * 60 * 60_000;
+    expect(canReactToWhatsappMessage({ ...inbound, timestamp: String(oldest) }, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage({ ...inbound, timestamp: String(oldest - 1) }, "WABA", chat, now)).toBe(false);
+    expect(canReactToWhatsappMessage({ ...inbound, timestamp: String(now + 5 * 60_000) }, "WABA", chat, now)).toBe(true);
+    expect(canReactToWhatsappMessage({ ...inbound, timestamp: String(now + 5 * 60_000 + 1) }, "WABA", chat, now)).toBe(false);
+  });
+
   it("requires a synchronized WhatsApp group and provider message identity for internal messages", () => {
     const internal = { ...message(), internalChatId: 8 } as unknown as InternalMessage;
     const chat = { wppGroupId: "group@g.us" } as never;
