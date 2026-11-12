@@ -84,6 +84,8 @@ export const InternalChatContext = createContext({
     { CODIGO: 9, NOME: "Visível zero", SETOR: 1, ATIVO: "SIM", DESATIVAR_EXIBICAO_WHATS: 0 },
     { CODIGO: 10, NOME: "Visível zero texto", SETOR: 1, ATIVO: "SIM", DESATIVAR_EXIBICAO_WHATS: "0" },
     { CODIGO: 11, NOME: "Visível null", SETOR: 1, ATIVO: "SIM", DESATIVAR_EXIBICAO_WHATS: null },
+    { CODIGO: 12, NOME: "Oculto não zero", SETOR: 1, ATIVO: "SIM", DESATIVAR_EXIBICAO_WHATS: "2" },
+    { CODIGO: 13, NOME: "Visível false texto", SETOR: 1, ATIVO: "SIM", DESATIVAR_EXIBICAO_WHATS: "false" },
   ] as User[],
   openInternalChat: (_chat: unknown, markAsRead = true) => {
     state.opened.push(markAsRead);

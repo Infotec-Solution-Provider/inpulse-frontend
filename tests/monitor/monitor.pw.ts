@@ -389,10 +389,10 @@ test("transferência com falha mantém modal e troca de tenant fecha ação anti
   await expect(page.getByRole("option", { name: "Usuário desativado", exact: true })).toHaveCount(
     0,
   );
-  for (const name of ["Oculto booleano", "Oculto número", "Oculto texto", "Oculto true texto"]) {
+  for (const name of ["Oculto booleano", "Oculto número", "Oculto texto", "Oculto true texto", "Oculto não zero"]) {
     await expect(page.getByRole("option", { name, exact: true })).toHaveCount(0);
   }
-  for (const name of ["Visível false", "Visível zero", "Visível zero texto", "Visível null"]) {
+  for (const name of ["Visível false", "Visível zero", "Visível zero texto", "Visível null", "Visível false texto"]) {
     await expect(page.getByRole("option", { name, exact: true })).toBeAttached();
   }
   await expect(page.getByRole("option", { name: "Supervisor", exact: true })).toBeVisible();

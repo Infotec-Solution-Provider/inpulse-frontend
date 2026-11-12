@@ -89,7 +89,9 @@ export default function TransferChatModal({ chatId, onSuccess }: TransferChatMod
           </MenuItem>}
           {users?.filter((user) => {
             const hidden = user.DESATIVAR_EXIBICAO_WHATS;
-            return user.ATIVO !== "NAO" && hidden !== true && hidden !== 1 && hidden !== "1" && hidden !== "true" && canTransferTo(tenantPolicy, user.CODIGO);
+            const numeric = Number(hidden ?? 0);
+            const isHidden = hidden === true || hidden === "true" || (!Number.isNaN(numeric) && numeric !== 0);
+            return user.ATIVO !== "NAO" && !isHidden && canTransferTo(tenantPolicy, user.CODIGO);
           }).map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
               {user.NOME_EXIBICAO || user.NOME}
