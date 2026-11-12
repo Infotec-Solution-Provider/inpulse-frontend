@@ -87,7 +87,7 @@ export default function TransferChatModal({ chatId, onSuccess }: TransferChatMod
           {canTransferTo(tenantPolicy, -1) && <MenuItem key={`admin:-1`} value={-1}>
             Todos os supervisores
           </MenuItem>}
-          {users?.filter(user => canTransferTo(tenantPolicy, user.CODIGO)).map((user) => (
+          {users?.filter(user => user.ATIVO !== "NAO" && canTransferTo(tenantPolicy, user.CODIGO)).map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
               {user.NOME_EXIBICAO || user.NOME}
             </MenuItem>

@@ -386,6 +386,9 @@ test("transferência com falha mantém modal e troca de tenant fecha ação anti
   await page.getByRole("menuitem", { name: /Transferir.*Contato 1$/ }).click();
   const dialog = page.getByRole("dialog", { name: "Transferir conversa" });
   await dialog.getByRole("combobox", { name: "Usuário" }).click();
+  await expect(page.getByRole("option", { name: "Usuário desativado", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Supervisor", exact: true })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Todos os supervisores", exact: true })).toBeVisible();
   await page.getByRole("option", { name: "Ana", exact: true }).click();
   await dialog.getByRole("button", { name: "Transferir", exact: true }).click();
   await page.evaluate(() => window.monitorHarness.fail());
