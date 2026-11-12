@@ -47,7 +47,7 @@ const typeLabels = {
 const statusLabels = {
   in_progress: "Em atendimento",
   waiting_agent: "Aguardando atendente",
-  waiting_customer: "Aguardando cliente",
+  waiting_customer: "Em atendimento",
   finished: "Finalizado",
   scheduled: "Agendado",
 };
@@ -137,7 +137,7 @@ export default function MonitorCard({
   const menuId = useId();
   const title = groupName || chatTitle || "Conversa sem título";
   const status = operational?.status;
-  const waiting = status === "waiting_agent" || status === "waiting_customer";
+  const waiting = status === "waiting_agent";
   const waitTime =
     waiting && operational?.waitingSince ? elapsedTime(operational.waitingSince, now) : null;
   const waitSeverity = monitorWaitSeverity(operational, waitThresholds, now);
@@ -171,9 +171,7 @@ export default function MonitorCard({
         ? `Cliente aguarda há ${waitTime}`
         : "Cliente aguarda resposta"
       : status === "waiting_customer"
-        ? waitTime
-          ? `Aguardando cliente há ${waitTime}`
-          : "Aguardando cliente"
+        ? null
         : status === "scheduled" || type === "schedule"
           ? scheduleLabel || "Agendado"
           : status
@@ -259,31 +257,35 @@ export default function MonitorCard({
                 (type === "schedule" ? "Conversa agendada" : "Prévia da mensagem indisponível")}
             </p>
             <div className="ip-conversation-activity-meta">
-              <p className="ip-conversation-operation">
-                <span
-                  className={`ip-conversation-status${waitSeverity ? ` ip-conversation-wait ip-conversation-wait--${waitSeverity}` : ""}`}
-                  data-wait-severity={waitSeverity || undefined}
-                  title={waitSeverity ? `${waitLabel}. Atenção a partir de ${waitThresholds.warningMinutes} min; crítica a partir de ${waitThresholds.criticalMinutes} min. A espera começa na primeira mensagem sem resposta do atendente.` : undefined}
-                >
-                  {waitSeverity && <span className="ip-conversation-wait-marker" aria-hidden="true" />}
-                  {waitSeverity && <span className="sr-only">{waitLabel}: </span>}
-                  {waitTime && <UiIcon name="clock" scale="metadata" />}
-                  {operationalDescription}
-                </span>
-                {deliveryLabel && (
-                  <span
-                    className={
-                      deliveryFailed
-                        ? "ip-conversation-alert"
-                        : deliveryPending
-                          ? "ip-conversation-delivery-pending"
-                          : "ip-muted"
-                    }
-                  >
-                    {deliveryLabel}
-                  </span>
-                )}
-              </p>
+              {(operationalDescription || deliveryLabel) && (
+                <p className="ip-conversation-operation">
+                  {operationalDescription && (
+                    <span
+                      className={`ip-conversation-status${waitSeverity ? ` ip-conversation-wait ip-conversation-wait--${waitSeverity}` : ""}`}
+                      data-wait-severity={waitSeverity || undefined}
+                      title={waitSeverity ? `${waitLabel}. Atenção a partir de ${waitThresholds.warningMinutes} min; crítica a partir de ${waitThresholds.criticalMinutes} min. A espera começa na primeira mensagem sem resposta do atendente.` : undefined}
+                    >
+                      {waitSeverity && <span className="ip-conversation-wait-marker" aria-hidden="true" />}
+                      {waitSeverity && <span className="sr-only">{waitLabel}: </span>}
+                      {waitTime && <UiIcon name="clock" scale="metadata" />}
+                      {operationalDescription}
+                    </span>
+                  )}
+                  {deliveryLabel && (
+                    <span
+                      className={
+                        deliveryFailed
+                          ? "ip-conversation-alert"
+                          : deliveryPending
+                            ? "ip-conversation-delivery-pending"
+                            : "ip-muted"
+                      }
+                    >
+                      {deliveryLabel}
+                    </span>
+                  )}
+                </p>
+              )}
               {(type === "external-chat" || type === "finished-chat") && (
                 <p
                   className="ip-muted ip-conversation-channel"

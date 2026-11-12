@@ -101,7 +101,7 @@ async function setup(page: Page, handler?: (route: Route, query: Query) => Promi
   return { queries, errors };
 }
 
-test("marca espera normal/amarela/vermelha e respeita o tema sem colorir espera pelo cliente", async ({ page }) => {
+test("marca a espera do cliente sem exibir aviso quando aguarda retorno dele", async ({ page }) => {
   const now = Date.now();
   await setup(page, async (route) => {
     const items = [29, 30, 1440, 2000].map((minutes, index) => {
@@ -109,11 +109,14 @@ test("marca espera normal/amarela/vermelha e respeita o tema sem colorir espera 
       chat.operational.waitingSince = new Date(now - minutes * 60_000).toISOString();
       return chat;
     });
-    await route.fulfill({ json: { data: { items, totalCount: 4, page: 1, pageSize: 20 } } });
+    const withoutDelivery = item(5, "Sem pendência de resposta", false);
+    withoutDelivery.operational.deliveryStatus = null;
+    items.push(withoutDelivery);
+    await route.fulfill({ json: { data: { items, totalCount: 5, page: 1, pageSize: 20 } } });
     return true;
   });
   const cards = page.getByRole("article");
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(5);
   await expect(cards.nth(0).locator("[data-wait-severity='normal']")).toBeVisible();
   const warning = cards.nth(1).locator("[data-wait-severity='warning']");
   const critical = cards.nth(2).locator("[data-wait-severity='critical']");
@@ -122,6 +125,11 @@ test("marca espera normal/amarela/vermelha e respeita o tema sem colorir espera 
   await expect(warning).toHaveAttribute("title", /Atenção a partir de 30 min; crítica a partir de 1440 min/);
   await expect(critical.getByText("Espera crítica:", { exact: true })).toBeAttached();
   await expect(cards.nth(3).locator("[data-wait-severity]")).toHaveCount(0);
+  await expect(cards.nth(3)).toHaveAttribute("aria-label", "Espera 4, Em atendimento");
+  await expect(cards.nth(3).getByText(/Aguardando cliente/)).toHaveCount(0);
+  await expect(cards.nth(3).locator(".ip-conversation-status")).toHaveCount(0);
+  await expect(cards.nth(3).getByText("Envio sem confirmação", { exact: true })).toBeVisible();
+  await expect(cards.nth(4).locator(".ip-conversation-operation")).toHaveCount(0);
   await page.screenshot({ path: "test-results/monitor-wait-colors-light.png" });
   await page.evaluate(() => window.monitorHarness.dark());
   await expect(warning).toHaveCSS("color", cssRgb(uiPalette.dark.warning));
