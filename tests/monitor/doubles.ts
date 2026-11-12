@@ -73,8 +73,9 @@ export const WhatsappContext = createContext(whatsapp);
 export const useWhatsappContext = () => useContext(WhatsappContext);
 export const InternalChatContext = createContext({
   users: [
-    { CODIGO: 1, NOME: "Supervisor", SETOR: 1 },
-    { CODIGO: 2, NOME: "Ana", SETOR: 1 },
+    { CODIGO: 1, NOME: "Supervisor", SETOR: 1, ATIVO: null },
+    { CODIGO: 2, NOME: "Ana", SETOR: 1, ATIVO: "SIM" },
+    { CODIGO: 3, NOME: "Usuário desativado", SETOR: 1, ATIVO: "NAO" },
   ] as User[],
   openInternalChat: (_chat: unknown, markAsRead = true) => {
     state.opened.push(markAsRead);
