@@ -292,7 +292,7 @@ export default function StartChatModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mb-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-2 shadow-inner dark:bg-slate-800/50">
-          <ul className="scrollbar-whatsapp flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-16">
+          <ul className="scrollbar-whatsapp flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
             {loading ? (
               <li className="space-y-3 px-1 py-2" aria-label="Carregando contatos">
                 {Array.from({ length: 5 }).map((_, index) => (
