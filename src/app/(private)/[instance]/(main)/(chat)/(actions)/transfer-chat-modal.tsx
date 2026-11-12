@@ -50,7 +50,10 @@ export default function TransferChatModal() {
           <MenuItem key={`admin:-1`} value={-1}>
             Todos os supervisores
           </MenuItem>
-          {users?.filter((user) => user.ATIVO !== "NAO").map((user) => (
+          {users?.filter((user) => {
+            const hidden = user.DESATIVAR_EXIBICAO_WHATS;
+            return user.ATIVO !== "NAO" && hidden !== true && hidden !== 1 && hidden !== "1" && hidden !== "true";
+          }).map((user) => (
             <MenuItem key={user.CODIGO} value={user.CODIGO}>
               {user.NOME_EXIBICAO || user.NOME}
             </MenuItem>
