@@ -510,3 +510,9 @@ test("disabled telephony monitoring ignores a restored tab and performs no telep
   expect(reads).toBe(0);
   expect(await page.evaluate(() => localStorage.getItem("monitor_tab:v1:tenant-a:1"))).toBe("conversations");
 });
+
+
+test("homolog without rollout flags retains telephony monitoring", async ({ page }) => {
+  await page.goto("/tests/monitor/index.html?homolog-no-flags=1");
+  await expect(page.getByRole("tab", { name: "Telefonia", exact: true })).toBeVisible();
+});

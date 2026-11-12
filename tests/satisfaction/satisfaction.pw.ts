@@ -163,3 +163,13 @@ test("disabled modules retain basic finalization without loading or sending new 
   expect(calls.filter((call: any) => call.kind === "proposal-results" || call.kind === "proposal-list" || call.scheduleId)).toEqual([]);
   expect(calls.find((call: any) => call.finish).finish[4]).toEqual({});
 });
+
+
+test("homolog without rollout flags still requires survey and proposal before finishing", async ({ page }) => {
+  await page.goto("/tests/satisfaction/index.html?mode=call&homolog-no-flags");
+  await page.getByRole("combobox", { name: /^Resultado/ }).click();
+  await page.getByRole("option", { name: "Proposta, cancelamento e pesquisa", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Pesquisa da ligação" })).toBeVisible();
+  await expect(page.getByLabel("Valor da proposta (R$)")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Finalizar", exact: true })).toBeDisabled();
+});

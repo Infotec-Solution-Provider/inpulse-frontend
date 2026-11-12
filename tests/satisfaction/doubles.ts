@@ -1,3 +1,4 @@
+import { resolveFeatureParameters } from "@/lib/feature-flags";
 import { useSyncExternalStore } from "react";
 export const context = { instance: "fixture", token: "fixture-token" };
 const initial = [
@@ -62,7 +63,9 @@ export const useAppContext = () => ({
 });
 const off = new URLSearchParams(location.search).has("flags-off");
 const whatsapp = {
-  parameters: { feature_crm_sales_enabled: off ? "false" : "true", feature_crm_satisfaction_enabled: off ? "false" : "true" },
+  parameters: new URLSearchParams(location.search).has("homolog-no-flags")
+    ? resolveFeatureParameters("homolog", {})
+    : { feature_crm_sales_enabled: off ? "false" : "true", feature_crm_satisfaction_enabled: off ? "false" : "true" },
   wppApi: {
     current: {
       setAuth() {},

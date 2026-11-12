@@ -306,9 +306,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
         </PilotDesignProvider>
       )}
       <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }}>
-        <div className="flex shrink-0 justify-end bg-slate-200 px-4 py-1 dark:bg-slate-800">
-          <FrontendVersionSwitch />
-        </div>
+        <FrontendVersionSwitch />
         <PilotDesignProvider style={{ height: 64, flexShrink: 0 }}>
           {" "}
           <Box

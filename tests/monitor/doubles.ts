@@ -1,3 +1,4 @@
+import { resolveFeatureParameters } from "@/lib/feature-flags";
 import { createContext, createElement, useContext, useState } from "react";
 import {
   Button,
@@ -54,7 +55,9 @@ const pendingAction = (type: string, chatId: number) =>
   });
 const currentChat = { id: 999, chatType: "wpp" } as DetailedChat;
 const whatsapp = {
-  parameters: { feature_telephony_monitoring_enabled: new URLSearchParams(location.search).has("telephony-off") ? "false" : "true" } as Record<string, string>,
+  parameters: new URLSearchParams(location.search).has("homolog-no-flags")
+    ? resolveFeatureParameters("homolog", {})
+    : { feature_telephony_monitoring_enabled: new URLSearchParams(location.search).has("telephony-off") ? "false" : "true" } as Record<string, string>,
   sectors: [{ id: 1, name: "Atendimento" }],
   currentChat,
   setCurrentChat: () => undefined,

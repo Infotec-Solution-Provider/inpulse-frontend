@@ -1,5 +1,5 @@
 import { AuthContext } from "@/app/auth-context";
-import { DEFAULT_FEATURE_PARAMETERS } from "@/lib/feature-flags";
+import { DEFAULT_FEATURE_PARAMETERS, resolveFeatureParameters } from "@/lib/feature-flags";
 import { loadWhatsappSectorSession, readWhatsappSessionMetadata } from "@/lib/whatsapp-sector-bootstrap";
 import { approvedWhatsappSectors, resolveSectorNamespace, sectorNamespaceKey } from "@/lib/sector-namespace";
 import { MessageSendStageError, type SendStage } from "@/lib/utils/message-send-diagnostics";
@@ -329,7 +329,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     const response = await api.current.ax.get<{ parameters: Record<string, string>; tenantPolicy?: TenantUiPolicy | null }>("/api/whatsapp/session/parameters");
     if (scope === liveAuth.current.scope) {
       const metadata = readWhatsappSessionMetadata(liveAuth.current.instance, response.data);
-      setParameters({ ...DEFAULT_FEATURE_PARAMETERS, ...metadata.parameters });
+      setParameters(resolveFeatureParameters(liveAuth.current.instance, metadata.parameters));
       setTenantPolicy(metadata.tenantPolicy);
       if (sectorSnapshotKey.current !== sectorNamespaceKey(liveAuth.current.instance, liveAuth.current.user?.SETOR, metadata.tenantPolicy)) {
         setSectorReload(value => value + 1);
@@ -1119,7 +1119,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         setTenantPolicy(snapshot.tenantPolicy);
         sectorSnapshotKey.current = sectorNamespaceKey(instance, sessionUser.SETOR, snapshot.tenantPolicy);
         setSectorSessionScope(sessionScope);
-        setParameters({ ...DEFAULT_FEATURE_PARAMETERS, ...parameters });
+        setParameters(resolveFeatureParameters(instance, parameters));
         globalChannel.current = activeChannel;
         setSelectedChannel((current) => current ?? activeChannel);
         setChannels(channelsData);

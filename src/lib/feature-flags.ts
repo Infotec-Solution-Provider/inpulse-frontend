@@ -36,6 +36,40 @@ export const DEFAULT_FEATURE_PARAMETERS: Record<string, string> = {
   [FEATURE_FLAGS.legacyHistory]: "false",
 };
 
+// The homolog frontend exposed these modules before rollout flags existed.
+// Apply this bridge only to its known test tenants and never override a value
+// explicitly supplied by the backend. Other builds and Odim remain deny-by-default.
+const HOMOLOG_EXISTING_TENANTS = new Set(["homolog", "suprimaxxi", "infotec"]);
+const HOMOLOG_EXISTING_FEATURES: FeatureFlag[] = [
+  FEATURE_FLAGS.crmCustomers,
+  FEATURE_FLAGS.crmUsers,
+  FEATURE_FLAGS.crmUnitsCampaigns,
+  FEATURE_FLAGS.crmSales,
+  FEATURE_FLAGS.crmImports,
+  FEATURE_FLAGS.crmEmail,
+  FEATURE_FLAGS.crmSatisfaction,
+  FEATURE_FLAGS.crmAdministration,
+  FEATURE_FLAGS.telephonyMonitoring,
+  FEATURE_FLAGS.contactRequests,
+  FEATURE_FLAGS.parameterSettings,
+];
+
+export function resolveFeatureParameters(
+  instance: string,
+  parameters: Record<string, string>,
+): Record<string, string> {
+  const resolved = { ...DEFAULT_FEATURE_PARAMETERS, ...parameters };
+  if (
+    process.env.NEXT_PUBLIC_HOMOLOG_LEGACY_FEATURE_ACCESS === "true" &&
+    HOMOLOG_EXISTING_TENANTS.has(instance)
+  ) {
+    for (const flag of HOMOLOG_EXISTING_FEATURES) {
+      if (resolved[flag] === undefined) resolved[flag] = "true";
+    }
+  }
+  return resolved;
+}
+
 export function isFeatureEnabled(parameters: FeatureParameters, flag: FeatureFlag): boolean {
   return parameters[flag] === "true";
 }

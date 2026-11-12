@@ -17,7 +17,7 @@ const stubs = {
 };
 const server = await createServer({
   configFile: false,
-  define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture.invalid") },
+  define: { "process.env.NEXT_PUBLIC_HOMOLOG_LEGACY_FEATURE_ACCESS": JSON.stringify("true"), "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture.invalid") },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-satisfaction",
   css: {
