@@ -215,7 +215,9 @@ export default function StartChatModalItem({
           <PersonIcon sx={{ fontSize: 32 }} />
         </Avatar>
 
-        <div className="grid flex-1 items-stretch gap-3 sm:grid-cols-2 sm:gap-4">
+        <div
+          className={`grid min-w-0 flex-1 items-stretch gap-3 sm:gap-4 ${customer ? "sm:grid-cols-2" : ""}`}
+        >
           {/* Informações do Contato */}
           <div className="flex min-h-[64px] min-w-0 flex-col justify-center gap-1">
             <div className="flex items-center gap-2">
@@ -223,6 +225,18 @@ export default function StartChatModalItem({
               <span className="truncate text-base font-bold text-gray-800 dark:text-white">
                 {contact.name}
               </span>
+              {!customer && (
+                <Chip
+                  label="Não Atribuído"
+                  size="small"
+                  sx={{
+                    flexShrink: 0,
+                    backgroundColor: "rgba(156, 163, 175, 0.2)",
+                    color: "rgb(107, 114, 128)",
+                    fontWeight: 500,
+                  }}
+                />
+              )}
             </div>
             <div className="flex items-center gap-2">
               <PhoneIcon className="text-gray-500" sx={{ fontSize: 16 }} />
@@ -256,23 +270,11 @@ export default function StartChatModalItem({
                 </div>
               )}
             </div>
-          ) : (
-            <div className="flex h-full min-h-[64px] items-center border-l-2 border-gray-200 pl-4 dark:border-gray-700">
-              <Chip
-                label="Não Atribuído"
-                size="small"
-                sx={{
-                  backgroundColor: "rgba(156, 163, 175, 0.2)",
-                  color: "rgb(107, 114, 128)",
-                  fontWeight: 500,
-                }}
-              />
-            </div>
-          )}
+          ) : null}
         </div>
 
         {/* Ação */}
-        <div className="flex shrink-0 items-center justify-end gap-2 sm:min-w-[120px]">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           {customer && (
             <Tooltip title="Detalhes do cliente" arrow>
               <IconButton
