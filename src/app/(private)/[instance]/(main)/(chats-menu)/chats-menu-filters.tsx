@@ -60,6 +60,7 @@ export default function ChatsMenuFilters() {
   const [newChatMenuAnchorEl, setNewChatMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [newInternalChatAnchorEl, setNewInternalChatAnchorEl] = useState<HTMLElement | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [schedulesOpen, setSchedulesOpen] = useState(false);
   const [draft, setDraft] = useState(chatFilters);
   const availableTypes = isExternal
     ? CHAT_TYPES.filter((type) => type.value === "internal")
@@ -98,7 +99,7 @@ export default function ChatsMenuFilters() {
             id="schedules-button"
             label="Consultar agendamentos"
             tooltip="Agendamentos"
-            onClick={() => openModal(<SchedulesModal onClose={closeModal} />)}
+            onClick={() => setSchedulesOpen(true)}
           >
             <UiIcon name="calendar" scale="toolbar" />
           </OperationalIconButton>
@@ -218,6 +219,7 @@ export default function ChatsMenuFilters() {
         <StartInternalChatModal onClose={() => setNewInternalChatAnchorEl(null)} />
       </Popover>
 
+      {schedulesOpen && <SchedulesModal onClose={() => setSchedulesOpen(false)} />}
       <OperationalPanel
         open={filtersOpen}
         title="Filtros de conversas"
