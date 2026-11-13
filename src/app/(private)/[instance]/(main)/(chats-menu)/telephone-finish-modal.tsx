@@ -2,7 +2,6 @@
 import TelephoneSurveyFields from "@/lib/components/telephone-survey-fields";
 import { completeSurvey, surveyPayload, type SurveyQuestion } from "@/lib/satisfaction";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
-import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import customersService from "@/lib/services/customers.service";
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
@@ -64,9 +63,10 @@ export default function TelephoneFinishModal({
 }: TelephoneFinishModalProps) {
   const { closeModal } = useAppContext();
   const { token, instance, user } = useAuthContext();
-  const { parameters, wppApi } = useWhatsappContext();
-  const salesEnabled = isFeatureEnabled(parameters, FEATURE_FLAGS.crmSales);
-  const satisfactionEnabled = isFeatureEnabled(parameters, FEATURE_FLAGS.crmSatisfaction);
+  const { wppApi } = useWhatsappContext();
+  // Homolog preserves the existing materialized flow: proposals and surveys are always available.
+  const salesEnabled = true;
+  const satisfactionEnabled = true;
   const finishApi = useMemo(
     () =>
       token
