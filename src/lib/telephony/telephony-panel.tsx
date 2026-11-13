@@ -85,6 +85,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           </IconButton>
         </span>
       </Tooltip>
+      <PhoneSettings />
       <Tooltip title={open ? "Recolher telefone" : "Abrir telefone"}>
         <IconButton
           size="small"
@@ -123,7 +124,6 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           {header}
         </div>
       )}
-      <PhoneSettings />
       {((open && (busy || state.connection === "ready")) ||
         state.error ||
         error ||

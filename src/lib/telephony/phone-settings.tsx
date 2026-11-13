@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Switch, TextField } from "@mui/material";
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Switch, TextField, Tooltip } from "@mui/material";
+import { Settings } from "lucide-react";
+import { UiIcon } from "@/lib/ui-system/icons";
 import { useTelephony } from "./telephony-provider";
 import { audioConstraints } from "./audio-preferences";
 
@@ -52,7 +54,11 @@ export function PhoneSettings() {
     </TextField>;
   }
   return <>
-    <Button size="small" onClick={() => setOpen(true)}>Aparelhos e áudio</Button>
+    <Tooltip title="Configurações da telefonia">
+      <IconButton size="small" aria-label="Configurações da telefonia" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+        <UiIcon icon={Settings} />
+      </IconButton>
+    </Tooltip>
     <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Aparelhos e áudio</DialogTitle><DialogContent className="space-y-4 pt-3">
       {error && <Alert severity="warning">{error}</Alert>}
       <p className="text-sm">Preferências deste usuário neste navegador. Alterações são usadas na próxima ligação.</p>

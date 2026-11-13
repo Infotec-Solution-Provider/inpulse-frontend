@@ -6,7 +6,7 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await page.getByRole("button", { name: "Abrir telefone" }).click();
   await page.getByRole("button", { name: "Conectar telefonia" }).click();
   await expect(page.getByRole("status", { name: "Ramal conectado" })).toBeVisible();
-  await page.getByRole("button", { name: "Aparelhos e áudio" }).click();
+  await page.getByRole("button", { name: "Configurações da telefonia" }).click();
   await expect(page.getByRole("dialog", { name: "Aparelhos e áudio" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Atender automaticamente" })).not.toBeChecked();
   await expect(page.getByRole("checkbox", { name: "Cancelamento de eco" })).toBeChecked();
