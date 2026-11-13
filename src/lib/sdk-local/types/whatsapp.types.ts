@@ -383,6 +383,8 @@ export interface CreateScheduleDTO {
 
 export type UnifiedScheduleChannel = "WHATSAPP" | "TELEFONIA";
 
+export type UnifiedSchedulePeriod = "all" | "overdue" | "today" | "next7" | "custom";
+
 export type UnifiedScheduleRepurchaseStatus = "green" | "yellow" | "red" | "neutral";
 
 export interface UnifiedScheduleRepurchaseMetrics {
@@ -413,6 +415,13 @@ export interface UnifiedSchedulePagination {
 }
 
 export interface UnifiedScheduleFilters extends CustomerProfileSummaryFilters {
+  search?: string;
+  period?: UnifiedSchedulePeriod;
+  /** Inclusive ISO-8601 instant with timezone, used with period=custom. */
+  scheduledFrom?: string;
+  /** Exclusive ISO-8601 instant with timezone, used with period=custom. */
+  scheduledTo?: string;
+  sortOrder?: "asc" | "desc";
   page?: string;
   perPage?: string;
   channels?: string;
@@ -421,6 +430,9 @@ export interface UnifiedScheduleFilters extends CustomerProfileSummaryFilters {
   userId?: string;
   sectorId?: string;
 }
+
+/** Personal schedules always derive their owner and authorized scope from the session. */
+export type MyScheduleFilters = Omit<UnifiedScheduleFilters, "userId" | "sectorId">;
 
 export interface UnifiedSchedule {
   id: string;
@@ -444,6 +456,8 @@ export interface UnifiedSchedule {
   profileSummary: CustomerProfileSummaryPayload | null;
   repurchase: UnifiedScheduleRepurchaseMetrics | null;
   meta: {
+    commercialRestricted?: boolean;
+    enrichmentUnavailable?: boolean;
     wppContactId?: number;
     wppChatId?: number | null;
     telephonyRecordId?: number;
@@ -451,6 +465,11 @@ export interface UnifiedSchedule {
 }
 
 export interface UnifiedSchedulesResponse {
+  /** Present on the personal endpoint; optional for older unified consumers. */
+  referenceAt?: string;
+  timeZone?: "America/Sao_Paulo";
+  warnings?: Array<{ code: string; message: string }>;
+  capabilities?: { channels: UnifiedScheduleChannel[]; commercial: boolean };
   message: string;
   data: UnifiedSchedule[];
   page: {

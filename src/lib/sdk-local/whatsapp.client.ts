@@ -22,6 +22,7 @@ import {
   SendMessageData,
   UnifiedSchedule,
   UnifiedScheduleFilters,
+  MyScheduleFilters,
   UnifiedSchedulesResponse,
   WhatsappGroup,
   WppChatsAndMessages,
@@ -561,8 +562,15 @@ export default class WhatsappClient extends ApiClient {
     return response.data;
   }
 
-  public async getUnifiedSchedules(filters?: UnifiedScheduleFilters) {
-    let baseUrl = `/api/whatsapp/schedules/unified`;
+  public async getUnifiedSchedules(filters?: UnifiedScheduleFilters, signal?: AbortSignal) {
+    return this.listUnifiedSchedules("/api/whatsapp/schedules/unified", filters, signal);
+  }
+
+  public async getMySchedules(filters?: MyScheduleFilters, signal?: AbortSignal) {
+    return this.listUnifiedSchedules("/api/whatsapp/schedules/mine", filters, signal);
+  }
+
+  private async listUnifiedSchedules(baseUrl: string, filters?: UnifiedScheduleFilters, signal?: AbortSignal) {
     const params = new URLSearchParams(
       Object.entries(filters ?? {}).reduce<Record<string, string>>((acc, [key, value]) => {
         if (value !== undefined && value !== null) {
@@ -577,7 +585,7 @@ export default class WhatsappClient extends ApiClient {
       baseUrl += `?${params.toString()}`;
     }
 
-    const response = await this.ax.get<UnifiedSchedulesResponse>(baseUrl);
+    const response = await this.ax.get<UnifiedSchedulesResponse>(baseUrl, { signal });
     return response.data;
   }
 
