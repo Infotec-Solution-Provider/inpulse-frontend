@@ -1,40 +1,22 @@
 import { Box, Chip, Typography } from "@mui/material";
 import type { UnifiedSchedule } from "@/lib/sdk-local";
-import { formatScheduleDate, repurchaseOptions, scheduleTimeLabel } from "./schedule-query";
+import { formatScheduleDate, scheduleTimeLabel } from "./schedule-query";
 
 export function ScheduleItem({
   schedule: s,
   referenceAt,
-  commercial,
 }: {
   schedule: UnifiedSchedule;
   referenceAt?: string;
-  commercial: boolean;
 }) {
   const timeLabel = scheduleTimeLabel(s, referenceAt);
   const name = s.customerName || s.customerFantasyName || s.contactName || "Cliente não vinculado";
-  const unavailable = s.meta.enrichmentUnavailable;
-  const restricted = s.meta.commercialRestricted || !commercial;
-  const repurchase = restricted
-    ? "Acesso restrito"
-    : unavailable
-      ? "Indisponível"
-      : s.repurchase
-        ? repurchaseOptions.find(([status]) => status === s.repurchase?.semaphoreStatus)?.[1] ||
-          "Sem histórico suficiente"
-        : "Sem histórico suficiente";
   const details = [
     ["Contato", s.contactName],
     ["Telefone", s.contactPhone],
     ["Origem", s.customerOriginDescription],
     ["Campanha do cliente", s.customerCampaignName],
     ...(s.telephonyCampaignName ? [["Campanha operacional", s.telephonyCampaignName]] : []),
-    ...(!restricted
-      ? [
-          ["Perfil do cliente", unavailable ? "Indisponível" : s.profileSummary?.label],
-          ["Recompra", repurchase],
-        ]
-      : []),
   ];
   return (
     <Box
@@ -105,19 +87,6 @@ export function ScheduleItem({
             </Box>
           ))}
         </Box>
-        {!restricted && s.profileSummary && !unavailable && (
-          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap", mt: 1 }}>
-            {[
-              s.profileSummary.tags.interaction,
-              s.profileSummary.tags.purchase,
-              s.profileSummary.tags.age,
-            ]
-              .filter(Boolean)
-              .map((tag) => (
-                <Chip key={tag!.label} size="small" variant="outlined" label={tag!.label} />
-              ))}
-          </Box>
-        )}
         {s.description && (
           <Typography
             variant="body2"

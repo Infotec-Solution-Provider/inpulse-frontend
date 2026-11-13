@@ -13,6 +13,10 @@ interface CustomerBusinessFiltersProps {
   options: CustomerBusinessFilterOptions;
   onChange: (filters: CustomerBusinessFilters) => void;
   phoneLabel?: string;
+  hiddenFields?: ReadonlyArray<"campaignIds" | "segmentIds" | "loyaltyOperatorIds">;
+  /** Additional server capability; this never overrides the authenticated user's permission. */
+  financialAllowed?: boolean;
+  lazyLookups?: boolean;
 }
 
 function getSelectedOptions(options: CustomerLookupOption[], ids: number[]) {
@@ -25,9 +29,13 @@ export default function CustomerBusinessFiltersPanel({
   options,
   onChange,
   phoneLabel = "Telefone contém",
+  hiddenFields = [],
+  financialAllowed = true,
+  lazyLookups = false,
 }: CustomerBusinessFiltersProps) {
   const { user } = useAuthContext();
-  const canFilterFinancial = user?.NIVEL === "ADMIN" || user?.VISUALIZA_COMPRAS === "SIM";
+  const canFilterFinancial =
+    financialAllowed && (user?.NIVEL === "ADMIN" || user?.VISUALIZA_COMPRAS === "SIM");
   const update = <K extends keyof CustomerBusinessFilters>(
     key: K,
     value: CustomerBusinessFilters[K],
@@ -39,23 +47,24 @@ export default function CustomerBusinessFiltersPanel({
     label: string,
     lookupOptions: CustomerLookupOption[],
     key: "campaignIds" | "segmentIds" | "loyaltyOperatorIds",
-  ) => (
-    <Autocomplete
-      multiple
-      disableCloseOnSelect
-      options={lookupOptions}
-      value={getSelectedOptions(lookupOptions, filters[key])}
-      isOptionEqualToValue={(option, value) => option.CODIGO === value.CODIGO}
-      getOptionLabel={(option) => option.NOME?.trim() || `#${option.CODIGO}`}
-      onChange={(_, selected) =>
-        update(
-          key,
-          selected.map((option) => option.CODIGO),
-        )
-      }
-      renderInput={(params) => <TextField {...params} size="small" label={label} />}
-    />
-  );
+  ) =>
+    hiddenFields.includes(key) ? null : (
+      <Autocomplete
+        multiple
+        disableCloseOnSelect
+        options={lookupOptions}
+        value={getSelectedOptions(lookupOptions, filters[key])}
+        isOptionEqualToValue={(option, value) => option.CODIGO === value.CODIGO}
+        getOptionLabel={(option) => option.NOME?.trim() || `#${option.CODIGO}`}
+        onChange={(_, selected) =>
+          update(
+            key,
+            selected.map((option) => option.CODIGO),
+          )
+        }
+        renderInput={(params) => <TextField {...params} size="small" label={label} />}
+      />
+    );
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
@@ -139,6 +148,7 @@ export default function CustomerBusinessFiltersPanel({
           key={key}
           label={label}
           kind={kind}
+          loadOnOpen={lazyLookups}
           value={filters[key]}
           onChange={(ids) => update(key, ids.map(Number))}
         />
@@ -146,6 +156,7 @@ export default function CustomerBusinessFiltersPanel({
       <CustomerSearchLookup
         label="Estados"
         kind="states"
+        loadOnOpen={lazyLookups}
         value={filters.states}
         onChange={(ids) => update("states", ids)}
       />

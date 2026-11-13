@@ -6,6 +6,10 @@ import { PilotDesignProvider, CrmQueryProvider } from "../../src/lib/ui-system";
 import SchedulesModal from "../../src/app/(private)/[instance]/(main)/(chats-menu)/(schedules-modal)/schedules-modal";
 import { AuthContext } from "./doubles";
 import { authSession } from "../../src/lib/auth-session";
+import { useCrmQueryState } from "../../src/lib/ui-system/query-state";
+import CustomerBusinessFiltersPanel from "../../src/lib/components/customer-business-filters";
+import useCustomerBusinessFilterOptions from "../../src/lib/hooks/use-customer-business-filter-options";
+import { createEmptyCustomerBusinessFilters } from "../../src/lib/types/customer-business-filters";
 
 declare global {
   interface Window {
@@ -34,17 +38,52 @@ function Harness() {
       {open && <SchedulesModal onClose={() => setOpen(false)} />}
     </>
   );
+  const user = {
+    CODIGO: userId,
+    NIVEL: "AMBOS",
+    VISUALIZA_COMPRAS: new URLSearchParams(location.search).has("financial-denied") ? "NAO" : "SIM",
+  };
   return (
-    <AuthContext.Provider value={{ instance, token, user: { CODIGO: userId } }}>
+    <AuthContext.Provider value={{ instance, token, user }}>
       <CrmQueryProvider scope={`${instance}:${userId}`}>
-        {new URLSearchParams(location.search).has("legacy") ? (
-          content
+        {new URLSearchParams(location.search).has("legacy-query") && (
+          <LegacyQuerySeed scope={`http://127.0.0.1:4193:${instance}:${userId}`} />
+        )}
+        {new URLSearchParams(location.search).has("shared-default") ? (
+          <SharedDefaultPanel />
         ) : (
-          <PilotDesignProvider>{content}</PilotDesignProvider>
+          <>
+            {new URLSearchParams(location.search).has("legacy") ? (
+              content
+            ) : (
+              <PilotDesignProvider>{content}</PilotDesignProvider>
+            )}
+          </>
         )}
       </CrmQueryProvider>
     </AuthContext.Provider>
   );
+}
+function LegacyQuerySeed({ scope }: { scope: string }) {
+  useCrmQueryState(`operator-schedules:${scope}`, () => ({
+    filters: {
+      search: "Fantasma legado",
+      profileLevel: "consolidado",
+      interactionLevel: "interacao_alta",
+      purchaseLevel: "muitas_compras",
+      ageLevel: "cliente_novo",
+      purchaseInterestLevel: "alto_interesse",
+      repurchaseStatuses: ["red"],
+    },
+    page: 3,
+    perPage: 50,
+  }));
+  return null;
+}
+function SharedDefaultPanel() {
+  const [filters, setFilters] = useState(createEmptyCustomerBusinessFilters);
+  const { options } = useCustomerBusinessFilterOptions();
+  return <CustomerBusinessFiltersPanel filters={filters} onChange={setFilters} options={options} />;
 }
 createRoot(document.getElementById("root")!).render(
   <ThemeProvider>

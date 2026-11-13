@@ -4,22 +4,47 @@ import {
   formatScheduleDate,
   initialScheduleQuery,
   scheduleTimeLabel,
+  scheduleQueryKey,
   serializeScheduleQuery,
   validateScheduleFilters,
 } from "./schedule-query";
 
 describe("consulta pessoal de agendamentos", () => {
-  it("serializa busca global e filtros combinados sem permitir selecionar outro usuário ou setor", () => {
+  it("serializa a busca e critérios reais do CRM sem campos automáticos ou campanha duplicada", () => {
     const query = initialScheduleQuery();
-    query.filters = {
-      ...query.filters,
-      search: "  Clínica São João  ",
-      channels: "WHATSAPP",
-      customerCampaignIds: ["2", "7"],
-      purchaseLevel: "sem_compras",
-      repurchaseStatuses: ["neutral"],
+    query.filters.search = "  Clínica São João  ";
+    query.filters.channels = "WHATSAPP";
+    query.filters.customerCampaignIds = ["2", "7"];
+    query.filters.customer = {
+      CODIGO: "-5",
+      CPF_CNPJ: "12345678901",
+      COD_ERP: "ABC%",
+      CIDADE: "São Paulo",
+      ATIVO: "SIM",
+      PESSOA: "JUR",
+    };
+    query.filters.business = {
+      ...query.filters.business,
+      campaignIds: [99],
+      purchaseStatus: "with_purchases",
+      purchaseFrom: "2026-01-01",
+      purchaseTo: "2026-11-13",
+      registeredFrom: "2025-01-01",
+      registeredTo: "2026-11-13",
+      segmentIds: [0, 7],
+      loyaltyOperatorIds: [4, 8],
+      groupIds: [-2, 0],
+      originIds: [3],
+      mediaIds: [4],
+      brandIds: [5],
+      unitIds: [6],
+      positionIds: [7],
+      states: ["RS", "SP"],
+      phone: " 51999990000 ",
+      email: " @teste.local ",
     };
     expect(serializeScheduleQuery(query)).toEqual({
+      view: "crm",
       page: "1",
       perPage: "10",
       period: "all",
@@ -27,9 +52,72 @@ describe("consulta pessoal de agendamentos", () => {
       search: "Clínica São João",
       channels: "WHATSAPP",
       customerCampaignIds: "2,7",
-      purchaseLevel: "sem_compras",
-      repurchaseStatuses: "neutral",
+      CODIGO: "-5",
+      CPF_CNPJ: "12345678901",
+      COD_ERP: "ABC%",
+      CIDADE: "São Paulo",
+      ATIVO: "SIM",
+      PESSOA: "JUR",
+      purchaseStatus: "with_purchases",
+      purchaseFrom: "2026-01-01",
+      purchaseTo: "2026-11-13",
+      registeredFrom: "2025-01-01",
+      registeredTo: "2026-11-13",
+      segmentIds: "0,7",
+      loyaltyOperatorIds: "4,8",
+      groupIds: "-2,0",
+      originIds: "3",
+      mediaIds: "4",
+      brandIds: "5",
+      unitIds: "6",
+      positionIds: "7",
+      states: "RS,SP",
+      phone: "51999990000",
+      email: "@teste.local",
     });
+  });
+  it("ignora campos automáticos legados e usa namespace v2 sem recuperar consulta antiga", () => {
+    const query = initialScheduleQuery();
+    Object.assign(query.filters, {
+      profileLevel: "consolidado",
+      interactionLevel: "interacao_alta",
+      purchaseLevel: "muitas_compras",
+      ageLevel: "cliente_novo",
+      purchaseInterestLevel: "alto_interesse",
+      repurchaseStatuses: ["green"],
+    });
+    const result = serializeScheduleQuery(query);
+    for (const key of [
+      "profileLevel",
+      "interactionLevel",
+      "purchaseLevel",
+      "ageLevel",
+      "purchaseInterestLevel",
+      "repurchaseStatuses",
+      "campaignIds",
+    ])
+      expect(result).not.toHaveProperty(key);
+    expect(scheduleQueryKey("tenant:1")).toBe("operator-schedules:v2:tenant:1");
+    expect(scheduleQueryKey("tenant:1")).not.toBe("operator-schedules:tenant:1");
+  });
+  it("valida os períodos de compra e cadastro sem confundir com agendamento", () => {
+    const query = initialScheduleQuery();
+    query.filters.business.purchaseFrom = "2026-11-14";
+    query.filters.business.purchaseTo = "2026-11-13";
+    expect(validateScheduleFilters(query.filters)).toContain("compra");
+    query.filters.business.purchaseStatus = "without_purchases";
+    expect(validateScheduleFilters(query.filters)).toBeNull();
+    expect(serializeScheduleQuery(query)).not.toHaveProperty("purchaseFrom");
+    query.filters.business.registeredFrom = "2026-02-30";
+    expect(validateScheduleFilters(query.filters)).toContain("cadastro");
+  });
+  it("rejeita telefone curto e preserva IDs zero e negativos dos catálogos CRM", () => {
+    const query = initialScheduleQuery();
+    query.filters.business.phone = "12";
+    expect(validateScheduleFilters(query.filters)).toContain("três dígitos");
+    query.filters.business.phone = "(51) 99999-0000";
+    query.filters.business.groupIds = [0, -2];
+    expect(serializeScheduleQuery(query).groupIds).toBe("0,-2");
   });
   it("converte dias inclusivos em Brasília para limites UTC sem depender do browser", () => {
     const query = initialScheduleQuery();
@@ -80,7 +168,7 @@ describe("consulta pessoal de agendamentos", () => {
       search: "",
       period: "all",
       customerCampaignIds: [],
-      repurchaseStatuses: [],
+      business: expect.objectContaining({ groupIds: [], purchaseStatus: "" }),
       sortOrder: "asc",
     });
   });

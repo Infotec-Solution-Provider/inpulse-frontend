@@ -2,10 +2,16 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import type { MyScheduleFilters, UnifiedSchedule } from "@/lib/sdk-local";
+import {
+  createEmptyCustomerBusinessFilters,
+  serializeCustomerBusinessFilters,
+  type CustomerBusinessFilters,
+} from "@/lib/types/customer-business-filters";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 export const SCHEDULE_TIME_ZONE = "America/Sao_Paulo";
+export const scheduleQueryKey = (scope: string) => `operator-schedules:v2:${scope}`;
 export const periodOptions = [
   { value: "all", label: "Todos pendentes" },
   { value: "overdue", label: "Atrasados" },
@@ -13,6 +19,15 @@ export const periodOptions = [
   { value: "next7", label: "Próximos 7 dias" },
   { value: "custom", label: "Personalizado" },
 ] as const;
+export const customerBasicFields = [
+  "CODIGO",
+  "CPF_CNPJ",
+  "COD_ERP",
+  "CIDADE",
+  "ATIVO",
+  "PESSOA",
+] as const;
+export type ScheduleCustomerFilters = Record<(typeof customerBasicFields)[number], string>;
 export type SchedulePeriod = (typeof periodOptions)[number]["value"];
 export interface ScheduleFilters {
   search: string;
@@ -22,73 +37,14 @@ export interface ScheduleFilters {
   channels: string;
   sortOrder: "asc" | "desc";
   customerCampaignIds: string[];
-  profileLevel: string;
-  interactionLevel: string;
-  purchaseLevel: string;
-  ageLevel: string;
-  purchaseInterestLevel: string;
-  repurchaseStatuses: string[];
+  customer: ScheduleCustomerFilters;
+  business: CustomerBusinessFilters;
 }
 export interface ScheduleQuery {
   filters: ScheduleFilters;
   page: number;
   perPage: number;
 }
-export const commercialOptions = {
-  profileLevel: {
-    label: "Perfil do cliente",
-    options: [
-      ["potencial_de_compra", "Potencial de compra"],
-      ["consolidado", "Consolidado"],
-      ["precisa_mais_interacao", "Precisa mais interação"],
-      ["em_observacao", "Em observação"],
-    ],
-  },
-  interactionLevel: {
-    label: "Interação",
-    options: [
-      ["sem_interacao", "Sem interação"],
-      ["pouca_interacao", "Pouca interação"],
-      ["interacao_media", "Interação média"],
-      ["interacao_alta", "Interação alta"],
-    ],
-  },
-  purchaseLevel: {
-    label: "Compras",
-    options: [
-      ["sem_compras", "Sem compras"],
-      ["poucas_compras", "Poucas compras"],
-      ["compras_medias", "Compras médias"],
-      ["muitas_compras", "Muitas compras"],
-    ],
-  },
-  ageLevel: {
-    label: "Tempo de cadastro",
-    options: [
-      ["sem_data_cadastro", "Sem data de cadastro"],
-      ["cliente_novo", "Cliente novo"],
-      ["ate_6_meses", "Até 6 meses"],
-      ["ate_12_meses", "Até 12 meses"],
-      ["mais_de_12_meses", "Mais de 12 meses"],
-    ],
-  },
-  purchaseInterestLevel: {
-    label: "Interesse de compra",
-    options: [
-      ["nao_analisado", "Não analisado"],
-      ["baixo_interesse", "Baixo interesse"],
-      ["interesse_moderado", "Interesse moderado"],
-      ["alto_interesse", "Alto interesse"],
-      ["pronto_para_compra", "Pronto para compra"],
-    ],
-  },
-} as const;
-export const repurchaseOptions = [
-  ["green", "Pronto para comprar"],
-  ["yellow", "Próximo da recompra"],
-  ["red", "Longe da recompra"],
-  ["neutral", "Sem histórico suficiente"],
-] as const;
 export function emptyScheduleFilters(): ScheduleFilters {
   return {
     search: "",
@@ -98,12 +54,8 @@ export function emptyScheduleFilters(): ScheduleFilters {
     channels: "",
     sortOrder: "asc",
     customerCampaignIds: [],
-    profileLevel: "",
-    interactionLevel: "",
-    purchaseLevel: "",
-    ageLevel: "",
-    purchaseInterestLevel: "",
-    repurchaseStatuses: [],
+    customer: { CODIGO: "", CPF_CNPJ: "", COD_ERP: "", CIDADE: "", ATIVO: "", PESSOA: "" },
+    business: createEmptyCustomerBusinessFilters(),
   };
 }
 export const initialScheduleQuery = (): ScheduleQuery => ({
@@ -111,7 +63,6 @@ export const initialScheduleQuery = (): ScheduleQuery => ({
   page: 1,
   perPage: 10,
 });
-
 function validDay(value: string): boolean {
   return (
     /^\d{4}-\d{2}-\d{2}$/.test(value) &&
@@ -119,22 +70,72 @@ function validDay(value: string): boolean {
     new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value
   );
 }
+function validateRange(from: string, to: string, label: string): string | null {
+  if ((from && !validDay(from)) || (to && !validDay(to)))
+    return `Informe datas válidas de ${label}.`;
+  if (from && to && from > to)
+    return `A data final de ${label} deve ser igual ou posterior à inicial.`;
+  return null;
+}
 export function validateScheduleFilters(filters: ScheduleFilters): string | null {
   if (filters.search.trim().length > 200) return "Use até 200 caracteres na busca.";
-  if (filters.period !== "custom") return null;
-  if (!validDay(filters.dateFrom) || !validDay(filters.dateTo))
-    return "Informe as duas datas válidas do período.";
-  if (filters.dateFrom > filters.dateTo)
-    return "A data final deve ser igual ou posterior à inicial.";
-  return null;
+  if (filters.period === "custom") {
+    if (!validDay(filters.dateFrom) || !validDay(filters.dateTo))
+      return "Informe as duas datas válidas do período do agendamento.";
+    if (filters.dateFrom > filters.dateTo)
+      return "A data final do agendamento deve ser igual ou posterior à inicial.";
+  }
+  if (filters.customer.CODIGO.trim() && !/^-?\d+$/.test(filters.customer.CODIGO.trim()))
+    return "Informe um código do cliente com dígitos.";
+  const b = filters.business;
+  if (b.phone.trim() && b.phone.replace(/\D/g, "").length < 3)
+    return "Informe pelo menos três dígitos no telefone do cliente.";
+  for (const value of [
+    b.phone,
+    b.email,
+    filters.customer.CPF_CNPJ,
+    filters.customer.COD_ERP,
+    filters.customer.CIDADE,
+  ]) {
+    if (value.trim().length > 200) return "Use até 200 caracteres em cada filtro de cliente.";
+  }
+  for (const values of [
+    b.segmentIds,
+    b.loyaltyOperatorIds,
+    b.groupIds,
+    b.originIds,
+    b.mediaIds,
+    b.brandIds,
+    b.unitIds,
+    b.positionIds,
+  ]) {
+    if (
+      values.length > 100 ||
+      values.some((id) => !Number.isInteger(id) || id < -2147483648 || id > 2147483647)
+    )
+      return "Selecione até 100 opções válidas por filtro.";
+  }
+  return (
+    validateRange(b.registeredFrom, b.registeredTo, "cadastro") ||
+    (b.purchaseStatus !== "without_purchases"
+      ? validateRange(b.purchaseFrom, b.purchaseTo, "compra")
+      : null)
+  );
 }
 export function serializeScheduleQuery(query: ScheduleQuery): MyScheduleFilters {
   const f = query.filters;
   const error = validateScheduleFilters(f);
   if (error) throw new Error(error);
   return {
+    ...Object.fromEntries(
+      customerBasicFields
+        .filter((key) => f.customer[key].trim())
+        .map((key) => [key, f.customer[key].trim()]),
+    ),
+    ...serializeCustomerBusinessFilters({ ...f.business, campaignIds: [] }),
     page: String(query.page),
     perPage: String(query.perPage),
+    view: "crm",
     period: f.period,
     sortOrder: f.sortOrder,
     ...(f.search.trim() ? { search: f.search.trim() } : {}),
@@ -152,23 +153,6 @@ export function serializeScheduleQuery(query: ScheduleQuery): MyScheduleFilters 
       : {}),
     ...(f.customerCampaignIds.length
       ? { customerCampaignIds: f.customerCampaignIds.join(",") }
-      : {}),
-    ...(f.repurchaseStatuses.length ? { repurchaseStatuses: f.repurchaseStatuses.join(",") } : {}),
-    ...(f.profileLevel
-      ? { profileLevel: f.profileLevel as MyScheduleFilters["profileLevel"] }
-      : {}),
-    ...(f.interactionLevel
-      ? { interactionLevel: f.interactionLevel as MyScheduleFilters["interactionLevel"] }
-      : {}),
-    ...(f.purchaseLevel
-      ? { purchaseLevel: f.purchaseLevel as MyScheduleFilters["purchaseLevel"] }
-      : {}),
-    ...(f.ageLevel ? { ageLevel: f.ageLevel as MyScheduleFilters["ageLevel"] } : {}),
-    ...(f.purchaseInterestLevel
-      ? {
-          purchaseInterestLevel:
-            f.purchaseInterestLevel as MyScheduleFilters["purchaseInterestLevel"],
-        }
       : {}),
   };
 }

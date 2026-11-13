@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { CrmDialog } from "@/lib/ui-system/crm-dialog";
 import {
@@ -30,15 +30,17 @@ import { useWhatsappContext } from "../../../whatsapp-context";
 import { ScheduleFilterFields, type CampaignOption } from "./schedule-filters";
 import { ScheduleItem } from "./schedule-item";
 import {
-  commercialOptions,
   emptyScheduleFilters,
   initialScheduleQuery,
   periodOptions,
-  repurchaseOptions,
+  scheduleQueryKey,
+  customerBasicFields,
   validateScheduleFilters,
   type ScheduleFilters,
 } from "./schedule-query";
 import { useSchedulesQuery } from "./use-schedules-query";
+import { CUSTOMER_FILTER_LABELS } from "@/lib/components/customer-basic-filters";
+import { createEmptyCustomerBusinessFilters } from "@/lib/types/customer-business-filters";
 
 export default function SchedulesModal({ onClose }: { onClose: () => void }) {
   const { instance, user } = useAuthContext();
@@ -50,9 +52,10 @@ export default function SchedulesModal({ onClose }: { onClose: () => void }) {
 function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => void }) {
   const { wppApi } = useWhatsappContext();
   const { token } = useAuthContext();
-  const [query, setQuery] = useCrmQueryState(`operator-schedules:${scope}`, initialScheduleQuery);
+  const [query, setQuery] = useCrmQueryState(scheduleQueryKey(scope), initialScheduleQuery);
   const [draft, setDraft] = useState(query.filters);
   const [validation, setValidation] = useState<string | null>(null);
+  const validationElement = useRef<HTMLDivElement>(null);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
   const [capabilities, setCapabilities] = useState({
     channels: ["WHATSAPP", "TELEFONIA"],
@@ -74,7 +77,10 @@ function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => voi
     event.preventDefault();
     const error = validateScheduleFilters(draft);
     setValidation(error);
-    if (error) return;
+    if (error) {
+      requestAnimationFrame(() => validationElement.current?.scrollIntoView({ block: "nearest" }));
+      return;
+    }
     const next = { ...draft, search: draft.search.trim() };
     setDraft(next);
     const nextQuery = { ...query, filters: next, page: 1 };
@@ -123,24 +129,44 @@ function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => voi
         customerCampaignIds: next.customerCampaignIds.filter((value) => value !== id),
       }),
     );
-  for (const [key, config] of Object.entries(commercialOptions)) {
-    const field = key as keyof typeof commercialOptions;
-    if (f[field])
+  for (const field of customerBasicFields) {
+    if (f.customer[field])
       chip(
-        field,
-        `${config.label}: ${config.options.find(([value]) => value === f[field])?.[1] || f[field]}`,
-        (next) => ({ ...next, [field]: "" }),
+        `customer-${field}`,
+        `${CUSTOMER_FILTER_LABELS[field]}: ${f.customer[field]}`,
+        (next) => ({ ...next, customer: { ...next.customer, [field]: "" } }),
       );
   }
-  for (const status of f.repurchaseStatuses)
+  for (const field of Object.keys(createEmptyCustomerBusinessFilters()) as Array<
+    keyof ScheduleFilters["business"]
+  >) {
+    if (
+      field === "campaignIds" ||
+      (f.business.purchaseStatus === "without_purchases" &&
+        ["purchaseFrom", "purchaseTo"].includes(field))
+    )
+      continue;
+    const value = f.business[field];
+    if (!value.length) continue;
+    const label =
+      field === "purchaseStatus"
+        ? value === "with_purchases"
+          ? "Com compras"
+          : "Sem compras"
+        : Array.isArray(value)
+          ? value.map((item) => (field === "states" ? item : `#${item}`)).join(", ")
+          : /(?:From|To)$/.test(field)
+            ? value.split("-").reverse().join("/")
+            : value;
     chip(
-      `repurchase-${status}`,
-      `Recompra: ${repurchaseOptions.find(([value]) => value === status)?.[1] || status}`,
+      `business-${field}`,
+      `${field === "phone" ? "Telefone do cliente" : CUSTOMER_FILTER_LABELS[field]}: ${label}`,
       (next) => ({
         ...next,
-        repurchaseStatuses: next.repurchaseStatuses.filter((value) => value !== status),
+        business: { ...next.business, [field]: Array.isArray(value) ? [] : "" },
       }),
     );
+  }
 
   const hasFilters = chips.length > 0;
   const page = data?.pagination.current ?? query.page;
@@ -197,7 +223,13 @@ function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => voi
         </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ minHeight: 0, px: { xs: 1.5, sm: 3 }, py: 2 }}>
-        <Box component="form" onSubmit={apply} aria-label="Filtros de agendamentos" sx={{ mb: 2 }}>
+        <Box
+          component="form"
+          id="operator-schedules-filters"
+          onSubmit={apply}
+          aria-label="Filtros de agendamentos"
+          sx={{ mb: 2 }}
+        >
           <ScheduleFilterFields
             draft={draft}
             setDraft={setDraft}
@@ -206,18 +238,10 @@ function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => voi
             commercial={capabilities.commercial}
           />
           {validation && (
-            <Alert severity="error" sx={{ mt: 1 }}>
+            <Alert ref={validationElement} severity="error" sx={{ mt: 1 }}>
               {validation}
             </Alert>
           )}
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 1.5 }}>
-            <Button type="submit" variant="contained" size="small">
-              Aplicar filtros
-            </Button>
-            <Button type="button" onClick={clearAll} size="small" color="inherit">
-              Limpar tudo
-            </Button>
-          </Box>
         </Box>
         <FilterChipBar items={chips} maxVisible={chips.length} onShowAll={() => {}} />
         {result.error && (
@@ -266,7 +290,6 @@ function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => voi
                     key={schedule.id}
                     schedule={schedule}
                     referenceAt={data.referenceAt}
-                    commercial={capabilities.commercial}
                   />
                 ))}
               </Box>
@@ -298,6 +321,14 @@ function SchedulesDialog({ scope, onClose }: { scope: string; onClose: () => voi
           "& > :not(style) ~ :not(style)": { ml: 0 },
         }}
       >
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+          <Button type="submit" form="operator-schedules-filters" variant="contained" size="small">
+            Aplicar filtros
+          </Button>
+          <Button type="button" onClick={clearAll} size="small" color="inherit">
+            Limpar tudo
+          </Button>
+        </Box>
         <TextField
           label="Itens por página"
           select

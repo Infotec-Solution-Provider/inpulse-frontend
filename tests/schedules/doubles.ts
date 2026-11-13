@@ -3,7 +3,7 @@ import WhatsappClient from "../../src/lib/sdk-local/whatsapp.client";
 export const AuthContext = createContext({
   instance: "suprimaxxi",
   token: "test-token",
-  user: { CODIGO: 1 },
+  user: { CODIGO: 1, NIVEL: "AMBOS", VISUALIZA_COMPRAS: "SIM" },
 });
 export const useAuthContext = () => useContext(AuthContext);
 export const WhatsappContext = createContext({

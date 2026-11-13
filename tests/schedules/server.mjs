@@ -9,7 +9,10 @@ const server = await createServer({
   configFile: false,
   root,
   cacheDir: "node_modules/.vite-schedules",
-  define: { "process.env.NEXT_PUBLIC_WHATSAPP_URL": JSON.stringify("http://127.0.0.1:4193") },
+  define: {
+    "process.env.NEXT_PUBLIC_WHATSAPP_URL": JSON.stringify("http://127.0.0.1:4193"),
+    "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://127.0.0.1:4193"),
+  },
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },
   plugins: [
     {

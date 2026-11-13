@@ -17,51 +17,80 @@ function sortOptions(options: CustomerLookupOption[]) {
   return [...options].sort((a, b) => (a.NOME ?? "").localeCompare(b.NOME ?? "", "pt-BR"));
 }
 
-export default function useCustomerBusinessFilterOptions() {
-  const { token, instance } = useAuthContext();
+export default function useCustomerBusinessFilterOptions({
+  includeCampaigns = true,
+}: { includeCampaigns?: boolean } = {}) {
+  const { token, instance, user } = useAuthContext();
+  const scope = `${instance}:${user?.CODIGO ?? "anonymous"}:${token ?? ""}:${includeCampaigns}`;
   const client = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
-  const [options, setOptions] = useState<CustomerBusinessFilterOptions>(EMPTY_OPTIONS);
-  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState({
+    scope: "",
+    options: EMPTY_OPTIONS,
+    loading: false,
+    error: false,
+  });
   const [catalogVersion, setCatalogVersion] = useState(0);
 
-  useEffect(() => subscribeCustomerSegmentsChanged(instance, () => {
-    setCatalogVersion((version) => version + 1);
-  }), [instance]);
+  useEffect(
+    () =>
+      subscribeCustomerSegmentsChanged(instance, () => {
+        setCatalogVersion((version) => version + 1);
+      }),
+    [instance],
+  );
 
   useEffect(() => {
     if (!token) {
-      setOptions(EMPTY_OPTIONS);
+      setState({ scope, options: EMPTY_OPTIONS, loading: false, error: false });
       return;
     }
 
     let active = true;
     client.current.setAuth(token);
-    setLoading(true);
+    setState((current) => ({
+      scope,
+      options: current.scope === scope ? current.options : EMPTY_OPTIONS,
+      loading: true,
+      error: false,
+    }));
 
     Promise.all([
-      client.current.getCampaigns(),
+      includeCampaigns ? client.current.getCampaigns() : Promise.resolve([]),
       client.current.getSegments(),
       client.current.getOperators(),
     ])
       .then(([campaigns, segments, operators]) => {
         if (!active) return;
-        setOptions({
-          campaigns: sortOptions(campaigns),
-          segments: sortOptions(segments),
-          operators: sortOptions(operators),
+        setState({
+          scope,
+          loading: false,
+          error: false,
+          options: {
+            campaigns: sortOptions(campaigns),
+            segments: sortOptions(segments),
+            operators: sortOptions(operators),
+          },
         });
       })
       .catch(() => {
-        if (active) setOptions(EMPTY_OPTIONS);
+        if (active) setState({ scope, options: EMPTY_OPTIONS, loading: false, error: true });
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active)
+          setState((current) =>
+            current.scope === scope ? { ...current, loading: false } : current,
+          );
       });
 
     return () => {
       active = false;
     };
-  }, [token, instance, catalogVersion]);
+  }, [token, instance, scope, includeCampaigns, catalogVersion]);
 
-  return { options, loading };
+  return {
+    options: state.scope === scope ? state.options : EMPTY_OPTIONS,
+    loading: Boolean(token) && (state.scope !== scope || state.loading),
+    error: state.scope === scope && state.error,
+    refetch: () => setCatalogVersion((version) => version + 1),
+  };
 }

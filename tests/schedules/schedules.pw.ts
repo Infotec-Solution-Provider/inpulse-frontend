@@ -68,18 +68,91 @@ async function setup(
   page: Page,
   handler?: (route: Route, params: URLSearchParams) => Promise<boolean>,
   legacy = false,
+  query = "",
 ) {
   const requests: URLSearchParams[] = [],
+    lookupRequests: Array<{ path: string; params: URLSearchParams }> = [],
     errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/api/whatsapp/schedules/mine?**", async (route) => {
-    const params = new URL(route.request().url()).searchParams;
-    requests.push(params);
-    if (handler && (await handler(route, params))) return;
-    await route.fulfill({ json: response(params) });
+  await page.route("**/*", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname !== "127.0.0.1") {
+      errors.push(`Unexpected external request: ${url.origin}`);
+      await route.abort();
+      return;
+    }
+    await route.continue();
   });
-  await page.goto(`/tests/schedules/index.html${legacy ? "?legacy" : ""}`);
-  return { requests, errors };
+  await page.route("**/api/**", async (route) => {
+    const url = new URL(route.request().url()),
+      params = url.searchParams;
+    if (url.pathname === "/api/whatsapp/schedules/mine") {
+      requests.push(params);
+      if (handler && (await handler(route, params))) return;
+      await route.fulfill({ json: response(params) });
+      return;
+    }
+    lookupRequests.push({ path: url.pathname, params });
+    if (url.pathname === "/api/customers/segments") {
+      await route.fulfill({
+        json: {
+          data: [
+            { CODIGO: 0, NOME: "Segmento legado" },
+            { CODIGO: 8, NOME: "Varejo" },
+          ],
+        },
+      });
+      return;
+    }
+    if (url.pathname === "/api/customers/operators") {
+      await route.fulfill({
+        json: {
+          data: [
+            { CODIGO: 7, NOME: "Ana" },
+            { CODIGO: 9, NOME: "Bruno" },
+          ],
+        },
+      });
+      return;
+    }
+    if (url.pathname === "/api/customers/campaigns") {
+      await route.fulfill({ json: { data: [{ CODIGO: 7, NOME: "Campanha Primavera" }] } });
+      return;
+    }
+    const kind = url.pathname.split("/").at(-1)!;
+    if (url.pathname.startsWith("/api/customers/search-options/")) {
+      const options: Record<string, Array<{ id: string; label: string }>> = {
+        groups: [
+          { id: "0", label: "Grupo legado" },
+          { id: "-2", label: "Grupo especial" },
+        ],
+        origins: [{ id: "3", label: "Indicação" }],
+        medias: [{ id: "4", label: "Mídia CRM" }],
+        brands: [{ id: "5", label: "Marca A" }],
+        units: [{ id: "6", label: "Unidade A" }],
+        positions: [{ id: "7", label: "Comprador" }],
+        states: [
+          { id: "RS", label: "Rio Grande do Sul" },
+          { id: "SP", label: "São Paulo" },
+        ],
+      };
+      if (options[kind]) {
+        await route.fulfill({
+          json: {
+            data: options[kind],
+            page: { current: Number(params.get("page") || 1), hasNext: false },
+          },
+        });
+        return;
+      }
+    }
+    errors.push(`Unexpected API: ${url.pathname}`);
+    await route.fulfill({ status: 500, json: { message: "API não simulada" } });
+  });
+  const flags = new URLSearchParams(query);
+  if (legacy) flags.set("legacy", "");
+  await page.goto(`/tests/schedules/index.html${flags.size ? `?${flags}` : ""}`);
+  return { requests, lookupRequests, errors };
 }
 const dialog = (page: Page) => page.getByRole("dialog", { name: "Meus Agendamentos", exact: true });
 const apply = (page: Page) =>
@@ -303,7 +376,13 @@ test("operador sem acesso financeiro mantém campanha e oculta perfil e recompra
   await expect(
     dialog(page).getByRole("combobox", { name: "Campanha do cliente", exact: true }),
   ).toBeVisible();
-  await expect(dialog(page).getByRole("button", { name: /Filtros avançados/ })).toHaveCount(0);
+  await dialog(page)
+    .getByRole("button", { name: /Filtros avançados/ })
+    .click();
+  await expect(dialog(page).getByRole("combobox", { name: /^Compras/ })).toBeDisabled();
+  await expect(
+    dialog(page).getByRole("combobox", { name: "Segmentos", exact: true }),
+  ).toBeVisible();
   await dialog(page)
     .getByRole("combobox", { name: "Campanha do cliente", exact: true })
     .fill("Primavera");
@@ -313,6 +392,272 @@ test("operador sem acesso financeiro mantém campanha e oculta perfil e recompra
   await expect.poll(() => state.requests.at(-1)?.get("customerCampaignIds")).toBe("7");
   expect(state.errors).toEqual([]);
 });
+
+async function advanced(page: Page) {
+  await dialog(page)
+    .getByRole("button", { name: /Filtros avançados/ })
+    .click();
+  await expect(
+    dialog(page).getByRole("heading", { name: "Dados do cliente", exact: true }),
+  ).toBeVisible();
+}
+async function lookup(page: Page, label: string, options: string[]) {
+  await dialog(page).getByRole("combobox", { name: label, exact: true }).click();
+  for (const option of options)
+    await page.getByRole("option", { name: option, exact: true }).click();
+  await page.keyboard.press("Escape");
+}
+
+test("avançados enviam os critérios cadastrais e comerciais do CRM sem análise automática ou campanha duplicada", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  await expect(dialog(page).getByText("Cliente 1", { exact: true })).toBeVisible();
+  await advanced(page);
+  await expect(
+    dialog(page).getByRole("combobox", { name: "Segmentos", exact: true }),
+  ).toBeVisible();
+  expect(
+    state.lookupRequests.filter((request) => request.path.includes("search-options")),
+  ).toHaveLength(0);
+  for (const [label, value] of [
+    ["Código do cliente", "-5"],
+    ["CPF/CNPJ", "123.456.789-01"],
+    ["Código ERP", "ABC%"],
+    ["Cidade", "São Paulo"],
+    ["Telefone do cliente", "(51) 99999-0000"],
+    ["E-mail contém", "@teste.local"],
+  ])
+    await dialog(page).getByRole("textbox", { name: label, exact: true }).fill(value);
+  await choose(page, "Situação", "Ativos");
+  await choose(page, "Tipo de pessoa", "Jurídica");
+  await choose(page, "Compras", "Com compras");
+  for (const [label, value] of [
+    ["Compra de", "2026-01-01"],
+    ["Compra até", "2026-11-13"],
+    ["Cadastro de", "2025-01-01"],
+    ["Cadastro até", "2026-11-13"],
+  ])
+    await dialog(page).getByLabel(label, { exact: true }).fill(value);
+  await lookup(page, "Segmentos", ["Segmento legado", "Varejo"]);
+  await lookup(page, "Usuários fidelizados", ["Ana", "Bruno"]);
+  for (const [label, options] of [
+    ["Grupos de clientes", ["Grupo legado (#0)", "Grupo especial (#-2)"]],
+    ["Origens", ["Indicação (#3)"]],
+    ["Mídias CRM", ["Mídia CRM (#4)"]],
+    ["Marcas", ["Marca A (#5)"]],
+    ["Unidades", ["Unidade A (#6)"]],
+    ["Cargos dos contatos", ["Comprador (#7)"]],
+    ["Estados", ["Rio Grande do Sul (#RS)", "São Paulo (#SP)"]],
+  ] as Array<[string, string[]]>)
+    await lookup(page, label, options);
+  expect(state.requests).toHaveLength(1);
+  await expect(dialog(page).getByRole("combobox", { name: "Campanhas", exact: true })).toHaveCount(
+    0,
+  );
+  for (const label of [
+    "Perfil do cliente",
+    "Interação",
+    "Tempo de cadastro",
+    "Interesse de compra",
+    "Situação de recompra",
+  ])
+    await expect(dialog(page).getByLabel(label, { exact: true })).toHaveCount(0);
+  await apply(page).click();
+  await expect.poll(() => state.requests.length).toBe(2);
+  expect(Object.fromEntries(state.requests.at(-1)!)).toMatchObject({
+    view: "crm",
+    CODIGO: "-5",
+    CPF_CNPJ: "12345678901",
+    COD_ERP: "ABC%",
+    CIDADE: "São Paulo",
+    ATIVO: "SIM",
+    PESSOA: "JUR",
+    purchaseStatus: "with_purchases",
+    purchaseFrom: "2026-01-01",
+    purchaseTo: "2026-11-13",
+    registeredFrom: "2025-01-01",
+    registeredTo: "2026-11-13",
+    segmentIds: "0,8",
+    loyaltyOperatorIds: "7,9",
+    groupIds: "0,-2",
+    originIds: "3",
+    mediaIds: "4",
+    brandIds: "5",
+    unitIds: "6",
+    positionIds: "7",
+    states: "RS,SP",
+    phone: "(51) 99999-0000",
+    email: "@teste.local",
+    page: "1",
+  });
+  for (const key of [
+    "profileLevel",
+    "interactionLevel",
+    "purchaseLevel",
+    "ageLevel",
+    "purchaseInterestLevel",
+    "repurchaseStatuses",
+    "campaignIds",
+  ])
+    expect(state.requests.at(-1)?.has(key)).toBe(false);
+  expect(state.lookupRequests.some((request) => request.path === "/api/customers/campaigns")).toBe(
+    false,
+  );
+  await dialog(page)
+    .getByRole("button", {
+      name: "Filtro aplicado Grupos de clientes: #0, #-2. Pressione Delete para remover.",
+      exact: true,
+    })
+    .press("Delete");
+  await expect.poll(() => state.requests.at(-1)?.has("groupIds")).toBe(false);
+  expect(state.requests.at(-1)?.get("originIds")).toBe("3");
+  await dialog(page).getByRole("button", { name: "Limpar tudo", exact: true }).click();
+  await expect.poll(() => state.requests.at(-1)?.has("purchaseStatus")).toBe(false);
+  expect(state.requests.at(-1)?.has("CODIGO")).toBe(false);
+  expect(state.errors).toEqual([]);
+});
+
+test("sem compras limpa e desabilita período de compra sem apagar o cadastro", async ({ page }) => {
+  const state = await setup(page);
+  await expect(dialog(page).getByText("Cliente 1", { exact: true })).toBeVisible();
+  await advanced(page);
+  await dialog(page).getByLabel("Compra de", { exact: true }).fill("2026-01-01");
+  await dialog(page).getByLabel("Compra até", { exact: true }).fill("2026-11-13");
+  await dialog(page).getByLabel("Cadastro de", { exact: true }).fill("2025-01-01");
+  await choose(page, "Compras", "Sem compras");
+  await expect(dialog(page).getByLabel("Compra de", { exact: true })).toBeDisabled();
+  await expect(dialog(page).getByLabel("Compra de", { exact: true })).toHaveValue("");
+  await apply(page).click();
+  await expect.poll(() => state.requests.length).toBe(2);
+  expect(state.requests.at(-1)?.get("purchaseStatus")).toBe("without_purchases");
+  expect(state.requests.at(-1)?.has("purchaseFrom")).toBe(false);
+  expect(state.requests.at(-1)?.has("purchaseTo")).toBe(false);
+  expect(state.requests.at(-1)?.get("registeredFrom")).toBe("2025-01-01");
+  expect(state.errors).toEqual([]);
+});
+
+test("namespace v2 ignora filtros automáticos e busca persistidos pela versão anterior", async ({
+  page,
+}) => {
+  const state = await setup(page, undefined, false, "legacy-query");
+  await expect(dialog(page).getByText("Cliente 1", { exact: true })).toBeVisible();
+  await expect(search(page)).toHaveValue("");
+  expect(Object.fromEntries(state.requests[0]!)).toEqual({
+    view: "crm",
+    page: "1",
+    perPage: "10",
+    period: "all",
+    sortOrder: "asc",
+  });
+  expect(state.errors).toEqual([]);
+});
+
+test("capacidade do servidor não libera compras para usuário sem permissão e cadastro continua utilizável", async ({
+  page,
+}) => {
+  const state = await setup(page, undefined, false, "financial-denied");
+  await expect(dialog(page).getByText("Cliente 1", { exact: true })).toBeVisible();
+  await advanced(page);
+  await expect(dialog(page).getByRole("combobox", { name: /^Compras/ })).toBeDisabled();
+  await expect(dialog(page).getByLabel("Compra de", { exact: true })).toBeDisabled();
+  await expect(dialog(page).getByLabel("Cadastro de", { exact: true })).toBeEnabled();
+  await lookup(page, "Segmentos", ["Varejo"]);
+  await apply(page).click();
+  await expect.poll(() => state.requests.at(-1)?.get("segmentIds")).toBe("8");
+  expect(state.errors).toEqual([]);
+});
+
+test("componentes compartilhados mantêm campanhas e carregamento padrão nas outras telas", async ({
+  page,
+}) => {
+  const state = await setup(page, undefined, false, "shared-default");
+  await expect(page.getByRole("combobox", { name: "Campanhas", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /^Compras/ })).toBeEnabled();
+  await expect
+    .poll(() => state.lookupRequests.some((request) => request.path === "/api/customers/campaigns"))
+    .toBe(true);
+  await expect
+    .poll(
+      () =>
+        state.lookupRequests.filter((request) => request.path.includes("search-options")).length,
+    )
+    .toBe(7);
+  expect(state.errors).toEqual([]);
+});
+
+test("catálogo pesquisável falha com aviso e retry sem consultar novamente a agenda", async ({
+  page,
+}) => {
+  const state = await setup(page);
+  let fail = true;
+  await page.route("**/api/customers/search-options/groups?**", async (route) => {
+    if (!fail) {
+      await route.fallback();
+      return;
+    }
+    fail = false;
+    await route.fulfill({ status: 503, json: { message: "Catálogo indisponível" } });
+  });
+  await expect(dialog(page).getByText("Cliente 1", { exact: true })).toBeVisible();
+  await advanced(page);
+  await dialog(page).getByRole("combobox", { name: "Grupos de clientes", exact: true }).click();
+  await expect(dialog(page).getByRole("alert")).toContainText(
+    "Não foi possível buscar grupos de clientes",
+  );
+  await dialog(page)
+    .getByRole("button", { name: "Tentar novamente grupos de clientes", exact: true })
+    .click();
+  await page.getByRole("option", { name: "Grupo legado (#0)", exact: true }).click();
+  await page.keyboard.press("Escape");
+  expect(state.requests).toHaveLength(1);
+  await apply(page).click();
+  await expect.poll(() => state.requests.at(-1)?.get("groupIds")).toBe("0");
+  expect(state.errors).toEqual([]);
+});
+
+for (const legacy of [false, true])
+  test(`avançados CRM ${legacy ? "legado" : "moderno"} mantêm rolagem e ações alcançáveis no móvel`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    const state = await setup(page, undefined, legacy);
+    await expect(dialog(page).getByText("Cliente 1", { exact: true })).toBeVisible();
+    await advanced(page);
+    await expect(
+      dialog(page).getByRole("button", { name: "Fechar agendamentos" }),
+    ).toBeInViewport();
+    await expect(
+      dialog(page).getByRole("combobox", { name: /^Itens por página/ }),
+    ).toBeInViewport();
+    const name = legacy ? "legacy" : "modern";
+    await page.screenshot({
+      path: `test-results/schedules/${name}-advanced-mobile-light.png`,
+      animations: "disabled",
+    });
+    await dialog(page)
+      .getByRole("textbox", { name: "E-mail contém", exact: true })
+      .fill("@teste.local");
+    await page.evaluate(() => window.schedulesHarness.dark());
+    await page.screenshot({
+      path: `test-results/schedules/${name}-advanced-mobile-dark.png`,
+      animations: "disabled",
+    });
+    await expect(apply(page)).toBeInViewport();
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect(
+      dialog(page).getByRole("combobox", { name: /^Itens por página/ }),
+    ).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({
+      path: `test-results/schedules/${name}-advanced-landscape-dark.png`,
+      animations: "disabled",
+    });
+    expect(state.requests).toHaveLength(1);
+    expect(state.errors).toEqual([]);
+  });
 
 for (const legacy of [false, true])
   test(`diálogo ${legacy ? "legado" : "moderno"} mantém rodapé e fechar visíveis no móvel, paisagem e desktop`, async ({
