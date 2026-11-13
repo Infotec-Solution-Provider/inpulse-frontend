@@ -15,6 +15,7 @@ import {
   Switch,
   TextField,
 } from "@mui/material";
+import Link from "next/link";
 import { useAuthContext } from "@/app/auth-context";
 import { SettingsPanel } from "../ui-system/settings-sections";
 import { OperationalIconButton } from "../ui-system/actions";
@@ -27,12 +28,12 @@ import usersService, {
 
 // Settings saved before the gateway existed have no mode or PBX address.
 function normalize(settings: WebrtcSettingsDTO): WebrtcSettingsDTO {
-  return { ...settings, mode: settings.mode ?? "direct", pbxAddress: settings.pbxAddress ?? "" };
+  return { ...settings, allowAutoAnswer: settings.allowAutoAnswer ?? false, mode: settings.mode ?? "direct", pbxAddress: settings.pbxAddress ?? "" };
 }
 
 export function WebrtcSettingsForm() {
   const { token, instance, user } = useAuthContext();
-  return <SettingsForm key={`${instance}:${user?.CODIGO}:${!!token}`} token={token} />;
+  return <><Link className="mb-4 inline-block text-sm underline" href={`/${instance}/telephony-extensions`}>Gerenciar ramais adicionais</Link><SettingsForm key={`${instance}:${user?.CODIGO}:${!!token}`} token={token} /></>;
 }
 
 function SettingsForm({ token }: { token: string | null }) {
@@ -166,7 +167,8 @@ function SettingsForm({ token }: { token: string | null }) {
               />
             }
           />
-          <FormControl disabled={disabled}>
+          <FormControlLabel label="Permitir que operadores ativem atendimento automático" control={<Switch checked={form.allowAutoAnswer ?? false} disabled={disabled} onChange={event => setForm({ ...form, allowAutoAnswer: event.target.checked })} />} />
+      <FormControl disabled={disabled}>
             <FormLabel id="webrtc-connection-mode">Conexão com a central</FormLabel>
             <RadioGroup
               aria-labelledby="webrtc-connection-mode"

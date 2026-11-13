@@ -1,3 +1,4 @@
+import { useAuthContext } from "@/app/auth-context";
 import type {
   CustomerBusinessFilterOptions,
   CustomerBusinessFilters,
@@ -25,6 +26,8 @@ export default function CustomerBusinessFiltersPanel({
   onChange,
   phoneLabel = "Telefone contém",
 }: CustomerBusinessFiltersProps) {
+  const { user } = useAuthContext();
+  const canFilterFinancial = user?.NIVEL === "ADMIN" || user?.VISUALIZA_COMPRAS === "SIM";
   const update = <K extends keyof CustomerBusinessFilters>(
     key: K,
     value: CustomerBusinessFilters[K],
@@ -60,6 +63,7 @@ export default function CustomerBusinessFiltersPanel({
         select
         size="small"
         label="Compras"
+        disabled={!canFilterFinancial}
         value={filters.purchaseStatus}
         onChange={(event) => {
           const purchaseStatus = event.target.value as CustomerPurchaseStatus;
@@ -81,7 +85,7 @@ export default function CustomerBusinessFiltersPanel({
           type="date"
           label="Compra de"
           value={filters.purchaseFrom}
-          disabled={filters.purchaseStatus === "without_purchases"}
+          disabled={!canFilterFinancial || filters.purchaseStatus === "without_purchases"}
           onChange={(event) => update("purchaseFrom", event.target.value)}
           InputLabelProps={{ shrink: true }}
         />
@@ -90,7 +94,7 @@ export default function CustomerBusinessFiltersPanel({
           type="date"
           label="Compra até"
           value={filters.purchaseTo}
-          disabled={filters.purchaseStatus === "without_purchases"}
+          disabled={!canFilterFinancial || filters.purchaseStatus === "without_purchases"}
           onChange={(event) => update("purchaseTo", event.target.value)}
           InputLabelProps={{ shrink: true }}
         />

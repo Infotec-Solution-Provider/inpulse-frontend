@@ -6,6 +6,7 @@ export interface WebrtcConfig {
   authorizationUser: string;
   password: string;
   iceServers: RTCIceServer[];
+  allowAutoAnswer?: boolean;
 }
 
 export type CallPhase = "idle" | "preparing" | "dialing" | "ringing" | "incoming" | "active" | "ended" | "failed";
@@ -17,13 +18,16 @@ export interface PhoneState {
   muted: boolean;
   error: string | null;
   startedAt: string | null;
+  answeredAt?: string | null;
   endedAt: string | null;
   scheduleId: number | null;
+  callId?: string | null;
+  transferPending?: boolean;
 }
 
 export const initialPhoneState: PhoneState = {
   connection: "disconnected", phase: "idle", number: "", extension: "", muted: false,
-  error: null, startedAt: null, endedAt: null, scheduleId: null,
+  error: null, startedAt: null, answeredAt: null, endedAt: null, scheduleId: null, callId: null, transferPending: false,
 };
 
 export function isCallBusy(phase: CallPhase) {

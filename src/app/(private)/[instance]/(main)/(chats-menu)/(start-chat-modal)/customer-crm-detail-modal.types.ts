@@ -107,6 +107,7 @@ export interface CustomerFullDetail {
   purchases: CustomerPurchaseDetail[];
   schedules: CustomerScheduleDetail[];
   metadata: {
+    financialAccess?: { canViewFinancial: boolean; canViewPurchases: boolean };
     purchaseItems: {
       mapped: boolean;
       tableName: string | null;

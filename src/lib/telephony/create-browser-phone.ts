@@ -1,7 +1,8 @@
 import { UA, WebSocketInterface, debug } from "jssip";
+import { audioConstraints, defaultAudioPreferences, type AudioPreferences } from "./audio-preferences";
 import { BrowserPhone } from "./browser-phone";
 
-export function createBrowserPhone(deps: Omit<ConstructorParameters<typeof BrowserPhone>[0], "createAgent" | "getMicrophone" | "createStream">) {
+export function createBrowserPhone(deps: Omit<ConstructorParameters<typeof BrowserPhone>[0], "createAgent" | "getMicrophone" | "createStream">, preferences: () => AudioPreferences = () => defaultAudioPreferences) {
   // Never enable SIP packet/credential debug output in the application.
   debug.disable();
   return new BrowserPhone({
@@ -15,7 +16,7 @@ export function createBrowserPhone(deps: Omit<ConstructorParameters<typeof Brows
         });
       } catch { throw new Error("Configuração de telefonia inválida. Consulte o administrador."); }
     },
-    getMicrophone: () => navigator.mediaDevices.getUserMedia({ audio: true, video: false }),
+    getMicrophone: () => navigator.mediaDevices.getUserMedia({ audio: audioConstraints(preferences(), navigator.mediaDevices.getSupportedConstraints()), video: false }),
     createStream: () => new MediaStream(),
   });
 }

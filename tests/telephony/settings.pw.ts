@@ -20,6 +20,7 @@ test("admin edits WebRTC and TURN settings and reloads saved values", async ({ p
   await expect(page.getByRole("alert")).toContainText("Telefonia web salva");
   expect(await page.evaluate(() => window.phoneHarness.settings)).toEqual({
     enabled: true,
+    allowAutoAnswer: false,
     mode: "direct",
     websocketUrl: "wss://pbx.example.test/ws",
     domain: "pbx.example.test",
@@ -83,6 +84,7 @@ test("gateway mode is offered only when the server has it and saves the PBX addr
   await expect(page.getByRole("alert").filter({ hasText: "Telefonia web salva" })).toBeVisible();
   expect(await page.evaluate(() => window.phoneHarness.settings)).toEqual({
     enabled: true,
+    allowAutoAnswer: false,
     mode: "gateway",
     websocketUrl: "",
     domain: "",

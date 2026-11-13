@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UA } from "jssip";
-import { BrowserPhone } from "./browser-phone";
+import { BrowserPhone, type CallPreparation } from "./browser-phone";
 import { initialPhoneState, normalizeDialTarget, type PhoneState, type WebrtcConfig } from "./types";
 
 const config: WebrtcConfig = { websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", uri: "sip:101@pbx.example.test", extension: "101", authorizationUser: "101", password: "test-only", iceServers: [] };
@@ -15,6 +15,7 @@ class Session extends EventEmitter {
   remote_identity = { uri: { user: "102" } };
   connection = Object.assign(new EventTarget(), { getReceivers: () => [], connectionState: "new" });
   isEnded = vi.fn(() => false);
+  refer = vi.fn((_target: string, _options: { eventHandlers: Record<string, () => void> }) => {});
   terminate = vi.fn(); answer = vi.fn(); mute = vi.fn(); unmute = vi.fn(); sendDTMF = vi.fn();
 }
 class Agent extends EventEmitter {
@@ -126,5 +127,64 @@ describe("BrowserPhone", () => {
     expect(() => normalizeDialTarget("sip:attacker@outside.test")).toThrow();
     expect(() => normalizeDialTarget("101\r\nVia:bad")).toThrow();
     expect(normalizeDialTarget("+55 (11) 99999-9999")).toBe("+5511999999999");
+  });
+});
+
+
+describe("advanced phone controls", () => {
+  it("keeps the original call until a successful NOTIFY and preserves it on transfer failure", async () => {
+    const { phone, agent, state } = setup();
+    await phone.dial("102"); agent.session.emit("confirmed");
+    phone.transfer("0200");
+    expect(agent.session.refer).toHaveBeenCalledWith("sip:0200@pbx.example.test", expect.any(Object));
+    expect(state().transferPending).toBe(true);
+    const handlers = agent.session.refer.mock.calls[0]![1].eventHandlers;
+    expect(agent.session.terminate).not.toHaveBeenCalled();
+    handlers.requestSucceeded?.();
+    expect(state().phase).toBe("active");
+    handlers.failed();
+    expect(state()).toMatchObject({ phase: "active", transferPending: false });
+    phone.transfer("0200");
+    agent.session.refer.mock.calls[1]![1].eventHandlers.accepted();
+    expect(agent.session.terminate).toHaveBeenCalledTimes(1);
+    expect(state().phase).toBe("ended");
+  });
+  it("rejects unsafe, own or current destinations without sending REFER", async () => {
+    const { phone, agent } = setup(); await phone.dial("102"); agent.session.emit("confirmed");
+    for (const value of ["101", "102", "200@other.test", "+55200", "*72"]) expect(() => phone.transfer(value)).toThrow();
+    expect(agent.session.refer).not.toHaveBeenCalled();
+  });
+  it("times out transfer without ending the call", async () => {
+    vi.useFakeTimers(); const { phone, agent, state } = setup();
+    await phone.dial("102"); agent.session.emit("confirmed"); phone.transfer("200");
+    vi.advanceTimersByTime(30_001);
+    expect(state()).toMatchObject({ phase: "active", transferPending: false }); expect(agent.session.terminate).not.toHaveBeenCalled();
+  });
+  it("requires both tenant policy and operator opt-in for automatic answering", async () => {
+    for (const [allowAutoAnswer, optin, expected] of [[false,true,false],[true,false,false],[true,true,true]] as const) {
+      const agent = new Agent(), incoming = new Session(); incoming.direction = "incoming";
+      const phone = new BrowserPhone({ createAgent: () => agent as unknown as UA, getMicrophone: async () => stream().value, createStream: () => stream().value, onState: () => {}, onAudio: () => {}, canAutoAnswer: () => optin });
+      phones.push(phone); phone.connect({ ...config, allowAutoAnswer });
+      agent.emit("newRTCSession", { originator: "remote", session: incoming });
+      await Promise.resolve();
+      expect(incoming.answer).toHaveBeenCalledTimes(expected ? 1 : 0);
+    }
+  });
+  it("prepares every manual attempt before sending and records incoming busy rejection separately", async () => {
+    let observed: PhoneState = { ...initialPhoneState };
+    const agent = new Agent(), prepareCall = vi.fn(async (_input: CallPreparation) => {}), reportCall = vi.fn();
+    const phone = new BrowserPhone({ createAgent: () => agent as unknown as UA, getMicrophone: async () => stream().value, createStream: () => stream().value, onState: next => { observed = next; }, onAudio: () => {}, prepareCall, reportCall }); phones.push(phone); phone.connect(config);
+    await phone.dial("102");
+    const outgoingId = prepareCall.mock.calls[0]![0].callId;
+    expect(prepareCall.mock.calls[0]![0]).toMatchObject({ direction: "outgoing", number: "102" });
+    agent.session.emit("sending");
+    expect(reportCall).toHaveBeenCalledWith(expect.objectContaining({ callId: outgoingId, type: "sent" }));
+    agent.session.emit("confirmed");
+    const incoming = new Session(); incoming.direction = "incoming";
+    agent.emit("newRTCSession", { originator: "remote", session: incoming });
+    expect(prepareCall.mock.calls[1]![0].callId).not.toBe(outgoingId);
+    expect(reportCall).toHaveBeenCalledWith(expect.objectContaining({ type: "rejected", detail: "busy" }));
+    expect(reportCall).toHaveBeenCalledWith(expect.objectContaining({ type: "ringing", callId: prepareCall.mock.calls[1]![0].callId }));
+    expect(observed).toMatchObject({ phase: "active", callId: outgoingId });
   });
 });

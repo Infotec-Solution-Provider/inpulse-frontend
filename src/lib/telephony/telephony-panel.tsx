@@ -9,14 +9,22 @@ import { callPhaseLabels } from "./types";
 import { UiIcon } from "@/lib/ui-system/icons";
 import { MicOff, PhoneOff, Power, Phone, X } from "lucide-react";
 import "./telephony-panel.css";
+import { PhoneSettings } from "./phone-settings";
+import { TransferControls } from "./transfer-controls";
+import { OperatorControls } from "./operator-controls";
+import { CallHistory } from "./call-history";
+import {OperatorDashboardDialog} from "./operator-dashboard";
 
 /** The attendance area hosts phone controls in its own layout. */
 export function TelephonyPanelSlot({ className }: { className?: string }) {
-  const { enabled, hostPanel } = useTelephony();
+  const { enabled, hostPanel, metrics, operatorState, state } = useTelephony();
   useEffect(() => hostPanel(), [hostPanel]);
   return enabled ? (
     <div className={className}>
       <TelephonyPanel />
+      {operatorState?.enabled && (
+        <OperatorDashboardDialog metrics={metrics} state={operatorState} phone={state} />
+      )}
     </div>
   ) : null;
 }
@@ -115,6 +123,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           {header}
         </div>
       )}
+      <PhoneSettings />
       {((open && (busy || state.connection === "ready")) ||
         state.error ||
         error ||
@@ -138,7 +147,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
               <div className="flex flex-wrap gap-2">
                 {state.phase === "incoming" && (
                   <Button variant="contained" color="success" onClick={() => void phone.answer()}>
-                    Atender
+                    {phone.operatorState?.state === "paused" ? "Retomar e atender" : "Atender"}
                   </Button>
                 )}
                 <Button
@@ -160,6 +169,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
                   </Button>
                 )}
               </div>
+              {state.phase === "active" && <TransferControls />}
               {state.phase === "active" && (
                 <div className="grid grid-cols-3 gap-1" aria-label="Teclado da ligação">
                   {"123456789*0#".split("").map((tone) => (
@@ -204,6 +214,8 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
               )}
             </>
           )}
+          <OperatorControls />
+          <CallHistory />
         </div>
       )}
     </section>

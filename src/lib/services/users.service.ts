@@ -1,4 +1,5 @@
 import { UsersClient } from "@/lib/sdk-local";
+import { crmMutationConfig, type CrmRequestContext } from "@/lib/sdk-local/crm-request-context";
 import { UserNotificationPreferences } from "@/lib/sdk-local/types/user.types";
 import type { WebrtcConfig } from "../telephony/types";
 
@@ -7,7 +8,11 @@ const USERS_URL = process.env.NEXT_PUBLIC_USERS_URL || "http://localhost:8001";
 /** "direct": browser -> WebRTC-capable PBX. "gateway": browser -> in.pulse gateway -> SIP PBX without WebRTC. */
 export type WebrtcConnectionMode = "direct" | "gateway";
 
+export interface TelephonyExtension { id: number; name: string; extension: string; version: number }
+export interface TransferOption { key: string; name: string; extension: string; source: "operator" | "directory" }
+
 export interface WebrtcSettingsDTO {
+	allowAutoAnswer?: boolean;
 	enabled: boolean;
 	mode: WebrtcConnectionMode;
 	websocketUrl: string;
@@ -94,7 +99,12 @@ export interface PushSubscriptionPayload {
 	};
 }
 
-class FrontendUsersService extends UsersClient {
+export class FrontendUsersService extends UsersClient {
+	public async getTelephonyExtensions(context?: CrmRequestContext): Promise<TelephonyExtension[]> { return (await this.ax.get<{data: TelephonyExtension[]}>("/api/telephony/extensions", context ? crmMutationConfig(context) : undefined)).data.data; }
+	public async createTelephonyExtension(data: {name:string;extension:string}, context: CrmRequestContext) { return (await this.ax.post("/api/telephony/extensions",data,crmMutationConfig(context))).data.data; }
+	public async changeTelephonyExtension(id:number,data:{name:string;extension:string;version:number}, context: CrmRequestContext) { return (await this.ax.patch(`/api/telephony/extensions/${id}`,data,crmMutationConfig(context))).data.data; }
+	public async removeTelephonyExtension(id:number,version:number, context: CrmRequestContext) { await this.ax.delete(`/api/telephony/extensions/${id}`,{...crmMutationConfig(context),data:{version}}); }
+	public async getTelephonyTransferOptions(context?: CrmRequestContext): Promise<TransferOption[]> { return (await this.ax.get<{data:TransferOption[]}>("/api/telephony/transfer-options",context ? crmMutationConfig(context) : undefined)).data.data; }
 	public async getWebrtcSettings() {
 		const response = await this.ax.get<{ data: WebrtcSettingsDTO }>("/api/telephony/webrtc-settings");
 		return response.data.data;

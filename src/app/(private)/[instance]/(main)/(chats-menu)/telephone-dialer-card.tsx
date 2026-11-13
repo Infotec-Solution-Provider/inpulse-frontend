@@ -186,6 +186,16 @@ export default function TelephoneDialerCard() {
     openModal(
       <TelephoneFinishModal
         appointment={nextAppointment}
+        callId={matchesCall ? phone.state.callId || undefined : undefined}
+        beforeV2Confirm={async () => {
+          if (phone.busy) throw new Error("Desligue a ligação antes de finalizar.");
+          await phone.waitForSync();
+        }}
+        onV2Committed={async () => {
+          await phone.refreshOperator();
+          setIsDrawerOpen(false);
+          await reloadQueue();
+        }}
         onConfirm={handleFinishAppointment}
         onCheckConfirmation={async (operationId) => {
           if (
@@ -255,7 +265,9 @@ export default function TelephoneDialerCard() {
         className="ip-attendance-next-call attendance-next-call attendance-next-call-summary"
       >
         <h2>Próxima ligação</h2>
-        <span>Sem pendências</span>
+        <span>
+          {phone.operatorState?.state === "paused" ? "Operação em pausa" : "Sem pendências"}
+        </span>
       </section>
     );
   }
@@ -291,7 +303,12 @@ export default function TelephoneDialerCard() {
         appointment={nextAppointment}
         isDialing={isDialing || isStartingDial}
         callStatusLabel={callStatusLabel}
-        canStartCall={phone.state.connection === "ready" && !phone.busy && !isStartingDial}
+        canStartCall={
+          phone.state.connection === "ready" &&
+          !phone.busy &&
+          !isStartingDial &&
+          phone.operatorState?.state !== "paused"
+        }
         canFinish={!phone.busy && !isStartingDial}
         dialedPhone={selectedPhone || nextAppointment.phone}
         onClose={() => setIsDrawerOpen(false)}

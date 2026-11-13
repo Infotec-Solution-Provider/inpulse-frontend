@@ -1,5 +1,6 @@
 "use client";
 
+import CustomerFinancialSummary from "@/lib/components/customer-financial-summary";
 import { crmPhonePayload, crmPhoneSlots } from "@/lib/crm-phone-form";
 import { crmErrorDetails } from "@/lib/crm-customer-form";
 import customersService from "@/lib/services/customers.service";
@@ -172,6 +173,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
   useEffect(() => { setDeactivationReason(""); }, [customerId, instance]);
   const [detail, setDetail] = useState<CustomerFullDetail | null>(null);
   const [segmentReloadRequired, setSegmentReloadRequired] = useState(false);
+  useEffect(() => { if (tab === "purchases" && !detail?.metadata.financialAccess?.canViewPurchases) setTab("main"); }, [detail, tab]);
 
   const [mainDraft, setMainDraft] = useState<Partial<Customer>>({});
   const [addressDraft, setAddressDraft] = useState<Partial<Customer>>({});
@@ -1754,12 +1756,15 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
   const renderPurchases = () => {
     if (!detail) return null;
 
+    if (!detail.metadata.financialAccess?.canViewPurchases) return <Alert severity="info">Seu perfil não permite visualizar compras e ficha financeira deste cliente.</Alert>;
+    const summary = <CustomerFinancialSummary customer={detail.customer} access={detail.metadata.financialAccess} />;
     if (!detail.purchases.length) {
-      return <Alert severity="info">Nenhuma compra encontrada.</Alert>;
+      return <>{summary}<Alert severity="info">Nenhuma compra encontrada.</Alert></>;
     }
 
     return (
       <div className="space-y-4">
+        {summary}
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
           <Autocomplete
             size="small"
@@ -2100,7 +2105,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
             <Tab value="observations" label="Observações" icon={<NoteAltIcon fontSize="small" />} iconPosition="start" />
             <Tab value="calls" label="Histórico" icon={<HeadsetMicIcon fontSize="small" />} iconPosition="start" />
             <Tab value="phones" label="Telefones" icon={<PhoneIcon fontSize="small" />} iconPosition="start" />
-            <Tab value="purchases" label="Compras" icon={<ReceiptLongIcon fontSize="small" />} iconPosition="start" />
+            {detail?.metadata.financialAccess?.canViewPurchases && <Tab value="purchases" label="Financeiro e compras" icon={<ReceiptLongIcon fontSize="small" />} iconPosition="start" />}
             <Tab value="agenda" label="Agenda" icon={<CalendarMonthIcon fontSize="small" />} iconPosition="start" />
           </Tabs>
 
