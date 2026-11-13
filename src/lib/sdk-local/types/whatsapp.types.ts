@@ -414,7 +414,35 @@ export interface UnifiedSchedulePagination {
   hasPrev: boolean;
 }
 
-export interface UnifiedScheduleFilters extends CustomerProfileSummaryFilters {
+/** CRM predicates shared in meaning with the customer list; lists use CSV on HTTP. */
+export interface ScheduleCustomerFilters {
+  CODIGO?: string;
+  CPF_CNPJ?: string;
+  COD_ERP?: string;
+  CIDADE?: string;
+  ATIVO?: "SIM" | "NAO";
+  PESSOA?: "FIS" | "JUR";
+  purchaseStatus?: "with_purchases" | "without_purchases";
+  purchaseFrom?: string;
+  purchaseTo?: string;
+  registeredFrom?: string;
+  registeredTo?: string;
+  segmentIds?: string | number[];
+  loyaltyOperatorIds?: string;
+  groupIds?: string;
+  originIds?: string;
+  mediaIds?: string;
+  unitIds?: string;
+  brandIds?: string;
+  positionIds?: string;
+  states?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface UnifiedScheduleFilters extends Omit<CustomerProfileSummaryFilters, "segmentIds">, ScheduleCustomerFilters {
+  /** Personal CRM view omits automatic profiling unless legacy predicates are explicit. */
+  view?: "crm";
   search?: string;
   period?: UnifiedSchedulePeriod;
   /** Inclusive ISO-8601 instant with timezone, used with period=custom. */
