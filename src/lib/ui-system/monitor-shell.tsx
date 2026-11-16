@@ -1,4 +1,5 @@
 "use client";
+import { OperatorPause } from "@/lib/components/operator-pause";
 
 import { AuthContext } from "@/app/auth-context";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
@@ -528,6 +529,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             onClose={() => setNotificationSettingsOpen(false)}
           />
         </PilotDesignProvider>
+        <OperatorPause />
         <Box
           component="main"
           id="app-main"

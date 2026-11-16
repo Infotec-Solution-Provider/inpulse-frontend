@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UA } from "jssip";
 import { BrowserPhone } from "./browser-phone";
+import type { CallPreparation, CallReport } from "../operator-pause/call-types";
 import { initialPhoneState, normalizeDialTarget, type PhoneState, type WebrtcConfig } from "./types";
 
 const config: WebrtcConfig = { websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", uri: "sip:101@pbx.example.test", extension: "101", authorizationUser: "101", password: "test-only", iceServers: [] };
@@ -34,11 +35,54 @@ function setup() {
     onState: (next: PhoneState) => { state = next; }, onAudio: vi.fn(),
     prepareSchedule: vi.fn(async (scheduleId: number, _phone: string) => ({ scheduleId, callId: "crm-1" })),
     reportSchedule: vi.fn(),
+    prepareCall: undefined as ((input: CallPreparation) => Promise<void>) | undefined,
+    reportCall: undefined as ((input: CallReport) => void) | undefined,
   };
   const phone = new BrowserPhone(deps); phones.push(phone); phone.connect(config); agent.emit("registered");
   return { phone, agent, microphone, deps, state: () => state };
 }
 describe("BrowserPhone", () => {
+  it.each([undefined, 42])("waits for central admission before SIP for schedule %s", async scheduleId => {
+    const { phone, agent, deps } = setup(); let release!: () => void;
+    deps.prepareCall = vi.fn(() => new Promise<void>(resolve => { release = resolve; }));
+    const report = vi.fn(); deps.reportCall = report;
+    const pending = phone.dial("102", scheduleId);
+    await vi.waitFor(() => expect(deps.prepareCall).toHaveBeenCalledOnce());
+    expect(agent.call).not.toHaveBeenCalled();
+    expect(deps.prepareCall).toHaveBeenCalledWith(expect.objectContaining({ callId: expect.stringMatching(/^[0-9a-f-]{36}$/), direction: "outgoing", number: "102", ...(scheduleId ? { scheduleId } : {}) }));
+    release(); await pending;
+    expect(agent.call).toHaveBeenCalledOnce(); expect(deps.prepareSchedule).not.toHaveBeenCalled();
+    agent.session.emit("sending", { request: { call_id: "fixture-sip-id" } });
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ type: "sent", sipCallId: "fixture-sip-id" }));
+  });
+  it.each(["gateway 404", "transport timeout", "unknown preparation"]) ("never sends SIP when central admission fails: %s", async message => {
+    const { phone, agent, deps, microphone } = setup();
+    deps.prepareCall = vi.fn(async () => { throw new Error(message); });
+    await expect(phone.dial("102")).rejects.toThrow("Nenhuma chamada foi enviada");
+    expect(agent.call).not.toHaveBeenCalled(); expect(microphone.track.stop).toHaveBeenCalled();
+    agent.emit("registered"); expect(agent.call).not.toHaveBeenCalled();
+  });
+  it("records cancellation after confirmed preparation without sending an INVITE", async () => {
+    const { phone, agent, deps } = setup(); let release!: () => void;
+    deps.prepareCall = vi.fn(() => new Promise<void>(resolve => { release = resolve; })); const report = vi.fn(); deps.reportCall = report;
+    const pending = phone.dial("102");
+    await vi.waitFor(() => expect(deps.prepareCall).toHaveBeenCalledOnce());
+    phone.hangup(); release(); await pending;
+    expect(agent.call).not.toHaveBeenCalled();
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ type: "failed", detail: "cancelled_before_sent" }));
+  });
+  it("keeps the current session while tracing a busy rejected incoming call separately", async () => {
+    const { phone, agent, deps, state } = setup();
+    const prepare = vi.fn(async (_input: CallPreparation) => {}), report = vi.fn(); deps.prepareCall = prepare; deps.reportCall = report;
+    await phone.dial("102"); const outgoingId = prepare.mock.calls[0]![0]?.callId;
+    const incoming = new Session(); incoming.direction = "incoming"; incoming.remote_identity.uri.user = "103";
+    agent.emit("newRTCSession", { originator: "remote", session: incoming, request: { getHeader: () => "incoming-sip-id" } });
+    const incomingId = prepare.mock.calls[1]![0]?.callId;
+    expect(incomingId).not.toBe(outgoingId);
+    expect(incoming.terminate).toHaveBeenCalledWith({ status_code: 486 });
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ callId: incomingId, type: "rejected", detail: "busy", sipCallId: "incoming-sip-id" }));
+    expect(state()).toMatchObject({ number: "102", phase: "dialing" });
+  });
   it("only calls after microphone permission and updates from SIP events", async () => {
     const { phone, agent, deps, state } = setup();
     await phone.dial("(11) 99999-9999", 42);

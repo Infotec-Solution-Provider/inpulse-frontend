@@ -1,4 +1,6 @@
 "use client";
+import { OperatorPausePhoneBridge } from "@/lib/operator-pause/phone-bridge";
+import { OperatorPauseProvider } from "@/lib/operator-pause/provider";
 import { CrmLeaveGuardProvider } from "@/lib/ui-system/leave-guard";
 import AppProvider from "@/app/(private)/[instance]/app-context";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
@@ -100,11 +102,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <ThemeProvider>
                         {/* Accepted sends and active calls outlive either page chrome. */}
                         <ChatProvider>
+                          <OperatorPauseProvider>
                           <TelephonyProvider>
+                            <OperatorPausePhoneBridge />
                             <AppFrame modal={modal} setModal={setModal}>
                               {children}
                             </AppFrame>
                           </TelephonyProvider>
+                          </OperatorPauseProvider>
                         </ChatProvider>
                       </ThemeProvider>
                     </CustomersProvider>

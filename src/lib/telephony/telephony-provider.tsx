@@ -10,6 +10,7 @@ import type { BrowserPhone } from "./browser-phone";
 import { acquirePhoneTabLock } from "./phone-tab-lock";
 import { initialPhoneState, isCallBusy, type PhoneState } from "./types";
 import { TelephonyPanel } from "./telephony-panel";
+import { useOperatorPause } from "../operator-pause/provider";
 
 interface TelephonyContextValue {
   enabled: boolean;
@@ -22,7 +23,8 @@ interface TelephonyContextValue {
   connect: () => Promise<void>;
   disconnect: () => void;
   dial: (number: string, scheduleId?: number) => Promise<void>;
-  answer: () => Promise<void>;
+  answer: (resume?: boolean) => Promise<void>;
+  incomingRequiresResume: boolean;
   hangup: () => void;
   toggleMute: () => void;
   sendTone: (tone: string) => void;
@@ -45,6 +47,11 @@ export function TelephonyProvider({ children }: { children: ReactNode }) {
 }
 
 function PhoneSession({ children, identity, token, enabled }: { children: ReactNode; identity: string; token: string | null; enabled: boolean }) {
+  const pause = useOperatorPause();
+  const runtimeRef = useRef(pause?.runtime);
+  runtimeRef.current = pause?.runtime;
+  const operatorRef = useRef(pause?.operatorState);
+  operatorRef.current = pause?.operatorState;
   const [state, setState] = useState<PhoneState>({ ...initialPhoneState });
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -57,8 +64,11 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
   const epochRef = useRef(0);
   const mountedRef = useRef(true);
   const syncRef = useRef<Promise<void>>(Promise.resolve());
+  const sessionRef = useRef<string | null>(null);
 
   function disconnect() {
+    if (sessionRef.current) void runtimeRef.current?.session("disconnect", sessionRef.current).catch(() => {});
+    sessionRef.current = null;
     epochRef.current++;
     connectingRef.current = false;
     phoneRef.current?.disconnect();
@@ -73,6 +83,13 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
     return () => { mountedRef.current = false; disconnect(); };
     // Identity/feature changes remount this component; token refresh does not.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (sessionRef.current) void runtimeRef.current?.session("heartbeat", sessionRef.current).catch(() => {});
+    }, 30_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   // Screens hosting the panel (the attendance area). Elsewhere the panel appears only during a call.
@@ -116,6 +133,7 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
       ]);
       if (epoch !== epochRef.current) { release(); return; }
       const phone = createBrowserPhone({
+        ...(runtimeRef.current ? { prepareCall: runtimeRef.current.prepareCall, reportCall: runtimeRef.current.reportCall } : {}),
         onState: next => { if (mountedRef.current) setState(next); },
         onAudio: stream => {
           const audio = audioRef.current;
@@ -144,6 +162,8 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
       phoneRef.current = phone;
       setSyncError(null);
       phone.connect(config);
+      sessionRef.current = crypto.randomUUID();
+      void runtimeRef.current?.session("connect", sessionRef.current).catch(() => {});
     } catch (error) {
       if (epoch !== epochRef.current) return;
       phoneRef.current?.disconnect();
@@ -159,13 +179,25 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
   }
 
   const value: TelephonyContextValue = {
-    enabled, hostPanel, state, busy, audioBlocked, syncError, connect, disconnect, playAudio,
-    waitForSync: () => syncRef.current,
+    enabled, hostPanel, state, busy, audioBlocked, syncError: pause?.syncError || syncError, connect, disconnect, playAudio,
+    incomingRequiresResume: !!pause?.operatorState?.enabled && pause.operatorState.state !== "available",
+    waitForSync: () => runtimeRef.current?.waitForSync() ?? syncRef.current,
     dial: async (number, scheduleId) => {
       if (!phoneRef.current) throw new Error("Conecte a telefonia antes de ligar.");
       await phoneRef.current.dial(number, scheduleId);
     },
-    answer: async () => { await phoneRef.current?.answer(); },
+    answer: async (resume = false) => {
+      const runtime = runtimeRef.current;
+      if (runtime) {
+        let status = operatorRef.current;
+        try { status = await runtime.refreshState(); } catch { /* Manual incoming calls remain answerable offline. */ }
+        if (status?.enabled && status.state !== "available") {
+          if (!resume) throw new Error("A operação está em pausa. Use Retomar e atender para responder à ligação.");
+          await runtime.commandPause(status.state === "pending" ? "cancel_pending" : "resume", undefined, true);
+        }
+      }
+      await phoneRef.current?.answer();
+    },
     hangup: () => phoneRef.current?.hangup(),
     toggleMute: () => phoneRef.current?.toggleMute(),
     sendTone: tone => phoneRef.current?.sendTone(tone),

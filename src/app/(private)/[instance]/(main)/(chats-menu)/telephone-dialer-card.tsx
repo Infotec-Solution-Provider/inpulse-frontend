@@ -10,6 +10,7 @@ import { Button } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useTelephony } from "@/lib/telephony/telephony-provider";
+import { useOperatorPause } from "@/lib/operator-pause/provider";
 import { callPhaseLabels } from "@/lib/telephony/types";
 import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
 import TelephoneFinishModal from "./telephone-finish-modal";
@@ -21,6 +22,9 @@ export default function TelephoneDialerCard() {
   authScope.current = { instance, userId: user?.CODIGO };
   const { openModal } = useAppContext();
   const phone = useTelephony();
+  const pause = useOperatorPause();
+  const live = useRef(true);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const [queue, setQueue] = useState<TelephoneQueueItem[]>([]);
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
   const [queueError, setQueueError] = useState<string | null>(null);
@@ -91,7 +95,7 @@ export default function TelephoneDialerCard() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, pause?.operatorState?.state]);
 
   const reloadQueue = async () => {
     if (!token) {
@@ -153,23 +157,20 @@ export default function TelephoneDialerCard() {
     }
 
     try {
-      await phone.waitForSync();
-      if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
+      if (!pause) await phone.waitForSync();
+      if (!live.current || authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
         throw new Error("A empresa ou o usuário mudou. Releia a fila antes de finalizar.");
-      await customersService.finishTelephonySchedule(
-        nextAppointment.id,
-        {
-          operationId,
+      const payload = {
           resultId,
           scheduleDate,
           startedAt: startedAt || undefined,
           finishedAt: (matchesCall && phone.state.endedAt) || finishedAt,
           dialedPhone: selectedPhone || nextAppointment.phone,
           ...extensions,
-        },
-        { instance, token },
-      );
-      if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
+        };
+      if (pause) await pause.runtime.finishLegacySchedule(nextAppointment.id, payload, operationId);
+      else await customersService.finishTelephonySchedule(nextAppointment.id, { ...payload, operationId }, { instance, token });
+      if (!live.current || authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
         return;
       setIsDrawerOpen(false);
       await reloadQueue();
@@ -180,8 +181,15 @@ export default function TelephoneDialerCard() {
     }
   };
 
-  const handleOpenFinishModal = () => {
+  const handleOpenFinishModal = async () => {
     if (!nextAppointment) return;
+    try {
+      if (pause && (await pause.runtime.pendingFinishes()).some(item => item.scheduleId === nextAppointment.id)) {
+        toast.warning("Há finalização anterior sem confirmação. Use Opções de pausa para conferir a tentativa.");
+        return;
+      }
+    } catch { toast.error("Não foi possível conferir os registros locais da finalização."); return; }
+    if (!live.current) return;
 
     openModal(
       <TelephoneFinishModal
@@ -189,17 +197,17 @@ export default function TelephoneDialerCard() {
         onConfirm={handleFinishAppointment}
         onCheckConfirmation={async (operationId) => {
           if (
-            !token ||
+            !live.current || !token ||
             authScope.current.instance !== instance ||
             authScope.current.userId !== user?.CODIGO
           )
             throw new Error("Reabra a fila na sessão atual.");
-          const response = await customersService.getTelephonyFinishStatus(
+          const response = pause ? { data: { status: (await pause.runtime.confirmLegacyFinish(operationId)).outcome === "COMMITTED" ? "applied" as const : "not_confirmed" as const } } : await customersService.getTelephonyFinishStatus(
             nextAppointment.id,
             operationId,
             { instance, token },
           );
-          if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
+          if (!live.current || authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
             throw new Error("A sessão mudou. Releia a fila.");
           if (response.data.status === "applied") {
             setIsDrawerOpen(false);

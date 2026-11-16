@@ -2,9 +2,12 @@ import type { UA } from "jssip";
 import type { RTCSessionEvent } from "jssip/lib/UA";
 import type { RTCSession } from "jssip/lib/RTCSession";
 import { initialPhoneState, isCallBusy, normalizeDialTarget, type PhoneState, type WebrtcConfig } from "./types";
+import type { CallPreparation, CallReport } from "../operator-pause/call-types";
 
 export interface ScheduledCall { scheduleId: number; callId: string }
 interface Dependencies {
+  prepareCall?: (input: CallPreparation) => Promise<void>;
+  reportCall?: (input: CallReport) => void;
   createAgent: (config: WebrtcConfig) => UA;
   getMicrophone: () => Promise<MediaStream>;
   createStream: () => MediaStream;
@@ -21,10 +24,17 @@ export class BrowserPhone {
   private config: WebrtcConfig | null = null;
   private scheduledCall: ScheduledCall | null = null;
   private attempt = 0;
+  private callId: string | null = null;
+  private sipCallId: string | undefined;
   private state: PhoneState = { ...initialPhoneState };
   private registrationTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly deps: Dependencies) {}
+
+  private report(type: CallReport["type"], detail?: string, callId = this.callId, sipCallId = this.sipCallId) {
+    if (callId) this.deps.reportCall?.({ callId, eventId: crypto.randomUUID(), type, occurredAt: new Date().toISOString(),
+      ...(detail ? { detail } : {}), ...(sipCallId ? { sipCallId } : {}) });
+  }
 
   private update(patch: Partial<PhoneState>) {
     this.state = { ...this.state, ...patch };
@@ -60,10 +70,19 @@ export class BrowserPhone {
     agent.on("newRTCSession", (event: RTCSessionEvent) => {
       if (this.agent !== agent) return;
       if (event.originator === "remote") {
-        if (isCallBusy(this.state.phase)) { event.session.terminate({ status_code: 486 }); return; }
+        const callId = crypto.randomUUID();
+        const number = event.session.remote_identity.uri.user || "Número desconhecido";
+        const sipCallId = event.request?.getHeader?.("Call-ID");
+        // Incoming metadata is durable locally even if the CRM is temporarily offline.
+        void this.deps.prepareCall?.({ callId, direction: "incoming", number }).catch(() => {});
+        this.report("ringing", undefined, callId, sipCallId);
+        if (isCallBusy(this.state.phase)) { this.report("rejected", "busy", callId, sipCallId); event.session.terminate({ status_code: 486 }); return; }
+        this.callId = callId;
+        this.sipCallId = sipCallId;
         this.scheduledCall = null;
         this.update({ phase: "incoming", number: event.session.remote_identity.uri.user || "Número desconhecido", scheduleId: null, startedAt: null, endedAt: null, error: null, muted: false });
       }
+      else this.sipCallId = event.request?.getHeader?.("Call-ID");
       this.bindSession(event.session);
     });
     this.registrationTimer = setTimeout(() => {
@@ -80,13 +99,22 @@ export class BrowserPhone {
     if (isCallBusy(this.state.phase)) throw new Error("Já existe uma ligação em andamento.");
     const attempt = ++this.attempt;
     this.scheduledCall = null;
+    const callId = crypto.randomUUID();
+    this.callId = null;
+    this.sipCallId = undefined;
     this.update({ phase: "preparing", number, scheduleId: scheduleId ?? null, startedAt: null, endedAt: null, error: null, muted: false });
     let preparingSchedule = false;
     try {
       const stream = await this.deps.getMicrophone();
       if (attempt !== this.attempt) { stream.getTracks().forEach(track => track.stop()); return; }
       this.localStream = stream;
-      if (scheduleId !== undefined) {
+      this.callId = callId;
+      if (this.deps.prepareCall) {
+        preparingSchedule = true;
+        await this.deps.prepareCall({ callId, direction: "outgoing", number, ...(scheduleId !== undefined ? { scheduleId } : {}) });
+        preparingSchedule = false;
+        if (attempt !== this.attempt) { this.report("failed", "cancelled_before_sent", callId); return; }
+      } else if (scheduleId !== undefined) {
         preparingSchedule = true;
         const prepared = await this.deps.prepareSchedule(scheduleId, number);
         preparingSchedule = false;
@@ -153,10 +181,12 @@ export class BrowserPhone {
     };
     session.on("peerconnection", ({ peerconnection }) => attachAudio(peerconnection));
     if (session.connection) attachAudio(session.connection);
-    session.on("progress", () => { if (current() && session.direction === "outgoing" && this.state.phase === "dialing") this.update({ phase: "ringing" }); });
+    session.on("sending", event => { if (current()) { this.sipCallId = event?.request?.call_id ?? this.sipCallId; this.report("sent"); } });
+    session.on("progress", () => { if (current() && session.direction === "outgoing" && this.state.phase === "dialing") { this.update({ phase: "ringing" }); this.report("ringing"); } });
     session.on("confirmed", () => {
       if (!current()) return;
       this.update({ phase: "active", startedAt: this.state.startedAt || new Date().toISOString() });
+      this.report("answered");
       if (this.scheduledCall) this.deps.reportSchedule(this.scheduledCall, "answered");
     });
     session.on("ended", () => { if (current()) this.complete("ended"); });
@@ -170,6 +200,7 @@ export class BrowserPhone {
     this.localStream?.getTracks().forEach(track => track.stop());
     this.localStream = null;
     this.deps.onAudio(null);
+    this.report(phase);
     if (this.scheduledCall) this.deps.reportSchedule(this.scheduledCall, phase);
     this.scheduledCall = null;
     this.update({ phase, error, muted: false, endedAt: new Date().toISOString() });
@@ -181,6 +212,7 @@ export class BrowserPhone {
   hangup() {
     if (!isCallBusy(this.state.phase)) return;
     const session = this.session;
+    if (this.state.phase === "incoming") this.report("rejected", "operator");
     this.complete("ended");
     try { if (session && !session.isEnded()) session.terminate(); } catch { /* Media is already released; never redial. */ }
   }

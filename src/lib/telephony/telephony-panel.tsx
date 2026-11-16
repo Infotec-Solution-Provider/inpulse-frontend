@@ -137,8 +137,11 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
               </p>
               <div className="flex flex-wrap gap-2">
                 {state.phase === "incoming" && (
-                  <Button variant="contained" color="success" onClick={() => void phone.answer()}>
-                    Atender
+                  <Button variant="contained" color="success" onClick={() => {
+                    setError(null);
+                    void phone.answer(phone.incomingRequiresResume).catch(err => setError(err instanceof Error ? err.message : "Não foi possível atender."));
+                  }}>
+                    {phone.incomingRequiresResume ? "Retomar e atender" : "Atender"}
                   </Button>
                 )}
                 <Button
