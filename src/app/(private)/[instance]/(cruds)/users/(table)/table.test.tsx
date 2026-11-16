@@ -10,8 +10,9 @@ vi.mock("@/lib/sdk-local", async () => ({
   UserRole: (await import("@/lib/sdk-local/types/user.types")).UserRole,
 }));
 vi.mock("@/app/auth-context", () => ({
-  useAuthContext: () => ({ token: "test-token", user: { NIVEL: session.role } }),
+  useAuthContext: () => ({ token: "test-token", user: { CODIGO: 1, NIVEL: session.role }, instance: "homolog", impersonating: false }),
 }));
+vi.mock("@/lib/services/auth.service", () => ({ default: { startImpersonation: vi.fn() } }));
 vi.mock("../../../whatsapp-context", () => ({
   useWhatsappContext: () => ({
     parameters: { feature_sip_config_enabled: session.sipEnabled ? "true" : "false" },
@@ -21,7 +22,7 @@ vi.mock("../(modal)/user-sip-config-modal", () => ({ default: () => null }));
 vi.mock("../users-context", () => ({
   useUsersContext: () => ({
     state: {
-      users: [{ CODIGO: 42, NOME: "Maria", NIVEL: "RECEP", LOGIN: "maria", SETOR: 2 }],
+      users: [{ CODIGO: 42, NOME: "Maria", NIVEL: "RECEP", LOGIN: "maria", SETOR: 2, ATIVO: "SIM" }],
       isLoading: false,
       totalRows: 1,
       filters: { page: "1", perPage: "10" },
@@ -55,6 +56,7 @@ describe("users table API and authorization contract", () => {
       expect(renderToStaticMarkup(<UsersPage />)).not.toContain("Novo usuário");
       expect(html).not.toContain('aria-label="Editar Maria"');
       expect(html).not.toContain('aria-label="Configurar SIP de Maria"');
+      expect(html).not.toContain('aria-label="Entrar como Maria"');
     },
   );
 
@@ -63,6 +65,7 @@ describe("users table API and authorization contract", () => {
     expect(renderToStaticMarkup(<UsersPage />)).toContain("Novo usuário");
     expect(enabled).toContain('aria-label="Editar Maria"');
     expect(enabled).toContain('aria-label="Configurar SIP de Maria"');
+    expect(enabled).toContain('aria-label="Entrar como Maria"');
     session.sipEnabled = false;
     const disabled = renderToStaticMarkup(<UsersTable />);
     expect(disabled).toContain('aria-label="Editar Maria"');
