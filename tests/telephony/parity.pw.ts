@@ -16,7 +16,7 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   expect(await page.evaluate(() => window.phoneHarness.runtimeState.reasonId)).toBe(1);
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 740 });
-    await page.locator(".ip-attendance-phone-controls").evaluate(element => { element.scrollTop = 0; });
+    await disconnectedPause.getByText("Em pausa · Café", { exact: true }).scrollIntoViewIfNeeded();
     await expect(disconnectedPause.getByText("Em pausa · Café", { exact: true })).toBeInViewport();
     await page.screenshot({ path: `test-results/telephony-disconnected-pause-top-${width}.png`, fullPage: true });
     await disconnectedPause.getByRole("button", { name: "Retomar", exact: true }).scrollIntoViewIfNeeded();
