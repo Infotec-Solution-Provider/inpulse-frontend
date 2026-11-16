@@ -65,6 +65,7 @@ export interface Source {
   label: string;
   category: string;
   available: boolean;
+  applyOnly?: boolean;
   message?: string;
 }
 export interface Tenant {

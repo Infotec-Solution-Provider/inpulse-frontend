@@ -41,6 +41,7 @@ export interface EditorProps {
   onDirty: (dirty: boolean) => void;
   onBusy: (busy: boolean) => void;
   onResources?: (resources: NonNullable<Snapshot["resources"]>) => void;
+  applyOnly?: boolean;
 }
 
 export function ConfigEditor(props: EditorProps) {
@@ -65,6 +66,17 @@ export function ConfigEditor(props: EditorProps) {
   const unresolved =
     operation !== null && !["COMMITTED", "NOT_COMMITTED"].includes(operation.state);
   const busy = loading || sending || unresolved;
+  const editable = snapshot?.catalog.some((field) => !field.readOnly && !field.unavailableReason);
+  const canApply =
+    !!snapshot &&
+    !snapshot.unavailableReason &&
+    (props.applyOnly === true ||
+      snapshot.catalog.some(
+        (field) =>
+          !field.readOnly &&
+          !field.unavailableReason &&
+          ["reload", "restart"].includes(field.applyMode ?? ""),
+      ));
   useEffect(() => {
     props.onDirty(dirty);
   }, [dirty]);
@@ -176,6 +188,7 @@ export function ConfigEditor(props: EditorProps) {
 
   const execute = async () => {
     if (!snapshot || !confirmation || confirmation === "release" || busy) return;
+    if (confirmation === "apply" && (!canApply || dirty || conflicted)) return;
     const action = confirmation;
     setConfirmation(null);
     setSending(true);
@@ -257,7 +270,12 @@ export function ConfigEditor(props: EditorProps) {
 
   return (
     <div className="admin-stack">
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error">
+          <strong>{props.label}</strong>
+          <div>{error}</div>
+        </Alert>
+      )}
       {notice && (
         <Alert severity={noticeKind} onClose={() => setNotice("")}>
           {notice}
@@ -300,49 +318,51 @@ export function ConfigEditor(props: EditorProps) {
           {snapshot.unavailableReason && (
             <Alert severity="warning">{snapshot.unavailableReason}</Alert>
           )}
-          <div className="admin-toolbar">
-            <TextField
-              className="admin-search"
-              label="Buscar parâmetro, chave ou descrição"
-              size="small"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <TextField
-              select
-              label="Categoria"
-              size="small"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            >
-              <MenuItem value="">Todas</MenuItem>
-              {[...new Set(snapshot.catalog.map((field) => field.category))].map((group) => (
-                <MenuItem key={group} value={group}>
-                  {group}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Exibir"
-              size="small"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-            >
-              <MenuItem value="all">Todos</MenuItem>
-              <MenuItem value="flags">Feature flags</MenuItem>
-              <MenuItem value="secrets">Credenciais</MenuItem>
-              <MenuItem value="changed">Alterados</MenuItem>
-            </TextField>
-            <Button
-              startIcon={<RefreshCw size={16} />}
-              disabled={busy || dirty}
-              onClick={() => void load()}
-            >
-              Recarregar
-            </Button>
-          </div>
-          {snapshot.application && (
+          {snapshot.catalog.length > 0 && (
+            <div className="admin-toolbar">
+              <TextField
+                className="admin-search"
+                label="Buscar parâmetro, chave ou descrição"
+                size="small"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              <TextField
+                select
+                label="Categoria"
+                size="small"
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+              >
+                <MenuItem value="">Todas</MenuItem>
+                {[...new Set(snapshot.catalog.map((field) => field.category))].map((group) => (
+                  <MenuItem key={group} value={group}>
+                    {group}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Exibir"
+                size="small"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+              >
+                <MenuItem value="all">Todos</MenuItem>
+                <MenuItem value="flags">Feature flags</MenuItem>
+                <MenuItem value="secrets">Credenciais</MenuItem>
+                <MenuItem value="changed">Alterados</MenuItem>
+              </TextField>
+              <Button
+                startIcon={<RefreshCw size={16} />}
+                disabled={busy || dirty}
+                onClick={() => void load()}
+              >
+                Recarregar
+              </Button>
+            </div>
+          )}
+          {snapshot.application && !snapshot.unavailableReason && (editable || canApply) && (
             <Alert
               severity={snapshot.application.state === "applied" ? "success" : "info"}
               icon={snapshot.application.state === "applied" ? <Check size={18} /> : undefined}
@@ -378,53 +398,60 @@ export function ConfigEditor(props: EditorProps) {
             <div className="admin-card admin-empty">
               {snapshot.catalog.length
                 ? "Nenhum parâmetro corresponde aos filtros."
-                : "Selecione um registro, quando disponível, para consultar as configurações."}
+                : snapshot.resources?.length && !snapshot.target?.resourceId
+                  ? "Selecione um registro acima para consultar suas configurações."
+                  : snapshot.unavailableReason
+                    ? "Não há configurações disponíveis nesta fonte para o tenant selecionado."
+                    : "Nenhum parâmetro cadastrado ou classificado nesta fonte."}
             </div>
           )}
-          <div className="admin-savebar">
-            <span role="status">
-              {dirty
-                ? `${compiled.changes.length} alteração(ões) pendente(s)`
-                : "Nenhuma alteração pendente"}
-            </span>
-            <div className="admin-actions">
-              <Button
-                disabled={busy || !dirty}
-                onClick={() => {
-                  setDrafts({});
-                  setError("");
-                }}
-              >
-                Descartar
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={
-                  sending ? <CircularProgress size={15} color="inherit" /> : <Save size={16} />
-                }
-                disabled={
-                  busy ||
-                  conflicted ||
-                  !compiled.changes.length ||
-                  Object.keys(compiled.errors).length > 0
-                }
-                onClick={() => setConfirmation("save")}
-              >
-                Salvar alterações
-              </Button>
-              {snapshot.application &&
-                ["pending", "unknown"].includes(snapshot.application.state) && (
-                  <Button
-                    variant="outlined"
-                    startIcon={<Play size={16} />}
-                    disabled={busy || dirty || conflicted}
-                    onClick={() => setConfirmation("apply")}
-                  >
-                    Aplicar versão salva
-                  </Button>
-                )}
+          {!snapshot.unavailableReason && (editable || canApply) && (
+            <div className="admin-savebar">
+              <span role="status">
+                {dirty
+                  ? `${compiled.changes.length} alteração(ões) pendente(s)`
+                  : "Nenhuma alteração pendente"}
+              </span>
+              <div className="admin-actions">
+                <Button
+                  disabled={busy || !dirty}
+                  onClick={() => {
+                    setDrafts({});
+                    setError("");
+                  }}
+                >
+                  Descartar
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={
+                    sending ? <CircularProgress size={15} color="inherit" /> : <Save size={16} />
+                  }
+                  disabled={
+                    busy ||
+                    conflicted ||
+                    !compiled.changes.length ||
+                    Object.keys(compiled.errors).length > 0
+                  }
+                  onClick={() => setConfirmation("save")}
+                >
+                  Salvar alterações
+                </Button>
+                {canApply &&
+                  snapshot.application &&
+                  ["pending", "unknown"].includes(snapshot.application.state) && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<Play size={16} />}
+                      disabled={busy || dirty || conflicted}
+                      onClick={() => setConfirmation("apply")}
+                    >
+                      Aplicar versão salva
+                    </Button>
+                  )}
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
       <Dialog open={!!confirmation} onClose={() => setConfirmation(null)} maxWidth="sm" fullWidth>

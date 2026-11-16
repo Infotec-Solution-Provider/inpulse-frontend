@@ -15,6 +15,8 @@ import {
 import { RefreshCw, Settings2, Play, Square, RotateCw, ArrowLeft } from "lucide-react";
 import { api, AdminError } from "./client";
 import { ConfigEditor } from "./config-editor";
+import { ParameterNavigation } from "./parameter-source-navigation";
+import { resourceLabel, sourceDescription } from "./parameter-navigation";
 import type {
   AuditEntry,
   Environment,
@@ -95,27 +97,44 @@ export function TenantScreen({
   const [search, setSearch] = useState("");
   const [resource, setResource] = useState<TargetOption | null>(null);
   const [resources, setResources] = useState<TargetOption[]>([]);
+  const selectionKey = `inpulse-admin-selection:${actorId}:${env}`;
+  const restoredSelection = useRef(false);
   const receiveResources = useCallback((items: TargetOption[]) => {
     if (items.length) setResources(items);
   }, []);
   useEffect(() => {
-    const list = tenants.data?.tenants;
-    if (list) setTenant((current) => current ?? list.find((item) => item.id === "infotec") ?? null);
-  }, [tenants.data]);
+    const availableTenants = tenants.data?.tenants;
+    const availableSources = sources.data?.sources;
+    if (!availableTenants || !availableSources || restoredSelection.current) return;
+    restoredSelection.current = true;
+    let remembered: { tenant?: string; source?: string } = {};
+    try {
+      remembered = JSON.parse(sessionStorage.getItem(selectionKey) ?? "{}") ?? {};
+    } catch {
+      /* Optional selection bookmark, never a credential or draft. */
+    }
+    setTenant(availableTenants.find((item) => item.id === remembered.tenant) ?? null);
+    setSource(
+      availableSources.find((item) => item.id === remembered.source) ??
+        availableSources.find((item) => item.id === "whatsapp" && item.available) ??
+        availableSources.find((item) => item.available) ??
+        null,
+    );
+  }, [tenants.data, sources.data, selectionKey]);
   useEffect(() => {
-    const list = sources.data?.sources;
-    if (list)
-      setSource(
-        (current) =>
-          current ??
-          list.find((item) => item.id === "whatsapp" && item.available) ??
-          list.find((item) => item.available) ??
-          null,
+    if (!tenant || !source) return;
+    try {
+      sessionStorage.setItem(
+        selectionKey,
+        JSON.stringify({ tenant: tenant.id, source: source.id }),
       );
-  }, [sources.data]);
+    } catch {
+      /* Optional bookmark contains only selected IDs. */
+    }
+  }, [tenant?.id, source?.id, selectionKey]);
   const canScope = !!source && ["whatsapp", "smtp"].includes(source.id);
   const effectiveScope = source?.id === "sip-user" ? "USER" : scope;
-  const options = useRead(
+  const options = useRead<{ targets: TargetOption[]; unavailableReason?: string }>(
     async (signal) => {
       if (!tenant || !source || effectiveScope === "INSTANCE")
         return { targets: [] as TargetOption[] };
@@ -154,11 +173,18 @@ export function TenantScreen({
       api.apply(env, tenant!.id, source!.id, { operationId, revision, target }),
     [identity],
   );
+  const selectSource = (next: Source) => {
+    if (source?.id === next.id) return true;
+    if (!canLeave()) return false;
+    setSource(next);
+    clearTarget();
+    return true;
+  };
   return (
-    <div className="admin-stack">
+    <div className="admin-stack admin-parameters">
       <Title
         title="Parâmetros dos tenants"
-        description="Consulte os recursos, credenciais e integrações de cada empresa. O tenant autenticado permanece infotec."
+        description="Escolha a empresa e navegue pelas áreas para consultar recursos, credenciais e integrações."
       />
       {(tenants.error || sources.error) && (
         <Alert
@@ -177,138 +203,181 @@ export function TenantScreen({
           {tenants.error || sources.error}
         </Alert>
       )}
-      <div className="admin-toolbar">
+      <div className="admin-toolbar admin-parameter-context">
+        <div className="admin-parameter-context-label">
+          <strong>Empresa e ambiente</strong>
+          <span>Salvar e aplicar são ações separadas.</span>
+        </div>
         <Autocomplete
           options={tenants.data?.tenants ?? []}
           value={tenant}
           loading={tenants.loading}
           isOptionEqualToValue={(a, b) => a.id === b.id}
           getOptionLabel={(item) => `${item.name} (${item.id})`}
-          sx={{ flex: 1, minWidth: 250 }}
+          sx={{ flex: 1, minWidth: 220 }}
           onChange={(_, item) => {
             if (canLeave()) {
               setTenant(item);
               clearTarget();
+              if (!item) {
+                try {
+                  sessionStorage.removeItem(selectionKey);
+                } catch {
+                  /* Optional bookmark. */
+                }
+              }
             }
           }}
           renderInput={(params) => <TextField {...params} label="Tenant de destino" size="small" />}
         />
-        <TextField
-          select
-          label="Configurações"
-          size="small"
-          value={source?.id ?? ""}
-          sx={{ flex: 1, minWidth: 200 }}
-          disabled={sources.loading}
-          onChange={(event) => {
-            if (canLeave()) {
-              setSource(
-                sources.data?.sources.find((item) => item.id === event.target.value) ?? null,
-              );
-              clearTarget();
-            }
-          }}
-        >
-          {sources.data?.sources.map((item) => (
-            <MenuItem key={item.id} value={item.id}>
-              {item.label}
-              {!item.available ? " · indisponível" : ""}
-            </MenuItem>
-          ))}
-        </TextField>
-        {canScope && (
-          <TextField
-            select
-            label="Escopo"
-            size="small"
-            value={scope}
-            onChange={(event) => {
-              if (canLeave()) {
-                setScope(event.target.value as typeof scope);
-                setTargetOption(null);
-                setSearch("");
-              }
-            }}
-          >
-            <MenuItem value="INSTANCE">Instância</MenuItem>
-            {source?.id === "whatsapp" && <MenuItem value="SECTOR">Setor</MenuItem>}
-            <MenuItem value="USER">Usuário</MenuItem>
-          </TextField>
-        )}
-        {tenant && source && effectiveScope !== "INSTANCE" && (
-          <Autocomplete
-            sx={{ flex: 1, minWidth: 230 }}
-            options={options.data?.targets ?? []}
-            value={targetOption}
-            loading={options.loading}
-            filterOptions={(items) => items}
-            getOptionLabel={(item) => `${item.label}${item.active === false ? " · Inativo" : ""}`}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            onInputChange={(_, value, reason) => {
-              if (reason === "input") setSearch(value);
-            }}
-            onChange={(_, item) => {
-              if (canLeave()) {
-                setTargetOption(item);
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={effectiveScope === "USER" ? "Usuário" : "Setor"}
-                size="small"
-              />
-            )}
-          />
-        )}
-        {resources.length > 0 && (
-          <Autocomplete
-            sx={{ flex: 1, minWidth: 230 }}
-            options={resources}
-            value={resource}
-            getOptionLabel={(item) => item.label}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
-            onChange={(_, item) => {
-              if (canLeave()) setResource(item);
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Registro"
-                size="small"
-                helperText="Vazio: configurações gerais da fonte"
-              />
-            )}
-          />
-        )}
+        <Chip variant="outlined" label={`Ambiente: ${environmentName(env)}`} />
       </div>
-      {options.error && (
-        <Alert severity="error" action={<Button onClick={options.reload}>Tentar novamente</Button>}>
-          {options.error}
-        </Alert>
-      )}
-      {source && !source.available && (
-        <Alert severity="warning">
-          {source.message || "Esta fonte ainda não está disponível no ambiente selecionado."}
-        </Alert>
-      )}
-      {ready ? (
-        <ConfigEditor
-          key={identity}
-          identity={identity}
-          label={`${environmentName(env)} · ${tenant.name} (${tenant.id}) · ${source.label}${targetOption ? ` · ${targetOption.label}` : ""}${resource ? ` · ${resource.label}` : ""}`}
-          load={load}
-          save={save}
-          apply={apply}
-          onDirty={onDirty}
-          onBusy={onBusy}
-          onResources={receiveResources}
+      <div className="admin-parameter-workspace">
+        <ParameterNavigation
+          sources={sources.data?.sources ?? []}
+          selected={source}
+          enabled={!!tenant}
+          loading={sources.loading}
+          onSelect={selectSource}
         />
-      ) : (
-        <div className="admin-card admin-empty">
-          Selecione o tenant e o destino das configurações para continuar.
+        <div className="admin-stack admin-parameter-editor">
+          {tenant && source && (
+            <div className="admin-parameter-editor-heading">
+              <div className="admin-metadata">
+                {tenant.name} ({tenant.id}) · {source.category}
+              </div>
+              <h2>{source.label}</h2>
+              <p>{sourceDescription(source)}</p>
+            </div>
+          )}
+          {tenant &&
+            source &&
+            (canScope || effectiveScope !== "INSTANCE" || resources.length > 0) && (
+              <div
+                className="admin-toolbar admin-parameter-targets"
+                aria-label="Destino da configuração"
+              >
+                {canScope && (
+                  <TextField
+                    select
+                    label="Escopo"
+                    size="small"
+                    value={scope}
+                    onChange={(event) => {
+                      if (canLeave()) {
+                        setScope(event.target.value as typeof scope);
+                        setTargetOption(null);
+                        setResource(null);
+                        setResources([]);
+                        setSearch("");
+                      }
+                    }}
+                  >
+                    <MenuItem value="INSTANCE">Instância</MenuItem>
+                    {source?.id === "whatsapp" && <MenuItem value="SECTOR">Setor</MenuItem>}
+                    <MenuItem value="USER">Usuário</MenuItem>
+                  </TextField>
+                )}
+                {tenant && source && effectiveScope !== "INSTANCE" && (
+                  <Autocomplete
+                    sx={{ flex: 1, minWidth: 230 }}
+                    options={options.data?.targets ?? []}
+                    value={targetOption}
+                    loading={options.loading}
+                    disabled={!!options.data?.unavailableReason}
+                    filterOptions={(items) => items}
+                    getOptionLabel={(item) =>
+                      `${item.label}${item.active === false ? " · Inativo" : ""}`
+                    }
+                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                    onInputChange={(_, value, reason) => {
+                      if (reason === "input") setSearch(value);
+                    }}
+                    onChange={(_, item) => {
+                      if (canLeave()) {
+                        setTargetOption(item);
+                        setResource(null);
+                        setResources([]);
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={effectiveScope === "USER" ? "Usuário" : "Setor"}
+                        size="small"
+                      />
+                    )}
+                  />
+                )}
+                {resources.length > 0 && (
+                  <Autocomplete
+                    sx={{ flex: 1, minWidth: 230 }}
+                    options={resources}
+                    value={resource}
+                    getOptionLabel={(item) => item.label}
+                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                    onChange={(_, item) => {
+                      if (canLeave()) setResource(item);
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label={resourceLabel(source?.id)}
+                        size="small"
+                        helperText={
+                          source?.id === "channels"
+                            ? "Selecione o canal para consultar suas configurações."
+                            : "Selecione um registro quando disponível."
+                        }
+                      />
+                    )}
+                  />
+                )}
+              </div>
+            )}
+          {options.error && (
+            <Alert
+              severity="error"
+              action={<Button onClick={options.reload}>Tentar novamente</Button>}
+            >
+              {options.error}
+            </Alert>
+          )}
+          {options.data?.unavailableReason && (
+            <Alert severity="warning">{options.data.unavailableReason}</Alert>
+          )}
+          {source && !source.available && (
+            <Alert severity="warning">
+              {source.message || "Esta fonte ainda não está disponível no ambiente selecionado."}
+            </Alert>
+          )}
+          {ready ? (
+            <ConfigEditor
+              key={identity}
+              identity={identity}
+              label={`${environmentName(env)} · ${tenant.name} (${tenant.id}) · ${source.label}${targetOption ? ` · ${targetOption.label}` : ""}${resource ? ` · ${resource.label}` : ""}`}
+              load={load}
+              save={save}
+              apply={apply}
+              onDirty={onDirty}
+              onBusy={onBusy}
+              onResources={receiveResources}
+              applyOnly={source.applyOnly}
+            />
+          ) : (
+            <div className="admin-card admin-empty">
+              <strong>
+                {tenant ? "Escolha o destino da configuração" : "Escolha uma empresa para começar"}
+              </strong>
+              <p>
+                {tenant
+                  ? "Selecione uma configuração e, quando necessário, um setor, usuário ou registro."
+                  : "Use o seletor de tenant acima. Depois navegue pelas áreas de configuração ao lado."}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -67,6 +67,7 @@ const catalog = [
     description: "Credencial protegida.",
     category: "Integrações",
     type: "secret",
+    applyMode: "reload",
   },
 ];
 const snapshot = (tenant = "infotec", source = "whatsapp") => ({
@@ -137,8 +138,13 @@ http
         if (route.endsWith("/sources"))
           return json(res, 200, {
             sources: [
-              { id: "whatsapp", label: "WhatsApp", category: "Atendimento", available: true },
-              { id: "openai", label: "OpenAI", category: "IA", available: true },
+              {
+                id: "whatsapp",
+                label: "WhatsApp e atendimento",
+                category: "Atendimento",
+                available: true,
+              },
+              { id: "openai", label: "Credencial OpenAI", category: "IA", available: true },
               { id: "ai-agent", label: "Agente padrão", category: "IA", available: true },
               {
                 id: "channels",

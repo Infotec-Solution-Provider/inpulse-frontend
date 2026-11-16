@@ -114,6 +114,7 @@ const catalog = [
     description: "Credencial protegida",
     category: "Integrações",
     type: "secret",
+    applyMode: "reload",
   },
 ];
 function snapshot(command: any) {

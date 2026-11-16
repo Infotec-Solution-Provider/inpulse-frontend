@@ -97,7 +97,7 @@ export class AdminClient {
     search: string,
     signal?: AbortSignal,
   ) {
-    return this.request<{ targets: TargetOption[] }>(
+    return this.request<{ targets: TargetOption[]; hasMore?: boolean; unavailableReason?: string }>(
       `/environments/${env}/tenants/${segment(tenant)}/targets/${segment(source)}` +
         query({ scope, search }),
       { signal },
