@@ -3,11 +3,12 @@
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { useAuthContext } from "@/app/auth-context";
 import customersService from "@/lib/services/customers.service";
+import { useOperatorPause } from "@/lib/operator-pause/provider";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import { Button, Chip } from "@mui/material";
-import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
 import TelephoneFinishModal from "./telephone-finish-modal";
@@ -37,6 +38,9 @@ const formatSchedule = (scheduledAt: string) => {
 };
 
 export default function TelephoneDialerCard() {
+  const pause = useOperatorPause();
+  const live = useRef(true);
+  useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const { token } = useAuthContext();
   const { openModal } = useAppContext();
   const [queue, setQueue] = useState<TelephoneQueueItem[]>([]);
@@ -50,6 +54,11 @@ export default function TelephoneDialerCard() {
 
   const nextAppointment = useMemo(() => queue[0] ?? null, [queue]);
   const isDialing = nextAppointment?.id === activeId;
+  const observePhone = pause?.observePhone;
+  useEffect(() => {
+    observePhone?.(isDialing || isStartingDial, isDialing ? activeId : null);
+    return () => observePhone?.(false, null);
+  }, [observePhone, isDialing, isStartingDial, activeId]);
 
   useEffect(() => {
     if (!nextAppointment) {
@@ -108,7 +117,7 @@ export default function TelephoneDialerCard() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, pause?.operatorState?.state]);
 
   const reloadQueue = async () => {
     if (!token) {
@@ -147,14 +156,18 @@ export default function TelephoneDialerCard() {
     setIsStartingDial(true);
 
     try {
-      customersService.setAuth(token);
-      const callStatus = await customersService.startTelephonyScheduleCall(nextAppointment.id, {
-        dialedPhone: selectedPhone || nextAppointment.phone,
-      });
+      const number = selectedPhone || nextAppointment.phone;
+      let callStatus;
+      if (pause) callStatus = await pause.runtime.startLegacyCall({ callId: crypto.randomUUID(), scheduleId: nextAppointment.id, number });
+      else {
+        customersService.setAuth(token);
+        callStatus = await customersService.startTelephonyScheduleCall(nextAppointment.id, { dialedPhone: number });
+      }
 
       if (callStatus.state !== "dialing" && callStatus.state !== "answered") {
         throw new Error("A sessao de chamada nao entrou em estado valido de discagem.");
       }
+      if (!live.current) return;
 
       setActiveId(nextAppointment.id);
       setStartedAt(callStatus.startedAt || new Date().toISOString());
@@ -179,14 +192,19 @@ export default function TelephoneDialerCard() {
     }
 
     try {
-      customersService.setAuth(token);
-      await customersService.finishTelephonySchedule(nextAppointment.id, {
+      const payload = {
         resultId,
         scheduleDate,
         startedAt: startedAt || undefined,
         finishedAt: new Date().toISOString(),
         dialedPhone: selectedPhone || nextAppointment.phone,
-      });
+      };
+      if (pause) await pause.runtime.finishLegacySchedule(nextAppointment.id, payload);
+      else {
+        customersService.setAuth(token);
+        await customersService.finishTelephonySchedule(nextAppointment.id, payload);
+      }
+      if (!live.current) return;
       setActiveId(null);
       setStartedAt(null);
       setIsDrawerOpen(false);
@@ -198,8 +216,15 @@ export default function TelephoneDialerCard() {
     }
   };
 
-  const handleOpenFinishModal = () => {
+  const handleOpenFinishModal = async () => {
     if (!nextAppointment) return;
+    try {
+      if (pause && (await pause.runtime.pendingFinishes()).some(item => item.scheduleId === nextAppointment.id)) {
+        toast.warning("Há finalização anterior sem confirmação. Use Opções de pausa para conferir a tentativa.");
+        return;
+      }
+    } catch { toast.error("Não foi possível conferir os registros locais da finalização."); return; }
+    if (!live.current) return;
 
     openModal(
       <TelephoneFinishModal appointment={nextAppointment} onConfirm={handleFinishAppointment} />,

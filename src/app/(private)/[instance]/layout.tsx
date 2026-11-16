@@ -1,5 +1,7 @@
 "use client";
+import { OperatorPauseProvider } from "@/lib/operator-pause/provider";
 import AppProvider from "@/app/(private)/[instance]/app-context";
+import { OperatorPause } from "@/lib/components/operator-pause";
 import Header from "@/app/(private)/[instance]/header";
 import SocketProvider from "@/app/(private)/[instance]/socket-context";
 import { ThemeProvider } from "@/app/theme-context";
@@ -101,8 +103,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       <ThemeProvider>
                         {/* Accepted sends must outlive pages and monitor dialogs. */}
                         <ChatProvider>
-                          <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_minmax(400px,1fr)]">
+                          <OperatorPauseProvider>
+                          <div className="grid h-full w-full auto-rows-max grid-rows-[max-content_auto_minmax(0,1fr)] md:w-screen md:grid-rows-[max-content_auto_minmax(0,1fr)]">
                             <Header />
+                            <div className="min-w-0"><OperatorPause /></div>
                             <main className="min-h-0 overflow-y-auto">
                               <RouteFeatureGate>{children}</RouteFeatureGate>
                             </main>
@@ -117,6 +121,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                               <div>{modal as ReactElement}</div>
                             </Modal>
                           </div>
+                                                  </OperatorPauseProvider>
                         </ChatProvider>
                       </ThemeProvider>
                     </CustomersProvider>
