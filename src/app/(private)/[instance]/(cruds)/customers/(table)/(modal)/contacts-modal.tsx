@@ -1,3 +1,4 @@
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { WhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { ContactRegistrationConflict, Customer, WppContact } from "@/lib/sdk-local";
 import { Button, IconButton, TextField } from "@mui/material";
@@ -15,6 +16,8 @@ interface ContactModalProps {
 }
 
 export default function ContactsModal({ customer }: ContactModalProps) {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed;
   const { closeModal } = useContext(AppContext);
   const { wppApi, updateChatContact } = useContext(WhatsappContext);
   const [contacts, setContacts] = useState<WppContact[]>([]);
@@ -259,7 +262,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
             placeholder="João Silva"
             onChange={handleChangeName}
             value={form.name}
-            disabled={isRegistering}
+            disabled={isRegistering || !canWrite}
             variant="outlined"
             className="flex-1 bg-white dark:bg-slate-600"
             sx={{
@@ -274,7 +277,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
             placeholder="5511999999999"
             onChange={handleChangePhone}
             value={form.phone}
-            disabled={isRegistering}
+            disabled={isRegistering || !canWrite}
             variant="outlined"
             className="flex-1 bg-white dark:bg-slate-600"
             sx={{
@@ -286,7 +289,7 @@ export default function ContactsModal({ customer }: ContactModalProps) {
           />
           <Button
             variant="contained"
-            disabled={!isFormValid || isRegistering}
+            disabled={!isFormValid || isRegistering || !canWrite}
             onClick={handleClickRegister}
             className="bg-indigo-600 px-6 py-3 hover:bg-indigo-700"
             startIcon={<Add />}

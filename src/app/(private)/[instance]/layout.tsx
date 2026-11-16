@@ -1,4 +1,5 @@
 "use client";
+import { OperatorFeaturesProvider } from "@/lib/components/operator-features-provider";
 import { OperatorPauseProvider } from "@/lib/operator-pause/provider";
 import AppProvider from "@/app/(private)/[instance]/app-context";
 import { OperatorPause } from "@/lib/components/operator-pause";
@@ -94,6 +95,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="box-border h-[100dvh] w-full overflow-hidden md:w-screen">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
+          <OperatorFeaturesProvider>
           <WhatsappProvider>
             <ContactsProvider>
               <InternalChatProvider>
@@ -130,6 +132,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               </InternalChatProvider>
             </ContactsProvider>
           </WhatsappProvider>
+          </OperatorFeaturesProvider>
         </SocketProvider>
       </AppProvider>
     </div>

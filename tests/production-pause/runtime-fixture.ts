@@ -11,6 +11,8 @@ const initial: RuntimeOperatorState = {
 let saved: any = null;
 try { saved = JSON.parse(sessionStorage.getItem("production-pause-fixture") || "null"); } catch { /* Synthetic fixture state only. */ }
 const fixture = {
+  identity: { instance: query.has("odim") ? "odim" : "tenant-a", userId: Number(query.get("user") || (query.has("odim") ? "534" : "1")) },
+  holdFeatures: query.has("hold-features"), releaseFeatures: null as (()=>void)|null, featureError: query.has("features-error"), revoke: false,
   operator: (saved?.operator ?? initial) as RuntimeOperatorState,
   calls: new Map<string, any>(saved?.calls ?? []), requests: [] as Array<{ path: string; method: string; body: any }>,
   api404: query.has("api404"), offline: false, holdPreparation: false, releasePreparation: null as (() => void) | null,
@@ -31,6 +33,8 @@ window.fetch = async (raw, init) => {
   const body = init?.body ? JSON.parse(String(init.body)) : {};
   fixture.requests.push({ path, method, body });
   if (fixture.offline) throw new TypeError("fixture offline");
+  if(path.endsWith("/operator-features")){ const identity={...fixture.identity}; if(fixture.holdFeatures)await new Promise<void>(resolve=>{fixture.releaseFeatures=()=>{fixture.holdFeatures=false;resolve();};}); if(fixture.featureError)return new Response("not found",{status:404}); const allowed=identity.instance==="odim"&&identity.userId===534&&!fixture.revoke; return json({managed:true,instance:"odim",operatorId:identity.userId,revision:"a".repeat(64),features:{operator:allowed,telephony:allowed,crm:allowed,whatsapp:allowed}}); }
+  if(fixture.identity.instance==="odim"&&(fixture.identity.userId!==534||fixture.revoke))return new Response(JSON.stringify({code:"OPERATOR_FEATURE_PILOT_REQUIRED"}),{status:403,headers:{"Content-Type":"application/json"}});
   if (fixture.api404) return new Response("Not found", { status: 404, headers: { "Content-Type": "text/html" } });
   if (path === "/api/customers/telephony/operator-state") {
     if(fixture.holdStatus)await new Promise<void>(resolve=>{fixture.releaseStatus=()=>{fixture.holdStatus=false;resolve();};});

@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createOperatorPauseClient, type RuntimeOperatorState } from "./client";
 
@@ -20,6 +21,26 @@ afterEach(() => vi.unstubAllGlobals());
 const client = () => { const state = vi.fn(), unavailable = vi.fn(); return { state, unavailable, runtime: createOperatorPauseClient({ identity: "tenant-a:7:central-v1", getToken: () => "snapshot-token", onOperatorState: state, onUnavailable: unavailable }) }; };
 
 describe("production pause-only client", () => {
+  it("clears a previously enabled snapshot on definitive pilot denial and never falls back to legacy prepare", async () => {
+    const denied = vi.fn(), runtime = createOperatorPauseClient({ identity: "odim:535:central-v1", getToken: () => "token", onAccessDenied: denied });
+    await runtime.refreshState();
+    intercept = () => new Response(JSON.stringify({ code: "OPERATOR_FEATURE_PILOT_REQUIRED", message: "Denied" }), { status: 403, headers: { "Content-Type": "application/json" } });
+    await expect(runtime.refreshState()).rejects.toMatchObject({ status: 403 });
+    await expect(runtime.prepareCall({ callId: crypto.randomUUID(), direction: "outgoing", number: "102" })).rejects.toMatchObject({ status: 403 });
+    expect(denied).toHaveBeenCalled();
+    expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(0);
+  });
+  it("cannot resurrect an enabled snapshot from an old action ACK after access was revoked", async () => {
+    const { runtime, state } = client(); let release!: () => void, denied = false;
+    const hold = new Promise<void>(resolve => { release = resolve; });
+    intercept = async init => init.method === "POST" ? (await hold, json({ ...global, version: 5, state: "paused" })) : denied ? new Response(JSON.stringify({ code: "OPERATOR_FEATURE_PILOT_REQUIRED" }), { status: 403, headers: { "Content-Type": "application/json" } }) : json(global);
+    const action = runtime.commandPause("now", 3);
+    const rejected = expect(action).rejects.toMatchObject({ code: "OPERATOR_FEATURE_PILOT_REQUIRED" });
+    await vi.waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+    denied = true; await expect(runtime.refreshState()).rejects.toMatchObject({ status: 403 });
+    const publications = state.mock.calls.length; release(); await rejected;
+    expect(state).toHaveBeenCalledTimes(publications);
+  });
   it.each([2, 3])("retains phone-only rollback over old global action ACK version %i", async version => {
     const { runtime, state } = client(); let release!: () => void;
     const hold = new Promise<void>(resolve => { release = resolve; });

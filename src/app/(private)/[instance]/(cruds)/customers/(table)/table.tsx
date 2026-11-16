@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { Customer } from "@/lib/sdk-local";
 import {
   Button,
@@ -22,10 +23,14 @@ import ClientTableHeader from "./table-header";
 import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed || access.allows("crm");
   const { openModal } = useContext(AppContext);
   const { state, dispatch } = useContext(CustomersContext);
 
   function openEditCustomerModal(customer: Customer) {
+    if (!canWrite) return;
+    if (access.managed) { window.location.assign(`/nova/odim/crm-customers/${customer.CODIGO}`); return; }
     if (isSystemDefaultCustomer(customer.CODIGO)) {
       toast.info("O cliente padrão do sistema não pode ser editado.");
       return;
@@ -35,6 +40,8 @@ export default function CustomersTable() {
   }
 
   function openCreateCustomerModal() {
+    if (!canWrite) return;
+    if (access.managed) { window.location.assign("/nova/odim/crm-customers/new"); return; }
     openModal(<CreateCustomerModal />);
   }
 
@@ -123,6 +130,7 @@ export default function CustomersTable() {
       <div className="flex flex-col items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:flex-row">
         <Button
           onClick={openCreateCustomerModal}
+          disabled={!canWrite}
           variant="contained"
           color="primary"
           size="medium"

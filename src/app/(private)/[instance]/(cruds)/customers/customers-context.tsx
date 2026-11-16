@@ -1,3 +1,4 @@
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import {
   ActionDispatch,
   createContext,
@@ -53,6 +54,9 @@ const CUSTOMERS_BASE_URL: string =
   process.env["NEXT_PUBLIC_CUSTOMERS_URL"] || "https://inpulse.infotecrs.inf.br";
 
 export default function CustomersProvider({ children }: ICustomersProviderProps) {
+  const access = useOperatorFeatures();
+  const canWrite = useRef(false);
+  canWrite.current = !access.managed;
   const api = useRef(new CustomersClient(CUSTOMERS_BASE_URL));
   const { token } = useAuthContext();
 
@@ -68,6 +72,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
 
   const createCustomer = useCallback(
     async (data: CreateCustomerDTO) => {
+      if (!canWrite.current) return false;
       try {
         if (token) {
           await api.current.createCustomer(data);
@@ -83,6 +88,7 @@ export default function CustomersProvider({ children }: ICustomersProviderProps)
 
   const updateCustomer = useCallback(
     async (id: number, data: UpdateCustomerDTO) => {
+      if (!canWrite.current) return false;
       if (isSystemDefaultCustomer(id)) {
         toast.info("O cliente padrão do sistema não pode ser editado.");
         return;

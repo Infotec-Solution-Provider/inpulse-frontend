@@ -1,3 +1,4 @@
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { Customer, WppChatPriority, WppChatType, WppContact, WppMessage } from "@/lib/sdk-local";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import { IconButton, Avatar, Tooltip, Chip } from "@mui/material";
@@ -44,11 +45,14 @@ export default function StartChatModalItem({
   const { openModal, closeModal } = useAppContext();
   const { pathname, instance, user } = useAuthContext();
 
+  const access = useOperatorFeatures();
+  const canUseWhatsapp = !access.managed || access.allows("whatsapp");
   const shouldShowViewOnly = useMemo(() => {
+    if (!canUseWhatsapp) return true;
     if (instance === "karsten") return true;
     if (user?.LOGIN === "infotec") return true;
     return false;
-  }, [instance, user]);
+  }, [instance, user, canUseWhatsapp]);
 
   const isCustomerDetailEnabled = parameters["customer_detail_modal_enabled"] === "true";
 
@@ -335,6 +339,7 @@ export default function StartChatModalItem({
             <Tooltip title="Iniciar conversa" arrow>
               <IconButton
                 onClick={handleClickStart}
+                disabled={!canUseWhatsapp}
                 sx={{
                   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   color: "white",

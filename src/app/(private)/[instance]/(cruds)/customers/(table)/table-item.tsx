@@ -1,3 +1,4 @@
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { Edit, ViewAgenda } from "@mui/icons-material";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
@@ -16,6 +17,8 @@ export default function CustomersTableItem({
   openEditModalHandler,
   openContactModalHandler,
 }: ClientListItemProps) {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed || access.allows("crm");
   const isSystemCustomer = isSystemDefaultCustomer(customer.CODIGO);
 
   return (
@@ -111,7 +114,7 @@ export default function CustomersTableItem({
             }
             onClick={() => openEditModalHandler(customer)}
             size="small"
-            disabled={isSystemCustomer}
+            disabled={isSystemCustomer || !canWrite}
             className="text-blue-600 hover:bg-blue-50 disabled:text-slate-400 dark:text-blue-400 dark:hover:bg-blue-950/30"
           >
             <Edit fontSize="small" />

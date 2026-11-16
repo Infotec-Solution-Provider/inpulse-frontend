@@ -1,3 +1,5 @@
+import { useOperatorFeatures } from "../../src/lib/components/operator-features-provider";
+import { operatorFeatureParameters } from "../../src/lib/operator-features";
 import { createContext, useContext, type ReactNode } from "react";
 import {
   AuthContext,
@@ -25,6 +27,7 @@ export function Empty() {
 }
 export function WppProvider({ children }: { children: ReactNode }) {
   const env = useEnvironment();
+  const access = useOperatorFeatures();
   return (
     <WhatsappContext.Provider
       value={
@@ -32,7 +35,8 @@ export function WppProvider({ children }: { children: ReactNode }) {
           ...whatsapp,
           ...env,
           loaded: true,
-          parameters: { feature_telephony_dialer_enabled: new URLSearchParams(location.search).has("dialer-off") ? "false" : "true", feature_crm_customers_enabled:"true",feature_crm_campaigns_enabled:"true" },
+          parameters: operatorFeatureParameters({ feature_telephony_dialer_enabled: new URLSearchParams(location.search).has("dialer-off") ? "false" : "true", feature_crm_customers_enabled:"true",feature_crm_campaigns_enabled:"true",customer_detail_edit_enabled:"true" },access.managed,access.capabilities),
+          isReadOnlyMode: access.managed && !access.allows("whatsapp") && env.currentChat?.chatType==="wpp",
         } as never
       }
     >

@@ -1,3 +1,4 @@
+import { useOperatorFeatures } from "../../src/lib/components/operator-features-provider";
 import "../monitor/harness.css";
 import "../../src/app/globals.css";
 import "./runtime-fixture";
@@ -16,20 +17,21 @@ navigate("/tenant-a/");
 Object.assign((window as any).productionFixture,{navigate,state,resolveSend,refreshToken,variant:"legacy"});
 function Probe(){
  const chat=useContext(ChatContext),path=usePathname(),pause=useOperatorPause(),theme=useThemeContext() as any;
- const [error,setError]=useState("");
+ const [error,setError]=useState(""); const access=useOperatorFeatures();
  
- useEffect(()=>{Object.assign((window as any).productionFixture,{runtime:pause?.runtime,setTheme:(mode:string)=>{if(theme.setPreference)theme.setPreference(mode);else if(theme.theme!==mode)theme.toggleTheme();}});},[pause?.runtime,theme.setPreference,theme.theme,theme.toggleTheme]);
+ useEffect(()=>{Object.assign((window as any).productionFixture,{access, runtime:pause?.runtime,setTheme:(mode:string)=>{if(theme.setPreference)theme.setPreference(mode);else if(theme.theme!==mode)theme.toggleTheme();}});},[access, pause?.runtime,theme.setPreference,theme.theme,theme.toggleTheme]);
  return <section className="flex h-full min-h-0 flex-col gap-2 p-2"><h1>{path}</h1>
- <textarea aria-label="Message draft" value={chat.state.text} onChange={e=>chat.dispatch({type:"change-text",text:e.target.value})}/>
+ <textarea className="min-h-[64px] shrink-0" aria-label="Message draft" value={chat.state.text} onChange={e=>chat.dispatch({type:"change-text",text:e.target.value})}/>
  <button onClick={()=>void chat.sendMessage()}>Send fixture</button>
+ <output data-testid="capabilities">{JSON.stringify(access.capabilities?.features??null)}</output><output data-testid="readonly">{String(chat.isReadOnlyMode)}</output>
  <output data-testid="pending">{chat.pendingSends.length}</output><output role="alert">{error}</output>
  
  {new URLSearchParams(location.search).has("card")&&<TelephoneDialerCard/>}
  </section>;
 }
-function Harness(){const env=useEnvironment();const [authenticated,setAuthenticated]=useState(true);usePathname();
- useEffect(()=>{(window as any).productionFixture.logout=()=>setAuthenticated(false);},[]);
- return <AuthContext.Provider value={{...env.auth,token:authenticated?env.auth.token:null,user:authenticated?{...env.auth.user,NIVEL:"ADMIN",NOME:"Demo"}:null,status:authenticated?"authenticated":"anonymous",signOut:()=>setAuthenticated(false)} as never}>
+function Harness(){const env=useEnvironment();const [authenticated,setAuthenticated]=useState(true);const[identity,setIdentity]=useState((window as any).productionFixture.identity);usePathname();
+ useEffect(()=>{(window as any).productionFixture.logout=()=>setAuthenticated(false);(window as any).productionFixture.switchIdentity=(instance:string,userId:number)=>{(window as any).productionFixture.identity={instance,userId};setIdentity({instance,userId});};},[]);
+ return <AuthContext.Provider value={{...env.auth,instance:identity.instance,token:authenticated?env.auth.token:null,user:authenticated?{...env.auth.user,CODIGO:identity.userId,NIVEL:identity.instance==="odim"&&!new URLSearchParams(location.search).has("admin")?"ATIVO":"ADMIN",NOME:"Demo"}:null,status:authenticated?"authenticated":"anonymous",signOut:()=>setAuthenticated(false)} as never}>
  <AppLayout><Probe/></AppLayout></AuthContext.Provider>;
 }
 createRoot(document.getElementById("root")!).render(<Harness/>);

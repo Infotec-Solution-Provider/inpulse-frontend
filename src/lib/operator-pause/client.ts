@@ -1,3 +1,4 @@
+import { isOperatorFeatureDenied } from "../operator-features";
 import type { CallPreparation, CallReport } from "./call-types";
 import type { OperatorDashboardMetrics } from "./dashboard-types";
 
@@ -42,9 +43,10 @@ async function write(entry:Pending){const db=await openOutbox();try{await new Pr
 async function pending(identity:string):Promise<Pending[]>{const db=await openOutbox();try{return await new Promise((resolve,reject)=>{const tx=db.transaction("operations","readonly"),r=tx.objectStore("operations").getAll();r.onsuccess=()=>resolve((r.result as Pending[]).filter(x=>x.identity===identity).sort((a,b)=>a.order-b.order));r.onerror=()=>reject(r.error);});}finally{db.close();}}
 async function remove(id:string){const db=await openOutbox();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction("operations","readwrite");tx.objectStore("operations").delete(id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 
-export function createOperatorPauseClient(options:{identity:string;getToken:()=>string|null;onUnavailable?:()=>void;onSyncError?:(message:string|null)=>void;onOperatorState?:(state:RuntimeOperatorState)=>void}) {
+export function createOperatorPauseClient(options:{identity:string;getToken:()=>string|null;onUnavailable?:()=>void;onAccessDenied?:()=>void;onSyncError?:(message:string|null)=>void;onOperatorState?:(state:RuntimeOperatorState)=>void}) {
   if(!options.identity.endsWith(":central-v1"))throw new Error("Namespace de autoridade da pausa inválido.");
   const instance=options.identity.split(":")[0];
+  let accessDenied=false;
   let disposed=false,listening=false,revision=0,state:RuntimeOperatorState|null=null,flushing:Promise<void>|null=null;
   let enqueueChain=Promise.resolve();
   let localWriteFailure:Error|null=null,stateRequest=0,policyEpoch=0;
@@ -56,7 +58,7 @@ export function createOperatorPauseClient(options:{identity:string;getToken:()=>
     const token=options.getToken();if(!token)throw new Error("Entre novamente para sincronizar a telefonia.");
     const response=await fetch(`${url}/api${path.startsWith("/telephony")?"/customers"+path:path}`,{method,cache:"no-store",headers:{Authorization:/^Bearer\s/i.test(token)?token:`Bearer ${token}`,"Content-Type":"application/json","x-crm-instance":instance},...(body===undefined?{}:{body:JSON.stringify(body)})});
     if(!response.headers.get("content-type")?.includes("application/json"))throw new Error("A pausa está indisponível. Tente atualizar o estado.");
-    const result=await response.json();if(!response.ok){const error=Object.assign(new Error(result.message||"Não foi possível confirmar a operação telefônica."),{code:result.code,status:response.status,outcome:result.outcome});throw error;}return result.data as T;
+    const result=await response.json();if(!response.ok){const error=Object.assign(new Error(result.message||"Não foi possível confirmar a operação telefônica."),{code:result.code,status:response.status,outcome:result.outcome});if(isOperatorFeatureDenied(error)){accessDenied=true;state=null;policyEpoch++;stateRequest++;if(!disposed)options.onAccessDenied?.();}throw error;}return result.data as T;
   }
   function publishState(next:RuntimeOperatorState){
     const policyChanged=!state||pausePolicyFingerprint(next)!==pausePolicyFingerprint(state);
@@ -82,7 +84,7 @@ export function createOperatorPauseClient(options:{identity:string;getToken:()=>
   }
   async function refreshState(){
     const currentRequest=++stateRequest;
-    try{const next=validateSnapshot(await request<RuntimeOperatorState>("/telephony/operator-state"));if(currentRequest===stateRequest)return publishState(next);return state??next;}
+    try{const next=validateSnapshot(await request<RuntimeOperatorState>("/telephony/operator-state"));if(currentRequest===stateRequest){accessDenied=false;return publishState(next);}if(accessDenied)throw Object.assign(new Error("Seu acesso às funcionalidades do operador não está habilitado."),{status:403,code:"OPERATOR_FEATURE_PILOT_REQUIRED"});return state??next;}
     catch(error){if(currentRequest===stateRequest){policyEpoch++;if(!disposed)options.onUnavailable?.();}throw error;}
   }
   async function flush(){
@@ -192,7 +194,7 @@ export function createOperatorPauseClient(options:{identity:string;getToken:()=>
       // A policy/capability change observed during the request supersedes its
       // delayed acknowledgement, even when the runtime remains enabled. Keep the
       // known snapshot and any newer GET in flight; the next poll reconciles state.
-      if(result.enabled&&actionPolicyEpoch!==policyEpoch&&state)return state;
+      if(result.enabled&&actionPolicyEpoch!==policyEpoch){if(state)return state;throw Object.assign(new Error("Seu acesso às funcionalidades do operador não está habilitado."),{status:403,code:"OPERATOR_FEATURE_PILOT_REQUIRED"});}
       // A GET started before this acknowledgement may contain the previous version.
       // Invalidate it, while allowing a later policy-disabled snapshot (version zero).
       stateRequest++;return publishState(result);

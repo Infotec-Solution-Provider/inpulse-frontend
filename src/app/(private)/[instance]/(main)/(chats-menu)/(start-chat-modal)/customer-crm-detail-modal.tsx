@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 
 import customersService from "@/lib/services/customers.service";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
@@ -24,6 +25,7 @@ import {
   Alert,
   Autocomplete,
   Box,
+  Button,
   Chip,
   CircularProgress,
   Divider,
@@ -150,6 +152,7 @@ function getUniqueOptions(values: Array<string | null | undefined>) {
 }
 
 export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }: CustomerCrmDetailModalProps) {
+  const access = useOperatorFeatures();
   const { token } = useAuthContext();
   const [tab, setTab] = useState<TabValue>("main");
   const [loading, setLoading] = useState(true);
@@ -2013,6 +2016,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit }:
             Código: {customerId}
           </Typography>
         </div>
+        {access.managed && access.allows("crm") && <Button component="a" href={`/nova/odim/crm-customers/${customerId}`}>Abrir cadastro completo</Button>}
         <IconButton onClick={onClose}>
           <CloseIcon />
         </IconButton>
