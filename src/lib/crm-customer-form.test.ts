@@ -22,6 +22,11 @@ const fields: CustomerCrmField[] = [
   { name: "EMAIL", label: "E-mail", group: "phones", type: "text", nullable: true, maxLength: 150 },
 ];
 describe("CRM registration form snapshots", () => {
+  it("never submits server-owned read-only financial values even if local draft data changes", () => {
+    const readOnly: CustomerCrmField = { name: "LIMITE_CREDITO", label: "Limite", group: "administration", type: "integer", nullable: true, readOnly: true };
+    const result = crmFormPayload([readOnly], { LIMITE_CREDITO: 999 }, { LIMITE_CREDITO: 100 });
+    expect(result).toMatchObject({ values: {}, valid: true, hasChanges: false });
+  });
   it("omits untouched new fields and preserves database defaults", () => {
     expect(crmFormPayload(fields, { RAZAO: " Ação " }).values).toEqual({ RAZAO: "Ação" });
   });

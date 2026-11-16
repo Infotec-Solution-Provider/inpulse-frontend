@@ -1,4 +1,6 @@
 "use client";
+import type { PendingCrmOperation } from "@/lib/crm-operation-journal";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 import { CrmPage, OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import { useCrmLeaveGuard } from "@/lib/ui-system/leave-guard";
@@ -241,7 +243,7 @@ function CrmFields({
           label={label}
           value={value}
           onChange={(next) => change(field.name, next)}
-          disabled={disabled}
+          disabled={disabled || !!field.readOnly}
           error={errors[field.name]}
         />
       );
@@ -253,7 +255,7 @@ function CrmFields({
           label={label}
           fullWidth
           value={value === undefined ? "__DEFAULT__" : value === null ? "__EMPTY__" : value}
-          disabled={disabled}
+          disabled={disabled || !!field.readOnly}
           onChange={(event) => {
             if (event.target.value === "__DEFAULT__")
               setDraft({ ...draft, [field.name]: undefined });
@@ -286,7 +288,7 @@ function CrmFields({
         key={field.name}
         label={label}
         fullWidth
-        disabled={disabled}
+        disabled={disabled || !!field.readOnly}
         value={value ?? ""}
         type={field.type === "integer" ? "number" : field.type === "date" ? "date" : "text"}
         multiline={multiline}
@@ -423,6 +425,8 @@ export function CustomerCrmEditor({
       () => new CustomerCrmClient(process.env.NEXT_PUBLIC_CUSTOMERS_URL || "http://localhost:8002"),
       [],
     );
+  const [pendingOperations, setPendingOperations] = useState<PendingCrmOperation[]>([]);
+  const [checkingReceipt, setCheckingReceipt] = useState(false);
   const storageKey = `crm-registration:${instance}:${userId}:${customerId ?? "new"}`;
   const [gate, setGate] = useState<Gate>(() => readGate(storageKey)),
     [reconcile, setReconcile] = useState(false),
@@ -468,25 +472,36 @@ export function CustomerCrmEditor({
   const load = async (confer = false) => {
     const sequence = ++request.current,
       context = contextKey;
-    api.setRegistrationContext(instance, token);
+    api.setRegistrationContext(instance, token, userId);
     setLoading(true);
     setMessage("");
     try {
-      const [formOptions, loaded, loadedContacts, loadedBrands] = await Promise.all([
+      const [formOptions, loaded, loadedContacts, loadedBrands, pending] = await Promise.all([
         api.getRegistrationOptions(),
         customerId !== undefined ? api.getRegistration(customerId) : null,
         customerId && customerId > 0 ? api.listRegistrationContacts(customerId) : [],
         customerId && customerId > 0 ? api.listRegistrationBrands(customerId) : [],
+        api.pendingRegistrationOperations(),
       ]);
       if (!active(context) || sequence !== request.current) return;
       setOptions(formOptions);
       setSnapshot(loaded);
-      setDraft(loaded ? { ...loaded.record } : {});
-      setDeactivationReason("");
+      const saved = pending.find(entry => !(entry.confirmed && customerId !== undefined && entry.result?.customerId === customerId) && entry.path === `/api/customers/crm-customers/${customerId ?? ""}`.replace(/\/$/, "") && ["POST", "PATCH"].includes(entry.method));
+      const payload = saved?.payload as { changes?: CustomerCrmDraft; deactivationReason?: string } | undefined;
+      setDraft({ ...(loaded?.record ?? {}), ...((payload?.changes ?? payload ?? {}) as CustomerCrmDraft) });
+      const applied = pending.some(entry => entry.confirmed && customerId !== undefined && entry.result?.customerId === customerId);
+      if (applied) {
+        await api.acknowledgeRegistrationOperations(customerId);
+        if (pending.some(entry => entry.confirmed && entry.method === "POST" && entry.path === "/api/customers/crm-customers" && entry.result?.customerId === customerId)) storeGate(`crm-registration:${instance}:${userId}:new`, null);
+      }
+      const remaining = applied ? await api.pendingRegistrationOperations() : pending;
+      setPendingOperations(remaining);
+      if (remaining.length) { storeGate(storageKey, { state: "unknown", at: Date.now() }); setGate({ state: "unknown", at: Date.now() }); }
+      setDeactivationReason(payload?.deactivationReason ?? "");
       setContacts(loadedContacts);
       setBrands(loadedBrands);
       setErrors({});
-      if (confer) {
+      if ((confer || applied) && !remaining.length) {
         storeGate(storageKey, null);
         setGate(null);
         setReconcile(false);
@@ -535,7 +550,7 @@ export function CustomerCrmEditor({
   const mutate = async (work: () => Promise<void>) => {
     if (blocked || writing.current) return;
     const context = contextKey;
-    api.setRegistrationContext(instance, token);
+    api.setRegistrationContext(instance, token, userId);
     writing.current = true;
     setSaving(true);
     setMessage("");
@@ -543,6 +558,7 @@ export function CustomerCrmEditor({
     storeGate(storageKey, { state: "pending", at: Date.now() });
     try {
       await work();
+      await api.acknowledgeRegistrationOperations(customerId);
       storeGate(storageKey, null);
       invalidate();
     } catch (error) {
@@ -552,9 +568,10 @@ export function CustomerCrmEditor({
       storeGate(storageKey, unknown ? { state: "unknown", at: Date.now() } : null);
       if (active(context)) {
         setMessage(detail.message);
-        if (unknown || detail.code?.endsWith("_CHANGED")) setReconcile(true);
+        if (unknown || detail.outcome === "COMMITTED" || detail.code?.endsWith("_CHANGED")) setReconcile(true);
       }
     } finally {
+      if (active(context)) setPendingOperations(await api.pendingRegistrationOperations().catch(() => []));
       writing.current = false;
       if (active(context)) setSaving(false);
       else if (alive.current) {
@@ -644,7 +661,28 @@ export function CustomerCrmEditor({
       }
     });
   };
+  const checkReceipt = async () => {
+    if (checkingReceipt || saving) return;
+    setCheckingReceipt(true); api.setRegistrationContext(instance, token, userId);
+    try {
+      const entries = await api.pendingRegistrationOperations();
+      let confirmedCustomerId: number | undefined;
+      let notCommitted = false;
+      for (const entry of entries) {
+        const receipt = await api.confirmRegistrationOperation(entry.operationId);
+        if (receipt.outcome === "UNKNOWN") { setMessage("O registro ainda está sem confirmação. Verifique novamente antes de continuar."); return; }
+        if (receipt.outcome === "NOT_COMMITTED") notCommitted = true;
+        if (receipt.outcome === "COMMITTED" && receipt.result?.entity === "customer") confirmedCustomerId = receipt.result.customerId;
+      }
+      if (notCommitted) { setPendingOperations(await api.pendingRegistrationOperations()); storeGate(storageKey, null); setGate(null); setReconcile(false); setMessage("O registro não foi aplicado. Revise o rascunho antes de salvar novamente."); return; }
+      if (customerId === undefined && confirmedCustomerId) router.replace(`/${instance}/crm-customers/${confirmedCustomerId}`);
+      else { await load(true); setPendingOperations(await api.pendingRegistrationOperations()); }
+    } catch { setMessage("Não foi possível conferir o registro. O rascunho e a pendência foram preservados."); }
+    finally { setCheckingReceipt(false); }
+  };
   const confer = () => {
+    if (pendingOperations.length) { void checkReceipt(); return; }
+
     if (dirty || contact) setDiscardAction("reload");
     else void load(true);
   };
@@ -706,6 +744,7 @@ export function CustomerCrmEditor({
           {message}
         </Alert>
       )}
+      {(!!pendingOperations.length || !!gate) && <Alert severity="warning" sx={{ mb: 2 }}>Há um registro sem confirmação. Nenhuma nova gravação será enviada.<Button onClick={() => void checkReceipt()} disabled={checkingReceipt || saving}>{checkingReceipt ? "Verificando registro…" : "Verificar registro"}</Button></Alert>}
       {(gate || reconcile) && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           {gate?.state === "pending"
@@ -1039,11 +1078,12 @@ export function CustomerCrmEditor({
   );
 }
 export default function CustomerCrmManagement({ customerId }: { customerId?: number }) {
+  const access = useOperatorFeatures();
   const { instance, user, token } = useAuthContext();
-  if (user?.NIVEL !== "ADMIN")
+  if (!user || (access.managed ? !access.allows("crm") : user.NIVEL !== "ADMIN"))
     return (
       <Alert severity="warning" sx={{ m: 3 }}>
-        Acesso restrito a administradores.
+        {access.managed ? "Cadastro completo indisponível para este perfil." : "Acesso restrito a administradores."}
       </Alert>
     );
   if (!token)

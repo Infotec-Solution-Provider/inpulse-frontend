@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 
 import { crmPhonePayload, crmPhoneSlots } from "@/lib/crm-phone-form";
 import { crmErrorDetails } from "@/lib/crm-customer-form";
@@ -162,6 +163,7 @@ function getUniqueOptions(values: Array<string | null | undefined>) {
 export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, presentation = "modal" }: CustomerCrmDetailModalProps) {
   const { token, user, instance } = useAuthContext();
   const { parameters } = useWhatsappContext();
+  const access = useOperatorFeatures();
   const crmCustomersEnabled = isFeatureEnabled(parameters, FEATURE_FLAGS.crmCustomers);
   const segmentContext = useRef({ instance, customerId, token });
   segmentContext.current = { instance, customerId, token };
@@ -2085,7 +2087,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
         </div>
       ) : (
         <>
-          {user?.NIVEL === "ADMIN" && crmCustomersEnabled && <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}><Button component={NextLink} href={`/${instance}/crm-customers/${customerId}`} size="small">Abrir cadastro completo</Button></Box>}
+          {(user?.NIVEL === "ADMIN" || (access.managed && access.allows("crm"))) && crmCustomersEnabled && <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}><Button component={NextLink} href={`/${instance}/crm-customers/${customerId}`} size="small">Abrir cadastro completo</Button></Box>}
           <Tabs
             value={tab}
             onChange={(_, value) => setTab(value)}

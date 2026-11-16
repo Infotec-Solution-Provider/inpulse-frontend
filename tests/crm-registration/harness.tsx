@@ -1,3 +1,4 @@
+import { OperatorFeaturesProvider } from "../../src/lib/components/operator-features-provider";
 import { PilotDesignProvider } from "../../src/lib/ui-system";
 import { createRoot } from "react-dom/client";
 import { CssBaseline, ThemeProvider } from "@mui/material";
@@ -14,9 +15,9 @@ createRoot(document.getElementById("root")!).render(
         <button onClick={() => switchAuth("tenant-b", "token-b")}>Trocar tenant</button>
         <button onClick={() => switchAuth("tenant-a", "token-refreshed")}>Renovar sessão</button>
       </div>
-      <div style={{ paddingTop: 30 }}>
+      <OperatorFeaturesProvider><div style={{ paddingTop: 30 }}>
         <CustomerCrmManagement customerId={params.has("new") ? undefined : 41} />
-      </div>
+      </div></OperatorFeaturesProvider>
     </PilotDesignProvider>
   </ThemeProvider>,
 );

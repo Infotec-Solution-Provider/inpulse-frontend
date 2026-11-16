@@ -10,6 +10,8 @@ import type { BrowserPhone } from "./browser-phone";
 import { acquirePhoneTabLock } from "./phone-tab-lock";
 import { initialPhoneState, isCallBusy, type PhoneState } from "./types";
 import { TelephonyPanel } from "./telephony-panel";
+import { useOperatorFeatures } from "../components/operator-features-provider";
+import { isOperatorFeatureDenied } from "../operator-features";
 import { useOperatorPause } from "../operator-pause/provider";
 
 interface TelephonyContextValue {
@@ -41,9 +43,10 @@ export function useTelephony() {
 export function TelephonyProvider({ children }: { children: ReactNode }) {
   const { token, instance, user } = useAuthContext();
   const { parameters } = useWhatsappContext();
+  const access = useOperatorFeatures();
   const enabled = !!token && isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyDialer);
   const identity = `${instance}:${user?.CODIGO ?? ""}`;
-  return <PhoneSession key={`${identity}:${enabled}`} identity={identity} token={token} enabled={enabled}>{children}</PhoneSession>;
+  return <PhoneSession key={`${identity}:${!!token}:${access.managed ? "managed" : enabled}`} identity={identity} token={token} enabled={enabled}>{children}</PhoneSession>;
 }
 
 function PhoneSession({ children, identity, token, enabled }: { children: ReactNode; identity: string; token: string | null; enabled: boolean }) {
@@ -81,7 +84,7 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; disconnect(); };
-    // Identity/feature changes remount this component; token refresh does not.
+    // Identity/logout remount. A capability refresh must preserve an active call.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -179,18 +182,23 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
   }
 
   const value: TelephonyContextValue = {
-    enabled, hostPanel, state, busy, audioBlocked, syncError: pause?.syncError || syncError, connect, disconnect, playAudio,
+    enabled: enabled || busy, hostPanel, state, busy, audioBlocked, syncError: pause?.syncError || syncError, connect, disconnect, playAudio,
     incomingRequiresResume: !!pause?.operatorState?.enabled && pause.operatorState.state !== "available",
     waitForSync: () => runtimeRef.current?.waitForSync() ?? syncRef.current,
     dial: async (number, scheduleId) => {
+      if (!enabled) throw new Error("Confira as permissões da telefonia antes de ligar.");
       if (!phoneRef.current) throw new Error("Conecte a telefonia antes de ligar.");
       await phoneRef.current.dial(number, scheduleId);
     },
     answer: async (resume = false) => {
+      if (!enabled) throw new Error("Confira as permissões da telefonia antes de atender.");
       const runtime = runtimeRef.current;
       if (runtime) {
         let status = operatorRef.current;
-        try { status = await runtime.refreshState(); } catch { /* Manual incoming calls remain answerable offline. */ }
+        try { status = await runtime.refreshState(); } catch (error) {
+          if (isOperatorFeatureDenied(error) || (error as { code?: string })?.code === "OPERATOR_FEATURE_PILOT_PENDING") throw error;
+          /* Known authorized incoming calls remain manually answerable offline. */
+        }
         if (status?.enabled && status.state !== "available") {
           if (!resume) throw new Error("A operação está em pausa. Use Retomar e atender para responder à ligação.");
           await runtime.commandPause(status.state === "pending" ? "cancel_pending" : "resume", undefined, true);
@@ -206,6 +214,6 @@ function PhoneSession({ children, identity, token, enabled }: { children: ReactN
     {children}
     <audio ref={audioRef} autoPlay aria-label="Áudio da ligação" />
     {/* Outside the attendance area the phone stays out of the way, except to answer or end a call. */}
-    {enabled && panelHosts === 0 && busy && <TelephonyPanel placement="floating" />}
+    {(enabled || busy) && panelHosts === 0 && busy && <TelephonyPanel placement="floating" />}
   </TelephonyContext.Provider>;
 }

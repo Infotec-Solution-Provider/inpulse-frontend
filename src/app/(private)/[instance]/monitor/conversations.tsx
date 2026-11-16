@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 
 import { Alert, Button, Skeleton } from "@mui/material";
 import { useAuthContext } from "@/app/auth-context";
@@ -23,6 +24,8 @@ import { useMonitorClock } from "./use-monitor-clock";
 import "./conversation-density.css";
 
 export default function ConversationMonitor() {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed || access.allows("whatsapp");
   const {
     chats,
     isLoading,
@@ -114,7 +117,7 @@ export default function ConversationMonitor() {
                           : null
                       }
                       handleTransfer={
-                        activeWpp
+                        activeWpp && canWrite
                           ? () => {
                               setCurrentChat(chat);
                               openModal(<TransferChatModal chatId={chat.id} onSuccess={refetch} />);
@@ -122,7 +125,7 @@ export default function ConversationMonitor() {
                           : null
                       }
                       handleFinish={
-                        activeWpp
+                        activeWpp && canWrite
                           ? () => {
                               setCurrentChat(chat);
                               openModal(<FinishChatModal chatId={chat.id} onSuccess={refetch} />);

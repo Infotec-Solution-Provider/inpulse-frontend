@@ -13,6 +13,7 @@ const stubs = {
 };
 const server = await createServer({
   configFile: false,
+  css: {postcss:{plugins:[require("tailwindcss")({...require("tailwindcss/loadConfig")(fileURLToPath(new URL("../../tailwind.config.ts",import.meta.url))),content:[fileURLToPath(new URL("../../src/**/*.{ts,tsx}",import.meta.url)),fileURLToPath(new URL("./**/*.{ts,tsx}",import.meta.url))]})]}},
   define: { "process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH": JSON.stringify(""), "process.env.NEXT_PUBLIC_CUSTOMERS_URL": JSON.stringify("http://fixture.invalid") },
   root: fileURLToPath(new URL("../../", import.meta.url)),
   cacheDir: "node_modules/.vite-crm-registration",

@@ -1,3 +1,9 @@
+import {
+  performCrmOperation,
+  pendingCrmOperations,
+  confirmCrmOperation,
+  acknowledgeCrmOperations,
+} from "../crm-operation-journal";
 import CustomersClient from "./customers.client";
 import type { DataResponse } from "./types/response.types";
 import type { CustomerLookupOption } from "./types/customers.types";
@@ -10,10 +16,28 @@ import type {
   CustomerCrmSnapshot,
 } from "./types/customer-crm.types";
 export default class CustomerCrmClient extends CustomersClient {
-  private registrationContext: { instance: string; token: string } | null = null;
-  setRegistrationContext(instance: string, token: string): void {
+  constructor(private readonly operationBaseUrl: string) {
+    super(operationBaseUrl);
+  }
+  private operationContext() {
+    if (!this.registrationContext) throw new Error("Atualize sua sessão antes de continuar.");
+    return { ...this.registrationContext, baseUrl: this.operationBaseUrl };
+  }
+  acknowledgeRegistrationOperations(customerId?: number) {
+    return acknowledgeCrmOperations(this.operationContext(), customerId);
+  }
+  pendingRegistrationOperations() {
+    return pendingCrmOperations(this.operationContext());
+  }
+  confirmRegistrationOperation(operationId: string) {
+    return confirmCrmOperation(this.operationContext(), operationId);
+  }
+  private registrationContext: { instance: string; token: string; operatorId: number } | null =
+    null;
+  setRegistrationContext(instance: string, token: string, operatorId = 0): void {
     this.registrationContext = {
       instance: instance.trim(),
+      operatorId,
       token: token.replace(/^Bearer\s+/i, "").trim(),
     };
     this.setAuth(this.registrationContext.token);
@@ -60,7 +84,7 @@ export default class CustomerCrmClient extends CustomersClient {
   async getRegistrationOptions(): Promise<CustomerCrmFormOptions> {
     return (
       await this.ax.get<DataResponse<CustomerCrmFormOptions>>(
-        "/api/crm-customers/options",
+        "/api/customers/crm-customers/options",
         this.registrationConfig(),
       )
     ).data.data;
@@ -68,33 +92,31 @@ export default class CustomerCrmClient extends CustomersClient {
   async getRegistration(id: number): Promise<CustomerCrmSnapshot> {
     return (
       await this.ax.get<DataResponse<CustomerCrmSnapshot>>(
-        `/api/crm-customers/${id}`,
+        `/api/customers/crm-customers/${id}`,
         this.registrationConfig(),
       )
     ).data.data;
   }
   async createRegistration(data: CustomerCrmRecord): Promise<CustomerCrmSnapshot> {
-    return (
-      await this.ax.post<DataResponse<CustomerCrmSnapshot>>(
-        "/api/crm-customers",
-        data,
-        this.registrationConfig(),
-      )
-    ).data.data;
+    return performCrmOperation(
+      this.operationContext(),
+      "POST",
+      "/api/customers/crm-customers",
+      data,
+    );
   }
   async updateRegistration(id: number, data: CustomerCrmPatch): Promise<CustomerCrmSnapshot> {
-    return (
-      await this.ax.patch<DataResponse<CustomerCrmSnapshot>>(
-        `/api/crm-customers/${id}`,
-        data,
-        this.registrationConfig(),
-      )
-    ).data.data;
+    return performCrmOperation(
+      this.operationContext(),
+      "PATCH",
+      `/api/customers/crm-customers/${id}`,
+      data,
+    );
   }
   async listRegistrationContacts(id: number): Promise<CustomerCrmSnapshot[]> {
     return (
       await this.ax.get<DataResponse<CustomerCrmSnapshot[]>>(
-        `/api/crm-customers/${id}/contacts`,
+        `/api/customers/crm-customers/${id}/contacts`,
         this.registrationConfig(),
       )
     ).data.data;
@@ -103,55 +125,56 @@ export default class CustomerCrmClient extends CustomersClient {
     id: number,
     data: CustomerCrmRecord,
   ): Promise<CustomerCrmSnapshot> {
-    return (
-      await this.ax.post<DataResponse<CustomerCrmSnapshot>>(
-        `/api/crm-customers/${id}/contacts`,
-        data,
-        this.registrationConfig(),
-      )
-    ).data.data;
+    return performCrmOperation(
+      this.operationContext(),
+      "POST",
+      `/api/customers/crm-customers/${id}/contacts`,
+      data,
+    );
   }
   async updateRegistrationContact(
     id: number,
     contactId: number,
     data: CustomerCrmPatch,
   ): Promise<CustomerCrmSnapshot> {
-    return (
-      await this.ax.patch<DataResponse<CustomerCrmSnapshot>>(
-        `/api/crm-customers/${id}/contacts/${contactId}`,
-        data,
-        this.registrationConfig(),
-      )
-    ).data.data;
+    return performCrmOperation(
+      this.operationContext(),
+      "PATCH",
+      `/api/customers/crm-customers/${id}/contacts/${contactId}`,
+      data,
+    );
   }
   async deleteRegistrationContact(id: number, contactId: number, version: string): Promise<void> {
-    await this.ax.delete(`/api/crm-customers/${id}/contacts/${contactId}`, {
-      ...this.registrationConfig(),
-      data: { version },
-    });
+    await performCrmOperation(
+      this.operationContext(),
+      "DELETE",
+      `/api/customers/crm-customers/${id}/contacts/${contactId}`,
+      { version },
+    );
   }
   async listRegistrationBrands(id: number): Promise<CustomerCrmBrandLink[]> {
     return (
       await this.ax.get<DataResponse<CustomerCrmBrandLink[]>>(
-        `/api/crm-customers/${id}/brands`,
+        `/api/customers/crm-customers/${id}/brands`,
         this.registrationConfig(),
       )
     ).data.data;
   }
   async createRegistrationBrand(id: number, brandId: number): Promise<CustomerCrmBrandLink> {
-    return (
-      await this.ax.post<DataResponse<CustomerCrmBrandLink>>(
-        `/api/crm-customers/${id}/brands`,
-        { MARCA: brandId },
-        this.registrationConfig(),
-      )
-    ).data.data;
+    return performCrmOperation(
+      this.operationContext(),
+      "POST",
+      `/api/customers/crm-customers/${id}/brands`,
+      { MARCA: brandId },
+    );
   }
   async deleteRegistrationBrand(id: number, linkId: number, version: string): Promise<void> {
-    await this.ax.delete(`/api/crm-customers/${id}/brands/${linkId}`, {
-      ...this.registrationConfig(),
-      data: { version },
-    });
+    await performCrmOperation(
+      this.operationContext(),
+      "DELETE",
+      `/api/customers/crm-customers/${id}/brands/${linkId}`,
+      { version },
+    );
   }
   async registrationLookup(
     kind: "groups" | "positions" | "origins" | "medias" | "brands" | "units" | "states",

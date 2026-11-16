@@ -6,6 +6,7 @@ export interface CustomerCrmField {
   group: "identification" | "address" | "phones" | "origin" | "administration";
   type: "text" | "integer" | "date" | "enum";
   nullable: boolean;
+  readOnly?: boolean;
   maxLength?: number;
   required?: boolean;
   options?: string[];

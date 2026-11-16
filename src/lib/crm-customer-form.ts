@@ -27,6 +27,7 @@ export function crmFormPayload(
     else values.CODIGO = code;
   }
   for (const field of fields) {
+    if (field.readOnly) continue;
     const raw = draft[field.name];
     if (original && raw === original[field.name]) continue;
     if (raw === undefined) {
@@ -77,6 +78,7 @@ export function crmFormPayload(
   const phones = crmPhonePayload(fields, values, original);
   Object.assign(values, phones.values);
   Object.assign(errors, phones.errors);
+  for (const field of fields) if (field.readOnly) delete values[field.name];
   return {
     values,
     errors,

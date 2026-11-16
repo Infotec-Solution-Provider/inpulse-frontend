@@ -1,3 +1,5 @@
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
+import { operatorFeatureParameters } from "@/lib/operator-features";
 import { AuthContext } from "@/app/auth-context";
 import { DEFAULT_FEATURE_PARAMETERS } from "@/lib/feature-flags";
 import { loadWhatsappSectorSession, readWhatsappSessionMetadata } from "@/lib/whatsapp-sector-bootstrap";
@@ -235,6 +237,10 @@ export const NOTIFICATIONS_PER_PAGE = 15;
 export const WhatsappContext = createContext({} as IWhatsappContext);
 
 export default function WhatsappProvider({ children }: WhatsappProviderProps) {
+  const operatorFeatures = useOperatorFeatures();
+  const canUseWhatsapp = !operatorFeatures.managed || operatorFeatures.allows("whatsapp");
+  const whatsappAccess = useRef(canUseWhatsapp);
+  whatsappAccess.current = canUseWhatsapp;
   const { token, instance, user } = useContext(AuthContext);
   const sessionScope = JSON.stringify([
     instance,
@@ -382,6 +388,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
       chatId: number,
       action: "pin" | "unpin" | "read" | "unread",
     ) => {
+      if (type === "wpp" && !whatsappAccess.current) throw new Error("WhatsApp disponível somente para consulta neste perfil.");
       const result = await api.current.updateChatPreference(type, chatId, action);
       const apply = (chat: DetailedChat | DetailedInternalChat) =>
         chat.id === chatId && chat.chatType === type
@@ -528,7 +535,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         });
       }
 
-      if (markAsRead && chat.contactId && globalChannel.current) {
+      if (whatsappAccess.current && markAsRead && chat.contactId && globalChannel.current) {
         api.current.markContactMessagesAsRead(chat.contactId);
 
         setChats((prev) =>
@@ -579,6 +586,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const finishChat = useCallback(
     async (chatId: number, resultId: number, scheduleDate?: Date | null) => {
+      if (!whatsappAccess.current) throw new Error("WhatsApp disponível somente para consulta neste perfil.");
       const scope = liveAuth.current.scope;
       api.current.setAuth(token || "");
       await api.current.finishChatById(chatId, resultId, scheduleDate);
@@ -590,6 +598,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const transferAttendance = useCallback(
     async (chatId: number, selectedUser: number) => {
+      if (!whatsappAccess.current) throw new Error("WhatsApp disponível somente para consulta neste perfil.");
       const scope = liveAuth.current.scope;
       api.current.setAuth(token || "");
       await api.current.transferAttendance(chatId, selectedUser).then(() => {
@@ -605,6 +614,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const sendMessageRequest = useCallback(
     async (to: string, data: SendMessageOptions, signal: AbortSignal): Promise<WppMessage> => {
+      if (!whatsappAccess.current) throw new Error("WhatsApp disponível somente para consulta neste perfil.");
       let traceId: string | null = null;
       let dispatched = false;
       let stage: SendStage = "prepare";
@@ -1080,6 +1090,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
 
   const startChatByContactId = useCallback(
     async (contactId: number, template?: SendTemplateData) => {
+      if (!whatsappAccess.current) throw new Error("WhatsApp disponível somente para consulta neste perfil.");
       api.current.setAuth(token || "");
       pendingReadOnlyOpenRef.current = false;
       // Marca que o usuário iniciou este chat manualmente
@@ -1310,9 +1321,10 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
     },
   });
 
-  const sessionValue = useMemo(() => ({ parameters, channels, loaded }), [parameters, channels, loaded]);
-  const chatListValue = useMemo(() => ({ chats, currentChat, chatFilters, changeChatFilters, openChat, parameters }),
-    [chats, currentChat, chatFilters, changeChatFilters, openChat, parameters]);
+  const effectiveParameters = useMemo(() => operatorFeatureParameters(parameters, operatorFeatures.managed, operatorFeatures.capabilities), [parameters, operatorFeatures.managed, operatorFeatures.capabilities]);
+  const sessionValue = useMemo(() => ({ parameters: effectiveParameters, channels, loaded }), [effectiveParameters, channels, loaded]);
+  const chatListValue = useMemo(() => ({ chats, currentChat, chatFilters, changeChatFilters, openChat, parameters: effectiveParameters }),
+    [chats, currentChat, chatFilters, changeChatFilters, openChat, effectiveParameters]);
 
   return (
     <WhatsappContext.Provider
@@ -1351,7 +1363,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         getNotifications,
         markAllAsReadNotification,
         templates,
-        parameters,
+        parameters: operatorFeatureParameters(parameters, operatorFeatures.managed, operatorFeatures.capabilities),
         tenantPolicy,
         refreshParameters,
         loadChatMessages,
@@ -1368,7 +1380,7 @@ export default function WhatsappProvider({ children }: WhatsappProviderProps) {
         whatsappSectorId,
         selectedChannel: workspaceReady ? selectedChannel : null,
         setSelectedChannel,
-        isReadOnlyMode,
+        isReadOnlyMode: isReadOnlyMode || (currentChat?.chatType === "wpp" && !canUseWhatsapp),
         prepareReadOnlyOpen,
         updateChatPreference,
       }}

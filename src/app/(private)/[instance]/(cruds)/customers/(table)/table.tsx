@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { useAuthContext } from "@/app/auth-context";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
@@ -29,6 +30,9 @@ import ClientTableHeader from "./table-header";
 import CustomersTableItem from "./table-item";
 
 export default function CustomersTable() {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed || access.allows("crm");
+
   const { parameters } = useWhatsappContext();
   const fullRegistration = isFeatureEnabled(parameters, FEATURE_FLAGS.crmCustomers);
   const { user, instance } = useAuthContext();
@@ -37,17 +41,19 @@ export default function CustomersTable() {
   const { state, dispatch } = useCustomersContext();
 
   function openEditCustomerModal(customer: Customer) {
+    if (!canWrite) return;
     if (isSystemDefaultCustomer(customer.CODIGO)) {
       toast.info("O cliente padrão do sistema não pode ser editado.");
       return;
     }
 
-    if (user?.NIVEL === "ADMIN" && fullRegistration) router.push(`/${instance}/crm-customers/${customer.CODIGO}`);
+    if ((user?.NIVEL === "ADMIN" || (access.managed && canWrite)) && fullRegistration) router.push(`/${instance}/crm-customers/${customer.CODIGO}`);
     else openModal(<EditCustomerModal customer={customer} />);
   }
 
   function openCreateCustomerModal() {
-    if (user?.NIVEL === "ADMIN" && fullRegistration) router.push(`/${instance}/crm-customers/new`);
+    if (!canWrite) return;
+    if ((user?.NIVEL === "ADMIN" || (access.managed && canWrite)) && fullRegistration) router.push(`/${instance}/crm-customers/new`);
     else openModal(<CreateCustomerModal />);
   }
 

@@ -1,3 +1,4 @@
+import { performCrmOperation, pendingCrmOperations, acknowledgeCrmOperations, confirmCrmOperation } from "../../src/lib/crm-operation-journal";
 import { useSyncExternalStore } from "react";
 import type {
   CustomerCrmField,
@@ -7,9 +8,9 @@ import type {
 } from "../../src/lib/sdk-local/types/customer-crm.types";
 const query = new URLSearchParams(location.search);
 let auth = {
-    instance: "tenant-a",
+    instance: query.has("pilot") ? "odim" : "tenant-a",
     token: "token-a",
-    user: { CODIGO: 1, NIVEL: query.has("operator") ? "ATIVO" : "ADMIN" },
+    user: { CODIGO: query.has("pilot") ? 534 : 1, NIVEL: query.has("operator") || query.has("pilot") ? "ATIVO" : "ADMIN" },
   },
   authSnapshot = JSON.stringify(auth);
 const listeners = new Set<() => void>();
@@ -219,14 +220,20 @@ function failure(mode: string) {
   });
 }
 export class FakeCrmClient {
+  operatorId = 0;
+  context() { return {instance:this.tenant,operatorId:this.operatorId,token:this.token,baseUrl:"http://fixture.invalid"}; }
+  async pendingRegistrationOperations() { return query.has("transport") ? pendingCrmOperations(this.context()) : []; }
+  async acknowledgeRegistrationOperations(customerId?:number) { if(query.has("transport"))await acknowledgeCrmOperations(this.context(),customerId); }
+  async confirmRegistrationOperation(operationId:string) { return confirmCrmOperation(this.context(),operationId); }
   tenant = "tenant-a";
   token = "token-a";
-  setRegistrationContext(tenant: string, token: string) {
+  setRegistrationContext(tenant: string, token: string, operatorId=0) {
+    this.operatorId=operatorId;
     this.tenant = tenant;
     this.token = token;
   }
   async getRegistrationOptions() {
-    if (window.registrationTest.failRead) throw new Error("read");
+    if (window.registrationTest.failRead || (query.has("transport") && sessionStorage.getItem("registration-readback-fails"))) throw new Error("read");
     return {
       customer: { fields, manualCode: false },
       contact: { fields: contactFields, manualCode: true },
@@ -236,15 +243,15 @@ export class FakeCrmClient {
     const tenant = this.tenant;
     window.registrationTest.reads.push(tenant);
     await wait(10);
-    if (window.registrationTest.failRead) throw new Error("read");
+    if (window.registrationTest.failRead || (query.has("transport") && sessionStorage.getItem("registration-readback-fails"))) throw new Error("read");
     return copy(window.registrationTest.record[tenant]);
   }
   async listRegistrationContacts() {
-    if (window.registrationTest.failRead) throw new Error("read");
+    if (window.registrationTest.failRead || (query.has("transport") && sessionStorage.getItem("registration-readback-fails"))) throw new Error("read");
     return copy(window.registrationTest.contacts);
   }
   async listRegistrationBrands() {
-    if (window.registrationTest.failRead) throw new Error("read");
+    if (window.registrationTest.failRead || (query.has("transport") && sessionStorage.getItem("registration-readback-fails"))) throw new Error("read");
     return copy(window.registrationTest.brands);
   }
   async write(kind: string, data: unknown) {
@@ -257,10 +264,12 @@ export class FakeCrmClient {
     return tenant;
   }
   async createRegistration(data: CustomerCrmRecord) {
+    if(query.has("transport"))return performCrmOperation<CustomerCrmSnapshot>(this.context(),"POST","/api/customers/crm-customers",data);
     await this.write("create", data);
     return snapshot({ ...data, CODIGO: 52 });
   }
   async updateRegistration(_id: number, data: { changes: CustomerCrmRecord; version: string }) {
+    if(query.has("transport"))return performCrmOperation<CustomerCrmSnapshot>(this.context(),"PATCH",`/api/customers/crm-customers/${_id}`,data);
     const tenant = await this.write("update", data);
     const next = snapshot({ ...window.registrationTest.record[tenant].record, ...data.changes });
     window.registrationTest.record[tenant] = next;
@@ -332,4 +341,27 @@ export class FakeCrmClient {
   async getCampaigns() {
     return [];
   }
+}
+
+if(query.has("pilot")) window.registrationTest.record.odim=copy(window.registrationTest.record["tenant-a"]);
+if(query.has("transport")){
+ const saved=JSON.parse(sessionStorage.getItem("registration-transport-fixture")||"null");
+ if(saved){window.registrationTest.record=saved.record;window.registrationTest.writes=saved.writes;}
+ const receipts:Record<string,any>=saved?.receipts??{};
+ const original=window.fetch.bind(window);
+ const json=(data:unknown)=>new Response(JSON.stringify({data}),{headers:{"Content-Type":"application/json"}});
+ window.fetch=async(raw,init)=>{
+  const path=new URL(String(raw),location.href).pathname;
+  if(path==="/api/customers/operator-features")return json({managed:true,instance:"odim",operatorId:534,revision:"a".repeat(64),features:{operator:true,telephony:true,crm:true,whatsapp:true}});
+  if(!path.startsWith("/api/customers/crm-customers"))return original(raw,init);
+  if(path.includes("/operations/")){const id=path.split("/").at(-1)!;return json({operationId:id,outcome:window.registrationTest.failure==="verify"&&receipts[id]?"COMMITTED":"UNKNOWN",status:"unconfirmed",retryAllowed:false,result:receipts[id]});}
+  const headers=init?.headers as Record<string,string>,id=headers["x-crm-operation-id"],data=JSON.parse(String(init?.body));
+  if(!id)throw Error("Missing operation UUID");
+  window.registrationTest.writes.push({kind:init?.method==="POST"?"create":"update",tenant:auth.instance,token:auth.token,data});
+  const customerId=init?.method==="POST"?52:41;
+  window.registrationTest.record[auth.instance]=snapshot({...window.registrationTest.record[auth.instance].record,...(data.changes??data),CODIGO:customerId});
+  receipts[id]={entity:"customer",customerId,id:customerId};
+  sessionStorage.setItem("registration-transport-fixture",JSON.stringify({record:window.registrationTest.record,writes:window.registrationTest.writes,receipts}));
+  throw new TypeError("Fixture committed write, response lost");
+ };
 }

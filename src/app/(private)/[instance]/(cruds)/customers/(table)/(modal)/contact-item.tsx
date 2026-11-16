@@ -1,3 +1,4 @@
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { WppContact } from "@/lib/sdk-local";
 import { Formatter } from "@in.pulse-crm/utils";
 import { Cancel, Delete, Edit, Save } from "@mui/icons-material";
@@ -13,6 +14,8 @@ export default function ContactItem({
   handleEdit: (updatedContact: WppContact) => void;
   handleDelete: (contactId: number) => void;
 }) {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed;
   const [state, setState] = useState({
     isEditing: false,
     name: contact.name,
@@ -62,7 +65,7 @@ export default function ContactItem({
           value={state.name}
           variant="outlined"
           size="small"
-          disabled={!state.isEditing}
+          disabled={!state.isEditing || !canWrite}
           onChange={handleChangeName}
           placeholder="Nome do contato"
           className="flex-1 bg-white dark:bg-slate-700"
@@ -81,7 +84,7 @@ export default function ContactItem({
           value={state.isEditing ? state.phone : formattedPhone}
           variant="outlined"
           size="small"
-          disabled={!state.isEditing}
+          disabled={!state.isEditing || !canWrite}
           onChange={handleChangePhone}
           placeholder="Número do WhatsApp"
           className="flex-1 bg-white dark:bg-slate-700"
@@ -103,6 +106,7 @@ export default function ContactItem({
           <>
             <IconButton
               onClick={onClickEdit}
+              disabled={!canWrite}
               size="small"
               className="text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/30"
               title="Editar contato"
@@ -111,6 +115,7 @@ export default function ContactItem({
             </IconButton>
             <IconButton
               onClick={onClickDelete}
+              disabled={!canWrite}
               size="small"
               className="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
               title="Excluir contato"
@@ -122,6 +127,7 @@ export default function ContactItem({
           <>
             <IconButton
               onClick={onClickSave}
+              disabled={!canWrite}
               size="small"
               className="text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
               title="Salvar alterações"

@@ -1,4 +1,5 @@
 "use client";
+import { OperatorFeaturesProvider } from "@/lib/components/operator-features-provider";
 import { OperatorPausePhoneBridge } from "@/lib/operator-pause/phone-bridge";
 import { OperatorPauseProvider } from "@/lib/operator-pause/provider";
 import { CrmLeaveGuardProvider } from "@/lib/ui-system/leave-guard";
@@ -91,6 +92,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="box-border h-[100dvh] w-full overflow-hidden md:w-screen">
       <AppProvider modal={modal} setModal={setModal}>
         <SocketProvider>
+          <OperatorFeaturesProvider>
           <WhatsappProvider>
             <FrontendSessionGate>
             <CacheWarmup />
@@ -119,6 +121,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </ContactsProvider>
             </FrontendSessionGate>
           </WhatsappProvider>
+          </OperatorFeaturesProvider>
         </SocketProvider>
       </AppProvider>
     </div>

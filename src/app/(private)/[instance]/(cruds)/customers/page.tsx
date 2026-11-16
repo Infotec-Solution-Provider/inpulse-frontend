@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import { CrmPage, UiIcon } from "@/lib/ui-system";
 import { useCustomersContext } from "./customers-context";
 import { useAuthContext } from "@/app/auth-context";
@@ -11,6 +12,9 @@ import { Button } from "@mui/material";
 import CreateCustomerModal from "./(table)/(modal)/create-customer-modal";
 import CustomersTable from "./(table)/table";
 export default function CustomersManagementPage() {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed || access.allows("crm");
+
   const { parameters } = useWhatsappContext();
   const fullRegistration = isFeatureEnabled(parameters, FEATURE_FLAGS.crmCustomers);
   const { state } = useCustomersContext(),
@@ -18,7 +22,7 @@ export default function CustomersManagementPage() {
     { openModal } = useContext(AppContext),
     router = useRouter();
   const create = () =>
-    user?.NIVEL === "ADMIN" && fullRegistration
+    (user?.NIVEL === "ADMIN" || (access.managed && canWrite)) && fullRegistration
       ? router.push(`/${instance}/crm-customers/new`)
       : openModal(<CreateCustomerModal />);
   return (
@@ -29,6 +33,7 @@ export default function CustomersManagementPage() {
       actions={
         <Button
           onClick={create}
+          disabled={!canWrite}
           variant="contained"
           startIcon={<UiIcon name="add" scale="toolbar" />}
         >

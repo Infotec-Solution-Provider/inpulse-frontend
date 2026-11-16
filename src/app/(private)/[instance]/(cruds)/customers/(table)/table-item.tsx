@@ -1,4 +1,5 @@
 "use client";
+import { useOperatorFeatures } from "@/lib/components/operator-features-provider";
 import formatCpfCnpj from "@/lib/utils/format-cnpj";
 import { isSystemDefaultCustomer } from "@/lib/utils/customer-guards";
 import { Customer } from "@/lib/sdk-local";
@@ -14,6 +15,8 @@ export default function CustomersTableItem({
   openEditModalHandler,
   openContactModalHandler,
 }: Props) {
+  const access = useOperatorFeatures();
+  const canWrite = !access.managed || access.allows("crm");
   const system = isSystemDefaultCustomer(customer.CODIGO),
     name = customer.RAZAO || `Cliente #${customer.CODIGO}`;
   return (
@@ -44,7 +47,7 @@ export default function CustomersTableItem({
           <OperationalIconButton
             label={`Editar ${name}`}
             tooltip={system ? "Cadastro do sistema somente para consulta" : "Editar cliente"}
-            disabled={system}
+            disabled={system || !canWrite}
             onClick={() => openEditModalHandler(customer)}
           >
             <UiIcon name="edit" scale="row" />
