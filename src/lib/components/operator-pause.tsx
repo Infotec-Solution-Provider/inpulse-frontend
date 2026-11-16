@@ -38,7 +38,9 @@ const duration = (seconds: number) =>
 /** One persistent control for the operator, shared by every private route. */
 export function OperatorPause() {
   const phone = useOptionalTelephony();
-  return phone?.enabled ? <PauseControl phone={phone} /> : null;
+  return phone?.canAccessOperatorRuntime && (phone.enabled || phone.operatorState?.enabled) ? (
+    <PauseControl phone={phone} />
+  ) : null;
 }
 
 function PauseControl({ phone }: { phone: Phone }) {
@@ -118,6 +120,19 @@ function PauseControl({ phone }: { phone: Phone }) {
     status?.reason || status?.reasons.find((item) => item.id === status.reasonId)?.name || "";
   const pbxUncertain =
     !!status?.pbx && ["pending", "failed", "unknown"].includes(status.pbx.status);
+  const globalScopeRequested =
+    status?.requestedScope === "all_channels" || status?.scope === "all_channels";
+  const globalScopeConfirmed =
+    status?.scope === "all_channels" &&
+    status.scopeReady === true &&
+    status.channels?.telephony?.supported === true &&
+    status.channels.telephony.enforced === true &&
+    status.channels.whatsapp?.supported === true &&
+    status.channels.whatsapp.enforced === true;
+  const scopeUnavailable = globalScopeRequested && !globalScopeConfirmed;
+  const scopeName = globalScopeConfirmed ? "Ligações e WhatsApp" : "Telefonia";
+  const afterAttendanceSupported =
+    !globalScopeRequested || status?.afterAttendanceScope === "telephony_schedule";
   const uncertain = !!refreshError || !!phone.syncError || pendingSync;
   const available = !!status?.enabled && status.state === "available" && !pendingSync;
   const label = pendingSync
@@ -132,24 +147,26 @@ function PauseControl({ phone }: { phone: Phone }) {
             : "Conferindo pausa…"
           : !status.enabled
             ? "Pausa indisponível"
-            : uncertain
+            : uncertain || scopeUnavailable
               ? "Conferir estado"
               : phone.busy
                 ? "Em atendimento"
                 : "Disponível";
   const caption = exceeded
     ? `Limite excedido${reasonName ? ` · ${reasonName}` : ""}`
-    : pending
-      ? `Após atendimento${reasonName ? ` · ${reasonName}` : ""}`
-      : pendingSync
-        ? "Aguardando sincronização"
-        : paused
-          ? `${reasonName || "Telefonia"}${pbxUncertain ? " · Central pendente" : ""}`
-          : uncertain
-            ? "Há pendências na telefonia"
-            : pbxUncertain
-              ? "Central pendente"
-              : "Telefonia";
+    : scopeUnavailable
+      ? "WhatsApp não confirmado"
+      : pending
+        ? `Após atendimento telefônico${reasonName ? ` · ${reasonName}` : ""}`
+        : pendingSync
+          ? "Aguardando sincronização"
+          : paused
+            ? `${reasonName ? `${reasonName} · ` : ""}${scopeName}${pbxUncertain ? " · Central pendente" : ""}`
+            : uncertain
+              ? "Há pendências na sincronização"
+              : pbxUncertain
+                ? `${scopeName} · Central pendente`
+                : scopeName;
 
   async function command(kind: string) {
     if (working) return;
@@ -182,7 +199,7 @@ function PauseControl({ phone }: { phone: Phone }) {
     if (!working) setOpen(false);
   };
   const Icon =
-    exceeded || uncertain || pbxUncertain
+    exceeded || uncertain || pbxUncertain || scopeUnavailable
       ? TriangleAlert
       : paused
         ? Pause
@@ -297,7 +314,7 @@ function PauseControl({ phone }: { phone: Phone }) {
                 ? "Cancelar"
                 : !status?.enabled || pendingSync
                   ? "Atualizar"
-                  : uncertain
+                  : uncertain || scopeUnavailable
                     ? "Conferir"
                     : "Pausar"}
           </Button>
@@ -327,8 +344,20 @@ function PauseControl({ phone }: { phone: Phone }) {
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              A pausa suspende novas ligações. Mensagens e outras áreas continuam disponíveis.
+              {globalScopeConfirmed
+                ? "A pausa bloqueia novas ligações e novos atendimentos no WhatsApp. Você pode responder e concluir as conversas já abertas."
+                : "A pausa suspende novas ligações. Mensagens e outras áreas continuam disponíveis."}
             </Typography>
+            <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+              Escopo confirmado: {scopeName}.
+            </Typography>
+            {scopeUnavailable && (
+              <Alert severity="warning">
+                Não foi possível confirmar o bloqueio de novos atendimentos no WhatsApp. Atualize o
+                estado antes de solicitar uma nova pausa. Retomar ou cancelar uma pausa continua
+                disponível.
+              </Alert>
+            )}
             <Box>
               <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
                 {label}
@@ -357,7 +386,9 @@ function PauseControl({ phone }: { phone: Phone }) {
             {exceeded && <Alert severity="warning">Tempo previsto de pausa excedido.</Alert>}
             {pending && (
               <Alert severity="info">
-                A pausa começará depois de salvar a finalização do atendimento atual.
+                {globalScopeConfirmed
+                  ? "Novos atendimentos no WhatsApp já estão bloqueados. O tempo de pausa começará depois de salvar a finalização do atendimento telefônico atual."
+                  : "A pausa começará depois de salvar a finalização do atendimento telefônico atual."}
               </Alert>
             )}
             {pendingSync && (
@@ -400,22 +431,30 @@ function PauseControl({ phone }: { phone: Phone }) {
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                   <Button
                     variant="contained"
-                    disabled={working || !reason || phone.busy || !!status.activeCallId}
+                    disabled={
+                      working || !reason || phone.busy || !!status.activeCallId || scopeUnavailable
+                    }
                     onClick={() => void command("now")}
                   >
                     Pausar agora
                   </Button>
                   <Button
                     variant="outlined"
-                    disabled={working || !reason || !phone.state.scheduleId}
+                    disabled={
+                      working ||
+                      !reason ||
+                      !phone.state.scheduleId ||
+                      scopeUnavailable ||
+                      !afterAttendanceSupported
+                    }
                     onClick={() => void command("after_attendance")}
                   >
-                    Após atendimento
+                    Após atendimento telefônico
                   </Button>
                 </Box>
                 {!phone.state.scheduleId && (
                   <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
-                    “Após atendimento” fica disponível durante um atendimento telefônico.
+                    “Após atendimento telefônico” fica disponível durante um atendimento telefônico.
                   </Typography>
                 )}
               </>

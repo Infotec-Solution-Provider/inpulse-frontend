@@ -73,7 +73,7 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await pause.getByRole("button", { name: "Pausar", exact: true }).click();
   await pauseDialog.getByLabel("Motivo da pausa").click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
-  await expect(pauseDialog.getByRole("button", { name: "Após atendimento", exact: true })).toBeDisabled();
+  await expect(pauseDialog.getByRole("button", { name: "Após atendimento telefônico", exact: true })).toBeDisabled();
   await pauseDialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
   await closePauseDialog(page);
   await expect(pause).toContainText("Em pausa");
@@ -86,4 +86,24 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await page.waitForTimeout(250);
   await page.screenshot({ path: "test-results/telephony-parity-dashboard.png", fullPage: true });
   expect(await page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
+});
+
+test("operator pause stays available without the SIP feature and disappears on logout", async ({ page }) => {
+  await page.goto("/tests/telephony/index.html?runtime&all-channels&dialer-off");
+  const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
+  await expect(pause).toContainText("Ligações e WhatsApp");
+  await expect(page.getByRole("button", { name: "Conectar telefonia", exact: true })).toHaveCount(0);
+  await pause.getByRole("button", { name: "Pausar", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Pausa", exact: true });
+  await expect(dialog).toContainText("Você pode responder e concluir as conversas já abertas.");
+  await dialog.getByLabel("Motivo da pausa", { exact: true }).click();
+  await page.getByRole("option", { name: "Café", exact: true }).click();
+  await dialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(pause).toContainText("Em pausa");
+  await pause.getByRole("button", { name: "Retomar", exact: true }).click();
+  await expect(pause).toContainText("Disponível");
+  expect(await page.evaluate(() => ({ calls: window.phoneHarness.calls, uaStarts: window.phoneHarness.uaStarts, configReads: window.phoneHarness.webrtcConfigReads }))).toEqual({ calls: [], uaStarts: 0, configReads: 0 });
+  await page.evaluate(() => window.phoneHarness.logout());
+  await expect(pause).toHaveCount(0);
 });

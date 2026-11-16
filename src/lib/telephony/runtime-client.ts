@@ -1,12 +1,24 @@
 import type { CallPreparation, CallReport } from "./browser-phone";
 import type { OperatorDashboardMetrics } from "./operator-dashboard";
 
+export interface OperatorPauseChannelCapability {
+  supported: boolean;
+  /** The channel guard is active, independently of the current operator state. */
+  enforced: boolean;
+  reason?: string | null;
+}
 export interface RuntimeOperatorState {
   enabled:boolean; state:"available"|"pending"|"paused"; version:number; activeCallId?:string|null;
   reasonId?:number|null; reason?:string|null; pauseId?:number|null; startedAt?:string|null; maxSeconds?:number;
   allowChangeReason?:boolean;pendingScheduleId?:number|null;
   /** Local incoming resume is durable but has not yet been confirmed by the server. */
   pendingSync?:boolean;
+  scope?:"telephony"|"all_channels";
+  requestedScope?:"telephony"|"all_channels";
+  scopeReady?:boolean;
+  policyRevision?:string|null;
+  afterAttendanceScope?:"telephony_schedule";
+  channels?:{telephony:OperatorPauseChannelCapability;whatsapp:OperatorPauseChannelCapability};
   reasons:Array<{id:number;name:string;maxSeconds:number;productive:string}>;
   pbx?:{status:string;detail?:string|null}; serverNow:string;
 }

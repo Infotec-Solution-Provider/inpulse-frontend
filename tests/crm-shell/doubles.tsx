@@ -51,7 +51,7 @@ export function WppProvider({ children }: { children: ReactNode }) {
           ...env,
           loaded: true,
           parameters: {
-            feature_telephony_dialer_enabled: "true",
+            feature_telephony_dialer_enabled: phoneHarness.dialerEnabled ? "true" : "false",
             feature_crm_customers_enabled: "true",
             feature_crm_units_campaigns_enabled: "true",
           },

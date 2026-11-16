@@ -8,6 +8,7 @@ class Emitter {
 }
 let authenticated = true;
 const authListeners = new Set<() => void>();
+const query = new URLSearchParams(location.search);
 export const harness = {
   // Shape saved before the gateway existed (no mode/pbxAddress), so the form's normalization is exercised.
   settings: { enabled: false, websocketUrl: "", domain: "", iceServers: [] } as unknown as WebrtcSettingsDTO,
@@ -16,6 +17,14 @@ export const harness = {
   settingsSaveError: false,
   gatewayAvailable: new URLSearchParams(location.search).has("gateway"),
   runtimeEnabled: new URLSearchParams(location.search).has("runtime"),
+  dialerEnabled: !query.has("dialer-off"),
+  webrtcConfigReads: 0, uaStarts: 0,
+  runtimeCapabilities: query.has("all-channels") ? {
+    scope: query.has("mixed-capability") ? "telephony" : "all_channels",
+    requestedScope: "all_channels", scopeReady: !query.has("mixed-capability"),
+    policyRevision: "a".repeat(64), afterAttendanceScope: "telephony_schedule",
+    channels: {telephony: {supported: true, enforced: true}, whatsapp: {supported: true, enforced: !query.has("mixed-capability"), reason: query.has("mixed-capability") ? "unavailable" : null}},
+  } as Record<string, any> : null,
   runtimeState: {state:"available",version:1,activeCallId:null as string|null,reasonId:null as number|null,startedAt:null as string|null},
   runtimeCalls: [] as Array<Record<string,any>>, runtimeEvents: [] as Record<string,unknown>[], transfers: [] as string[],
   calls: [] as string[], reports: [] as string[], session: null as Session | null, media: null as MediaStream | null,
@@ -25,7 +34,7 @@ export function useAuthContext() {
   const active = useSyncExternalStore(callback => { authListeners.add(callback); return () => { authListeners.delete(callback); }; }, () => authenticated);
   return { token: active ? "test-token" : null, instance: "tenant-a", user: { CODIGO: 7, NIVEL: "ADMIN" } };
 }
-export const useWhatsappContext = () => ({ parameters: { feature_telephony_dialer_enabled: "true" } });
+export const useWhatsappContext = () => ({ parameters: { feature_telephony_dialer_enabled: harness.dialerEnabled ? "true" : "false" } });
 export const usersService = {
   setAuth() {},
   async getWebrtcSettings() {
@@ -39,7 +48,7 @@ export const usersService = {
     return { ...structuredClone(settings), gatewayAvailable: harness.gatewayAvailable };
   },
   async getTelephonyTransferOptions(){return [{key:"operator:8",name:"Ana",extension:"102",source:"operator"},{key:"directory:1",name:"Recepção",extension:"0200",source:"directory"}];},
-  async getWebrtcConfig() { return { allowAutoAnswer: harness.runtimeEnabled, websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", extension: "101", uri: "sip:101@pbx.example.test", authorizationUser: "101", password: "test-only", iceServers: [] }; },
+  async getWebrtcConfig() { harness.webrtcConfigReads++; return { allowAutoAnswer: harness.runtimeEnabled, websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", extension: "101", uri: "sip:101@pbx.example.test", authorizationUser: "101", password: "test-only", iceServers: [] }; },
 };
 export const customersService = { setAuth() {}, async startTelephonyScheduleCall() { return { callId: "test-crm-id" }; }, async reportTelephonyCall(_id: number, _call: string, state: string) { harness.reports.push(state); } };
 class Session extends Emitter {
@@ -54,7 +63,7 @@ class Session extends Emitter {
 }
 export class UA extends Emitter {
   registered = false;
-  start() { this.registered = true; this.emit("registered"); }
+  start() { harness.uaStarts++; this.registered = true; this.emit("registered"); }
   stop() { this.registered = false; }
   isRegistered() { return this.registered; }
   call(target: string, options: { mediaStream: MediaStream }) {
@@ -76,7 +85,7 @@ window.fetch=async(input:RequestInfo|URL,init?:RequestInit)=>{
  if(!target.startsWith("http://runtime.fixture"))return originalFetch(input,init);
  const path=new URL(target).pathname.replace(/^\/api/,""),method=init?.method||"GET",body=init?.body?JSON.parse(String(init.body)):{};
  const reply=(data:unknown)=>new Response(JSON.stringify({data}),{status:200,headers:{"Content-Type":"application/json"}});
- const status=()=>({enabled:harness.runtimeEnabled,...harness.runtimeState,reason:harness.runtimeState.reasonId===1?"Café":harness.runtimeState.reasonId===2?"Reunião":null,allowChangeReason:true,reasons:[{id:1,name:"Café",maxSeconds:60,productive:"NAO"},{id:2,name:"Reunião",maxSeconds:0,productive:"SIM"}],serverNow:new Date().toISOString(),pbx:{status:"unknown"}});
+ const status=()=>({enabled:harness.runtimeEnabled,...harness.runtimeState,...harness.runtimeCapabilities,reason:harness.runtimeState.reasonId===1?"Café":harness.runtimeState.reasonId===2?"Reunião":null,allowChangeReason:true,reasons:[{id:1,name:"Café",maxSeconds:60,productive:"NAO"},{id:2,name:"Reunião",maxSeconds:0,productive:"SIM"}],serverNow:new Date().toISOString(),pbx:{status:"unknown"}});
  if(path==="/telephony/operator-state")return reply(status());
  if(path==="/telephony/operator-state/actions"){
   if(body.kind==="now"){Object.assign(harness.runtimeState,{state:"paused",reasonId:body.reasonId,startedAt:new Date().toISOString()});}

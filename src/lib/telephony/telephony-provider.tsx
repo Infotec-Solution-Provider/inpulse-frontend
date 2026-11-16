@@ -35,6 +35,8 @@ interface TelephonyContextValue {
   operatorState: RuntimeOperatorState | null;
   refreshOperator: () => Promise<void>;
   metrics: OperatorDashboardMetrics | null;
+  /** Authenticated operator access is independent of the SIP dialer feature. */
+  canAccessOperatorRuntime: boolean;
   enabled: boolean;
   audioPreferences: AudioPreferences;
   allowAutoAnswer: boolean;
@@ -70,6 +72,7 @@ export function useTelephony() {
 export function TelephonyProvider({ children }: { children: ReactNode }) {
   const { token, instance, user } = useAuthContext();
   const { parameters } = useWhatsappContext();
+  const canAccessOperatorRuntime = !!token && !!instance && !!user;
   const enabled = !!token && isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyDialer);
   const identity = `${instance}:${user?.CODIGO ?? ""}`;
   return (
@@ -78,6 +81,7 @@ export function TelephonyProvider({ children }: { children: ReactNode }) {
       identity={identity}
       token={token}
       enabled={enabled}
+      canAccessOperatorRuntime={canAccessOperatorRuntime}
     >
       {children}
     </PhoneSession>
@@ -89,11 +93,13 @@ function PhoneSession({
   identity,
   token,
   enabled,
+  canAccessOperatorRuntime,
 }: {
   children: ReactNode;
   identity: string;
   token: string | null;
   enabled: boolean;
+  canAccessOperatorRuntime: boolean;
 }) {
   const [state, setState] = useState<PhoneState>({ ...initialPhoneState });
   const [audioBlocked, setAudioBlocked] = useState(false);
@@ -135,7 +141,7 @@ function PhoneSession({
     await runtimeRef.current!.refreshState();
   }
   useEffect(() => {
-    if (!operatorState?.enabled) return;
+    if (!canAccessOperatorRuntime || !operatorState?.enabled) return;
     let cancelled = false;
     const run = () => {
       void runtimeRef
@@ -153,14 +159,15 @@ function PhoneSession({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [operatorState?.enabled, operatorState?.version, state.phase]);
+  }, [canAccessOperatorRuntime, operatorState?.enabled, operatorState?.version, state.phase]);
   useEffect(() => {
-    if (!enabled) return;
+    if (!canAccessOperatorRuntime) return;
+    let cancelled = false;
     const run = () => {
       void runtimeRef
         .current!.refreshState()
         .then((next) => {
-          if (next.enabled) {
+          if (!cancelled && next.enabled) {
             void runtimeRef.current!.waitForSync().catch(() => {});
             if (webSessionRef.current)
               void runtimeRef.current!.session("heartbeat", webSessionRef.current).catch(() => {});
@@ -170,8 +177,11 @@ function PhoneSession({
     };
     run();
     const timer = setInterval(run, 30_000);
-    return () => clearInterval(timer);
-  }, [enabled]);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [canAccessOperatorRuntime]);
   function saveAudioPreferences(preferences: AudioPreferences) {
     if (isCallBusy(state.phase)) return;
     try {
@@ -369,6 +379,7 @@ function PhoneSession({
     operatorState,
     refreshOperator,
     metrics,
+    canAccessOperatorRuntime,
     enabled,
     hostPanel,
     state,
