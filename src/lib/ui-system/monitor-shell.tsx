@@ -7,7 +7,6 @@ import { useThemeContext } from "@/app/theme-context";
 import HorizontalLogo from "@/assets/img/hlogodark.png";
 import LazyNotificationsDropdown from "@/lib/components/lazy-notifications-dropdown";
 import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
-import FrontendVersionSwitch from "@/lib/components/frontend-version-switch";
 import { OperatorPause } from "@/lib/components/operator-pause";
 import {
   Avatar,
@@ -307,7 +306,6 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
         </PilotDesignProvider>
       )}
       <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }}>
-        <FrontendVersionSwitch />
         <PilotDesignProvider style={{ height: 64, flexShrink: 0 }}>
           {" "}
           <Box
