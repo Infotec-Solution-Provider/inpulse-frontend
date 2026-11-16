@@ -5,6 +5,8 @@ export interface RuntimeOperatorState {
   enabled:boolean; state:"available"|"pending"|"paused"; version:number; activeCallId?:string|null;
   reasonId?:number|null; reason?:string|null; pauseId?:number|null; startedAt?:string|null; maxSeconds?:number;
   allowChangeReason?:boolean;pendingScheduleId?:number|null;
+  /** Local incoming resume is durable but has not yet been confirmed by the server. */
+  pendingSync?:boolean;
   reasons:Array<{id:number;name:string;maxSeconds:number;productive:string}>;
   pbx?:{status:string;detail?:string|null}; serverNow:string;
 }
@@ -25,7 +27,7 @@ export function createTelephonyRuntimeClient(options:{identity:string;getToken:(
   const instance=options.identity.split(":")[0];
   let disposed=false,listening=false,revision=0,state:RuntimeOperatorState|null=null,flushing:Promise<void>|null=null;
   let enqueueChain=Promise.resolve();
-  let localWriteFailure:Error|null=null,stateRequest=0;
+  let localWriteFailure:Error|null=null,stateRequest=0,policyEpoch=0;
   const legacyUntracked=new Set<string>();
   const legacy=new Map<string,{scheduleId:number;callId:string}>();
   const unconfirmed=new Set<string>();
@@ -34,7 +36,17 @@ export function createTelephonyRuntimeClient(options:{identity:string;getToken:(
     const response=await fetch(`${url}/api${path}`,{method,cache:"no-store",headers:{Authorization:/^Bearer\s/i.test(token)?token:`Bearer ${token}`,"Content-Type":"application/json","x-crm-instance":instance},...(body===undefined?{}:{body:JSON.stringify(body)})});
     const result=await response.json();if(!response.ok){const error=Object.assign(new Error(result.message||"Não foi possível confirmar a operação telefônica."),{code:result.code,status:response.status,outcome:result.outcome});throw error;}return result.data as T;
   }
-  async function refreshState(){const currentRequest=++stateRequest;const next=await request<RuntimeOperatorState>("/telephony/operator-state");if(currentRequest===stateRequest){state=next;if(!disposed)options.onOperatorState?.(next);}return next;}
+  function publishState(next:RuntimeOperatorState){
+    if(state?.enabled&&next.enabled){
+      if(next.version<state.version)return state;
+      // The same server version predates the durable incoming resume.
+      if(state.pendingSync&&next.version===state.version)return state;
+    }
+    // OFF snapshots reset the version domain; a subsequent ON snapshot is valid.
+    if(!next.enabled)policyEpoch++;
+    state=next;if(!disposed)options.onOperatorState?.(next);return next;
+  }
+  async function refreshState(){const currentRequest=++stateRequest;const next=await request<RuntimeOperatorState>("/telephony/operator-state");if(currentRequest===stateRequest)return publishState(next);return state??next;}
   async function flush(){
     if(flushing)return flushing;
     flushing=(async()=>{
@@ -119,9 +131,20 @@ export function createTelephonyRuntimeClient(options:{identity:string;getToken:(
     if(offlineIncoming){
       await enqueue("pause",payload,payload.operationId);
       // Local pending resume permits the incoming call, while further outgoing remains server-gated.
-      state={...current,state:"available"};if(!disposed)options.onOperatorState?.(state);void flush().catch(()=>{});return state;
+      stateRequest++;const optimistic=publishState({...current,state:"available",pendingSync:true});void flush().catch(()=>{});return optimistic;
     }
-    const result=await request<RuntimeOperatorState>("/telephony/operator-state/actions","POST",payload);state=result;if(!disposed)options.onOperatorState?.(result);return result;
+    try {
+      const actionPolicyEpoch=policyEpoch;
+      const result=await request<RuntimeOperatorState>("/telephony/operator-state/actions","POST",payload);
+      // An OFF observed during the request supersedes its delayed ON acknowledgement.
+      if(result.enabled&&actionPolicyEpoch!==policyEpoch&&state)return state;
+      // A GET started before this acknowledgement may contain the previous version.
+      // Invalidate it, while allowing a later policy-disabled snapshot (version zero).
+      stateRequest++;return publishState(result);
+    } catch(error) {
+      // A competing tab or an uncertain response can have changed the server state.
+      await refreshState().catch(()=>{});throw error;
+    }
   }
   async function pendingPreparations(){await enqueueChain;return(await pending(options.identity)).filter(entry=>entry.kind==="probe").map(entry=>({callId:String(entry.payload.callId),number:String(entry.payload.number),scheduleId:entry.payload.scheduleId as number|undefined}));}
   async function getCall(callId:string){return(await request<{calls:RuntimeCall[]}>(`/telephony/calls/${encodeURIComponent(callId)}`)).calls[0];}

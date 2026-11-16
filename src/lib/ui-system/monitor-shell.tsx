@@ -8,6 +8,7 @@ import HorizontalLogo from "@/assets/img/hlogodark.png";
 import LazyNotificationsDropdown from "@/lib/components/lazy-notifications-dropdown";
 import NotificationPreferencesModal from "@/lib/components/notification-preferences-modal";
 import FrontendVersionSwitch from "@/lib/components/frontend-version-switch";
+import { OperatorPause } from "@/lib/components/operator-pause";
 import {
   Avatar,
   Box,
@@ -527,6 +528,9 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             open={notificationSettingsOpen}
             onClose={() => setNotificationSettingsOpen(false)}
           />
+        </PilotDesignProvider>
+        <PilotDesignProvider style={{ height: "auto", flexShrink: 0, minWidth: 0 }}>
+          <OperatorPause />
         </PilotDesignProvider>
         <Box
           component="main"

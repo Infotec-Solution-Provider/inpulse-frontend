@@ -1,33 +1,41 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import type {} from "./doubles";
+
+async function closePauseDialog(page: Page) {
+  const dialog = page.getByRole("dialog", { name: "Pausa", exact: true });
+  if (await dialog.isVisible()) await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+}
 
 test("audio settings, direct transfer, optional call quality and pause controls", async ({ page }) => {
   await page.goto("/tests/telephony/index.html?runtime");
-  await page.getByRole("button", { name: "Abrir telefone" }).click();
-  const disconnectedPause = page.getByRole("region", { name: "Pausa telefônica" });
+  const disconnectedPause = page.getByRole("region", { name: "Pausa do operador", exact: true });
+  await expect(disconnectedPause).toHaveCount(1);
   await expect(disconnectedPause).toBeVisible();
   await expect(page.getByRole("status", { name: "Desconectado" })).toBeVisible();
   await expect(page.getByLabel("Telefone ou ramal", { exact: true })).toHaveCount(0);
-  await disconnectedPause.getByLabel("Motivo da pausa", { exact: true }).click();
+  await disconnectedPause.getByRole("button", { name: "Pausar", exact: true }).click();
+  const pauseDialog = page.getByRole("dialog", { name: "Pausa", exact: true });
+  await expect(pauseDialog).toContainText("Mensagens e outras áreas continuam disponíveis.");
+  await pauseDialog.getByLabel("Motivo da pausa", { exact: true }).click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
-  await disconnectedPause.getByRole("button", { name: "Pausar agora", exact: true }).click();
-  await expect(disconnectedPause.getByText("Em pausa · Café", { exact: true })).toBeVisible();
+  await pauseDialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
+  await closePauseDialog(page);
+  await expect(disconnectedPause).toContainText("Em pausa");
+  await expect(disconnectedPause).toContainText("Café");
   await expect(disconnectedPause.getByRole("timer")).toBeVisible();
   expect(await page.evaluate(() => window.phoneHarness.runtimeState.reasonId)).toBe(1);
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 740 });
-    await disconnectedPause.getByText("Em pausa · Café", { exact: true }).scrollIntoViewIfNeeded();
-    await expect(disconnectedPause.getByText("Em pausa · Café", { exact: true })).toBeInViewport();
-    await page.screenshot({ path: `test-results/telephony-disconnected-pause-top-${width}.png`, fullPage: true });
-    await disconnectedPause.getByRole("button", { name: "Retomar", exact: true }).scrollIntoViewIfNeeded();
     await expect(disconnectedPause.getByRole("button", { name: "Retomar", exact: true })).toBeInViewport();
-    await page.screenshot({ path: `test-results/telephony-disconnected-pause-${width}.png`, fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: `test-results/telephony-global-pause-${width}.png`, fullPage: true });
   }
   await page.setViewportSize({ width: 1280, height: 720 });
   await disconnectedPause.getByRole("button", { name: "Retomar", exact: true }).click();
-  await expect(disconnectedPause.getByText("Disponível para telefonia", { exact: true })).toBeVisible();
+  await expect(disconnectedPause).toContainText("Disponível");
   expect(await page.evaluate(() => ({ calls: window.phoneHarness.calls, session: window.phoneHarness.session }))).toEqual({ calls: [], session: null });
   await expect(page.getByRole("status", { name: "Desconectado" })).toBeVisible();
+  await page.getByRole("button", { name: "Abrir telefone" }).click();
   await page.getByRole("button", { name: "Conectar telefonia" }).click();
   await expect(page.getByRole("status", { name: "Ramal conectado" })).toBeVisible();
   await page.getByRole("button", { name: "Configurações da telefonia" }).click();
@@ -61,18 +69,18 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await expect(page.getByRole("button", { name: "Salvar avaliação" })).toHaveCount(0);
   await page.getByRole("dialog", { name: "Ligações e qualidade técnica do áudio" }).getByRole("button", { name: "Fechar", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Ligações e qualidade técnica do áudio" })).toBeHidden();
-  const pause = page.getByRole("region", { name: "Pausa telefônica" });
-  // section has an accessible name even when the browser maps it as a region.
-  await pause.getByLabel("Motivo da pausa").click();
+  const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
+  await pause.getByRole("button", { name: "Pausar", exact: true }).click();
+  await pauseDialog.getByLabel("Motivo da pausa").click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
-  await expect(pause.getByRole("button", { name: "Após atendimento", exact: true })).toBeDisabled();
-  await pause.getByRole("button", { name: "Pausar agora", exact: true }).click();
-  await expect(pause.getByText(/Em pausa/)).toBeVisible();
+  await expect(pauseDialog.getByRole("button", { name: "Após atendimento", exact: true })).toBeDisabled();
+  await pauseDialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
+  await closePauseDialog(page);
+  await expect(pause).toContainText("Em pausa");
   await expect(pause.getByRole("timer")).toBeVisible();
-  await pause.getByText(/Em pausa/).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/telephony-parity-paused.png", fullPage: true });
   await pause.getByRole("button", { name: "Retomar", exact: true }).click();
-  await expect(pause.getByText("Disponível para telefonia", { exact: true })).toBeVisible();
+  await expect(pause).toContainText("Disponível");
   await page.getByRole("button", { name: "Meus indicadores de telefonia", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Meus indicadores de telefonia" })).toBeVisible();
   await page.waitForTimeout(250);

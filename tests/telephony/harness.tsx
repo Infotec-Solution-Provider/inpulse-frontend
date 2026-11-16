@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { TelephonyProvider, useTelephony } from "../../src/lib/telephony/telephony-provider";
 import { TelephonyPanelSlot } from "../../src/lib/telephony/telephony-panel";
+import { OperatorPause } from "../../src/lib/components/operator-pause";
 import ConversationSidebar from "../../src/app/(private)/[instance]/(main)/(chats-menu)/conversation-sidebar";
 import { PilotDesignProvider } from "../../src/lib/ui-system/provider";
 import { UA, harness } from "./doubles";
@@ -50,7 +51,7 @@ function Attendance({ onLeave }: { onLeave: () => void }) {
     <input aria-label="Mensagem" value={draft} onChange={event => setDraft(event.target.value)} style={{ minWidth: 0, flex: 1, border: "1px solid #94a3b8", padding: 8 }} />
     <button type="submit">Enviar mensagem</button>
   </form>;
-  return <main style={{ height: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+  return <main style={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
     <div style={{ padding: "8px 12px", flexShrink: 0, borderBottom: "1px solid #cbd5e1" }}>
       <h1 className="text-xl">Atendimento — página {page}</h1>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
@@ -88,4 +89,4 @@ function App() {
   const [screen, setScreen] = useState<"attendance" | "other">("attendance");
   return screen === "attendance" ? <Attendance onLeave={() => setScreen("other")} /> : <OtherScreen onBack={() => setScreen("attendance")} />;
 }
-createRoot(document.getElementById("root")!).render(<TelephonyProvider><PilotDesignProvider><App /></PilotDesignProvider></TelephonyProvider>);
+createRoot(document.getElementById("root")!).render(<TelephonyProvider><PilotDesignProvider><div style={{ height: "100dvh", display: "flex", flexDirection: "column", overflow: "hidden" }}><OperatorPause /><div style={{ minHeight: 0, flex: 1 }}><App /></div></div></PilotDesignProvider></TelephonyProvider>);

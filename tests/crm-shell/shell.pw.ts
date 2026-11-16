@@ -36,3 +36,80 @@ test("actual private layout preserves the active phone, composer and accepted se
   expect(await page.evaluate(() => (window as any).phoneHarness.calls.length)).toBe(1);
   expect(errors).toEqual([]);
 });
+
+test("global pause survives routes and document reload while SIP remains disconnected", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto("/tests/crm-shell/index.html?runtime");
+  const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
+  await expect(pause).toHaveCount(1);
+  await expect(pause).toContainText("Disponível");
+  await expect(page.getByTestId("connection")).toHaveText("disconnected");
+  await pause.getByRole("button", { name: "Pausar", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Pausa", exact: true });
+  await expect(dialog).toContainText("Mensagens e outras áreas continuam disponíveis.");
+  await dialog.getByLabel("Motivo da pausa", { exact: true }).click();
+  await page.getByRole("option", { name: "Café", exact: true }).click();
+  await dialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(pause).toContainText("Em pausa");
+  await expect(pause).toContainText("Café");
+  const startedAt = await page.evaluate(() => (window as any).phoneHarness.runtimeState.startedAt);
+  expect(startedAt).toBeTruthy();
+  for (const path of ["/tenant-a/customers", "/tenant-a/monitor", "/tenant-a/crm-campaigns", "/tenant-a/"]) {
+    await page.evaluate(path => (window as any).shellFixture.navigate(path), path);
+    await expect(page.getByRole("heading", { name: path, exact: true })).toBeVisible();
+    await expect(pause).toHaveCount(1);
+    await expect(pause).toContainText("Em pausa");
+    await expect(pause.getByRole("timer", { name: "Tempo de pausa" })).toBeVisible();
+    await expect(pause.getByRole("button", { name: "Retomar", exact: true })).toBeInViewport();
+  }
+  await page.getByRole("button", { name: "Preferência de tema", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Escuro", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 740 });
+    await expect(pause.getByRole("button", { name: "Retomar", exact: true })).toBeInViewport();
+    await expect(pause.getByRole("timer", { name: "Tempo de pausa" })).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: `test-results-crm-shell/global-pause-dark-${width}.png`, fullPage: true });
+  }
+  await page.reload();
+  await expect(pause).toHaveCount(1);
+  await expect(pause).toContainText("Em pausa");
+  await expect(pause).toContainText("Café");
+  expect(await page.evaluate(() => (window as any).phoneHarness.runtimeState.startedAt)).toBe(startedAt);
+  await expect(page.getByTestId("connection")).toHaveText("disconnected");
+  await expect(page.getByTestId("phase")).toHaveText("idle");
+  expect(await page.evaluate(() => ({ calls: (window as any).phoneHarness.calls, session: (window as any).phoneHarness.session }))).toEqual({ calls: [], session: null });
+  await pause.getByRole("button", { name: "Retomar", exact: true }).click();
+  await expect(pause).toContainText("Disponível");
+  await expect(pause.getByRole("timer")).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).phoneHarness.runtimeState.state)).toBe("available");
+  expect(errors).toEqual([]);
+});
+
+test("global pending and exceeded states stay explicit and can be canceled or resumed", async ({ page }) => {
+  await page.goto("/tests/crm-shell/index.html?runtime");
+  const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
+  await expect(pause).toContainText("Disponível");
+  await page.evaluate(() => Object.assign((window as any).phoneHarness.runtimeState, { state: "pending", reasonId: 1, version: 2 }));
+  await pause.getByRole("button", { name: "Opções de pausa", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Pausa", exact: true });
+  await expect(dialog).toContainText("Pausa solicitada");
+  await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+  await expect(pause).toContainText("Pausa solicitada");
+  await expect(pause.getByRole("timer")).toHaveCount(0);
+  await pause.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(pause).toContainText("Disponível");
+  await page.evaluate(() => Object.assign((window as any).phoneHarness.runtimeState, { state: "paused", reasonId: 1, version: 4, startedAt: new Date(Date.now() - 120_000).toISOString(), maxSeconds: 60 }));
+  await pause.getByRole("button", { name: "Opções de pausa", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Tempo previsto de pausa excedido.");
+  await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+  await expect(pause).toContainText("Limite excedido");
+  await expect(pause.getByRole("timer", { name: "Tempo de pausa" })).toBeVisible();
+  await pause.getByRole("button", { name: "Retomar", exact: true }).click();
+  await expect(pause).toContainText("Disponível");
+  expect(await page.evaluate(() => (window as any).phoneHarness.calls)).toEqual([]);
+  await expect(page.getByTestId("connection")).toHaveText("disconnected");
+});

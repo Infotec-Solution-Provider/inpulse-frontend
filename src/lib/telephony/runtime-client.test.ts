@@ -166,4 +166,175 @@ describe("durable browser telephony journal", () => {
     await expect(runtime.waitForSync()).rejects.toThrow("registro local");
   });
 
+  it("does not replace an acknowledged pause with a GET snapshot started before the acknowledgement", async () => {
+    const api = server(), { runtime, state } = client();
+    const paused: RuntimeOperatorState = { ...available, state: "paused", version: 2, reasonId: 3 };
+    let releaseAction!: () => void, releasePoll!: () => void, holdPoll = false;
+    const actionPending = new Promise<void>(resolve => { releaseAction = resolve; });
+    api.intercept(async request => {
+      if (request.path === "/telephony/operator-state/actions") {
+        await actionPending;
+        api.setState(paused);
+        return json(paused);
+      }
+      if (request.path === "/telephony/operator-state" && holdPoll) {
+        return new Promise<Response>(resolve => { releasePoll = () => resolve(json(available)); });
+      }
+    });
+    const action = runtime.commandPause("now", 3);
+    await vi.waitFor(() => expect(api.seen.some(request => request.path.endsWith("/actions"))).toBe(true));
+    holdPoll = true;
+    const poll = runtime.refreshState();
+    await vi.waitFor(() => expect(releasePoll).toBeTypeOf("function"));
+    releaseAction();
+    await expect(action).resolves.toEqual(paused);
+    const published = state.mock.calls.length;
+    releasePoll();
+    await poll;
+    expect(state).toHaveBeenLastCalledWith(paused);
+    expect(state).toHaveBeenCalledTimes(published);
+    const write = api.seen.find(request => request.path.endsWith("/actions"))!;
+    expect(write.body).toMatchObject({ kind: "now", reasonId: 3, expectedVersion: 1 });
+
+    // A later GET can also be stale; the request counter alone cannot reject it.
+    holdPoll = false;
+    api.setState(available);
+    await expect(runtime.refreshState()).resolves.toEqual(paused);
+    expect(state).toHaveBeenLastCalledWith(paused);
+
+    // A new policy snapshot must still be accepted even though OFF has version zero.
+    const disabled = { ...available, enabled: false, version: 0 };
+    api.setState(disabled);
+    await runtime.refreshState();
+    expect(state).toHaveBeenLastCalledWith(disabled);
+    await expect(runtime.session("connect", id(20))).resolves.toEqual({ observed: false });
+    expect(api.seen.filter(request => request.path === "/telephony/session")).toHaveLength(0);
+    api.setState(available);
+    await runtime.refreshState();
+    expect(state).toHaveBeenLastCalledWith(available);
+  });
+
+  it("refreshes operator state after a competing action rejects the expected version", async () => {
+    const api = server(), { runtime, state } = client();
+    const competing: RuntimeOperatorState = { ...available, state: "paused", version: 4, reasonId: 8 };
+    api.intercept(request => {
+      if (request.path.endsWith("/actions")) {
+        api.setState(competing);
+        return rejected("VERSION_CONFLICT");
+      }
+    });
+    await expect(runtime.commandPause("now", 3)).rejects.toMatchObject({ code: "VERSION_CONFLICT", status: 409 });
+    expect(state).toHaveBeenLastCalledWith(competing);
+    expect(api.seen.map(request => request.path)).toEqual([
+      "/telephony/operator-state",
+      "/telephony/operator-state/actions",
+      "/telephony/operator-state",
+    ]);
+  });
+
+  it("marks an offline incoming resume as pending until its durable operation is confirmed", async () => {
+    const api = server(), { runtime, state } = client();
+    api.setState({ ...available, state: "paused", version: 2 });
+    await runtime.refreshState();
+    api.setOffline(true);
+    await expect(runtime.commandPause("resume", undefined, true)).resolves.toMatchObject({ state: "available", version: 2, pendingSync: true });
+    expect(state).toHaveBeenLastCalledWith(expect.objectContaining({ pendingSync: true }));
+    await expect(runtime.waitForSync()).rejects.toThrow();
+    api.setOffline(false);
+    api.intercept(request => {
+      if (request.path.endsWith("/actions")) {
+        const confirmed = { ...available, version: 3 };
+        api.setState(confirmed);
+        return json(confirmed);
+      }
+    });
+    await runtime.waitForSync();
+    expect(state).toHaveBeenLastCalledWith({ ...available, version: 3 });
+    expect(api.seen.filter(request => request.path.endsWith("/actions"))).toMatchObject([
+      { body: { kind: "resume", expectedVersion: 2, occurredAt: expect.any(String) } },
+    ]);
+  });
+
+  it("keeps a newer GET state when an older action acknowledgement arrives afterwards", async () => {
+    const api = server(), { runtime, state } = client();
+    const acknowledged: RuntimeOperatorState = { ...available, state: "paused", version: 2, reasonId: 3 };
+    const newer: RuntimeOperatorState = { ...available, version: 3 };
+    let releaseAction!: () => void;
+    const actionPending = new Promise<void>(resolve => { releaseAction = resolve; });
+    api.intercept(async request => {
+      if (request.path.endsWith("/actions")) {
+        await actionPending;
+        return json(acknowledged);
+      }
+    });
+    const action = runtime.commandPause("now", 3);
+    await vi.waitFor(() => expect(api.seen.some(request => request.path.endsWith("/actions"))).toBe(true));
+    api.setState(newer);
+    await expect(runtime.refreshState()).resolves.toEqual(newer);
+    const published = state.mock.calls.length;
+    releaseAction();
+    await expect(action).resolves.toEqual(newer);
+    expect(state).toHaveBeenLastCalledWith(newer);
+    expect(state).toHaveBeenCalledTimes(published);
+  });
+
+  it("keeps the optimistic incoming resume while a GET still reports the same server version", async () => {
+    const api = server(), { runtime, state } = client();
+    api.setState({ ...available, state: "paused", version: 2, reasonId: 3 });
+    await runtime.refreshState();
+    api.setOffline(true);
+    await runtime.commandPause("resume", undefined, true);
+    await expect(runtime.waitForSync()).rejects.toThrow();
+    const optimistic = state.mock.lastCall![0] as RuntimeOperatorState;
+    expect(optimistic).toMatchObject({ state: "available", version: 2, pendingSync: true });
+    api.setOffline(false);
+    const published = state.mock.calls.length;
+    await expect(runtime.refreshState()).resolves.toEqual(optimistic);
+    expect(state).toHaveBeenCalledTimes(published);
+    expect(state).toHaveBeenLastCalledWith(optimistic);
+    api.intercept(request => {
+      if (request.path.endsWith("/actions")) {
+        const confirmed = { ...available, version: 3 };
+        api.setState(confirmed);
+        return json(confirmed);
+      }
+    });
+    await runtime.waitForSync();
+    expect(state).toHaveBeenLastCalledWith({ ...available, version: 3 });
+  });
+
+  it("keeps a policy OFF observed during an action until a subsequent ON GET is confirmed", async () => {
+    const api = server(), { runtime, state } = client();
+    const disabled = { ...available, enabled: false, version: 0 };
+    const reenabled = { ...available, version: 1 };
+    let releaseAction!: () => void, releaseOn!: () => void, holdOn = false;
+    const actionPending = new Promise<void>(resolve => { releaseAction = resolve; });
+    api.intercept(async request => {
+      if (request.path.endsWith("/actions")) {
+        await actionPending;
+        return json({ ...available, state: "paused", version: 2, reasonId: 3 });
+      }
+      if (request.path === "/telephony/operator-state" && holdOn) {
+        return new Promise<Response>(resolve => { releaseOn = () => resolve(json(reenabled)); });
+      }
+    });
+    const action = runtime.commandPause("now", 3);
+    await vi.waitFor(() => expect(api.seen.some(request => request.path.endsWith("/actions"))).toBe(true));
+    api.setState(disabled);
+    await runtime.refreshState();
+    expect(state).toHaveBeenLastCalledWith(disabled);
+    holdOn = true;
+    const on = runtime.refreshState();
+    await vi.waitFor(() => expect(releaseOn).toBeTypeOf("function"));
+    const published = state.mock.calls.length;
+    releaseAction();
+    await expect(action).resolves.toEqual(disabled);
+    expect(state).toHaveBeenCalledTimes(published);
+    expect(state).toHaveBeenLastCalledWith(disabled);
+    await expect(runtime.session("connect", id(21))).resolves.toEqual({ observed: false });
+    releaseOn();
+    await expect(on).resolves.toEqual(reenabled);
+    expect(state).toHaveBeenLastCalledWith(reenabled);
+  });
+
 });

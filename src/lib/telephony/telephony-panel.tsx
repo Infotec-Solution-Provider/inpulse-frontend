@@ -11,7 +11,7 @@ import { MicOff, PhoneOff, Power, Phone, X } from "lucide-react";
 import "./telephony-panel.css";
 import { PhoneSettings } from "./phone-settings";
 import { TransferControls } from "./transfer-controls";
-import { OperatorControls } from "./operator-controls";
+import { CallRecoveryControls } from "./operator-controls";
 import { CallHistory } from "./call-history";
 import {OperatorDashboardDialog} from "./operator-dashboard";
 
@@ -60,7 +60,8 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
       : "w-full min-w-0 shadow-sm";
   const statusLabel = busy ? callPhaseLabels[state.phase] : labels[state.connection];
   const controlsVisible = !!(
-    (open && (busy || state.connection === "ready" || phone.operatorState?.enabled)) ||
+    (open && (busy || state.connection === "ready")) ||
+    (phone.operatorState?.enabled && phone.operatorState.activeCallId && !busy) ||
     state.error ||
     error ||
     phone.syncError ||
@@ -126,7 +127,6 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
       {controlsVisible && (
         <div className="ip-attendance-phone-controls mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
           {(state.error || error) && <Alert severity="error">{error || state.error}</Alert>}
-          {phone.syncError && <Alert severity="warning">{phone.syncError}</Alert>}
           {phone.audioBlocked && (
             <Button size="small" variant="contained" onClick={phone.playAudio}>
               Ativar áudio da ligação
@@ -209,7 +209,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
               )}
             </>
           )}
-          <OperatorControls />
+          <CallRecoveryControls />
           <CallHistory />
         </div>
       )}
