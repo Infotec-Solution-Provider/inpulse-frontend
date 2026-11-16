@@ -76,7 +76,7 @@ window.fetch=async(input:RequestInfo|URL,init?:RequestInit)=>{
  if(!target.startsWith("http://runtime.fixture"))return originalFetch(input,init);
  const path=new URL(target).pathname.replace(/^\/api/,""),method=init?.method||"GET",body=init?.body?JSON.parse(String(init.body)):{};
  const reply=(data:unknown)=>new Response(JSON.stringify({data}),{status:200,headers:{"Content-Type":"application/json"}});
- const status=()=>({enabled:harness.runtimeEnabled,...harness.runtimeState,allowChangeReason:true,reasons:[{id:1,name:"Café",maxSeconds:60,productive:"NAO"},{id:2,name:"Reunião",maxSeconds:0,productive:"SIM"}],serverNow:new Date().toISOString(),pbx:{status:"unknown"}});
+ const status=()=>({enabled:harness.runtimeEnabled,...harness.runtimeState,reason:harness.runtimeState.reasonId===1?"Café":harness.runtimeState.reasonId===2?"Reunião":null,allowChangeReason:true,reasons:[{id:1,name:"Café",maxSeconds:60,productive:"NAO"},{id:2,name:"Reunião",maxSeconds:0,productive:"SIM"}],serverNow:new Date().toISOString(),pbx:{status:"unknown"}});
  if(path==="/telephony/operator-state")return reply(status());
  if(path==="/telephony/operator-state/actions"){
   if(body.kind==="now"){Object.assign(harness.runtimeState,{state:"paused",reasonId:body.reasonId,startedAt:new Date().toISOString()});}

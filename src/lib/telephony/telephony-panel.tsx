@@ -59,6 +59,13 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
       ? "fixed right-4 top-20 z-[1250] max-h-[calc(100dvh-14rem)] w-[330px] max-w-[calc(100vw-2rem)] shadow-xl"
       : "w-full min-w-0 shadow-sm";
   const statusLabel = busy ? callPhaseLabels[state.phase] : labels[state.connection];
+  const controlsVisible = !!(
+    (open && (busy || state.connection === "ready" || phone.operatorState?.enabled)) ||
+    state.error ||
+    error ||
+    phone.syncError ||
+    phone.audioBlocked
+  );
   const header = (
     <>
       <span
@@ -105,15 +112,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
     <section
       aria-label="Telefone web"
       data-header-host={!!headerHost}
-      data-controls-visible={
-        !!(
-          (open && (busy || state.connection === "ready")) ||
-          state.error ||
-          error ||
-          phone.syncError ||
-          phone.audioBlocked
-        )
-      }
+      data-controls-visible={controlsVisible}
       className={`ip-attendance-phone ip-attendance-phone--${placement} ${position} flex flex-col overflow-hidden rounded-md border border-slate-300 bg-white p-3 text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100`}
     >
       {headerHost ? (
@@ -124,11 +123,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           {header}
         </div>
       )}
-      {((open && (busy || state.connection === "ready")) ||
-        state.error ||
-        error ||
-        phone.syncError ||
-        phone.audioBlocked) && (
+      {controlsVisible && (
         <div className="ip-attendance-phone-controls mt-3 max-h-[min(18rem,35dvh)] min-h-0 space-y-3 overflow-y-auto">
           {(state.error || error) && <Alert severity="error">{error || state.error}</Alert>}
           {phone.syncError && <Alert severity="warning">{phone.syncError}</Alert>}

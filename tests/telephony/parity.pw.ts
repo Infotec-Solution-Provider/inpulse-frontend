@@ -4,6 +4,30 @@ import type {} from "./doubles";
 test("audio settings, direct transfer, optional call quality and pause controls", async ({ page }) => {
   await page.goto("/tests/telephony/index.html?runtime");
   await page.getByRole("button", { name: "Abrir telefone" }).click();
+  const disconnectedPause = page.getByRole("region", { name: "Pausa telefônica" });
+  await expect(disconnectedPause).toBeVisible();
+  await expect(page.getByRole("status", { name: "Desconectado" })).toBeVisible();
+  await expect(page.getByLabel("Telefone ou ramal", { exact: true })).toHaveCount(0);
+  await disconnectedPause.getByLabel("Motivo da pausa", { exact: true }).click();
+  await page.getByRole("option", { name: "Café", exact: true }).click();
+  await disconnectedPause.getByRole("button", { name: "Pausar agora", exact: true }).click();
+  await expect(disconnectedPause.getByText("Em pausa · Café", { exact: true })).toBeVisible();
+  await expect(disconnectedPause.getByRole("timer")).toBeVisible();
+  expect(await page.evaluate(() => window.phoneHarness.runtimeState.reasonId)).toBe(1);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 740 });
+    await page.locator(".ip-attendance-phone-controls").evaluate(element => { element.scrollTop = 0; });
+    await expect(disconnectedPause.getByText("Em pausa · Café", { exact: true })).toBeInViewport();
+    await page.screenshot({ path: `test-results/telephony-disconnected-pause-top-${width}.png`, fullPage: true });
+    await disconnectedPause.getByRole("button", { name: "Retomar", exact: true }).scrollIntoViewIfNeeded();
+    await expect(disconnectedPause.getByRole("button", { name: "Retomar", exact: true })).toBeInViewport();
+    await page.screenshot({ path: `test-results/telephony-disconnected-pause-${width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await disconnectedPause.getByRole("button", { name: "Retomar", exact: true }).click();
+  await expect(disconnectedPause.getByText("Disponível para telefonia", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => ({ calls: window.phoneHarness.calls, session: window.phoneHarness.session }))).toEqual({ calls: [], session: null });
+  await expect(page.getByRole("status", { name: "Desconectado" })).toBeVisible();
   await page.getByRole("button", { name: "Conectar telefonia" }).click();
   await expect(page.getByRole("status", { name: "Ramal conectado" })).toBeVisible();
   await page.getByRole("button", { name: "Configurações da telefonia" }).click();
