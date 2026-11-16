@@ -1,3 +1,4 @@
+import { TelephonyPanelSlot } from "../../src/lib/telephony/telephony-panel";
 import { useOperatorFeatures } from "../../src/lib/components/operator-features-provider";
 import "../monitor/harness.css";
 import "../../src/app/globals.css";
@@ -21,6 +22,7 @@ function Probe(){
  const phone=useTelephony();
  useEffect(()=>{Object.assign((window as any).productionFixture,{access, runtime:pause?.runtime,setTheme:(mode:string)=>{if(theme.setPreference)theme.setPreference(mode);else if(theme.theme!==mode)theme.toggleTheme();}});},[access, pause?.runtime,theme.setPreference,theme.theme,theme.toggleTheme]);
  return <section className="flex h-full min-h-0 flex-col gap-2 p-2"><h1>{path}</h1>
+ {new URLSearchParams(location.search).has("show-phone")&&<TelephonyPanelSlot/>}
  <textarea className="min-h-[64px] shrink-0" aria-label="Message draft" value={chat.state.text} onChange={e=>chat.dispatch({type:"change-text",text:e.target.value})}/>
  <button onClick={()=>void chat.sendMessage()}>Send fixture</button>
  <output data-testid="capabilities">{JSON.stringify(access.capabilities?.features??null)}</output><output data-testid="readonly">{String(chat.isReadOnlyMode)}</output>

@@ -36,7 +36,7 @@ export const usersService = {
     harness.settings = structuredClone(settings);
     return { ...structuredClone(settings), gatewayAvailable: harness.gatewayAvailable };
   },
-  async getWebrtcConfig() { harness.webrtcReads++; return { websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", extension: "101", uri: "sip:101@pbx.example.test", authorizationUser: "101", password: "test-only", iceServers: [] }; },
+  async getWebrtcConfig() { harness.webrtcReads++; if(new URLSearchParams(location.search).has("webrtc-unconfigured"))throw Object.assign(new Error("WebRTC not configured"),{isAxiosError:true,response:{status:404,data:{code:"WEBRTC_NOT_CONFIGURED"}}}); return { websocketUrl: "wss://pbx.example.test/ws", domain: "pbx.example.test", extension: "101", uri: "sip:101@pbx.example.test", authorizationUser: "101", password: "test-only", iceServers: [] }; },
 };
 export const customersService = { setAuth() {},
   async getTelephonySchedules(){const f=(window as any).productionFixture;return{data:f.finished||f.operator.state==="paused"?[]:[{CODIGO:42,CLIENTE:1,CLIENTE_RAZAO:"Synthetic customer",CLIENTE_FANTASIA:"Synthetic customer",FONE1:"101",DT_AGENDAMENTO:"2026-11-16T12:00:00Z",CAMPANHA_NOME:"Fixture campaign",CONCLUIDO:"NAO"}]};}, async startTelephonyScheduleCall() { return { callId: "test-crm-id" }; }, async reportTelephonyCall(_id: number, _call: string, state: string) { harness.reports.push(state); } };
