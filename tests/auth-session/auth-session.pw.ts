@@ -41,9 +41,30 @@ test("initial cookie refresh displays loading until the session is known", async
   await authenticate(page);
 });
 
-test("refresh keeps authentication and the mounted screen while replacing the token", async ({
-  page,
-}) => {
+test("impersonation stays in its tab across reload and leaves the original session intact", async ({ page, context }) => {
+  await authenticate(page);
+  const originalToken = await page.getByTestId("token").textContent();
+  const isolated = await context.newPage();
+  await isolated.goto("/tests/auth-session/index.html#impersonation=session.handoff");
+  await expect(isolated.getByTestId("status")).toHaveText("authenticated");
+  await expect(isolated.getByText("Modo impersonação: Usuário de teste")).toBeVisible();
+  await expect(isolated.getByTestId("token")).toContainText("impersonated.");
+  await expect(page.getByTestId("token")).toHaveText(originalToken!);
+  await expect(page.getByText(/Modo impersonação/)).toHaveCount(0);
+  await isolated.reload();
+  await expect(isolated.getByText("Modo impersonação: Usuário de teste")).toBeVisible();
+  expect(await isolated.evaluate(() => window.authHarness.state.impersonationCalls)).toContain("refresh");
+  const popupPromise = isolated.waitForEvent("popup");
+  await isolated.evaluate(() => window.open(window.location.href, "_blank"));
+  const duplicate = await popupPromise;
+  await expect.poll(() => duplicate.evaluate(() => window.authHarness?.state.redirects)).toContain("/test-tenant/login");
+  await expect(isolated.getByText("Modo impersonação: Usuário de teste")).toBeVisible();
+  await duplicate.close();
+  await expect(page.getByTestId("token")).toHaveText(originalToken!);
+  await isolated.close();
+});
+
+test("refresh keeps authentication and the mounted screen while replacing the token", async ({ page }) => {
   await authenticate(page);
   const previousToken = await page.getByTestId("token").textContent();
   await page.evaluate(() => window.authHarness.startRefresh());

@@ -10,6 +10,7 @@ export const state = {
   pending: [] as PendingRefresh[],
   redirects: [] as string[],
   toasts: [] as string[],
+  impersonationCalls: [] as string[],
 };
 const router = { replace: (path: string) => { state.redirects.push(path); } };
 let pathname = "/test-tenant";
@@ -30,6 +31,13 @@ export const usersService = {
   getUserById: async () => user,
 };
 export const authService = {
+  impersonation: async (action: string, _instance: string, credential: string) => {
+    state.impersonationCalls.push(action);
+    if (action === "end") return undefined;
+    if (!credential || credential === "ended") throw new Error("invalid credential");
+    const payload = btoa(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 300 }));
+    return { token: `impersonated.${payload}.signature`, credential: "session.secret", user: { ...user, CODIGO: 2, NOME: "Usuário de teste" } };
+  },
   refresh: (_instance: string, signal: AbortSignal) => {
     state.refreshCalls += 1;
     return new Promise<Session>((resolve, reject) => {
