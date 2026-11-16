@@ -5,6 +5,10 @@ import type { CallReport } from "./browser-phone";
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const available: RuntimeOperatorState = { enabled: true, state: "available", version: 1, reasons: [], serverNow: "2026-11-13T12:00:00Z" };
+const globalPolicy: RuntimeOperatorState = {
+  ...available, scope: "all_channels", requestedScope: "all_channels", scopeReady: true, policyRevision: "a".repeat(64),
+  afterAttendanceScope: "telephony_schedule", channels: { telephony: { supported: true, enforced: true }, whatsapp: { supported: true, enforced: true } },
+};
 const json = (data: unknown) => new Response(JSON.stringify({ data }), { status: 200, headers: { "Content-Type": "application/json" } });
 const rejected = (code: string, status = 409, outcome = "NOT_COMMITTED") => new Response(JSON.stringify({ code, outcome, message: code }), { status, headers: { "Content-Type": "application/json" } });
 const clients: ReturnType<typeof createTelephonyRuntimeClient>[] = [];
@@ -335,6 +339,103 @@ describe("durable browser telephony journal", () => {
     releaseOn();
     await expect(on).resolves.toEqual(reenabled);
     expect(state).toHaveBeenLastCalledWith(reenabled);
+  });
+
+  it.each([2, 3])("keeps a phone-only rollback when an old global action acknowledges version %i", async acknowledgedVersion => {
+    const api = server(), { runtime, state } = client();
+    api.setState(globalPolicy);
+    const phoneOnly: RuntimeOperatorState = {
+      ...globalPolicy, scope: "telephony", requestedScope: "telephony", version: 2,
+      policyRevision: "b".repeat(64), channels: { telephony: { supported: true, enforced: true }, whatsapp: { supported: true, enforced: false } },
+    };
+    let releaseAction!: () => void;
+    const actionPending = new Promise<void>(resolve => { releaseAction = resolve; });
+    api.intercept(async request => {
+      if (request.path.endsWith("/actions")) {
+        await actionPending;
+        return json({ ...globalPolicy, state: "paused", version: acknowledgedVersion });
+      }
+    });
+    const action = runtime.commandPause("now", 3);
+    await vi.waitFor(() => expect(api.seen.some(request => request.path.endsWith("/actions"))).toBe(true));
+    api.setState(phoneOnly);
+    await expect(runtime.refreshState()).resolves.toEqual(phoneOnly);
+    const published = state.mock.calls.length;
+    releaseAction();
+    await expect(action).resolves.toEqual(phoneOnly);
+    expect(state).toHaveBeenCalledTimes(published);
+    expect(state).toHaveBeenLastCalledWith(phoneOnly);
+    // A later authoritative GET still reconciles the operator state under the new policy.
+    const confirmed = { ...phoneOnly, state: "paused" as const, version: 3 };
+    api.setState(confirmed);
+    await expect(runtime.refreshState()).resolves.toEqual(confirmed);
+  });
+
+  const policyChanges: Array<[string, Partial<RuntimeOperatorState>]> = [
+    ["scope", { scope: "telephony" }],
+    ["requested scope", { requestedScope: "telephony" }],
+    ["scope readiness", { scopeReady: false }],
+    ["policy revision", { policyRevision: "b".repeat(64) }],
+    ["phone support", { channels: { telephony: { supported: false, enforced: true }, whatsapp: { supported: true, enforced: true } } }],
+    ["phone enforcement", { channels: { telephony: { supported: true, enforced: false }, whatsapp: { supported: true, enforced: true } } }],
+    ["WhatsApp support", { channels: { telephony: { supported: true, enforced: true }, whatsapp: { supported: false, enforced: true } } }],
+    ["WhatsApp enforcement", { channels: { telephony: { supported: true, enforced: true }, whatsapp: { supported: true, enforced: false } } }],
+    ["legacy metadata omission", { scope: undefined, requestedScope: undefined, scopeReady: undefined, policyRevision: undefined, channels: undefined }],
+  ];
+  it.each(policyChanges)("rejects stale global acknowledgements after a change in %s", async (_label, change) => {
+    const api = server(), { runtime, state } = client();
+    api.setState(globalPolicy);
+    let releaseAction!: () => void;
+    const actionPending = new Promise<void>(resolve => { releaseAction = resolve; });
+    api.intercept(async request => {
+      if (request.path.endsWith("/actions")) {
+        await actionPending;
+        return json({ ...globalPolicy, state: "paused", version: 3 });
+      }
+    });
+    const action = runtime.commandPause("now", 3);
+    await vi.waitFor(() => expect(api.seen.some(request => request.path.endsWith("/actions"))).toBe(true));
+    const current = { ...globalPolicy, ...change };
+    api.setState(current);
+    await runtime.refreshState();
+    releaseAction();
+    await expect(action).resolves.toEqual(current);
+    expect(state).toHaveBeenLastCalledWith(current);
+  });
+
+  it("accepts a current action acknowledgement after only state and clock updates", async () => {
+    const api = server(), { runtime, state } = client();
+    api.setState(globalPolicy);
+    let releaseAction!: () => void;
+    const actionPending = new Promise<void>(resolve => { releaseAction = resolve; });
+    const acknowledged = { ...globalPolicy, state: "paused" as const, version: 3 };
+    api.intercept(async request => {
+      if (request.path.endsWith("/actions")) { await actionPending; return json(acknowledged); }
+    });
+    const action = runtime.commandPause("now", 3);
+    await vi.waitFor(() => expect(api.seen.some(request => request.path.endsWith("/actions"))).toBe(true));
+    api.setState({ ...globalPolicy, state: "pending", version: 2, serverNow: "2026-11-13T12:01:00Z" });
+    await runtime.refreshState();
+    releaseAction();
+    await expect(action).resolves.toEqual(acknowledged);
+    expect(state).toHaveBeenLastCalledWith(acknowledged);
+  });
+
+  it("withdraws stale channel guarantees without undoing an offline incoming resume", async () => {
+    const api = server(), { runtime, state } = client();
+    api.setState({ ...globalPolicy, state: "paused", version: 2 });
+    await runtime.refreshState();
+    api.setOffline(true);
+    await runtime.commandPause("resume", undefined, true);
+    await expect(runtime.waitForSync()).rejects.toThrow();
+    api.setOffline(false);
+    const phoneOnly: RuntimeOperatorState = {
+      ...globalPolicy, state: "paused", version: 2, scope: "telephony", scopeReady: false,
+      channels: { telephony: { supported: true, enforced: true }, whatsapp: { supported: true, enforced: false } },
+    };
+    api.setState(phoneOnly);
+    await expect(runtime.refreshState()).resolves.toMatchObject({ ...phoneOnly, state: "available", pendingSync: true });
+    expect(state).toHaveBeenLastCalledWith(expect.objectContaining({ state: "available", pendingSync: true, scope: "telephony", scopeReady: false, channels: phoneOnly.channels }));
   });
 
 });

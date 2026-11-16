@@ -23,6 +23,12 @@ export interface RuntimeOperatorState {
   pbx?:{status:string;detail?:string|null}; serverNow:string;
 }
 export interface RuntimeCall {callId:string;operatorId:number;direction:string;number:string;state:string;scheduleId:number|null;preparedAt:string;sentAt:string|null;answeredAt:string|null;endedAt:string|null;rating:"RUIM"|"MÉDIA"|"BOA"|null;comment:string;reviewVersion:number;cursor:string}
+
+function pausePolicyFingerprint(snapshot:RuntimeOperatorState){
+  return JSON.stringify([snapshot.enabled,snapshot.scope,snapshot.requestedScope,snapshot.scopeReady,snapshot.policyRevision,
+    snapshot.channels?.telephony.supported,snapshot.channels?.telephony.enforced,
+    snapshot.channels?.whatsapp.supported,snapshot.channels?.whatsapp.enforced]);
+}
 type Pending = {id:string;identity:string;kind:"prepare"|"event"|"pause"|"probe"|"review";payload:Record<string,unknown>;order:number;blocked?:{code:string;message:string}};
 const url=(process.env.NEXT_PUBLIC_CUSTOMERS_URL||"http://localhost:8002").replace(/\/$/,"");
 let order=0;
@@ -49,13 +55,20 @@ export function createTelephonyRuntimeClient(options:{identity:string;getToken:(
     const result=await response.json();if(!response.ok){const error=Object.assign(new Error(result.message||"Não foi possível confirmar a operação telefônica."),{code:result.code,status:response.status,outcome:result.outcome});throw error;}return result.data as T;
   }
   function publishState(next:RuntimeOperatorState){
+    const policyChanged=!state||pausePolicyFingerprint(next)!==pausePolicyFingerprint(state);
     if(state?.enabled&&next.enabled){
       if(next.version<state.version)return state;
       // The same server version predates the durable incoming resume.
-      if(state.pendingSync&&next.version===state.version)return state;
+      if(state.pendingSync&&next.version===state.version){
+        if(!policyChanged)return state;
+        // Policy changes do not advance the operator version. Preserve the local
+        // resume, but never retain a channel guarantee withdrawn by the server.
+        next={...state,scope:next.scope,requestedScope:next.requestedScope,scopeReady:next.scopeReady,
+          policyRevision:next.policyRevision,afterAttendanceScope:next.afterAttendanceScope,channels:next.channels};
+      }
     }
     // OFF snapshots reset the version domain; a subsequent ON snapshot is valid.
-    if(!next.enabled)policyEpoch++;
+    if(!next.enabled||policyChanged)policyEpoch++;
     state=next;if(!disposed)options.onOperatorState?.(next);return next;
   }
   async function refreshState(){const currentRequest=++stateRequest;const next=await request<RuntimeOperatorState>("/telephony/operator-state");if(currentRequest===stateRequest)return publishState(next);return state??next;}
@@ -148,7 +161,9 @@ export function createTelephonyRuntimeClient(options:{identity:string;getToken:(
     try {
       const actionPolicyEpoch=policyEpoch;
       const result=await request<RuntimeOperatorState>("/telephony/operator-state/actions","POST",payload);
-      // An OFF observed during the request supersedes its delayed ON acknowledgement.
+      // A policy/capability change observed during the request supersedes its
+      // delayed acknowledgement, even when the runtime remains enabled. Keep the
+      // known snapshot and any newer GET in flight; the next poll reconciles state.
       if(result.enabled&&actionPolicyEpoch!==policyEpoch&&state)return state;
       // A GET started before this acknowledgement may contain the previous version.
       // Invalidate it, while allowing a later policy-disabled snapshot (version zero).
