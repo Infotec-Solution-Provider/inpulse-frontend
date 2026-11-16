@@ -8,6 +8,7 @@ export interface AuthSignForm {
 export interface AuthContextProps {
     status: "loading" | "authenticated" | "recovering" | "anonymous";
     isAuthenticated: boolean;
+    impersonating: boolean;
     user: User | null;
     signIn: (instance: string, data: AuthSignForm) => Promise<void>;
     signOut: () => Promise<void>;

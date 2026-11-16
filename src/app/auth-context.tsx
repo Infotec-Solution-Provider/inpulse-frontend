@@ -15,6 +15,7 @@ import usersService from "../lib/services/users.service";
 import { activateSessionFrontendScope, clearSessionFrontendChoices } from "@/lib/frontend-selection";
 
 const LAST_TENANT_STORAGE_KEY = "@inpulse/last-tenant";
+const IMPERSONATION_STORAGE_KEY = "@inpulse/impersonation";
 const REFRESH_RETRY_DELAYS_MS = [0, 1_000, 2_000];
 
 type AuthStatus = AuthContextProps["status"];
@@ -47,6 +48,25 @@ export default function AuthProvider({ children }: ProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [refreshRetryPending, setRefreshRetryPending] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
+  const impersonationRef = useRef(false);
+  const releaseImpersonationLockRef = useRef<(() => void) | null>(null);
+  const impersonationClaimRef = useRef<Promise<boolean> | null>(null);
+  const impersonationRedeemRef = useRef<ReturnType<typeof authService.impersonation> | null>(null);
+
+  const claimImpersonationTab = useCallback(async (credential: string): Promise<boolean> => {
+    if (impersonationClaimRef.current) return impersonationClaimRef.current;
+    if (!navigator.locks) return false;
+    let resolveClaim: (claimed: boolean) => void = () => undefined;
+    const claimed = new Promise<boolean>((resolve) => { resolveClaim = resolve; });
+    impersonationClaimRef.current = claimed;
+    void navigator.locks.request(`inpulse-impersonation:${credential.split(".")[0]}`, { ifAvailable: true }, async (lock) => {
+      if (!lock) { resolveClaim(false); return; }
+      resolveClaim(true);
+      await new Promise<void>((resolve) => { releaseImpersonationLockRef.current = resolve; });
+    }).catch(() => resolveClaim(false));
+    return claimed;
+  }, []);
 
   const clearLocalSession = useCallback((redirect = true) => {
     clearSessionFrontendChoices();
@@ -62,7 +82,7 @@ export default function AuthProvider({ children }: ProviderProps) {
     delete axios.defaults.headers.common.Authorization;
     delete axios.defaults.headers.authorization;
     if (instanceRef.current) {
-      localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+      if (!impersonationRef.current) localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
       if (redirect) router.replace(`/${instanceRef.current}/login`);
     } else if (redirect) {
       router.replace("/");
@@ -83,7 +103,7 @@ export default function AuthProvider({ children }: ProviderProps) {
     setRefreshRetryPending(false);
     axios.defaults.headers.common.Authorization = `Bearer ${session.token}`;
     usersService.setAuth(session.token);
-    if (instanceRef.current) localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
+    if (instanceRef.current && !impersonationRef.current) localStorage.removeItem(`@inpulse/${instanceRef.current}/token`);
   }, []);
 
   const refreshSession = useCallback(async (): Promise<string> => {
@@ -99,7 +119,10 @@ export default function AuthProvider({ children }: ProviderProps) {
           throw new Error("session refresh cancelled");
         }
         try {
-          const session = await authService.refresh(instance, abortController.signal);
+          const session = impersonationRef.current
+            ? await authService.impersonation("refresh", instance, sessionStorage.getItem(IMPERSONATION_STORAGE_KEY) || "")
+            : await authService.refresh(instance, abortController.signal);
+          if (!session) throw new Error("impersonation session unavailable");
           if (
             abortController.signal.aborted ||
             epoch !== sessionEpochRef.current ||
@@ -133,6 +156,10 @@ export default function AuthProvider({ children }: ProviderProps) {
   }, [clearLocalSession, refreshSession]);
 
   const signIn = useCallback(async (instance: string, { login, password }: AuthSignForm) => {
+    if (sessionStorage.getItem(IMPERSONATION_STORAGE_KEY)) {
+      toast.error("Feche esta aba e volte à aba original para acessar sua conta.");
+      return;
+    }
     sessionEpochRef.current += 1;
     refreshAbortRef.current?.abort();
     refreshAbortRef.current = null;
@@ -155,6 +182,17 @@ export default function AuthProvider({ children }: ProviderProps) {
 
   const signOut = useCallback(async () => {
     const instance = instanceRef.current;
+    if (impersonationRef.current) {
+      const credential = sessionStorage.getItem(IMPERSONATION_STORAGE_KEY) || "";
+      sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, "ended");
+      releaseImpersonationLockRef.current?.();
+      releaseImpersonationLockRef.current = null;
+      clearLocalSession(false);
+      try { await authService.impersonation("end", instance, credential); } catch { /* local exit still succeeds */ }
+      window.close();
+      router.replace(`/${instance}/login`);
+      return;
+    }
     clearLocalSession(false);
     try {
       if (instance) await authService.logout(instance);
@@ -171,7 +209,7 @@ export default function AuthProvider({ children }: ProviderProps) {
     const channel = new BroadcastChannel("inpulse-auth");
     channelRef.current = channel;
     channel.onmessage = (event: MessageEvent<{ type?: string; instance?: string }>) => {
-      if (event.data?.type === "logout" && event.data.instance === instanceRef.current) {
+      if (!impersonationRef.current && event.data?.type === "logout" && event.data.instance === instanceRef.current) {
         clearLocalSession(true);
       }
     };
@@ -230,12 +268,46 @@ export default function AuthProvider({ children }: ProviderProps) {
 
     const bootstrap = async () => {
       try {
+        const fragment = new URLSearchParams(window.location.hash.slice(1));
+        const stored = sessionStorage.getItem(IMPERSONATION_STORAGE_KEY);
+        const handoff = fragment.get("impersonation") || (stored?.startsWith("handoff:") ? stored.slice(8) : null);
+        if (handoff) {
+          history.replaceState(null, "", window.location.pathname + window.location.search);
+          sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, `handoff:${handoff}`);
+          impersonationRef.current = true;
+          setImpersonating(true);
+          if (!await claimImpersonationTab(handoff)) throw new Error("impersonation tab unavailable");
+          impersonationRedeemRef.current ??= authService.impersonation("redeem", instance, handoff);
+          const session = await impersonationRedeemRef.current;
+          if (!session || isStaleBootstrap()) return;
+          sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, session.credential);
+          applySession(session);
+          return;
+        }
+        const isolatedCredential = sessionStorage.getItem(IMPERSONATION_STORAGE_KEY);
+        if (isolatedCredential) {
+          impersonationRef.current = true;
+          setImpersonating(true);
+          if (isolatedCredential === "ended" || isolatedCredential === "pending") {
+            setStatus("anonymous");
+            router.replace(`/${instance}/login`);
+            return;
+          }
+          if (!await claimImpersonationTab(isolatedCredential)) throw new Error("impersonation already active in another tab");
+        }
         await authSession.forceRefresh();
         if (isStaleBootstrap()) return;
         if (isLoginPath) router.replace(`/${instance}`);
         return;
       } catch (refreshError) {
         if (isStaleBootstrap()) return;
+        if (impersonationRef.current) {
+          sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, "ended");
+          setStatus("anonymous");
+          toast.error("Sessão de impersonação indisponível. Volte à aba original.");
+          router.replace(`/${instance}/login`);
+          return;
+        }
         const legacyToken = localStorage.getItem(`@inpulse/${instance}/token`);
         if (legacyToken) {
           try {
@@ -270,7 +342,7 @@ export default function AuthProvider({ children }: ProviderProps) {
 
     void bootstrap();
     return () => { cancelled = true; };
-  }, [applySession, pathname, refreshSession, router]);
+  }, [applySession, claimImpersonationTab, pathname, refreshSession, router]);
 
   useEffect(() => {
     if (!token) return;
@@ -325,9 +397,16 @@ export default function AuthProvider({ children }: ProviderProps) {
       isAuthenticated: status === "authenticated" || (status === "recovering" && !!token),
       signIn,
       signOut,
+      impersonating,
       instance: instanceRef.current,
       pathname,
     }}>
+      {impersonating && status === "authenticated" && (
+        <div role="alert" className="fixed bottom-4 left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-4 rounded-lg bg-amber-400 px-5 py-3 text-sm font-bold text-black shadow-xl">
+          <span>Modo impersonação: {user?.NOME}</span>
+          <button type="button" className="rounded bg-black px-3 py-1 text-white" onClick={() => void signOut()}>Encerrar impersonação</button>
+        </div>
+      )}
       {blockPrivateContent ? (
         <div className="flex min-h-screen items-center justify-center bg-slate-950 text-sm text-slate-300">
           {status === "recovering" ? "Reconectando sua sessão..." : "Carregando sua sessão..."}

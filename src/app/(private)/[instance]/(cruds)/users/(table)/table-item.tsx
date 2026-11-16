@@ -1,12 +1,15 @@
 "use client";
 import type { User } from "@/lib/sdk-local";
 import { TableRow, TableCell } from "@mui/material";
+import { Login } from "@mui/icons-material";
 import { OperationalIconButton, UiIcon } from "@/lib/ui-system";
 import { useUsersContext } from "../users-context";
 interface Props {
   user: User;
   canEdit: boolean;
   canUseSipConfig: boolean;
+  canImpersonate: boolean;
+  openImpersonationHandler: (user: User) => void;
   openEditModalHandler: (user: User) => void;
   openSipConfigModalHandler: (user: User) => void;
 }
@@ -14,6 +17,8 @@ export default function UsersTableItem({
   user,
   canEdit,
   canUseSipConfig,
+  canImpersonate,
+  openImpersonationHandler,
   openEditModalHandler,
   openSipConfigModalHandler,
 }: Props) {
@@ -44,6 +49,11 @@ export default function UsersTableItem({
       </TableCell>
       <TableCell data-label="Ações" align="right">
         <div className="flex justify-end gap-1">
+          {canImpersonate && (
+            <OperationalIconButton label={`Entrar como ${name}`} tooltip="Entrar como usuário" onClick={() => openImpersonationHandler(user)}>
+              <Login fontSize="small" />
+            </OperationalIconButton>
+          )}
           {canUseSipConfig && (
             <OperationalIconButton
               label={`Configurar SIP de ${name}`}

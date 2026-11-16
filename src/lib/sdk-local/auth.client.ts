@@ -8,6 +8,16 @@ import { skipAuthInterceptors } from "@/lib/auth-session";
  * Classe AuthSDK para interagir com a API de autenticação.
  */
 export default class AuthClient extends ApiClient {
+	public async startImpersonation(userId: number) {
+		const { data } = await this.ax.post<DataResponse<{ credential: string }>>("/api/auth/impersonation", { userId });
+		return data.data;
+	}
+
+	public async impersonation(action: "redeem" | "refresh" | "end", instance: string, credential: string) {
+		const { data } = await this.ax.post<DataResponse<LoginData & { credential: string }>>(
+			`/api/auth/impersonation/${action}`, { instance, credential }, skipAuthInterceptors());
+		return data?.data;
+	}
 	/**
 	 * Realiza o login do usuário.
 	 * @param instance Nome da instância do Inpulse.

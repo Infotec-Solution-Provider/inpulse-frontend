@@ -13,6 +13,8 @@ import {
   TableRow,
 } from "@mui/material";
 import { useState } from "react";
+import { toast } from "react-toastify";
+import authService from "@/lib/services/auth.service";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import UserSipConfigModal from "../(modal)/user-sip-config-modal";
 import { useUsersContext } from "../users-context";
@@ -21,7 +23,7 @@ import UsersTableHeader from "./table-header";
 import UsersTableItem from "./table-item";
 
 export default function UsersTable() {
-  const { token, user: actor } = useAuthContext();
+  const { token, user: actor, instance, impersonating } = useAuthContext();
   const { state, dispatch, openUserModal } = useUsersContext();
   const { parameters } = useWhatsappContext();
   const [sipConfigUser, setSipConfigUser] = useState<User | null>(null);
@@ -34,6 +36,20 @@ export default function UsersTable() {
 
   function openSipConfigModal(user: User) {
     setSipConfigUser(user);
+  }
+
+  async function openImpersonation(user: User) {
+    if (!window.confirm(`Entrar como ${user.NOME || user.LOGIN} em uma nova aba? As ações serão realizadas em nome desse usuário.`)) return;
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) { toast.error("Permita a abertura de novas abas para entrar como outro usuário."); return; }
+    try {
+      const { credential } = await authService.startImpersonation(user.CODIGO);
+      tab.opener = null;
+      tab.location.replace(`/${encodeURIComponent(instance)}#impersonation=${encodeURIComponent(credential)}`);
+    } catch {
+      tab.close();
+      toast.error("Não foi possível iniciar a impersonação.");
+    }
   }
 
   const onChangePage = (page: number) => {
@@ -105,6 +121,8 @@ export default function UsersTable() {
                   <UsersTableItem
                     key={`${user.NOME}_${user.CODIGO}`}
                     user={user}
+                    canImpersonate={!impersonating && canEdit && user.CODIGO !== actor?.CODIGO && user.ATIVO === "SIM"}
+                    openImpersonationHandler={openImpersonation}
                     canEdit={canEdit}
                     canUseSipConfig={canUseSipConfig}
                     openEditModalHandler={openEditUserModal}
