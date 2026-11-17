@@ -38,7 +38,7 @@ export default function SchedulePicker({ value, onChange, disabled = false }: { 
     {data && <>
       {!data.periods.length && <Alert severity="warning">Usuário sem expediente válido no cadastro de turnos. Solicite a configuração para agendar.</Alert>}
       <div className="grid grid-cols-7 gap-1">
-        {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><span key={d} className={`text-center text-xs ${d === "Dom" || d === "S�b" ? "rounded bg-yellow-100 font-semibold text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200" : ""}`}>{d}</span>)}
+        {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><span key={d} className={`text-center text-xs ${d === "Dom" || d === "Sáb" ? "rounded bg-yellow-100 font-semibold text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200" : ""}`}>{d}</span>)}
         {Array.from({length:month.getDay()},(_,i)=><span key={`blank${i}`} />)}
         {days.map(d => {
           const count = data.appointments.filter(a=>a.startsWith(d+"T")).length;
