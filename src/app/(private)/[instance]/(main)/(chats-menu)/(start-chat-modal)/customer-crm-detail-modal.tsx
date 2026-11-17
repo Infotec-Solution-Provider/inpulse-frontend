@@ -21,6 +21,7 @@ import DoneIcon from "@mui/icons-material/Done";
 import EditIcon from "@mui/icons-material/Edit";
 import HeadsetMicIcon from "@mui/icons-material/HeadsetMic";
 import HomeIcon from "@mui/icons-material/Home";
+import MapIcon from "@mui/icons-material/Map";
 import NoteAltIcon from "@mui/icons-material/NoteAlt";
 import PersonIcon from "@mui/icons-material/Person";
 import PhoneIcon from "@mui/icons-material/Phone";
@@ -1159,6 +1160,19 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
   };
 
   const renderAddress = () => {
+    const address = [
+      addressDraft.END_RUA,
+      addressDraft.COMPLEMENTO,
+      addressDraft.BAIRRO,
+      addressDraft.CIDADE,
+      addressDraft.ESTADO,
+      addressDraft.CEP,
+    ]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(", ");
+    const mapsUrl = `https://www.google.com/maps/search/?${new URLSearchParams({ api: "1", query: address })}`;
+
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <TextField
@@ -1222,6 +1236,18 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
           slotProps={{ input: { readOnly: !canEditAddress } }}
         />
 
+        <Box className="md:col-span-2">
+          <Button
+            variant="outlined"
+            startIcon={<MapIcon />}
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            disabled={!address}
+          >
+            Abrir no Google Maps
+          </Button>
+        </Box>
         {renderEditActions(
           canEditAddress,
           hasAddressChanges,
