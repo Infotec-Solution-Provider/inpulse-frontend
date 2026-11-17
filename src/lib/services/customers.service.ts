@@ -19,7 +19,18 @@ interface TelephonyScheduleCallStatus {
 	errorReason: string | null;
 }
 
+export interface ScheduleAvailability {
+  periods: { start: string; end: string }[];
+  appointments: string[];
+  dailyLimit: number;
+  blockDailyLimit: boolean;
+}
+
 class FrontendCustomersService extends CustomersClient {
+  public async scheduleAvailability(from: string, to: string): Promise<ScheduleAvailability> {
+    const response = await this.ax.get('/api/customers/schedules/availability', { params: { from, to } });
+    return response.data.data;
+  }
 	public async reportTelephonyCall(scheduleId: number, callId: string, state: "answered" | "ended" | "failed") {
 		await this.ax.post(`/api/customers/schedules/telephony/${scheduleId}/call/end`, { callId, state });
 	}
@@ -71,3 +82,4 @@ class FrontendCustomersService extends CustomersClient {
 const customersService = new FrontendCustomersService(NEXT_PUBLIC_CUSTOMERS_URL);
 
 export default customersService;
+

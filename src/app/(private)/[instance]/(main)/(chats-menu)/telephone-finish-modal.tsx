@@ -4,6 +4,7 @@ import { completeSurvey, surveyPayload, type SurveyQuestion } from "@/lib/satisf
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import customersService from "@/lib/services/customers.service";
 
+import SchedulePicker, { validateScheduleAvailability } from "@/lib/components/schedule-picker";
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
 import { useAuthContext } from "@/app/auth-context";
 import CrmProposalsClient, { type Proposal } from "@/lib/sdk-local/crm-proposals.client";
@@ -294,6 +295,11 @@ export default function TelephoneFinishModal({
     operation.current ??= { id: crypto.randomUUID(), finishedAt: new Date().toISOString() };
 
     try {
+      if (requiresScheduleDate) {
+        try { await validateScheduleAvailability(scheduleDate); }
+        catch (failure) { setError(failure instanceof Error ? failure.message : "Não foi possível consultar a agenda."); return; }
+        if (!scope.isActive()) return;
+      }
       if (advanced && finishApi) {
         await beforeV2Confirm?.();
         await finishApi.finish(appointment.id, {

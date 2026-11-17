@@ -1,4 +1,5 @@
 "use client";
+import SchedulePicker, { validateScheduleAvailability } from "@/lib/components/schedule-picker";
 import CloseIcon from "@mui/icons-material/Close";
 import { Alert, Button, IconButton, MenuItem, TextField } from "@mui/material";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -43,15 +44,19 @@ export default function FinishChatModal({ chatId, onSuccess }: FinishChatModalPr
       submitting.current = true;
       setIsSubmitting(true);
       setError(null);
+      let finalizationStarted = false;
       try {
+        if (needsScheduleDate) await validateScheduleAvailability(scheduleDate);
+        if (!scope.isActive()) return;
+        finalizationStarted = true;
         await finishChat(targetId, resultId, needsScheduleDate ? new Date(scheduleDate) : null);
         if (!scope.isActive()) return;
         closeModal();
         onSuccess?.();
-      } catch {
+      } catch (error) {
         if (scope.isActive())
           setError(
-            "Não foi possível confirmar a finalização. Confira o estado da conversa antes de tentar novamente.",
+            !finalizationStarted ? (error instanceof Error ? error.message : "Não foi possível consultar a disponibilidade.") : "Não foi possível confirmar a finalização. Confira o estado da conversa antes de tentar novamente.",
           );
       } finally {
         submitting.current = false;
@@ -90,7 +95,7 @@ export default function FinishChatModal({ chatId, onSuccess }: FinishChatModalPr
       role="dialog"
       aria-modal="true"
       aria-labelledby="finish-chat-title"
-      className="w-[26rem] max-w-[calc(100vw-2rem)] rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white"
+      className="w-[26rem] max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto rounded-md bg-white px-4 py-4 text-gray-800 dark:bg-slate-800 dark:text-white"
     >
       <header className="flex items-center justify-between pb-8">
         <h1 id="finish-chat-title" className="text-xl">
@@ -143,20 +148,7 @@ export default function FinishChatModal({ chatId, onSuccess }: FinishChatModalPr
 
         {/* Mostrar input de data se COD_ACAO = 2 */}
         {resultId && results.find((r) => r.id === resultId)?.COD_ACAO === 2 && (
-          <TextField
-            type="datetime-local"
-            label="Data e hora do agendamento"
-            required
-            value={scheduleDate}
-            disabled={isSubmitting}
-            onChange={(e) => setScheduleDate(e.target.value)}
-            className="!text-sm"
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-          />
+          <SchedulePicker value={scheduleDate} onChange={setScheduleDate} disabled={isSubmitting} />
         )}
 
         <div className="flex items-center justify-end gap-2">
@@ -191,3 +183,6 @@ export default function FinishChatModal({ chatId, onSuccess }: FinishChatModalPr
     </div>
   );
 }
+
+
+
