@@ -128,10 +128,11 @@ class FinancialService {
 			compareStartDate?: string;
 			compareEndDate?: string;
 		},
+		signal?: AbortSignal,
 	): Promise<DashboardData> {
 		const response = await axios.get<{ message: string; data: DashboardData }>(
 			`${BASE}/dashboard`,
-			{ ...authHeader(token), params },
+			{ ...authHeader(token), params, signal },
 		);
 		return response.data.data;
 	}

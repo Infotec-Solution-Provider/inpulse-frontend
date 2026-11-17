@@ -1,0 +1,191 @@
+"use client";
+
+import Link from "next/link";
+import { Alert, Button, Chip, CircularProgress, TextField } from "@mui/material";
+import { ArrowLeft, FileChartColumn, RotateCcw } from "lucide-react";
+import type { ReactNode } from "react";
+import { reportPeriodShortcut, type ReportPeriod } from "@/lib/reports/filters";
+
+export function ReportPageShell({
+  instance,
+  category,
+  title,
+  description,
+  children,
+}: {
+  instance: string;
+  category: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="box-border h-full min-w-0 overflow-y-auto bg-slate-50 p-4 text-slate-950 dark:bg-slate-950 dark:text-slate-100 md:p-6">
+      <div className="mx-auto grid w-full min-w-0 max-w-[1600px] gap-6">
+        <header className="grid gap-3">
+          <nav
+            aria-label="Caminho do relatório"
+            className="flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400"
+          >
+            <Link
+              href={`/${instance}/reports`}
+              className="inline-flex items-center gap-1 hover:text-indigo-600"
+            >
+              <ArrowLeft size={15} />
+              Relatórios
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span>{category}</span>
+          </nav>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+              {description}
+            </p>
+          </div>
+        </header>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function ReportFilterPanel({
+  period,
+  onPeriodChange,
+  onGenerate,
+  onClear,
+  onRestore,
+  loading,
+  dirty,
+  children,
+}: {
+  period: ReportPeriod;
+  onPeriodChange: (period: ReportPeriod) => void;
+  onGenerate: () => void;
+  onClear: () => void;
+  onRestore?: () => void;
+  loading: boolean;
+  dirty: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <form
+      className="grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:p-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onGenerate();
+      }}
+    >
+      <div className="flex flex-wrap gap-2" aria-label="Atalhos de período">
+        {[
+          ["today", "Hoje"],
+          ["yesterday", "Ontem"],
+          ["last7", "Últimos 7 dias"],
+          ["month", "Este mês"],
+          ["previousMonth", "Mês anterior"],
+        ].map(([id, label]) => (
+          <Button
+            key={id}
+            size="small"
+            variant="outlined"
+            onClick={() => onPeriodChange(reportPeriodShortcut(id))}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <TextField
+          label="Data inicial"
+          type="date"
+          size="small"
+          value={period.startDate}
+          onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })}
+          InputLabelProps={{ shrink: true }}
+          required
+        />
+        <TextField
+          label="Data final"
+          type="date"
+          size="small"
+          value={period.endDate}
+          onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })}
+          InputLabelProps={{ shrink: true }}
+          required
+        />
+        {children}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={loading}
+          startIcon={
+            loading ? <CircularProgress size={16} color="inherit" /> : <FileChartColumn size={17} />
+          }
+        >
+          {loading ? "Gerando relatório…" : "Gerar relatório"}
+        </Button>
+        <Button onClick={onClear} startIcon={<RotateCcw size={16} />}>
+          Limpar filtros
+        </Button>
+        {dirty && onRestore && <Button onClick={onRestore}>Descartar alterações</Button>}
+      </div>
+      {dirty && (
+        <Alert severity="warning">
+          Filtros alterados. Gere novamente para atualizar o resultado e liberar a exportação.
+        </Alert>
+      )}
+    </form>
+  );
+}
+
+export function ReportExecutionStatus({
+  loading,
+  error,
+  generatedAt,
+  labels,
+  hasResult,
+}: {
+  loading: boolean;
+  error: string | null;
+  generatedAt: string | null;
+  labels: string[];
+  hasResult: boolean;
+}) {
+  return (
+    <div className="grid gap-3" aria-live="polite">
+      {error && (
+        <Alert severity="error">
+          {error}
+          {hasResult ? " O resultado anterior foi mantido." : ""}
+        </Alert>
+      )}
+      {loading && (
+        <Alert severity="info" icon={<CircularProgress size={18} />}>
+          Gerando relatório. Aguarde a conclusão.
+        </Alert>
+      )}
+      {!hasResult && !loading && !error && (
+        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          Defina os filtros e clique em Gerar relatório para consultar os dados.
+        </div>
+      )}
+      {hasResult && (
+        <div
+          className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400"
+          aria-label="Filtros aplicados"
+        >
+          <span>
+            Resultado gerado em {generatedAt && new Date(generatedAt).toLocaleString("pt-BR")} ·
+            filtros aplicados:
+          </span>
+          {labels.map((label) => (
+            <Chip key={label} size="small" label={label} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

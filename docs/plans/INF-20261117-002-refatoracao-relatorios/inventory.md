@@ -3,8 +3,8 @@ id: INF-20261117-002
 title: Inventário técnico dos relatórios e da navegação
 service: cross-service
 type: refactor
-status: planned
-owner: unassigned
+status: in-progress
+owner: codex
 created_at: 2026-11-17
 updated_at: 2026-11-17
 depends_on: []

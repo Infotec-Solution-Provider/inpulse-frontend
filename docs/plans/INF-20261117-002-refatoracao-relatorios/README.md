@@ -3,8 +3,8 @@ id: INF-20261117-002
 title: Cópia versionada do plano de relatórios
 service: cross-service
 type: refactor
-status: planned
-owner: unassigned
+status: in-progress
+owner: codex
 created_at: 2026-11-17
 updated_at: 2026-11-17
 depends_on: []
@@ -21,7 +21,8 @@ Snapshot documental de 17/11/2026. O serviço dono principal da interface é `in
 - [Plano e critérios de aceite](plan.md)
 - [Inventário e evidências de código](inventory.md)
 - [Tarefas e dependências](tasks.md)
+- [Primeira onda implementada e validações](implementation-20261117.md)
 
 A fonte central para execução e histórico é `C:/Workspace/infotec/planejamento/cross-service/INF-20261117-002-refatoracao-relatorios/`, incluindo `journal.md` e `handoff.md`. Atualizações futuras devem partir da pasta central e sincronizar este snapshot quando necessário, evitando dois planos independentes.
 
-Esta entrega altera apenas documentação. A implementação, os testes de runtime, a validação autenticada e os deployments continuam pendentes.
+Execução iniciada: central e pilotos de Mensagens por Operador/Vendas implementados e testados localmente. Validação autenticada, demais ondas e publicação continuam pendentes.

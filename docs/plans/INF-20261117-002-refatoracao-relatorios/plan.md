@@ -3,8 +3,8 @@ id: INF-20261117-002
 title: Refatoração da navegação e dos fluxos de relatórios
 service: cross-service
 type: refactor
-status: planned
-owner: unassigned
+status: in-progress
+owner: codex
 created_at: 2026-11-17
 updated_at: 2026-11-17
 depends_on: []
@@ -27,7 +27,7 @@ source_docs:
 
 O usuário deve conseguir encontrar um relatório pelo assunto ou pela busca, entender o que ele mede, selecionar filtros pesquisáveis e gerar o resultado de maneira previsível. A navegação e os controles devem ser consistentes entre relatórios, sem alterar silenciosamente fórmulas, permissões e abrangência dos dados.
 
-Este é um plano de produto e implementação baseado em leitura de código local. A entrega desta demanda é o planejamento; a implementação permanece pendente. Não houve inspeção autenticada das telas, consulta SQL, acesso remoto nem publicação. O [inventário](inventory.md) registra a base técnica e as limitações de cada conclusão.
+Este é um plano de produto e implementação baseado em leitura de código local. O planejamento foi entregue e o usuário autorizou o início da implementação em 17/11/2026. A central e os dois pilotos da primeira onda estão implementados localmente; validação autenticada e publicação permanecem pendentes. Não houve inspeção autenticada das telas, consulta SQL, acesso remoto nem publicação. O [inventário](inventory.md) registra a base técnica e as limitações de cada conclusão.
 
 ## Diagnóstico
 

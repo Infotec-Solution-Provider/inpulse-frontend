@@ -30,7 +30,8 @@ interface Props {
 
 export default function OperatorDetailModal({ operadorId, operadorNome, onClose }: Props) {
 	const { token } = useContext(AuthContext);
-	const { filters } = useFinancialContext();
+	const { appliedFilters } = useFinancialContext();
+	const filters = appliedFilters!;
 	const [rows, setRows] = useState<OperatorSaleDetail[]>([]);
 	const [loading, setLoading] = useState(false);
 

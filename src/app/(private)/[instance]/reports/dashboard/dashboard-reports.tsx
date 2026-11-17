@@ -1,6 +1,7 @@
 "use client";
 
 import { useContext, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { AuthContext } from "@/app/auth-context";
 import {
@@ -403,6 +404,7 @@ function SatisfactionSurveySyntheticView({
 }
 
 export default function DashboardReports() {
+  const router = useRouter();
   const {
     chartTypes,
     setChartType,
@@ -500,7 +502,11 @@ export default function DashboardReports() {
           label="Relatório"
           size="small"
           value={selectedReport}
-          onChange={(e) =>
+          onChange={(e) => {
+            if (e.target.value === "messagesPerUser") {
+              router.push(`/${instance}/reports/messages-per-operator`);
+              return;
+            }
             setSelectedReport(
               e.target.value as
                 | "generalPerformance"
@@ -511,8 +517,8 @@ export default function DashboardReports() {
                 | "messagesPerHourDay"
                 | "contactsAwaitingReturn"
                 | "satisfactionSurvey",
-            )
-          }
+            );
+          }}
           className="min-w-[240px]"
         >
           <MenuItem value="generalPerformance">Performance Geral</MenuItem>

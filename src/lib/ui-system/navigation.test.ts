@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { availableReports } from "@/lib/reports/catalog";
 import { UserRole } from "@/lib/sdk-local";
 import {
   getNavigationItems,
@@ -11,13 +12,26 @@ import {
   sidebarStorageKey,
 } from "./navigation";
 
-const CRM_PARAMETERS: Record<string, string> = Object.fromEntries([
-  "crm_customers", "crm_users", "crm_units_campaigns", "crm_sales", "crm_imports", "crm_email",
-  "crm_satisfaction", "crm_administration", "telephony_monitoring", "contact_requests", "parameter_settings",
-].map(name => [`feature_${name}_enabled`, "true"]));
+const CRM_PARAMETERS: Record<string, string> = Object.fromEntries(
+  [
+    "crm_customers",
+    "crm_users",
+    "crm_units_campaigns",
+    "crm_sales",
+    "crm_imports",
+    "crm_email",
+    "crm_satisfaction",
+    "crm_administration",
+    "telephony_monitoring",
+    "contact_requests",
+    "parameter_settings",
+  ].map((name) => [`feature_${name}_enabled`, "true"]),
+);
 
-const routes = (role: UserRole, parameters: Record<string, string> = {}, instance = "homolog") =>
-  navigationLeaves(getNavigationItems(parameters, role, instance)).map((item) => item.href);
+const routes = (role: UserRole, parameters: Record<string, string> = {}, instance = "homolog") => [
+  ...navigationLeaves(getNavigationItems(parameters, role, instance)).map((item) => item.href),
+  ...availableReports(parameters, role, instance).map((item) => item.href),
+];
 
 describe("shared navigation authorization", () => {
   it("does not expose administration or internal groups to external operators", () => {
@@ -32,15 +46,17 @@ describe("shared navigation authorization", () => {
   it("preserves administrator destinations and gates optional functionality", () => {
     const base = routes(UserRole.ADMIN);
     expect(base).toEqual(
-      expect.arrayContaining([
-        "/monitor",
-        "/customers",
-        "/users",
-        "/reports/dashboard",
-        "/changelog",
-      ]),
+      expect.arrayContaining(["/monitor", "/customers", "/users", "/reports", "/changelog"]),
     );
-    for (const path of ["/parameters", "/crm-purchases", "/crm-proposals", "/crm-imports", "/crm-email", "/user-catalogs/user-groups"]) expect(base).not.toContain(path);
+    for (const path of [
+      "/parameters",
+      "/crm-purchases",
+      "/crm-proposals",
+      "/crm-imports",
+      "/crm-email",
+      "/user-catalogs/user-groups",
+    ])
+      expect(base).not.toContain(path);
     expect(base).not.toContain("/channels");
     expect(base).not.toContain("/sip-config");
     expect(base).not.toContain("/ai-agents");
@@ -63,7 +79,10 @@ describe("shared navigation authorization", () => {
     expect(visible).not.toContain("/internal-groups");
   });
   it("preserves existing goals destinations and their feature and role gates alongside CRM", () => {
-    const enabled = routes(UserRole.ADMIN, { ...CRM_PARAMETERS, feature_reports_advanced_enabled: "true" });
+    const enabled = routes(UserRole.ADMIN, {
+      ...CRM_PARAMETERS,
+      feature_reports_advanced_enabled: "true",
+    });
     expect(enabled).toEqual(
       expect.arrayContaining([
         "/reports/goals-dashboard",
@@ -149,7 +168,7 @@ describe("hierarchical application navigation", () => {
       ).toEqual(["campaigns", "exceptions", leaf]);
     }
   });
-  it("prefers a query-specific report and respects route boundaries and visual scope", () => {
+  it("keeps report deep links in the central navigation entry and respects visual scope", () => {
     expect(
       activeNavigationPath(
         getNavigationItems({}, UserRole.ADMIN, "exatron"),
@@ -157,7 +176,10 @@ describe("hierarchical application navigation", () => {
         "exatron",
         "report=satisfactionSurvey",
       ).at(-1)?.title,
-    ).toBe("Pesquisa de Satisfação");
+    ).toBe("Relatórios");
+    expect(isModernCrmPath("/homolog/reports")).toBe(true);
+    expect(isModernCrmPath("/homolog/reports/messages-per-operator")).toBe(true);
+    expect(isModernCrmPath("/homolog/reports/sales")).toBe(true);
     expect(isModernCrmPath("/homolog/crm-customers/12")).toBe(true);
     expect(isModernCrmPath("/homolog/customers-old")).toBe(false);
     expect(isModernCrmPath("/homolog/reports/dashboard")).toBe(false);
@@ -171,7 +193,9 @@ describe("hierarchical application navigation", () => {
       ["tab=invalid", "Enviar"],
     ]) {
       expect(
-        activeNavigationPath(tree, "/homolog/crm-email", "homolog", query).map(item => item.title),
+        activeNavigationPath(tree, "/homolog/crm-email", "homolog", query).map(
+          (item) => item.title,
+        ),
       ).toEqual(["Comunicação", "Email", title]);
     }
     expect(routes(UserRole.ACTIVE, CRM_PARAMETERS)).toContain("/crm-email?tab=accounts");
@@ -181,16 +205,35 @@ describe("hierarchical application navigation", () => {
 
 describe("integrated CRM lanes", () => {
   it("uses one management entry for both campaign views and their details", () => {
-    const tree = getNavigationItems(CRM_PARAMETERS, UserRole.ADMIN, 'homolog');
+    const tree = getNavigationItems(CRM_PARAMETERS, UserRole.ADMIN, "homolog");
     const leaves = navigationLeaves(tree);
-    const management = leaves.filter(item => item.href === '/crm-units' || item.href === '/crm-campaigns');
+    const management = leaves.filter(
+      (item) => item.href === "/crm-units" || item.href === "/crm-campaigns",
+    );
     expect(management).toHaveLength(1);
-    expect(management[0]).toMatchObject({ id: 'units', title: 'Gerenciar', href: '/crm-units', aliases: ['/crm-campaigns'] });
-    for (const path of ['/crm-units', '/crm-units/2', '/crm-units/new', '/crm-campaigns', '/crm-campaigns/9', '/crm-campaigns/9/configure', '/crm-campaigns/new']) {
-      expect(activeNavigationPath(tree, '/homolog' + path, 'homolog').map(item => item.id)).toEqual(['campaigns', 'units']);
+    expect(management[0]).toMatchObject({
+      id: "units",
+      title: "Gerenciar",
+      href: "/crm-units",
+      aliases: ["/crm-campaigns"],
+    });
+    for (const path of [
+      "/crm-units",
+      "/crm-units/2",
+      "/crm-units/new",
+      "/crm-campaigns",
+      "/crm-campaigns/9",
+      "/crm-campaigns/9/configure",
+      "/crm-campaigns/new",
+    ]) {
+      expect(
+        activeNavigationPath(tree, "/homolog" + path, "homolog").map((item) => item.id),
+      ).toEqual(["campaigns", "units"]);
     }
-    expect(activeNavigationPath(tree, '/homolog/crm-campaigns-old', 'homolog')).toEqual([]);
-    expect(activeNavigationPath(tree, '/homolog/crm-ordering', 'homolog').at(-1)?.id).not.toBe('units');
+    expect(activeNavigationPath(tree, "/homolog/crm-campaigns-old", "homolog")).toEqual([]);
+    expect(activeNavigationPath(tree, "/homolog/crm-ordering", "homolog").at(-1)?.id).not.toBe(
+      "units",
+    );
   });
   const paths = [
     "/crm-units",
@@ -203,7 +246,10 @@ describe("integrated CRM lanes", () => {
     "/reports/sales",
   ];
   it("retains every administrative destination and modern layout after all merges", () => {
-    const admin = routes(UserRole.ADMIN, { ...CRM_PARAMETERS, feature_sales_reports_enabled: "true" });
+    const admin = routes(UserRole.ADMIN, {
+      ...CRM_PARAMETERS,
+      feature_sales_reports_enabled: "true",
+    });
     for (const path of paths) {
       expect(admin).toContain(path);
       if (!path.startsWith("/reports/")) expect(isModernCrmPath(`/homolog${path}`)).toBe(true);

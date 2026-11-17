@@ -71,7 +71,7 @@ export const crudsRoutes = (
     arr.push({ title: "Contatos", href: "/contacts" });
   }
 
-  return arr.filter(route => canAccessFeaturePath(params, route.href, instance));
+  return arr.filter((route) => canAccessFeaturePath(params, route.href, instance));
 };
 
 export const aiRoutes = (params: Record<string, string>) => {
@@ -92,50 +92,9 @@ export const aiRoutes = (params: Record<string, string>) => {
   ];
 };
 
-export const reportsRoutes = (params: Record<string, string>, instance: string) => {
-  const routes = [{ title: "Relatórios", href: "/reports/dashboard" }];
-  if (isFeatureEnabled(params, FEATURE_FLAGS.chatExport)) {
-    routes.push({ title: "Conversas", href: "/reports/chats" });
-  }
-
-  if (isFeatureEnabled(params, FEATURE_FLAGS.reportsAdvanced)) {
-    routes.push(
-      { title: "Dashboard de Operadores", href: "/reports/operators" },
-      { title: "Metas e Indicadores", href: "/reports/goals-dashboard" },
-      { title: "Equipe x Metas", href: "/reports/team-goals" },
-      { title: "Origem x Qualidade", href: "/reports/lead-origin-quality" },
-      { title: "Motivos de Perda", href: "/reports/lost-reasons" },
-      { title: "Performance Operadores", href: "/reports/operator-performance" },
-
-      //{ title: "Análise de Mailing", href: "/reports/mailing-analysis" },
-      //{ title: "Régua por Carteira (Sintético) + WhatsApp", href: "/reports/regua-carteira-sintetico-whatsapp" },
-    );
-  }
-
-  if (instance === "exatron") {
-    routes.push({
-      title: "Pesquisa de Satisfação",
-      href: "/reports/dashboard?report=satisfactionSurvey",
-    });
-  }
-
-  if (isFeatureEnabled(params, FEATURE_FLAGS.salesReports)) {
-    routes.push(
-      { title: "Dashboard: Vendas", href: "/reports/sales" },
-      { title: "Dashboard: WhatsApp", href: "/reports/operator-performance" },
-    );
-  }
-
-  /*   if (isFeatureEnabled(params, FEATURE_FLAGS.reportsDashboards)) {
-    routes.push(
-      //{ title: "Gerador de Relatório", href: "/reports/report-generator" },
-      //{ title: "Dashboards", href: "/reports/dashboards" },
-      //{ title: "Métricas", href: "/reports/metrics" },
-    );
-  } */
-
-  return routes;
-};
+export const reportsRoutes = (_params: Record<string, string>, _instance: string) => [
+  { title: "Central de relatórios", href: "/reports" },
+];
 
 /** One permission-aware catalog used by the pilot and legacy navigation. */
 export function getNavigationItems(
@@ -185,9 +144,7 @@ export function getNavigationItems(
     );
   }
   if (isAdmin) {
-    items.push(
-      group("imports", "Importar", [link("crm-imports", "Mail List", "/crm-imports")]),
-    );
+    items.push(group("imports", "Importar", [link("crm-imports", "Mail List", "/crm-imports")]));
     items.push(
       group(
         "users",
@@ -248,13 +205,11 @@ export function getNavigationItems(
   if (!isExternalOperator(role) && parameters.disable_contacts_crud !== "true")
     contacts.push(link("contacts", "Cadastro", "/contacts"));
   if (isAdmin) contacts.push(link("contact-requests", "Desativações", "/contact-requests"));
-  if (contacts.length)
-    communication.push(group("communication-contacts", "Contatos", contacts));
+  if (contacts.length) communication.push(group("communication-contacts", "Contatos", contacts));
   const internalGroups: NavigationItem[] = [];
   if (canAccessInternalGroups(parameters, role))
     internalGroups.push(link("internal-groups", "Cadastro", "/internal-groups"));
-  if (isAdmin)
-    internalGroups.push(link("senders", "Identificar Remetentes", "/whatsapp-senders"));
+  if (isAdmin) internalGroups.push(link("senders", "Identificar Remetentes", "/whatsapp-senders"));
   if (internalGroups.length)
     communication.push(group("communication-internal-groups", "Grupos Internos", internalGroups));
   if (isAdmin)
@@ -297,23 +252,16 @@ export function getNavigationItems(
     items.push({ ...link("mass-messages", "Disparos", "/tools/mass-messages"), icon: "dispatch" });
   }
   if (isAdmin) {
-    items.push(
-      group(
-        "reports",
-        "Relatórios",
-        reportsRoutes(parameters, instance).map((route, index) =>
-          link(`report-${index}`, route.title, route.href),
-        ),
-        "reports",
-      ),
-    );
+    items.push({ ...link("reports", "Relatórios", "/reports"), icon: "reports" });
     items.push({ ...link("news", "Novidades", "/changelog"), icon: "news" });
   }
-  const visible = (nodes: NavigationItem[]): NavigationItem[] => nodes.flatMap<NavigationItem>(item => {
-    if (item.kind === "link") return canAccessFeaturePath(parameters, item.href, instance) ? [item] : [];
-    const routes = visible(item.routes);
-    return routes.length ? [{ ...item, routes }] : [];
-  });
+  const visible = (nodes: NavigationItem[]): NavigationItem[] =>
+    nodes.flatMap<NavigationItem>((item) => {
+      if (item.kind === "link")
+        return canAccessFeaturePath(parameters, item.href, instance) ? [item] : [];
+      const routes = visible(item.routes);
+      return routes.length ? [{ ...item, routes }] : [];
+    });
   return visible(items);
 }
 
@@ -373,9 +321,15 @@ export function isModernCrmPath(pathname: string): boolean {
   if (route === "tools" && pathname.split("/").filter(Boolean)[2] === "mass-messages") return true;
   if (
     route === "reports" &&
-    ["metrics", "dashboards", "report-generator", "generated"].includes(
-      pathname.split("/").filter(Boolean)[2],
-    )
+    [
+      undefined,
+      "messages-per-operator",
+      "sales",
+      "metrics",
+      "dashboards",
+      "report-generator",
+      "generated",
+    ].includes(pathname.split("/").filter(Boolean)[2])
   )
     return true;
   return [
