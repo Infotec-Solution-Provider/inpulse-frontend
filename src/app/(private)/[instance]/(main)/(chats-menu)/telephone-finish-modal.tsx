@@ -297,7 +297,7 @@ export default function TelephoneFinishModal({
     try {
       if (requiresScheduleDate) {
         try { await validateScheduleAvailability(scheduleDate); }
-        catch (failure) { setError(failure instanceof Error ? failure.message : "Não foi possível consultar a agenda."); return; }
+        catch (failure) { setError(failure instanceof Error ? failure.message : "Nï¿½o foi possï¿½vel consultar a agenda."); return; }
         if (!scope.isActive()) return;
       }
       if (advanced && finishApi) {
@@ -632,19 +632,7 @@ export default function TelephoneFinishModal({
           </>
         )}
         {requiresScheduleDate && (
-          <TextField
-            type="datetime-local"
-            label="Data e hora do reagendamento"
-            required
-            value={scheduleDate}
-            disabled={saving || blocked}
-            onChange={(event) => setScheduleDate(event.target.value)}
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-          />
+          <SchedulePicker value={scheduleDate} onChange={setScheduleDate} disabled={saving || blocked} />
         )}
 
         {requiresProposal && (
@@ -739,3 +727,4 @@ export default function TelephoneFinishModal({
     </div>
   );
 }
+
