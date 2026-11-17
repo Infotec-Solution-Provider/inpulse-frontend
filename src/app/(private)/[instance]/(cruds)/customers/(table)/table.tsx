@@ -1,4 +1,5 @@
 "use client";
+import CustomerCrmDetailModal from "../../../(main)/(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 import { useAuthContext } from "@/app/auth-context";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
@@ -33,7 +34,7 @@ export default function CustomersTable() {
   const fullRegistration = isFeatureEnabled(parameters, FEATURE_FLAGS.crmCustomers);
   const { user, instance } = useAuthContext();
   const router = useRouter();
-  const { openModal } = useContext(AppContext);
+  const { openModal, closeModal } = useContext(AppContext);
   const { state, dispatch } = useCustomersContext();
 
   function openEditCustomerModal(customer: Customer) {
@@ -130,6 +131,7 @@ export default function CustomersTable() {
                     customer={client}
                     openEditModalHandler={openEditCustomerModal}
                     openContactModalHandler={openContactModal}
+                    openDetailsHandler={(customer) => openModal(<CustomerCrmDetailModal customerId={customer.CODIGO} canEdit={false} onClose={closeModal} />)}
                   />
                 ))}
             </TableBody>

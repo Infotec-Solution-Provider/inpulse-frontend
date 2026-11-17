@@ -8,11 +8,13 @@ interface Props {
   customer: Customer;
   openEditModalHandler: (customer: Customer) => void;
   openContactModalHandler: (customer: Customer) => void;
+  openDetailsHandler: (customer: Customer) => void;
 }
 export default function CustomersTableItem({
   customer,
   openEditModalHandler,
   openContactModalHandler,
+  openDetailsHandler,
 }: Props) {
   const system = isSystemDefaultCustomer(customer.CODIGO),
     name = customer.RAZAO || `Cliente #${customer.CODIGO}`;
@@ -49,6 +51,7 @@ export default function CustomersTableItem({
           >
             <UiIcon name="edit" scale="row" />
           </OperationalIconButton>
+          <OperationalIconButton label={`Ver ficha de ${name}`} tooltip="Ver ficha e agenda" onClick={() => openDetailsHandler(customer)}><UiIcon name="view" scale="row" /></OperationalIconButton>
           <OperationalIconButton
             label={`Ver contatos de ${name}`}
             tooltip="Ver contatos"

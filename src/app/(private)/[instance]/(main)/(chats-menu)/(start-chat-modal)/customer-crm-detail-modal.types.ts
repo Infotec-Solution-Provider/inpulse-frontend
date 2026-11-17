@@ -21,6 +21,7 @@ export interface CustomerContactDetail {
 
 export interface CustomerCallHistoryDetail {
   CODIGO: number;
+  CC_CODIGO?: number | null;
   OPERADOR: number | string;
   CLIENTE: number;
   RESULTADO: number;

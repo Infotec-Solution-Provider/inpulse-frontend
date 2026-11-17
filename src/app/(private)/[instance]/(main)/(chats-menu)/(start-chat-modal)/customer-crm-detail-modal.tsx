@@ -3,6 +3,7 @@
 import CustomerFinancialSummary from "@/lib/components/customer-financial-summary";
 import { crmPhonePayload, crmPhoneSlots } from "@/lib/crm-phone-form";
 import { crmErrorDetails } from "@/lib/crm-customer-form";
+import ResultCorrectionDialog from "@/lib/components/result-correction-dialog";
 import customersService from "@/lib/services/customers.service";
 import NextLink from "next/link";
 import CustomerSegmentSelector from "@/lib/components/customer-segment-selector";
@@ -162,6 +163,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
   const { token, user, instance } = useAuthContext();
   const segmentContext = useRef({ instance, customerId, token });
   segmentContext.current = { instance, customerId, token };
+  const [correctResultId, setCorrectResultId] = useState<number | null>(null);
   const [tab, setTab] = useState<TabValue>("main");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1592,6 +1594,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
           <Alert severity="info">Nenhum registro encontrado com os filtros atuais.</Alert>
         ) : null}
 
+        {correctResultId !== null && <ResultCorrectionDialog scheduleId={correctResultId} onClose={() => setCorrectResultId(null)} onSaved={() => { setCorrectResultId(null); void loadDetail(); }} />}
         {paginatedCallHistory.map((call: CustomerCallHistoryDetail) => {
           const isWhatsapp = call.CANAL_ATENDIMENTO === "WhatsApp";
           const startedAt = call.WHATSAPP_CHAT_INICIADO_EM ?? call.LIGACAO_RECEBIDA;
@@ -1614,6 +1617,7 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
                     )}
                   </span>
                 </Tooltip>
+                {!isWhatsapp && user?.NIVEL === "ADMIN" && call.CC_CODIGO && detail.schedules.some(schedule => schedule.CODIGO === call.CC_CODIGO && schedule.CONCLUIDO === "SIM") ? <IconButton title="Alterar resultado da ficha vinculada" onClick={() => setCorrectResultId(call.CC_CODIGO!)}><EditIcon fontSize="small" /></IconButton> : null}
                 {(call.RESULTADO_NOME || call.RESULTADO != null) ? (
                   <Chip
                     label={call.RESULTADO_NOME ?? String(call.RESULTADO)}
@@ -1999,12 +2003,14 @@ export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, p
           <Alert severity="info">Nenhum registro de agenda encontrado com os filtros atuais.</Alert>
         ) : null}
 
+        {correctResultId !== null && <ResultCorrectionDialog scheduleId={correctResultId} onClose={() => setCorrectResultId(null)} onSaved={() => { setCorrectResultId(null); void loadDetail(); }} />}
         {paginatedAgenda.map((schedule: CustomerScheduleDetail) => (
           <Box key={schedule.CODIGO} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="flex items-center gap-2 bg-slate-50 px-4 py-2 dark:bg-slate-800">
               <CalendarMonthIcon fontSize="small" className="text-slate-500" />
               <Typography fontWeight={600}>{formatDate(schedule.DT_AGENDAMENTO)}</Typography>
               {schedule.RESULTADO ? <Chip label={String(schedule.RESULTADO)} size="small" variant="outlined" /> : null}
+              {user?.NIVEL === "ADMIN" && schedule.CONCLUIDO === "SIM" && <IconButton title="Alterar resultado da ficha" onClick={() => setCorrectResultId(schedule.CODIGO)}><EditIcon fontSize="small" /></IconButton>}
             </div>
             <Divider />
             <div className="grid grid-cols-1 gap-x-6 gap-y-1 p-3 md:grid-cols-2">

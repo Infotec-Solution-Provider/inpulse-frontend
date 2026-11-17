@@ -42,6 +42,7 @@ export interface TelephonyMonitorItem {
   };
   schedule: {
     id: number;
+    concluded?: boolean;
     at: string | null;
     campaignId: number | null;
     campaignName: string | null;

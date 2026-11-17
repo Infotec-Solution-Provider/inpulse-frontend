@@ -14,6 +14,7 @@ interface TelephonyResultsProps {
   referenceMonth: string;
   onPreview: (customerId: number) => void;
   onEditSchedule: (scheduleId: number) => void;
+  onCorrectResult: (scheduleId: number) => void;
 }
 
 function Activity({ item }: { item: TelephonyMonitorItem }) {
@@ -137,6 +138,7 @@ export default function TelephonyResults({
   referenceMonth,
   onPreview,
   onEditSchedule,
+  onCorrectResult,
 }: TelephonyResultsProps) {
   const eventLabel =
     mode === "schedules" ? "Agendamento" : mode === "calls" ? "Ligação" : "Atividade recente";
@@ -154,6 +156,7 @@ export default function TelephonyResults({
       >
         <UiIcon name="view" scale="row" />
       </OperationalIconButton>
+      {mode === "calls" && item.schedule?.concluded && item.call?.finishedAt && <OperationalIconButton label="Alterar resultado da ficha" tooltip="Alterar resultado da ficha" onClick={() => onCorrectResult(item.schedule!.id)}><UiIcon name="edit" scale="row" /></OperationalIconButton>}
       {mode === "schedules" && item.schedule && (
         <OperationalIconButton
           size="small"

@@ -1,5 +1,6 @@
 "use client";
 
+import ResultCorrectionDialog from "@/lib/components/result-correction-dialog";
 import { useAuthContext } from "@/app/auth-context";
 import telephonyMonitorService from "@/lib/services/telephony-monitor.service";
 import { Alert, Button, Skeleton } from "@mui/material";
@@ -53,6 +54,7 @@ function ScopedTelephonyMonitor() {
   }, [viewKey, view]);
   const [activeLookup, setActiveLookup] = useState<TelephonyLookupKind | null>(null);
   const [previewCustomerId, setPreviewCustomerId] = useState<number | null>(null);
+  const [correctResultId, setCorrectResultId] = useState<number | null>(null);
   const [editScheduleId, setEditScheduleId] = useState<number | null>(null);
   const [savedNotice, setSavedNotice] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -62,7 +64,7 @@ function ScopedTelephonyMonitor() {
   const [now, setNow] = useState(Date.now);
   const state = useTelephonyMonitor(mode, {
     modalOpen:
-      filtersOpen || activeLookup !== null || previewCustomerId !== null || editScheduleId !== null,
+      filtersOpen || activeLookup !== null || previewCustomerId !== null || editScheduleId !== null || correctResultId !== null,
   });
   const statesKey = JSON.stringify(state.filters.states);
   const citiesKey = JSON.stringify(state.filters.cities);
@@ -223,6 +225,7 @@ function ScopedTelephonyMonitor() {
             view={view}
             referenceMonth={state.appliedFilters.referenceMonth}
             onPreview={setPreviewCustomerId}
+            onCorrectResult={setCorrectResultId}
             onEditSchedule={(id) => {
               setSavedNotice(false);
               setEditScheduleId(id);
@@ -238,6 +241,7 @@ function ScopedTelephonyMonitor() {
         ) : null}
       </div>
       <TelephonyPagination state={state} />
+      {correctResultId !== null && <ResultCorrectionDialog scheduleId={correctResultId} onClose={() => setCorrectResultId(null)} onSaved={() => { setCorrectResultId(null); state.refetch(); }} />}
       {mode === "schedules" && editScheduleId !== null && (
         <ScheduleEditDialog
           key={editScheduleId}
