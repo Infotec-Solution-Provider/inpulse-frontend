@@ -61,7 +61,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 interface LookupOption extends CustomerCrmLookupOption {
   historical?: boolean;
@@ -205,6 +205,8 @@ function CrmFields({
   disabled,
   manualCode,
   original,
+  groupTabs = false,
+  groupExtra,
 }: {
   api: CustomerCrmClient;
   fields: CustomerCrmField[];
@@ -214,7 +216,10 @@ function CrmFields({
   disabled: boolean;
   manualCode?: boolean;
   original?: CustomerCrmRecord;
+  groupTabs?: boolean;
+  groupExtra?: { group: string; content: ReactNode };
 }) {
+  const [activeGroup, setActiveGroup] = useState<string>("identification");
   const [expanded, setExpanded] = useState<string[]>([
     ...new Set([
       "identification",
@@ -223,11 +228,13 @@ function CrmFields({
   ]);
   useEffect(() => {
     const first = fields.find((field) => errors[field.name]);
-    if (first)
+    if (first) {
+      if (groupTabs) setActiveGroup(first.group);
       setExpanded((current) =>
         current.includes(first.group) ? current : [...current, first.group],
       );
-  }, [errors, fields]);
+    }
+  }, [errors, fields, groupTabs]);
   const change = (name: string, value: CustomerCrmValue) => setDraft({ ...draft, [name]: value });
   const render = (field: CustomerCrmField) => {
     const value = draft[field.name],
@@ -328,34 +335,20 @@ function CrmFields({
           helperText={errors.CODIGO || "Use um código positivo ainda não utilizado."}
         />
       )}
-      {CRM_FIELD_GROUPS.map((group) => {
-        const groupFields = fields.filter((field) => field.group === group.id);
-        if (group.id === "phones") {
-          const order: readonly string[] = crmPhoneSlots.flat();
-          const position = (name: string) => order.includes(name) ? order.indexOf(name) : order.length;
-          groupFields.sort((left, right) => position(left.name) - position(right.name));
-        }
-        if (!groupFields.length) return null;
-        return (
-          <Accordion
-            key={group.id}
-            disableGutters
-            expanded={expanded.includes(group.id)}
-            onChange={(_, checked) =>
-              setExpanded((current) =>
-                checked ? [...current, group.id] : current.filter((item) => item !== group.id),
-              )
-            }
-            variant="outlined"
-          >
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography component="h3" fontSize={14} fontWeight={600}>
-                {group.label}
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
+      {(() => {
+        const groups = CRM_FIELD_GROUPS.filter((group) => fields.some((field) => field.group === group.id));
+        const selected = groups.some((group) => group.id === activeGroup) ? activeGroup : groups[0]?.id;
+        const groupContent = (group: (typeof CRM_FIELD_GROUPS)[number]) => {
+          const groupFields = fields.filter((field) => field.group === group.id);
+          if (group.id === "phones") {
+            const order: readonly string[] = crmPhoneSlots.flat();
+            const position = (name: string) => order.includes(name) ? order.indexOf(name) : order.length;
+            groupFields.sort((left, right) => position(left.name) - position(right.name));
+          }
+          return (
+            <Stack spacing={2}>
               {group.id === "phones" && fields.some(field => field.name === "FONE1") && (
-                <Stack spacing={1} sx={{ mb: 2 }}>
+                <Stack spacing={1}>
                   <Typography variant="body2">Informe DDD e número juntos. Ao salvar, os telefones seguintes ocupam as posições removidas, com suas descrições e observações.</Typography>
                   <Stack direction="row" useFlexGap flexWrap="wrap" spacing={1}>
                     {crmPhoneSlots.map((slot, index) => fields.some(field => field.name === slot[1]) && (
@@ -371,19 +364,30 @@ function CrmFields({
                   </Stack>
                 </Stack>
               )}
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "minmax(0,1fr)", md: "repeat(2,minmax(0,1fr))" },
-                  gap: 2,
-                }}
-              >
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "repeat(2,minmax(0,1fr))" }, gap: 2 }}>
                 {groupFields.map(render)}
               </Box>
-            </AccordionDetails>
-          </Accordion>
+              {groupExtra?.group === group.id && groupExtra.content}
+            </Stack>
+          );
+        };
+        if (groupTabs) return (
+          <Box>
+            <Tabs value={selected ?? false} onChange={(_, value: string) => setActiveGroup(value)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile aria-label="Seções do cadastro" sx={{ mb: 2 }}>
+              {groups.map((group) => <Tab key={group.id} value={group.id} id={`customer-group-tab-${group.id}`} aria-controls={`customer-group-panel-${group.id}`} label={fields.some(field => field.group === group.id && errors[field.name]) ? `${group.label} •` : group.label} />)}
+            </Tabs>
+            {groups.filter(group => group.id === selected).map(group => (
+              <Box key={group.id} role="tabpanel" id={`customer-group-panel-${group.id}`} aria-labelledby={`customer-group-tab-${group.id}`}>{groupContent(group)}</Box>
+            ))}
+          </Box>
         );
-      })}
+        return groups.map(group => (
+          <Accordion key={group.id} disableGutters expanded={expanded.includes(group.id)} onChange={(_, checked) => setExpanded(current => checked ? [...current, group.id] : current.filter(item => item !== group.id))} variant="outlined">
+            <AccordionSummary expandIcon={<ExpandMore />}><Typography component="h3" fontSize={14} fontWeight={600}>{group.label}</Typography></AccordionSummary>
+            <AccordionDetails>{groupContent(group)}</AccordionDetails>
+          </Accordion>
+        ));
+      })()}
     </Stack>
   );
 }
@@ -567,6 +571,7 @@ export function CustomerCrmEditor({
     setErrors(parsed.errors);
     if (!parsed.valid || !parsed.hasChanges) return;
     if (draft.ATIVO === "NAO" && (!snapshot || snapshot.record.ATIVO !== "NAO") && !snapshot?.hasDeactivationHistory && !deactivationReason.trim()) {
+      setErrors({ ...parsed.errors, ATIVO: "Informe o motivo da inativação." });
       setMessage("Informe o motivo da inativação.");
       return;
     }
@@ -749,19 +754,23 @@ export function CustomerCrmEditor({
             {tab === 0 && (
               <Stack gap={2}>
                 <CrmFields
-                api={api}
-                fields={fields}
-                draft={draft}
-                setDraft={setDraft}
-                errors={errors}
-                disabled={saving || snapshot?.writable === false}
-                original={snapshot?.record}
+                  api={api}
+                  fields={fields}
+                  draft={draft}
+                  setDraft={setDraft}
+                  errors={errors}
+                  disabled={saving || snapshot?.writable === false}
+                  original={snapshot?.record}
+                  groupTabs
+                  groupExtra={{
+                    group: fields.find(field => field.name === "ATIVO")?.group ?? "administration",
+                    content: draft.ATIVO === "NAO" && (!snapshot || snapshot.record.ATIVO !== "NAO") && (
+                      snapshot?.hasDeactivationHistory
+                        ? <Alert severity="info">Este cliente já possui um motivo registrado no histórico de inativação.</Alert>
+                        : <TextField label="Motivo da inativação" value={deactivationReason} onChange={event => setDeactivationReason(event.target.value)} multiline minRows={2} required disabled={saving} inputProps={{ maxLength: 4000 }} />
+                    ),
+                  }}
                 />
-                {draft.ATIVO === "NAO" && (!snapshot || snapshot.record.ATIVO !== "NAO") && (
-                  snapshot?.hasDeactivationHistory
-                    ? <Alert severity="info">Este cliente já possui um motivo registrado no histórico de inativação.</Alert>
-                    : <TextField label="Motivo da inativação" value={deactivationReason} onChange={event => setDeactivationReason(event.target.value)} multiline minRows={2} required disabled={saving} inputProps={{ maxLength: 4000 }} />
-                )}
               </Stack>
             )}
             {tab === 1 && (

@@ -4,7 +4,7 @@ for (const [name, width, height] of [["desktop", 1280, 900], ["mobile", 390, 844
   test(`${name}: delete compacts phone metadata and labels former fax as Telefone 4`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto(path);
-    await page.getByRole("button", { name: "Telefones e e-mails" }).click();
+    await page.getByRole("tab", { name: "Telefones e e-mails" }).click();
     await expect(page.getByLabel("Telefone 4", { exact: true })).toHaveValue("55555555");
     await page.getByRole("button", { name: "Remover telefone 1", exact: true }).click();
     await page.getByRole("button", { name: "Salvar cadastro", exact: true }).click();
@@ -16,7 +16,7 @@ for (const [name, width, height] of [["desktop", 1280, 900], ["mobile", 390, 844
 }
 test("refuses DDD-only pairs and deletion of the last phone without sending a request", async ({ page }) => {
   await page.goto(path);
-  await page.getByRole("button", { name: "Telefones e e-mails" }).click();
+  await page.getByRole("tab", { name: "Telefones e e-mails" }).click();
   await page.getByLabel("Telefone 2", { exact: true }).fill("");
   await page.getByRole("button", { name: "Salvar cadastro", exact: true }).click();
   await expect(page.getByText("Informe o DDD e o telefone 2 completos e válidos.")).toBeVisible();

@@ -16,7 +16,7 @@ test("edits only changed fields with a complete version and clears email explici
 }) => {
   await page.goto(path);
   await page.getByLabel("Nome fantasia", { exact: true }).fill("Nome editado");
-  await page.getByRole("button", { name: "Telefones e e-mails" }).click();
+  await page.getByRole("tab", { name: "Telefones e e-mails" }).click();
   await page.getByLabel("E-mail", { exact: true }).fill("");
   await page.getByRole("button", { name: "Salvar cadastro", exact: true }).click();
   await expect(page.getByText("Cadastro salvo.")).toBeVisible();
@@ -29,7 +29,7 @@ test("uses real lookup options while preserving a historical zero until explicit
   page,
 }) => {
   await page.goto(path);
-  await page.getByRole("button", { name: "Origem e classificação" }).click();
+  await page.getByRole("tab", { name: "Origem e classificação" }).click();
   const group = page.getByRole("combobox", { name: "Grupo de clientes" });
   await expect(group).toHaveValue("Código 0 (atual)");
   await group.click();
@@ -195,3 +195,17 @@ for (const [name, width, height, query] of [
       fullPage: true,
     });
   });
+
+
+test("sub-abas preservam o rascunho e levam ao primeiro campo inválido", async ({ page }) => {
+  await page.goto(`${path}?new`);
+  await page.getByRole("tab", { name: "Endereço" }).click();
+  await expect(page.getByRole("tabpanel", { name: "Endereço" })).toBeVisible();
+  await page.getByRole("button", { name: "Salvar cadastro", exact: true }).click();
+  await expect(page.getByRole("tab", { name: /Identificação/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByLabel("Razão social ou nome *", { exact: true }).fill("Cliente com rascunho");
+  await page.getByRole("tab", { name: "Endereço" }).click();
+  await page.getByRole("tab", { name: /Identificação/ }).click();
+  await expect(page.getByLabel("Razão social ou nome *", { exact: true })).toHaveValue("Cliente com rascunho");
+  expect(await page.evaluate(() => window.registrationTest.writes)).toHaveLength(0);
+});
