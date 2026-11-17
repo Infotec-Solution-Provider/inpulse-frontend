@@ -38,19 +38,20 @@ export default function SchedulePicker({ value, onChange, disabled = false }: { 
     {data && <>
       {!data.periods.length && <Alert severity="warning">Usuário sem expediente válido no cadastro de turnos. Solicite a configuração para agendar.</Alert>}
       <div className="grid grid-cols-7 gap-1">
-        {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><span key={d} className="text-center text-xs">{d}</span>)}
+        {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map(d=><span key={d} className={`text-center text-xs ${d === "Dom" || d === "S�b" ? "rounded bg-yellow-100 font-semibold text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200" : ""}`}>{d}</span>)}
         {Array.from({length:month.getDay()},(_,i)=><span key={`blank${i}`} />)}
         {days.map(d => {
           const count = data.appointments.filter(a=>a.startsWith(d+"T")).length;
+          const weekday = new Date(month.getFullYear(), month.getMonth(), Number(d.slice(-2))).getDay();
+          const weekend = weekday === 0 || weekday === 6;
           const full = data.dailyLimit > 0 && count >= data.dailyLimit;
-          return <button type="button" key={d} aria-pressed={day===d} disabled={disabled || d < localDate(new Date()) || !data.periods.length || (full && data.blockDailyLimit)} onClick={()=>chooseDay(d)} className={`rounded border p-1 text-sm disabled:opacity-40 ${day===d ? "border-blue-500 bg-blue-100 text-slate-900" : full ? "border-amber-500" : "border-slate-300"}`}>
+          return <button type="button" key={d} aria-pressed={day===d} disabled={disabled || d < localDate(new Date()) || !data.periods.length || (full && data.blockDailyLimit)} onClick={()=>chooseDay(d)} className={`rounded border p-1 text-sm disabled:opacity-40 ${weekend ? `bg-yellow-100 text-yellow-900 dark:bg-yellow-900 dark:text-yellow-200 ${day===d ? "border-blue-500 ring-2 ring-blue-500" : full ? "border-amber-500" : "border-yellow-400"}` : day===d ? "border-blue-500 bg-blue-100 text-slate-900" : full ? "border-amber-500" : "border-slate-300"}`}>
             {Number(d.slice(-2))}<small className="block text-[10px]">{count}{data.dailyLimit>0 ? `/${data.dailyLimit}` : " ag."}</small>
           </button>;
         })}
       </div>
       {day >= from && day <= to && <>
         <p className="text-sm">{day.split("-").reverse().join("/")} · Expediente: {data.periods.map(p=>`${p.start}–${p.end}`).join(", ") || "não configurado"}</p>
-        <p className="text-xs">Ocupados: {occupied.map(a=>a.slice(11)).join(", ") || "nenhum"}. Sem duração definida; outros horários não garantem intervalo entre atendimentos.</p>
         <div className="grid max-h-36 grid-cols-4 gap-1 overflow-y-auto">
           {times.filter(t=>data.periods.some(p=>t>=p.start && t<p.end)).map(t=>{
             const at=day+"T"+t, busy=occupied.includes(at);
