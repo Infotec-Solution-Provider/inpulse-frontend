@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { UserRole } from "@/lib/sdk-local";
+import { featureRoute } from "@/lib/module-feature-access";
 import { availableReports, REPORT_CATALOG, searchReports } from "./catalog";
 
 describe("report discovery and authorization", () => {
+  it("matches each catalog feature flag to the direct route gate", () => {
+    for (const report of REPORT_CATALOG) {
+      expect(featureRoute(report.href)?.flags ?? []).toEqual(report.feature ? [report.feature] : []);
+    }
+  });
   it("has unique stable IDs and destinations, without promoting hidden tools or demo data", () => {
     for (const field of ["id", "href"] as const)
       expect(new Set(REPORT_CATALOG.map((report) => report[field])).size).toBe(

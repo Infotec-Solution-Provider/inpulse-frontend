@@ -1,5 +1,4 @@
 import { FEATURE_FLAGS as F, isFeatureEnabled } from "@/lib/feature-flags";
-import { canAccessFeaturePath } from "@/lib/module-feature-access";
 import { UserRole } from "@/lib/sdk-local";
 
 export const REPORT_CATEGORIES = [
@@ -177,8 +176,7 @@ export function availableReports(
   return REPORT_CATALOG.filter(
     (report) =>
       (!report.feature || isFeatureEnabled(parameters, report.feature)) &&
-      (!report.instance || report.instance === instance) &&
-      canAccessFeaturePath(parameters, report.href, instance),
+      (!report.instance || report.instance === instance),
   );
 }
 
