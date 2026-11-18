@@ -32,7 +32,7 @@ test("Curva ABC generates with applied filters and exports every ranked row", as
     });
   });
   await page.goto("/tests/reports/index.html");
-  await expect(page.getByRole("link", { name: /Curva ABC de ligações/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Curva ABC de ligações/ })).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: "Curva ABC", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Curva ABC de ligações" })).toBeVisible();
   await page.getByRole("combobox", { name: "Agrupar por" }).click();

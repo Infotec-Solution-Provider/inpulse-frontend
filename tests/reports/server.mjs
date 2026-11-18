@@ -28,6 +28,7 @@ const server = await createServer({
       NEXT_PUBLIC_USERS_URL: "http://fixture-users",
       NEXT_PUBLIC_MARKETING_URL: "http://fixture-marketing",
       NEXT_PUBLIC_REPORTS_URL: "http://fixture-reports",
+      NEXT_PUBLIC_REPORTS_API_URL: "http://fixture-reports",
       NEXT_PUBLIC_FRONTEND_BASE_PATH: "",
     }),
   },
