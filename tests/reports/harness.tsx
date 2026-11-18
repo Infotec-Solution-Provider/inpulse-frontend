@@ -9,6 +9,9 @@ import { availableReports } from "../../src/lib/reports/catalog";
 import { ReportCatalogView } from "../../src/components/reports/ReportCatalog";
 import { MessagesPerOperatorReport } from "../../src/components/reports/MessagesPerOperatorReport";
 import { AttendanceReport } from "../../src/components/reports/AttendanceReport";
+import ChatsReportProvider from "../../src/app/(private)/[instance]/reports/chats/chats-reports-context";
+import ChatReportForm from "../../src/app/(private)/[instance]/reports/chats/form";
+import ChatsReportList from "../../src/app/(private)/[instance]/reports/chats/list";
 import MailingAnalysisPage from "../../src/app/(private)/[instance]/reports/mailing-analysis/page";
 import ReguaCarteiraPage from "../../src/app/(private)/[instance]/reports/regua-carteira-sintetico-whatsapp/page";
 import PerformanceReport from "../../src/app/(private)/[instance]/reports/_components/performance-report";
@@ -68,6 +71,7 @@ function Harness() {
             {location.search.includes("expanded") && (
               <>
                 <button onClick={() => setPage("mailing")}>Mailing</button>
+                <button onClick={() => setPage("chat-export")}>Exportação</button>
                 <button onClick={() => setPage("regua")}>Régua</button>
                 <button onClick={() => setPage("performance")}>Performance</button>
                 <button onClick={() => setPage("dashboard")}>Painel</button>
@@ -105,6 +109,11 @@ function Harness() {
                 />
               ) : page === "call-abc" ? (
                 <CallAbcPage />
+              ) : page === "chat-export" ? (
+                <ChatsReportProvider key={instance}>
+                  <ChatReportForm instance={instance} />
+                  <ChatsReportList />
+                </ChatsReportProvider>
               ) : page === "mailing" ? (
                 <MailingAnalysisPage />
               ) : page === "regua" ? (

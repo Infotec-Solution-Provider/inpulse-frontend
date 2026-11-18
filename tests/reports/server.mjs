@@ -16,6 +16,10 @@ const server = await createServer({
         find: "@/app/(private)/[instance]/whatsapp-context",
         replacement: `${root}/tests/reports/whatsapp-stub.ts`,
       },
+      {
+        find: "@/app/(private)/[instance]/socket-context",
+        replacement: `${root}/tests/reports/socket-stub.ts`,
+      },
       { find: "next/link", replacement: `${root}/tests/reports/link-stub.tsx` },
       { find: "next/navigation", replacement: `${root}/tests/reports/navigation-stub.ts` },
       { find: "@", replacement: `${root}/src` },
@@ -28,6 +32,7 @@ const server = await createServer({
       NEXT_PUBLIC_USERS_URL: "http://fixture-users",
       NEXT_PUBLIC_MARKETING_URL: "http://fixture-marketing",
       NEXT_PUBLIC_REPORTS_URL: "http://fixture-reports",
+      NEXT_PUBLIC_FILES_URL: "http://fixture-files",
       NEXT_PUBLIC_REPORTS_API_URL: "http://fixture-reports",
       NEXT_PUBLIC_FRONTEND_BASE_PATH: "",
     }),

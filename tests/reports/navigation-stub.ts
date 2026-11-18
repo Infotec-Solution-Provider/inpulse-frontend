@@ -4,3 +4,5 @@ export const useParams = () => ({
   reportId: "fixture-report",
 });
 export const useRouter = () => ({ push: (path: string) => window.history.pushState({}, "", path) });
+
+export const usePathname = () => "/tenant-a/reports/chats";

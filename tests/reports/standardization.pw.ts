@@ -239,3 +239,65 @@ test("Generated reports load metadata before execution and validate required fil
   await expect(pdf).toBeEnabled();
   expect(executions).toEqual([{ filters: { description: "Regional Sul" } }]);
 });
+
+test("Chat export submits one file request and filters searchable history", async ({ page }) => {
+  const requests: unknown[] = [];
+  const completed = {
+    id: 81,
+    userId: "77",
+    fileId: 89,
+    instance: "tenant-a",
+    startDate: "2026-11-01",
+    endDate: "2026-11-03",
+    exportDate: "2026-11-04T00:00:00Z",
+    chats: 3,
+    messages: 12,
+    format: "pdf",
+    status: "completed",
+  };
+  const pending = {
+    ...completed,
+    id: 90,
+    fileId: 0,
+    userId: "*",
+    format: "txt",
+    status: "pending",
+  };
+  await page.route("http://fixture-users/**", async (route) => {
+    if (route.request().method() === "OPTIONS") return json(route, null);
+    return route.fulfill({
+      headers,
+      json: { data: [{ CODIGO: 77, NOME: "Lígia Teste" }], page: { current: 1, totalRows: 1 } },
+    });
+  });
+  await page.route("http://fixture-reports/**", async (route) => {
+    const method = route.request().method();
+    if (method === "OPTIONS") return json(route, null);
+    if (method === "POST") {
+      requests.push(route.request().postDataJSON());
+      return json(route, pending);
+    }
+    return json(route, requests.length ? [pending, completed] : [completed]);
+  });
+  await page.goto(base);
+  await page.getByRole("button", { name: "Exportação", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Histórico de arquivos" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Lígia Teste" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Baixar", exact: true })).toHaveAttribute(
+    "href",
+    "http://fixture-files/api/files/89",
+  );
+  expect(requests).toHaveLength(0);
+  await page.getByLabel("Data inicial").fill("2026-11-01");
+  await page.getByLabel("Data final").fill("2026-11-03");
+  await page.getByRole("combobox", { name: /^Formato/ }).click();
+  await page.getByRole("option", { name: "TXT", exact: true }).click();
+  await page.getByRole("button", { name: "Gerar arquivo" }).click();
+  await expect(page.getByText(/Arquivo solicitado/)).toBeVisible();
+  expect(requests).toEqual([
+    { startDate: "2026-11-01", endDate: "2026-11-03", userId: "*", format: "txt" },
+  ]);
+  await page.getByRole("textbox", { name: "Pesquisar nos resultados" }).fill("txt");
+  await expect(page.getByRole("cell", { name: "TXT", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Baixar", exact: true })).toHaveCount(0);
+});
