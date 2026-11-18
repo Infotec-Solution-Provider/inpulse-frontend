@@ -43,6 +43,7 @@ import {
   PanelLeftOpen,
   RadioTower,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Sun,
   Workflow,
@@ -62,6 +63,14 @@ import {
 } from "./navigation";
 import type { ThemePreference } from "./theme-preference";
 import { UiIcon } from "./icons";
+import { NavigationEditor } from "./navigation-editor";
+import {
+  defaultNavigationPreferences,
+  navigationPreferencesKey,
+  readNavigationPreferences,
+  visibleNavigation,
+  type NavigationPreferences,
+} from "./navigation-preferences";
 import { NavigationTree } from "./navigation-tree";
 import { availableReports } from "@/lib/reports/catalog";
 import { useRecentReports } from "@/lib/reports/recent";
@@ -73,22 +82,24 @@ function Sidebar({
   expanded,
   mobile,
   instance,
-  pathname,
-  search,
   items,
+  activeIds,
+  locationKey,
   reportShortcuts,
   onNavigate,
   onToggle,
+  onCustomize,
 }: {
   expanded: boolean;
   mobile?: boolean;
   instance: string;
-  pathname: string;
-  search: string;
   items: NavigationItem[];
+  activeIds: string[];
+  locationKey: string;
   reportShortcuts: ReportShortcuts;
   onNavigate: () => void;
   onToggle: () => void;
+  onCustomize?: () => void;
 }) {
   return (
     <Box
@@ -167,12 +178,46 @@ function Sidebar({
           items={items}
           expanded={expanded}
           instance={instance}
-          pathname={pathname}
-          search={search}
+          activeIds={activeIds}
+          locationKey={locationKey}
           reportShortcuts={reportShortcuts}
           onNavigate={onNavigate}
         />
       </Box>
+      {onCustomize && (
+        <Box
+          sx={{
+            px: 1,
+            py: 0.5,
+            flexShrink: 0,
+            borderTop: "1px solid var(--ip-border)",
+            textAlign: expanded ? "left" : "center",
+          }}
+        >
+          {expanded ? (
+            <Button
+              fullWidth
+              aria-haspopup="dialog"
+              onClick={onCustomize}
+              startIcon={<UiIcon icon={SlidersHorizontal} scale="toolbar" />}
+              sx={{ justifyContent: "flex-start", minHeight: 44, color: "var(--ip-text)" }}
+            >
+              Personalizar navegação
+            </Button>
+          ) : (
+            <Tooltip title="Personalizar navegação">
+              <IconButton
+                aria-label="Personalizar navegação"
+                aria-haspopup="dialog"
+                onClick={onCustomize}
+                size="small"
+              >
+                <UiIcon icon={SlidersHorizontal} scale="toolbar" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      )}
       {!mobile && (
         <Box
           sx={{
@@ -213,7 +258,7 @@ const themeChoices: Array<{ value: ThemePreference; label: string; icon: typeof 
 
 /** Page chrome lives below persistent chat and phone providers. */
 export default function MonitorShell({ children }: { children: ReactNode }) {
-  const { instance, user, signOut } = useContext(AuthContext);
+  const { instance, user, signOut, impersonating } = useContext(AuthContext);
   const { parameters, loaded } = useContext(WhatsappContext);
   const { preference, setPreference, theme } = useThemeContext();
   const pathname = usePathname();
@@ -226,11 +271,64 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
   const [themeAnchor, setThemeAnchor] = useState<HTMLElement | null>(null);
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
+  const [navigationSettings, setNavigationSettings] = useState<{
+    key: string;
+    preferences: NavigationPreferences;
+  } | null>(null);
+  const [editorScope, setEditorScope] = useState<string | null>(null);
   const storageKey = user && instance ? sidebarStorageKey(instance, user.CODIGO) : null;
-  const items = useMemo(
+  const navigationKey =
+    user && instance && !impersonating ? navigationPreferencesKey(instance, user.CODIGO) : null;
+  const navigationReady = navigationKey !== null && navigationSettings?.key === navigationKey;
+  const preferences = navigationReady
+    ? navigationSettings.preferences
+    : defaultNavigationPreferences;
+  const catalog = useMemo(
     () => getNavigationItems(parameters, user?.NIVEL, instance),
     [parameters, user?.NIVEL, instance],
   );
+  const items = useMemo(() => visibleNavigation(catalog, preferences), [catalog, preferences]);
+  const activePath = useMemo(
+    () => activeNavigationPath(catalog, pathname, instance, search),
+    [catalog, pathname, instance, search],
+  );
+  const activeIds = activePath.map((item) => item.id);
+  const locationKey = `${pathname}?${search}`;
+
+  useEffect(() => {
+    setEditorScope(null);
+    if (!navigationKey) {
+      setNavigationSettings(null);
+      return;
+    }
+    const load = () => {
+      let saved: string | null = null;
+      try {
+        saved = localStorage.getItem(navigationKey);
+      } catch {
+        /* The default navigation is available even when storage is blocked. */
+      }
+      setNavigationSettings({ key: navigationKey, preferences: readNavigationPreferences(saved) });
+    };
+    const sync = (event: StorageEvent) => {
+      if (event.key === navigationKey || event.key === null) load();
+    };
+    load();
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [navigationKey]);
+
+  function saveNavigation(next: NavigationPreferences) {
+    if (!navigationReady || editorScope !== navigationKey) return false;
+    try {
+      localStorage.setItem(navigationKey, JSON.stringify(next));
+    } catch {
+      return false;
+    }
+    setNavigationSettings({ key: navigationKey, preferences: next });
+    setEditorScope(null);
+    return true;
+  }
 
   const reports = useMemo(
     () => (loaded ? availableReports(parameters, user?.NIVEL, instance) : []),
@@ -270,10 +368,10 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
       }
     }
   };
-  const activePath = activeNavigationPath(items, pathname, instance, search);
   const pageTitle = activePath[0]?.title ?? "in.pulse";
   const ThemeIcon = themeChoices.find((choice) => choice.value === preference)?.icon ?? Monitor;
   const closeNavigation = () => setMobileOpen(false);
+  const customizeNavigation = navigationReady ? () => setEditorScope(navigationKey) : undefined;
 
   return (
     <Box
@@ -315,12 +413,13 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
           <Sidebar
             expanded={expanded}
             instance={instance}
-            pathname={pathname}
-            search={search}
             items={items}
+            activeIds={activeIds}
+            locationKey={locationKey}
             reportShortcuts={reportShortcuts}
             onNavigate={closeNavigation}
             onToggle={toggleExpanded}
+            onCustomize={customizeNavigation}
           />
         </PilotDesignProvider>
       )}
@@ -496,12 +595,13 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               mobile
               expanded
               instance={instance}
-              pathname={pathname}
-              search={search}
               items={items}
+              activeIds={activeIds}
+              locationKey={locationKey}
               reportShortcuts={reportShortcuts}
               onNavigate={closeNavigation}
               onToggle={toggleExpanded}
+              onCustomize={customizeNavigation}
             />
           </Drawer>
           <Menu
@@ -571,6 +671,14 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             open={notificationSettingsOpen}
             onClose={() => setNotificationSettingsOpen(false)}
           />
+          {navigationReady && editorScope === navigationKey && (
+            <NavigationEditor
+              catalog={catalog}
+              preferences={preferences}
+              onSave={saveNavigation}
+              onCancel={() => setEditorScope(null)}
+            />
+          )}
         </PilotDesignProvider>
         <Box
           component="main"

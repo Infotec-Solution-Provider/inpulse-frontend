@@ -17,6 +17,7 @@ function Harness() {
   const [instance, setInstance] = useState("tenant-a");
   const [token, setToken] = useState("test-token");
   const [role, setRole] = useState("ADMIN");
+  const [impersonating, setImpersonating] = useState(false);
   const [userId, setUserId] = useState(1);
   const [reportSales, setReportSales] = useState(
     new URLSearchParams(location.search).has("report-navigation"),
@@ -58,6 +59,7 @@ function Harness() {
       setRole,
       setReportSales,
       setReportsReady,
+      setImpersonating,
       emit: socket.emit,
       listeners: socket.listenerCount,
       actions: () => state.actions.map(({ type, chatId }) => ({ type, chatId })),
@@ -86,6 +88,7 @@ function Harness() {
       value={{
         instance,
         token,
+        impersonating,
         user: { CODIGO: userId, NOME: "Supervisor", NIVEL: role } as never,
         signOut: () => {
           setToken("");

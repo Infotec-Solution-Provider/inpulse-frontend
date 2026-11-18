@@ -31,10 +31,10 @@ import {
   Workflow,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { UiIcon } from "./icons";
 import { ReportsNavigationEntry, type ReportShortcuts } from "./reports-navigation-entry";
-import { activeNavigationPath, type NavigationIcon, type NavigationItem } from "./navigation";
+import { navigationGroupTrail, type NavigationIcon, type NavigationItem } from "./navigation";
 
 const icons: Record<NavigationIcon, typeof Headset> = {
   headset: Headset,
@@ -56,8 +56,8 @@ type Props = {
   items: NavigationItem[];
   expanded: boolean;
   instance: string;
-  pathname: string;
-  search?: string;
+  activeIds: string[];
+  locationKey: string;
   reportShortcuts: ReportShortcuts;
   onNavigate: () => void;
 };
@@ -66,16 +66,11 @@ export function NavigationTree({
   items,
   expanded,
   instance,
-  pathname,
-  search = "",
+  activeIds,
+  locationKey,
   reportShortcuts,
   onNavigate,
 }: Props) {
-  const active = useMemo(
-    () => activeNavigationPath(items, pathname, instance, search),
-    [items, pathname, instance, search],
-  );
-  const activeIds = active.map((item) => item.id);
   return (
     <List disablePadding>
       {items.map((item) => (
@@ -86,7 +81,7 @@ export function NavigationTree({
           instance={instance}
           onNavigate={onNavigate}
           activeIds={activeIds}
-          locationKey={`${pathname}?${search}`}
+          locationKey={locationKey}
           reportShortcuts={item.id === "reports" ? reportShortcuts : undefined}
         />
       ))}
@@ -117,12 +112,14 @@ function Entry({
     selected = activeIds.at(-1) === item.id;
   const [open, setOpen] = useState(active);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const [trail, setTrail] = useState<NavigationItem[]>([]);
+  const [trail, setTrail] = useState<string[]>([]);
   const menuList = useRef<HTMLUListElement>(null);
+  const currentTrail = item.kind === "group" ? navigationGroupTrail(item.routes, trail) : [];
+  const current = currentTrail.at(-1) ?? item;
   useLayoutEffect(() => {
     if (!anchor) return;
     menuList.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
-  }, [anchor, trail.length]);
+  }, [anchor, current.id]);
   useEffect(() => {
     if (active) setOpen(true);
     setAnchor(null);
@@ -211,7 +208,6 @@ function Entry({
     );
   }
 
-  const current = trail.at(-1) ?? item;
   return (
     <>
       <Tooltip title={expanded ? "" : item.title} placement="right">
@@ -258,11 +254,11 @@ function Entry({
           list: { ref: menuList, "aria-label": current.title },
         }}
       >
-        {trail.length > 0 && (
-          <MenuItem onClick={() => setTrail((value) => value.slice(0, -1))}>
+        {currentTrail.length > 0 && (
+          <MenuItem onClick={() => setTrail(currentTrail.slice(0, -1).map((group) => group.id))}>
             <UiIcon icon={ChevronLeft} scale="metadata" />
             <Box component="span" ml={1}>
-              Voltar para {trail.length > 1 ? trail[trail.length - 2].title : item.title}
+              Voltar para {currentTrail.at(-2)?.title ?? item.title}
             </Box>
           </MenuItem>
         )}
@@ -293,7 +289,7 @@ function Entry({
             ) : (
               <MenuItem
                 key={child.id}
-                onClick={() => setTrail((value) => [...value, child])}
+                onClick={() => setTrail([...currentTrail.map((group) => group.id), child.id])}
                 sx={{ minHeight: 44, fontSize: 13, justifyContent: "space-between" }}
               >
                 {child.title}

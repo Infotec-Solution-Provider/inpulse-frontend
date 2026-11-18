@@ -23,6 +23,7 @@ declare global {
       setRole: (role: string) => void;
       setReportSales: (enabled: boolean) => void;
       setReportsReady: (ready: boolean) => void;
+      setImpersonating: (value: boolean) => void;
       emit: () => void;
       listeners: () => number;
       actions: () => { type: string; chatId: number }[];
@@ -38,6 +39,7 @@ declare global {
 export const AuthContext = createContext({
   instance: "tenant-a",
   token: "test-token",
+  impersonating: false,
   user: { CODIGO: 1, NOME: "Supervisor", NIVEL: "ADMIN" } as User,
   signOut: () => undefined,
 });
