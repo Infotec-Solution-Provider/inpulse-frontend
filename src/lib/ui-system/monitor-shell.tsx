@@ -236,12 +236,12 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
     () => (loaded ? availableReports(parameters, user?.NIVEL, instance) : []),
     [loaded, parameters, user?.NIVEL, instance],
   );
-  const recentIds = useRecentReports({ instance, userId: user?.CODIGO, pathname, reports });
+  const recent = useRecentReports({ instance, userId: user?.CODIGO, pathname, reports });
   const reportShortcuts: ReportShortcuts = {
     scope: storageKey ?? "",
-    ready: loaded,
+    ready: loaded && recent.ready,
     reports,
-    recentIds,
+    recentIds: recent.ids,
   };
 
   useEffect(() => {

@@ -42,7 +42,7 @@ export function ReportsNavigationEntry({
   const dialogId = useId();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
-  useEffect(() => setAnchor(null), [locationKey, expanded]);
+  useEffect(() => setAnchor(null), [locationKey]);
 
   const open = Boolean(anchor);
   const searching = Boolean(query.trim());
@@ -54,26 +54,32 @@ export function ReportsNavigationEntry({
       sx={{ display: "flex", alignItems: "center", mx: expanded ? 1 : 0.5, mb: 0.25, minWidth: 0 }}
     >
       {children}
-      <Tooltip title="Acesso rápido a relatórios" placement="right">
-        <IconButton
-          aria-label="Acesso rápido a relatórios"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          aria-controls={open ? dialogId : undefined}
-          onClick={(event) => {
-            setQuery("");
-            setAnchor(event.currentTarget);
-          }}
-          sx={{
-            width: expanded ? { xs: 44, lg: 36 } : 26,
-            height: { xs: 44, lg: 36 },
-            flexShrink: 0,
-            borderRadius: "8px",
-            color: open ? "var(--ip-accent)" : "var(--ip-muted)",
-          }}
-        >
-          <UiIcon icon={ChevronDown} scale="metadata" />
-        </IconButton>
+      <Tooltip
+        title={shortcuts.ready ? "Acesso rápido a relatórios" : "Carregando relatórios…"}
+        placement="right"
+      >
+        <span style={{ display: "inline-flex" }}>
+          <IconButton
+            disabled={!shortcuts.ready}
+            aria-label="Acesso rápido a relatórios"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-controls={open ? dialogId : undefined}
+            onClick={(event) => {
+              setQuery("");
+              setAnchor(event.currentTarget);
+            }}
+            sx={{
+              width: expanded ? { xs: 44, lg: 36 } : 26,
+              height: { xs: 44, lg: 36 },
+              flexShrink: 0,
+              borderRadius: "8px",
+              color: open ? "var(--ip-accent)" : "var(--ip-muted)",
+            }}
+          >
+            <UiIcon icon={ChevronDown} scale="metadata" />
+          </IconButton>
+        </span>
       </Tooltip>
       <Popover
         anchorEl={anchor}
