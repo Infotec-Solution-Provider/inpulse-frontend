@@ -8,6 +8,7 @@ import { UnconfirmedMessageSendError } from "../../src/lib/utils/reliable-messag
 import { EMPTY_MENTION_DIRECTORY } from "../../src/lib/utils/message-mentions";
 
 const date = new Date("2026-10-19T12:00:00.000Z");
+const integratedFixture = new URLSearchParams(location.search).has("integrated-fixture");
 export const user = {
   CODIGO: 1,
   NOME: "Operadora demonstrativa",
@@ -245,7 +246,13 @@ export function makeWhatsapp(env: ReturnType<typeof useEnvironment>) {
     reactToMessage: async () => {},
     forwardMessages: async () => {},
     wppApi: {
-      current: { setAuth() {}, getSectors: async () => [], getChannels: async () => channels },
+      current: {
+        setAuth() {},
+        getSectors: async () => [],
+        getChannels: async () => channels,
+        getCustomerContacts: async () => [initialChats[0].contact],
+        getContactsWithCustomer: async () => ({ data: [initialChats[0].contact, { ...initialChats[1].contact, phone: initialChats[0].contact.phone }] }),
+      },
     },
   };
 }
@@ -255,7 +262,26 @@ export const filesService = {
 };
 export const customersService = {
   setAuth() {},
-  getTelephonySchedules: async () => ({ data: [] }),
+  ax: {
+    get: async (path: string) => ({ data: { data: {
+      customer: initialChats[0].customer,
+      purchases: [],
+      callHistory: path.includes("/customers/1/full") ? [
+        { CODIGO: 420, TIPO_ACAO: "RECEP", LIGACAO_RECEBIDA: new Date(date.getTime() + 1000).toISOString(), LIGACAO_FINALIZADA: new Date(date.getTime() + 62000).toISOString(), RESULTADO_NOME: "Contato realizado" },
+        { CODIGO: 421, CANAL_ATENDIMENTO: "WhatsApp", LIGACAO_RECEBIDA: date.toISOString() },
+      ] : [],
+    } } }),
+  },
+  getTelephonySchedules: async () => ({ data: integratedFixture ? [{
+    CODIGO: 1042,
+    CLIENTE: 1,
+    CLIENTE_FANTASIA: "Ana da fila",
+    CAMPANHA_NOME: "Retorno de pós-venda",
+    FONE1: "11900000001",
+    FONE2: "11900000008",
+    CONCLUIDO: "NAO",
+    DT_AGENDAMENTO: date.toISOString(),
+  }] : [] }),
   getTelephonyFinishResults: async () => ({ data: [] }),
   startTelephonyScheduleCall: async () => ({ callId: "fixture" }),
   reportTelephonyCall: async () => {},

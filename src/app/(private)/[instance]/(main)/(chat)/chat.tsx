@@ -5,6 +5,7 @@ import { ChatContext } from "./chat-context";
 import ChatHeader, { ChatContactInfoProps } from "./chat-header";
 import ChatMessagesList from "./chat-messages-list";
 import ChatSendMessageArea from "./chat-send-message-area";
+import type { AttendanceHistory } from "../integrated-call-history";
 
 export default function Chat({
   avatarUrl,
@@ -16,7 +17,8 @@ export default function Chat({
   customerId,
   startDate,
   onClose,
-}: ChatContactInfoProps & { onClose?: () => void }) {
+  attendanceHistory,
+}: ChatContactInfoProps & { onClose?: () => void; attendanceHistory?: AttendanceHistory }) {
   const { state, dispatch, isReadOnlyMode } = useContext(ChatContext);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -78,7 +80,7 @@ export default function Chat({
         onDragOver={handleDragOver}
         onPaste={handlePaste}
       >
-        <ChatMessagesList />
+        <ChatMessagesList attendanceHistory={attendanceHistory} />
       </div>
       {!isReadOnlyMode && state?.file && !state.sendAsAudio && (
         <div className="ip-attendance-attachment-slot">

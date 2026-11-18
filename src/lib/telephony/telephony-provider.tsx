@@ -55,6 +55,7 @@ interface TelephonyContextValue {
   answer: () => Promise<void>;
   hangup: () => void;
   toggleMute: () => void;
+  toggleHold: () => void;
   sendTone: (tone: string) => void;
   playAudio: () => void;
   waitForSync: () => Promise<void>;
@@ -406,6 +407,7 @@ function PhoneSession({
     },
     hangup: () => phoneRef.current?.hangup(),
     toggleMute: () => phoneRef.current?.toggleMute(),
+    toggleHold: () => phoneRef.current?.toggleHold(),
     sendTone: (tone) => phoneRef.current?.sendTone(tone),
   };
   return (

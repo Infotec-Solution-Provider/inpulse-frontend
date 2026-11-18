@@ -45,7 +45,7 @@ const server = await createServer({
       "AI",
     ].map((name) => [
       `process.env.NEXT_PUBLIC_${name}_URL`,
-      JSON.stringify("http://127.0.0.1:4210"),
+      JSON.stringify(name === "CUSTOMERS" ? "http://runtime.fixture" : "http://127.0.0.1:4210"),
     ]),
   ),
   resolve: { alias: { "@": fileURLToPath(new URL("../../src", import.meta.url)) } },

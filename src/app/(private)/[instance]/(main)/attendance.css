@@ -253,3 +253,204 @@
     min-height: 44px;
   }
 }
+
+.ip-attendance[data-has-view-control="true"] {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.attendance-layout-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  min-width: 0;
+  padding: 6px 10px;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border-subtle);
+  border-radius: 8px;
+}
+.attendance-layout-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.attendance-layout-control select,
+.attendance-layout-button,
+.attendance-history-filters button {
+  padding: 5px 8px;
+  border: 1px solid var(--ip-border-subtle);
+  border-radius: 6px;
+  background: var(--ip-surface);
+  color: var(--ip-text);
+  font-size: 12px;
+}
+.attendance-layout-control select:focus-visible,
+.attendance-layout-button:focus-visible,
+.attendance-history-filters button:focus-visible {
+  outline: 2px solid var(--ip-accent);
+  outline-offset: 2px;
+}
+.attendance-layout-button[aria-expanded="true"],
+.attendance-history-filters button[aria-pressed="true"] {
+  background: var(--ip-accent-soft);
+  color: var(--ip-accent);
+}
+.attendance-integrated-phone {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.attendance-integrated-phone .ip-attendance-phone {
+  padding: 4px 8px;
+}
+.attendance-integrated-phone .ip-attendance-phone-controls {
+  max-height: min(16rem, 27dvh);
+  margin-top: 4px;
+}
+.attendance-integrated-phone .ip-attendance-phone-controls > div[aria-label="Teclado da ligação"] {
+  max-width: 300px;
+}
+.attendance-call-contact {
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+.attendance-workspace {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.attendance-integrated-details:not([hidden]) {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  max-height: 38%;
+  overflow: auto;
+  background: var(--ip-surface);
+  border: 1px solid var(--ip-border-subtle);
+  border-radius: 10px;
+}
+.attendance-inline-appointment:not([hidden]) {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+}
+.attendance-inline-appointment > div {
+  width: 100%;
+}
+.attendance-integrated-details[data-appointment-open="true"] {
+  overflow: hidden;
+}
+.attendance-inline-appointment header {
+  padding: 10px;
+}
+.attendance-inline-appointment header .MuiChip-root {
+  max-width: 100%;
+  height: auto;
+}
+.attendance-inline-appointment header > div:first-child > div:first-child > div:first-child {
+  flex-wrap: wrap;
+}
+.attendance-customer {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.attendance-customer h2 {
+  font-size: 14px;
+  font-weight: 700;
+}
+.attendance-customer p,
+.attendance-history-status {
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+.attendance-history-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.attendance-history-toolbar h3 {
+  font-size: 13px;
+  font-weight: 700;
+}
+.attendance-history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.attendance-channel-filter {
+  flex: none;
+  padding: 6px 8px;
+}
+.ip-attendance .attendance-sidebar > [hidden] {
+  display: none;
+}
+.attendance-history-call {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px;
+  border: 1px solid var(--ip-border-subtle);
+  border-radius: 8px;
+  background: var(--ip-surface);
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.attendance-history-call > div {
+  flex: 1;
+}
+.attendance-history-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  height: 30px;
+  border-radius: 6px;
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+}
+.attendance-history-call p,
+.attendance-history-call time {
+  color: var(--ip-muted);
+}
+@media (min-width: 1140px) {
+  .ip-attendance[data-attendance-view="integrated"] {
+    grid-template-columns: minmax(264px, 22%) minmax(0, 1fr);
+  }
+  .ip-attendance[data-attendance-view="integrated"] .attendance-workspace {
+    flex-direction: row;
+    gap: 10px;
+  }
+  .attendance-integrated-details:not([hidden]) {
+    flex: 0 0 clamp(240px, 23vw, 340px);
+    max-height: none;
+  }
+}
+@media (max-width: 1139px) {
+  .attendance-integrated-details[data-appointment-open="true"] {
+    flex: 1 1 0;
+  }
+  .attendance-workspace[data-has-chat="false"] .attendance-integrated-details {
+    max-height: none;
+  }
+}
+@media (max-width: 767px) {
+  .attendance-layout-bar {
+    border-radius: 0;
+  }
+  .attendance-layout-control select,
+  .attendance-layout-button,
+  .attendance-history-filters button {
+    min-height: 36px;
+  }
+}

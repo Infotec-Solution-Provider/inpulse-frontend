@@ -12,8 +12,9 @@ import RenderInternalChatMessages from "./render-internal-chat-messages";
 import RenderInternalGroupMessages from "./render-internal-group-messages";
 import RenderWhatsappChatMessages from "./render-whatsapp-chat-messages";
 import { ChatContext } from "./chat-context";
+import type { AttendanceHistory } from "../integrated-call-history";
 
-export default function ChatMessagesList() {
+export default function ChatMessagesList({ attendanceHistory }: { attendanceHistory?: AttendanceHistory }) {
   const { currentChat, currentChatMessages, chats, forwardMessages } = useContext(WhatsappContext);
   const { users, internalChats, currentInternalChatMessages } = useContext(InternalChatContext);
   const { isReadOnlyMode } = useContext(ChatContext);
@@ -156,6 +157,7 @@ export default function ChatMessagesList() {
             toggleSelectMessage={toggleSelectMessage}
             openManualForward={openManualForward}
             isReadOnlyMode={isReadOnlyMode}
+            attendanceHistory={attendanceHistory}
           />
         )}
         {isInternalChat && (

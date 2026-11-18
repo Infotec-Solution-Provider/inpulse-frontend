@@ -7,18 +7,35 @@ import { useWhatsappChatList } from "../../whatsapp-chat-list-context";
 import { TelephonyPanelSlot } from "@/lib/telephony/telephony-panel";
 import ConversationSidebar from "./conversation-sidebar";
 
-export default function ChatsMenu() {
+interface ChatsMenuProps {
+  integrated?: boolean;
+  appointmentHost?: HTMLDivElement | null;
+  onAppointmentOpenChange?: (open: boolean) => void;
+  onAppointmentFinished?: () => void;
+}
+
+export default function ChatsMenu({
+  integrated = false,
+  appointmentHost,
+  onAppointmentOpenChange,
+  onAppointmentFinished,
+}: ChatsMenuProps) {
   const { parameters } = useWhatsappChatList();
   const showTelephonyDialer = isFeatureEnabled(parameters, FEATURE_FLAGS.telephonyDialer);
 
   return (
     <ConversationSidebar
+      integrated={integrated}
       filters={<ChatsMenuFilters />}
       telephony={
         showTelephonyDialer ? (
           <>
-            <TelephonyPanelSlot className="attendance-telephony-phone-slot" />
-            <TelephoneDialerCard />
+            {!integrated && <TelephonyPanelSlot className="attendance-telephony-phone-slot" />}
+            <TelephoneDialerCard
+              inlineHost={integrated ? appointmentHost : undefined}
+              onOpenChange={onAppointmentOpenChange}
+              onFinished={onAppointmentFinished}
+            />
           </>
         ) : undefined
       }

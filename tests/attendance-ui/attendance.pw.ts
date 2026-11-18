@@ -7,7 +7,7 @@ const artifacts = resolve(
 );
 const rows = (page: Page) => page.getByTestId("chat-menu-item");
 const draft = (page: Page) => page.getByRole("textbox", { name: "Mensagem", exact: true });
-async function open(page: Page, width = 1440, height = 900) {
+async function open(page: Page, width = 1440, height = 900, fixture = "") {
   await page.setViewportSize({ width, height });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -20,7 +20,7 @@ async function open(page: Page, width = 1440, height = 900) {
       ? route.continue()
       : route.abort();
   });
-  await page.goto("/tests/attendance-ui/index.html");
+  await page.goto(`/tests/attendance-ui/index.html${fixture}`);
   await expect(page.getByRole("heading", { name: "Conversas", exact: true })).toBeVisible();
   await expect(rows(page)).toHaveCount(4);
   await page.evaluate(() => document.fonts.ready);
@@ -39,6 +39,63 @@ async function noOverflow(page: Page) {
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
     .toBe(true);
 }
+
+test("the integrated view opens appointments inline and keeps a call and WhatsApp draft across layout changes", async ({ page }) => {
+  const errors = await open(page, 1440, 900, "?integrated-fixture");
+  const layout = page.getByLabel("Visualização do atendimento");
+  const area = page.getByRole("region", { name: "Área de atendimento", exact: true });
+  const controls = page.getByRole("region", { name: "Telefone web", exact: true });
+  await expect(layout).toHaveValue("classic");
+  await selectAna(page);
+  await draft(page).fill("Mensagem durante a chamada");
+
+  await layout.selectOption("integrated");
+  await expect(area).toHaveAttribute("data-attendance-view", "integrated");
+  await expect(page.getByRole("region", { name: "Ficha do cliente", exact: true })).toContainText("Ana Souza");
+  await expect(page.getByText("Contato realizado · 1min 1s")).toBeVisible();
+  const history = page.getByRole("group", { name: "Canal do histórico" });
+  await history.getByRole("button", { name: "Ligações" }).click();
+  await expect(page.getByText("Olá! Preciso acompanhar meu atendimento.")).toHaveCount(0);
+  await history.getByRole("button", { name: "Tudo" }).click();
+  await expect(page.getByText("Olá! Preciso acompanhar meu atendimento.")).toBeVisible();
+
+  const queue = page.getByRole("group", { name: "Canal da fila" });
+  await queue.getByRole("button", { name: "Telefonia" }).click();
+  await expect(rows(page).first()).toBeHidden();
+  await page.getByRole("button", { name: "Abrir próxima ligação: Ana da fila" }).click();
+  const appointment = page.getByRole("complementary", { name: "Dados do atendimento" });
+  await expect(appointment).toContainText("Retorno de pós-venda");
+  await expect(draft(page)).toHaveValue("Mensagem durante a chamada");
+
+  await controls.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
+  await expect(controls.getByRole("status", { name: "Ramal conectado", exact: true })).toBeVisible();
+  await appointment.getByRole("button", { name: /Iniciar liga/ }).click();
+  await expect.poll(() => page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
+  await page.evaluate(() => window.phoneHarness.session?.emit("confirmed"));
+  await controls.getByRole("button", { name: "Localizar conversa de WhatsApp" }).click();
+  const contacts = controls.getByRole("group", { name: "Contatos encontrados" });
+  await expect(contacts.getByRole("button")).toHaveCount(2);
+  await expect(draft(page)).toHaveValue("Mensagem durante a chamada");
+  await controls.getByRole("button", { name: "Colocar em espera" }).click();
+  await expect(controls.getByRole("button", { name: "Retomar ligação" })).toBeVisible();
+  await controls.getByRole("button", { name: "Retomar ligação" }).click();
+
+  await appointment.getByRole("button", { name: "Fechar atendimento telefônico" }).click();
+  await layout.selectOption("classic");
+  await expect(controls.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
+  await expect(draft(page)).toHaveValue("Mensagem durante a chamada");
+  await layout.selectOption("integrated");
+  await expect(controls.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(draft(page)).toBeInViewport();
+  await noOverflow(page);
+  await controls.getByRole("button", { name: "Desligar", exact: true }).click();
+  await page.reload();
+  await expect(layout).toHaveValue("integrated");
+  await expect(area).toHaveAttribute("data-attendance-view", "integrated");
+  expect(errors).toEqual([]);
+});
 
 test("conversation type carousel navigates without applying filters and keeps keyboard focus visible", async ({
   page,
