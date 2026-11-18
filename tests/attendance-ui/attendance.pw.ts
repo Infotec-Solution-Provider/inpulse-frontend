@@ -40,16 +40,33 @@ async function noOverflow(page: Page) {
     .toBe(true);
 }
 
-test("the integrated view opens appointments inline and keeps a call and WhatsApp draft across layout changes", async ({ page }) => {
+test("view options keep the call and WhatsApp draft while switching layouts on desktop and mobile", async ({ page }) => {
   const errors = await open(page, 1440, 900, "?integrated-fixture");
-  const layout = page.getByLabel("Visualização do atendimento");
   const area = page.getByRole("region", { name: "Área de atendimento", exact: true });
   const controls = page.getByRole("region", { name: "Telefone web", exact: true });
-  await expect(layout).toHaveValue("classic");
-  await selectAna(page);
-  await draft(page).fill("Mensagem durante a chamada");
+  const queueOptions = page.getByRole("button", { name: "Opções de visualização", exact: true });
+  const layoutMenu = page.getByRole("menu", { name: "Visualização do atendimento", exact: true });
+  const chatOptions = page.getByRole("button", { name: "Ações da conversa com Ana Souza", exact: true });
+  const chatMenu = page.getByRole("menu", { name: "Ações da conversa", exact: true });
+  const draftText = "Mensagem durante a chamada";
 
-  await layout.selectOption("integrated");
+  await expect(area).toHaveAttribute("data-attendance-view", "classic");
+  await expect(page.getByRole("combobox", { name: "Visualização do atendimento" })).toHaveCount(0);
+  await queueOptions.focus();
+  await page.keyboard.press("Enter");
+  await expect(layoutMenu.getByRole("menuitemradio", { name: "Clássico" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.keyboard.press("Escape");
+  await expect(layoutMenu).toBeHidden();
+  await expect(queueOptions).toBeFocused();
+
+  await selectAna(page);
+  await draft(page).fill(draftText);
+
+  await queueOptions.click();
+  await layoutMenu.getByRole("menuitemradio", { name: "Integrado" }).click();
   await expect(area).toHaveAttribute("data-attendance-view", "integrated");
   await expect(page.getByRole("region", { name: "Ficha do cliente", exact: true })).toContainText("Ana Souza");
   await expect(page.getByText("Contato realizado · 1min 1s")).toBeVisible();
@@ -60,40 +77,83 @@ test("the integrated view opens appointments inline and keeps a call and WhatsAp
   await expect(page.getByText("Olá! Preciso acompanhar meu atendimento.")).toBeVisible();
 
   const queue = page.getByRole("group", { name: "Canal da fila" });
-  await queue.getByRole("button", { name: "Telefonia" }).click();
+  const conversations = queue.getByRole("button", { name: "Conversas" });
+  await conversations.click();
+  await expect(conversations).toHaveAttribute("aria-pressed", "true");
+  await expect(rows(page).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Abrir próxima ligação: Ana da fila" })).toBeHidden();
+  const telephony = queue.getByRole("button", { name: "Telefonia" });
+  await telephony.click();
+  await expect(telephony).toHaveAttribute("aria-pressed", "true");
   await expect(rows(page).first()).toBeHidden();
+  await expect(queueOptions).toBeVisible();
   await page.getByRole("button", { name: "Abrir próxima ligação: Ana da fila" }).click();
   const appointment = page.getByRole("complementary", { name: "Dados do atendimento" });
   await expect(appointment).toContainText("Retorno de pós-venda");
-  await expect(draft(page)).toHaveValue("Mensagem durante a chamada");
+  await expect(draft(page)).toHaveValue(draftText);
 
-  await controls.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
-  await expect(controls.getByRole("status", { name: "Ramal conectado", exact: true })).toBeVisible();
+  const phoneQueue = page.getByRole("region", { name: "Telefonia e próximas ligações", exact: true });
+  await phoneQueue.getByRole("button", { name: "Conectar telefonia", exact: true }).click();
+  await expect(phoneQueue.getByRole("status", { name: "Ramal conectado", exact: true })).toBeVisible();
   await appointment.getByRole("button", { name: /Iniciar liga/ }).click();
   await expect.poll(() => page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
   await page.evaluate(() => window.phoneHarness.session?.emit("confirmed"));
-  await controls.getByRole("button", { name: "Localizar conversa de WhatsApp" }).click();
-  const contacts = controls.getByRole("group", { name: "Contatos encontrados" });
+  await expect(page.getByRole("region", { name: "Conversa com Ana Souza", exact: true })
+    .getByRole("region", { name: "Telefone web", exact: true })).toBeVisible();
+  await controls.getByRole("button", { name: "Opções da ligação", exact: true }).click();
+  await page.getByText("Localizar conversa de WhatsApp", { exact: true }).click();
+  const contacts = page.getByRole("group", { name: "Contatos encontrados" });
   await expect(contacts.getByRole("button")).toHaveCount(2);
-  await expect(draft(page)).toHaveValue("Mensagem durante a chamada");
+  await page.keyboard.press("Escape");
+  await expect(draft(page)).toHaveValue(draftText);
   await controls.getByRole("button", { name: "Colocar em espera" }).click();
   await expect(controls.getByRole("button", { name: "Retomar ligação" })).toBeVisible();
   await controls.getByRole("button", { name: "Retomar ligação" }).click();
 
   await appointment.getByRole("button", { name: "Fechar atendimento telefônico" }).click();
-  await layout.selectOption("classic");
+  await queueOptions.click();
+  await expect(layoutMenu.getByRole("menuitemradio", { name: "Integrado" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await layoutMenu.getByRole("menuitemradio", { name: "Clássico" }).click();
+  await expect(area).toHaveAttribute("data-attendance-view", "classic");
   await expect(controls.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
-  await expect(draft(page)).toHaveValue("Mensagem durante a chamada");
-  await layout.selectOption("integrated");
+  await expect(draft(page)).toHaveValue(draftText);
+  await queueOptions.click();
+  await layoutMenu.getByRole("menuitemradio", { name: "Integrado" }).click();
+  await expect(area).toHaveAttribute("data-attendance-view", "integrated");
   await expect(controls.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
-  expect(await page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
+
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(queueOptions).toBeHidden();
+  await expect(page.getByRole("region", { name: "Ficha do cliente", exact: true })).toHaveCount(0);
   await expect(draft(page)).toBeInViewport();
+  await chatOptions.click();
+  await expect(chatMenu.getByRole("menuitemradio", { name: "Integrado" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await chatMenu.getByRole("menuitemradio", { name: "Clássico" }).click();
+  await expect(area).toHaveAttribute("data-attendance-view", "classic");
+  await expect(controls.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
+  await expect(draft(page)).toHaveValue(draftText);
+  await chatOptions.click();
+  await chatMenu.getByRole("menuitemradio", { name: "Integrado" }).click();
+  await expect(area).toHaveAttribute("data-attendance-view", "integrated");
+  await expect(controls.getByRole("button", { name: "Desligar", exact: true })).toBeVisible();
+  await expect(draft(page)).toHaveValue(draftText);
+  expect(await page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
   await noOverflow(page);
+
   await controls.getByRole("button", { name: "Desligar", exact: true }).click();
   await page.reload();
-  await expect(layout).toHaveValue("integrated");
   await expect(area).toHaveAttribute("data-attendance-view", "integrated");
+  await queueOptions.click();
+  await expect(layoutMenu.getByRole("menuitemradio", { name: "Integrado" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
   expect(errors).toEqual([]);
 });
 

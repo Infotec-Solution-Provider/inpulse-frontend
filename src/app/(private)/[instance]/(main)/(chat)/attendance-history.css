@@ -1,0 +1,113 @@
+.attendance-history-frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.attendance-history-toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+  padding-inline: clamp(12px, 2.4vw, 36px);
+  background: var(--ip-surface);
+  border-bottom: 1px solid var(--ip-border-subtle);
+}
+
+.attendance-history-toolbar h3 {
+  margin: 0;
+  color: var(--ip-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.attendance-history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.attendance-history-tabs button {
+  min-height: 36px;
+  padding-inline: 9px;
+  border-bottom: 2px solid transparent;
+  color: var(--ip-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.attendance-history-tabs button:hover:not(:disabled) {
+  background: var(--ip-surface-muted);
+  color: var(--ip-text);
+}
+
+.attendance-history-tabs button[aria-pressed="true"] {
+  border-bottom-color: var(--ip-accent);
+  color: var(--ip-accent);
+}
+
+.attendance-history-tabs button:focus-visible {
+  outline: 2px solid var(--ip-accent);
+  outline-offset: -3px;
+}
+
+.attendance-history-tabs button:disabled:not([aria-pressed="true"]) {
+  opacity: 0.6;
+}
+
+.attendance-history-status {
+  padding-block: 4px 10px;
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+
+.attendance-history-call {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  max-width: min(100%, 34rem);
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--ip-surface-muted);
+  color: var(--ip-text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.attendance-history-call strong {
+  font-weight: 600;
+}
+
+.attendance-history-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--ip-muted);
+}
+
+.attendance-history-call p,
+.attendance-history-call time {
+  color: var(--ip-muted);
+}
+
+.attendance-history-call p {
+  margin: 0;
+}
+
+.attendance-history-call time {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse) {
+  .attendance-history-tabs button {
+    min-height: 44px;
+  }
+}

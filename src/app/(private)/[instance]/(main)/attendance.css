@@ -254,63 +254,44 @@
   }
 }
 
-.ip-attendance[data-has-view-control="true"] {
-  grid-template-rows: auto minmax(0, 1fr);
-}
-.attendance-layout-bar {
-  grid-column: 1 / -1;
+.attendance-queue-stack {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  min-width: 0;
-  padding: 6px 10px;
-  background: var(--ip-surface);
-  border: 1px solid var(--ip-border-subtle);
-  border-radius: 8px;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
 }
-.attendance-layout-control {
+.ip-attendance .attendance-queue-stack > .attendance-sidebar {
+  height: auto;
+  flex: 1;
+}
+.attendance-sidebar-preferences,
+.attendance-appointment-options {
   display: flex;
+  flex: none;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--ip-muted);
+}
+.attendance-sidebar-preferences {
+  margin-block-start: auto;
+  padding-inline: 6px;
+  border-block-start: 1px solid var(--ip-border-subtle);
+}
+.attendance-sidebar-preferences button {
+  color: var(--ip-muted);
+}
+.attendance-appointment-options {
+  padding-inline: 8px;
   font-size: 12px;
-  font-weight: 600;
+  border-block-end: 1px solid var(--ip-border-subtle);
 }
-.attendance-layout-control select,
-.attendance-layout-button,
-.attendance-history-filters button {
-  padding: 5px 8px;
-  border: 1px solid var(--ip-border-subtle);
-  border-radius: 6px;
-  background: var(--ip-surface);
-  color: var(--ip-text);
-  font-size: 12px;
-}
-.attendance-layout-control select:focus-visible,
-.attendance-layout-button:focus-visible,
-.attendance-history-filters button:focus-visible {
-  outline: 2px solid var(--ip-accent);
-  outline-offset: 2px;
-}
-.attendance-layout-button[aria-expanded="true"],
-.attendance-history-filters button[aria-pressed="true"] {
-  background: var(--ip-accent-soft);
-  color: var(--ip-accent);
-}
-.attendance-integrated-phone {
-  flex: 1 1 360px;
-  min-width: 0;
-}
-.attendance-integrated-phone .ip-attendance-phone {
-  padding: 4px 8px;
-}
-.attendance-integrated-phone .ip-attendance-phone-controls {
-  max-height: min(16rem, 27dvh);
-  margin-top: 4px;
-}
-.attendance-integrated-phone .ip-attendance-phone-controls > div[aria-label="Teclado da ligação"] {
-  max-width: 300px;
+.attendance-view-check {
+  display: inline-flex;
+  margin-inline-start: auto;
+  padding-inline-start: 20px;
+  min-width: 35px;
+  color: var(--ip-accent, currentColor);
 }
 .attendance-call-contact {
   color: var(--ip-muted);
@@ -367,72 +348,52 @@
   font-size: 14px;
   font-weight: 700;
 }
-.attendance-customer p,
-.attendance-history-status {
+.attendance-customer p {
   color: var(--ip-muted);
   font-size: 12px;
 }
-.attendance-history-toolbar {
+.attendance-customer-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 12px;
-}
-.attendance-history-toolbar h3 {
-  font-size: 13px;
-  font-weight: 700;
-}
-.attendance-history-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
 }
 .attendance-channel-filter {
+  display: flex;
+  flex-wrap: wrap;
   flex: none;
-  padding: 6px 8px;
+  padding-inline: 10px;
+  gap: 9px;
+  border-block-end: 1px solid var(--ip-border-subtle);
+}
+.attendance-channel-filter button {
+  padding: 5px 4px;
+  min-height: 34px;
+  color: var(--ip-muted);
+  font-size: 12px;
+  border-block-end: 2px solid transparent;
+}
+.attendance-channel-filter button:hover,
+.attendance-channel-filter button[aria-pressed="true"] {
+  color: var(--ip-accent);
+}
+.attendance-channel-filter button[aria-pressed="true"] {
+  border-block-end-color: var(--ip-accent);
+  font-weight: 600;
 }
 .ip-attendance .attendance-sidebar > [hidden] {
   display: none;
 }
-.attendance-history-call {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px;
-  border: 1px solid var(--ip-border-subtle);
-  border-radius: 8px;
-  background: var(--ip-surface);
-  overflow-wrap: anywhere;
-  font-size: 12px;
-}
-.attendance-history-call > div {
-  flex: 1;
-}
-.attendance-history-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 30px;
-  height: 30px;
-  border-radius: 6px;
-  color: var(--ip-accent);
-  background: var(--ip-accent-soft);
-}
-.attendance-history-call p,
-.attendance-history-call time {
-  color: var(--ip-muted);
-}
 @media (min-width: 1140px) {
   .ip-attendance[data-attendance-view="integrated"] {
-    grid-template-columns: minmax(264px, 22%) minmax(0, 1fr);
+    grid-template-columns: clamp(278px, 23%, 312px) minmax(0, 1fr);
   }
   .ip-attendance[data-attendance-view="integrated"] .attendance-workspace {
     flex-direction: row;
     gap: 10px;
   }
   .attendance-integrated-details:not([hidden]) {
-    flex: 0 0 clamp(240px, 23vw, 340px);
+    flex: 0 0 clamp(208px, 19vw, 258px);
     max-height: none;
   }
 }
@@ -444,13 +405,6 @@
     max-height: none;
   }
 }
-@media (max-width: 767px) {
-  .attendance-layout-bar {
-    border-radius: 0;
-  }
-  .attendance-layout-control select,
-  .attendance-layout-button,
-  .attendance-history-filters button {
-    min-height: 36px;
-  }
+@media (pointer: coarse) {
+  .attendance-channel-filter button { min-height: 44px; }
 }

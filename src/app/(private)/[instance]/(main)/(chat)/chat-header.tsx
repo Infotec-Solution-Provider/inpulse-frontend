@@ -4,12 +4,14 @@ import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import reportsService from "@/lib/services/reports.service";
 import { UserRole } from "@/lib/sdk-local";
-import { Avatar, Button, Menu, MenuItem } from "@mui/material";
+import { Avatar, Button, Divider, Menu, MenuItem } from "@mui/material";
 import {
   Bot,
   ChartNoAxesCombined,
   Download,
   FileText,
+  PanelRight,
+  Phone,
   ShieldCheck,
   Sparkles,
   type LucideIcon,
@@ -32,6 +34,7 @@ import LegacyChatHistoryModal from "@/lib/components/legacy-chat-history-modal";
 import AgentAuditDrawer from "./(actions)/agent-audit-drawer";
 import { useAuthContext } from "@/app/auth-context";
 import { chatHasAgentMessages } from "@/lib/utils/ai-agent-labels";
+import { attendanceViewItems, type AttendanceViewOptions } from "../attendance-view-menu";
 import "./attendance-composer.css";
 
 const safeFormatPhone = (phone: string | null): string => {
@@ -54,6 +57,9 @@ export interface ChatContactInfoProps {
   avatarUrl?: string | null;
   chatType?: string | null;
   onClose?: () => void;
+  viewOptions?: AttendanceViewOptions;
+  onOpenDialer?: () => void;
+  customerPanel?: { expanded: boolean; toggle: () => void };
 }
 
 export default function ChatHeader({
@@ -65,6 +71,9 @@ export default function ChatHeader({
   cpfCnpj,
   customerId,
   onClose,
+  viewOptions,
+  onOpenDialer,
+  customerPanel,
 }: ChatContactInfoProps) {
   const { instance, user, token } = useAuthContext();
   const router = useRouter();
@@ -101,15 +110,6 @@ export default function ChatHeader({
     isFeatureEnabled(parameters, FEATURE_FLAGS.aiAgents);
   const canOpenLegacyHistory = currentChat?.chatType === "wpp" && Boolean(currentChat.id) &&
     isFeatureEnabled(parameters, FEATURE_FLAGS.legacyHistory);
-  const hasMobileActions =
-    canOpenLegacyHistory ||
-    canOpenCustomerDetail ||
-    canOpenAIActions ||
-    canOpenSupervisorAssistant ||
-    hasAiAgent ||
-    canInteract ||
-    canExportChat;
-
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
   const [mobileActionsAnchor, setMobileActionsAnchor] = useState<null | HTMLElement>(null);
 
@@ -197,6 +197,7 @@ export default function ChatHeader({
     run: () => void;
     name?: UiIconName;
     icon?: LucideIcon;
+    expanded?: boolean;
   };
   const primaryActions: HeaderAction[] = [];
   const extraActions: HeaderAction[] = [];
@@ -204,8 +205,16 @@ export default function ChatHeader({
     const chatId = currentChat.id;
     extraActions.push({ key: "legacy-history", label: "Histórico do sistema antigo", icon: FileText, run: () => openModal(<LegacyChatHistoryModal chatId={chatId} onClose={closeModal} />) });
   }
-  if (canOpenCustomerDetail)
+  if (customerPanel)
     primaryActions.push({
+      key: "customer-panel",
+      label: customerPanel.expanded ? "Ocultar ficha do cliente" : "Mostrar ficha do cliente",
+      icon: PanelRight,
+      expanded: customerPanel.expanded,
+      run: customerPanel.toggle,
+    });
+  if (canOpenCustomerDetail)
+    (customerPanel ? extraActions : primaryActions).push({
       key: "details",
       label: "Consultar cliente",
       name: "info",
@@ -266,6 +275,8 @@ export default function ChatHeader({
       icon: Download,
       run: () => void exportChat(),
     });
+  if (onOpenDialer)
+    extraActions.push({ key: "dialer", label: "Discador", icon: Phone, run: onOpenDialer });
   const canTransfer = currentChat?.chatType === "wpp" && canInteract && tenantPolicy?.canTransferAttendance !== false;
   const canFinish =
     canInteract &&
@@ -297,6 +308,7 @@ export default function ChatHeader({
       : []),
     ...extraActions,
   ];
+  const hasMobileActions = menuActions.length > 0 || Boolean(viewOptions);
   const distinctCustomerName =
     customerName?.trim() &&
     customerName.trim().toLocaleLowerCase() !== name.trim().toLocaleLowerCase();
@@ -345,6 +357,8 @@ export default function ChatHeader({
                 key={action.key}
                 label={`${action.label}: ${name}`}
                 tooltip={action.label}
+                aria-expanded={action.expanded}
+                aria-controls={action.expanded === undefined ? undefined : "attendance-customer-summary"}
                 onClick={action.run}
               >
                 {actionIcon(action)}
@@ -396,6 +410,8 @@ export default function ChatHeader({
                   <MenuItem
                     key={action.key}
                     className="ip-attendance-menu-item"
+                    aria-expanded={action.expanded}
+                    aria-controls={action.expanded === undefined ? undefined : "attendance-customer-summary"}
                     onClick={() => {
                       setMobileActionsAnchor(null);
                       action.run();
@@ -405,6 +421,8 @@ export default function ChatHeader({
                     <span>{action.label}</span>
                   </MenuItem>
                 ))}
+                {viewOptions && menuActions.length > 0 && <Divider />}
+                {viewOptions && attendanceViewItems(viewOptions, () => setMobileActionsAnchor(null))}
               </Menu>
             </div>
           )}

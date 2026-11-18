@@ -1,0 +1,89 @@
+.attendance-call-bar {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border-block-end: 1px solid var(--ip-border-subtle);
+  background: var(--ip-surface-muted);
+  color: var(--ip-text);
+}
+.attendance-call-bar-row,
+.attendance-call-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.attendance-call-signal {
+  flex: 0 0 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+  border-radius: 8px;
+}
+.attendance-call-status {
+  display: grid;
+  flex: 1 1 106px;
+  min-width: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.attendance-call-status > span {
+  color: var(--ip-muted);
+}
+.attendance-call-actions {
+  gap: 3px;
+}
+.attendance-call-actions button {
+  min-height: 34px;
+}
+.attendance-call-actions [aria-pressed="true"] {
+  color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+}
+.attendance-call-feedback {
+  margin-top: 4px;
+}
+.attendance-call-options {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  width: min(300px, calc(100vw - 24px));
+  padding: 12px;
+}
+.attendance-call-options details {
+  width: 100%;
+}
+.attendance-call-options-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 13px;
+}
+.attendance-call-keypad {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.attendance-call-keypad button {
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .attendance-call-bar-row {
+    column-gap: 5px;
+  }
+  .attendance-call-signal {
+    flex-basis: 26px;
+    height: 26px;
+  }
+  .attendance-call-status {
+    flex-basis: 94px;
+  }
+}
+@media (pointer: coarse) {
+  .attendance-call-actions button {
+    min-height: 44px;
+  }
+}

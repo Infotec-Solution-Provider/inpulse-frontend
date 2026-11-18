@@ -1,5 +1,5 @@
 "use client";
-import { useContext } from "react";
+import { useContext, type ReactNode } from "react";
 import ChatAttachmentPreview from "./chat-attachment-preview";
 import { ChatContext } from "./chat-context";
 import ChatHeader, { ChatContactInfoProps } from "./chat-header";
@@ -18,7 +18,11 @@ export default function Chat({
   startDate,
   onClose,
   attendanceHistory,
-}: ChatContactInfoProps & { onClose?: () => void; attendanceHistory?: AttendanceHistory }) {
+  callBar,
+  viewOptions,
+  onOpenDialer,
+  customerPanel,
+}: ChatContactInfoProps & { attendanceHistory?: AttendanceHistory; callBar?: ReactNode }) {
   const { state, dispatch, isReadOnlyMode } = useContext(ChatContext);
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -65,6 +69,9 @@ export default function Chat({
             customerId={customerId}
             startDate={startDate}
             onClose={onClose}
+            viewOptions={viewOptions}
+            onOpenDialer={onOpenDialer}
+            customerPanel={customerPanel}
           />
           {isReadOnlyMode && (
             <div className="ip-attendance-readonly" role="status">
@@ -72,6 +79,7 @@ export default function Chat({
             </div>
           )}
         </div>
+        {callBar}
       </div>
 
       <div

@@ -2,16 +2,19 @@
 import Chat from "./(chat)/chat";
 import ChatsMenu from "./(chats-menu)/chats-menu";
 import React, { useContext } from "react";
+import { Dialog, DialogContent, DialogTitle, useMediaQuery } from "@mui/material";
 import { WhatsappContext } from "../whatsapp-context";
 import { AuthContext } from "@/app/auth-context";
 import filesService from "@/lib/services/files.service";
-import { TelephonyPanelSlot } from "@/lib/telephony/telephony-panel";
+import { TelephonyPanel, TelephonyPanelSlot } from "@/lib/telephony/telephony-panel";
+import { AttendanceCallBar } from "@/lib/telephony/attendance-call-bar";
 import { useTelephony } from "@/lib/telephony/telephony-provider";
 import { UiIcon } from "@/lib/ui-system/icons";
 import { useAttendanceView } from "./attendance-view";
+import { AttendanceViewMenu } from "./attendance-view-menu";
 import { useIntegratedCallHistory } from "./integrated-call-history";
 import { IntegratedCustomer } from "./integrated-customer";
-import IntegratedCallContact from "./integrated-call-contact";
+import IntegratedCallContact, { hasWhatsappLookup } from "./integrated-call-contact";
 import "./attendance.css";
 
 export default function Home() {
@@ -19,14 +22,37 @@ export default function Home() {
   const { user, instance } = useContext(AuthContext);
   const phone = useTelephony();
   const [view, selectView] = useAttendanceView(instance, user?.CODIGO);
+  const viewOptions = phone.enabled ? { view, selectView } : undefined;
   const integrated = phone.enabled && view === "integrated";
+  const mobile = useMediaQuery("(max-width: 767px)");
+  const wide = useMediaQuery("(min-width: 1140px)");
   const [appointmentHost, setAppointmentHost] = React.useState<HTMLDivElement | null>(null);
   const [appointmentOpen, setAppointmentOpen] = React.useState(false);
-  const [customerOpen, setCustomerOpen] = React.useState(true);
+  const [customerPreference, setCustomerPreference] = React.useState<boolean | null>(null);
+  const customerOpen = customerPreference ?? wide;
+  const [dialerOpen, setDialerOpen] = React.useState(false);
   const [historyVersion, refreshHistory] = React.useReducer((version: number) => version + 1, 0);
   const showAppointment = integrated && appointmentOpen;
   const showWorkspace = !!currentChat || showAppointment;
   const whatsappChat = currentChat?.chatType === "wpp" ? currentChat : null;
+  const dockCall = integrated && phone.busy;
+  const dockInQueue = mobile && !showWorkspace;
+  const canOpenDialer = integrated && mobile && !dockCall;
+  const openDialer = canOpenDialer ? () => setDialerOpen(true) : undefined;
+  const closeDialer = () => setDialerOpen(false);
+  const callBar = dockCall ? (
+    <AttendanceCallBar
+      key={phone.state.callId ?? phone.state.number}
+      callContext={
+        hasWhatsappLookup(phone.state.number) ? (
+          <IntegratedCallContact number={phone.state.number} />
+        ) : undefined
+      }
+    />
+  ) : null;
+  React.useEffect(() => {
+    if (!canOpenDialer) setDialerOpen(false);
+  }, [canOpenDialer]);
   const attendanceHistory = useIntegratedCallHistory(
     integrated && !!whatsappChat,
     whatsappChat?.customer?.CODIGO ?? null,
@@ -57,64 +83,27 @@ export default function Home() {
       aria-label="Área de atendimento"
       className={`ip-attendance ${showWorkspace ? "chat-open" : ""}`}
       data-attendance-view={integrated ? "integrated" : "classic"}
-      data-has-view-control={phone.enabled}
     >
-      {phone.enabled && (
-        <div className="attendance-layout-bar">
-          <label className="attendance-layout-control">
-            Visualização do atendimento
-            <select
-              value={view}
-              onChange={(event) =>
-                selectView(event.target.value === "integrated" ? "integrated" : "classic")
-              }
-            >
-              <option value="classic">Clássico</option>
-              <option value="integrated">Integrado</option>
-            </select>
-          </label>
-          {integrated && (
-            <>
-              {whatsappChat && !showAppointment && (
-                <button
-                  type="button"
-                  className="attendance-layout-button"
-                  aria-expanded={customerOpen}
-                  aria-controls="attendance-customer-summary"
-                  onClick={() => setCustomerOpen((open) => !open)}
-                >
-                  Ficha do cliente
-                </button>
-              )}
-              <TelephonyPanelSlot
-                integrated
-                className="attendance-integrated-phone"
-                callContext={
-                  <IntegratedCallContact
-                    key={phone.state.callId ?? phone.state.number}
-                    number={phone.state.number}
-                  />
-                }
-              />
-            </>
-          )}
-        </div>
-      )}
       <div className={`chats-menu min-h-0 ${showWorkspace ? "hidden" : "block"} md:block`}>
-        <ChatsMenu
-          integrated={integrated}
-          appointmentHost={appointmentHost}
-          onAppointmentOpenChange={setAppointmentOpen}
-          onAppointmentFinished={refreshHistory}
-        />
+        <div className="attendance-queue-stack">
+          {dockInQueue && callBar}
+          <ChatsMenu
+            integrated={integrated}
+            dockCall={dockCall}
+            viewOptions={viewOptions}
+            appointmentHost={appointmentHost}
+            onAppointmentOpenChange={setAppointmentOpen}
+            onAppointmentFinished={refreshHistory}
+          />
+        </div>
       </div>
       <div
         className={`chat-panel-container min-h-0 min-w-0 overflow-hidden ${showWorkspace ? "flex" : "hidden"} h-full flex-col md:flex`}
       >
-        {/* The mobile conversation hides the sidebar, so keep phone controls in flow here. */}
         {currentChat && !integrated && (
           <TelephonyPanelSlot className="max-h-[40%] shrink-0 overflow-y-auto p-2 md:hidden" />
         )}
+        {!currentChat && !dockInQueue && callBar}
         <div className="attendance-workspace" data-has-chat={!!currentChat}>
           <div
             className={`min-h-0 min-w-0 flex-1 overflow-hidden ${showAppointment && !currentChat ? "hidden md:block" : ""}`}
@@ -124,8 +113,14 @@ export default function Home() {
                 <span className="ip-attendance-welcome-icon">
                   <UiIcon name="conversations" scale="empty" />
                 </span>
-                <h1>Seu próximo atendimento começa aqui</h1>
-                <p>Selecione uma conversa para acompanhar o histórico e responder.</p>
+                <h1>
+                  {showAppointment ? "Atendimento telefônico aberto" : "Selecione uma conversa"}
+                </h1>
+                <p>
+                  {showAppointment
+                    ? "Use os contatos no painel ao lado para abrir o WhatsApp."
+                    : "Abra um contato da fila para acompanhar o histórico e responder."}
+                </p>
               </div>
             )}
             {currentChat?.chatType === "internal" && (
@@ -162,6 +157,9 @@ export default function Home() {
                   currentChat.startedAt ? new Date(currentChat.startedAt).toDateString() : null
                 }
                 onClose={handleCloseChat}
+                callBar={callBar}
+                viewOptions={mobile ? viewOptions : undefined}
+                onOpenDialer={openDialer}
               />
             )}
             {currentChat?.chatType === "wpp" && (
@@ -177,6 +175,17 @@ export default function Home() {
                 startDate={new Date(currentChat?.startedAt).toDateString() || null}
                 onClose={handleCloseChat}
                 attendanceHistory={attendanceHistory}
+                callBar={callBar}
+                viewOptions={mobile ? viewOptions : undefined}
+                onOpenDialer={openDialer}
+                customerPanel={
+                  integrated && !showAppointment
+                    ? {
+                        expanded: customerOpen,
+                        toggle: () => setCustomerPreference(!customerOpen),
+                      }
+                    : undefined
+                }
               />
             )}
           </div>
@@ -186,11 +195,26 @@ export default function Home() {
             hidden={!integrated || (!showAppointment && (!whatsappChat || !customerOpen))}
             data-appointment-open={showAppointment}
           >
+            {mobile && !currentChat && showAppointment && viewOptions && (
+              <div className="attendance-appointment-options">
+                {openDialer && (
+                  <button type="button" onClick={openDialer}>
+                    Discador
+                  </button>
+                )}
+                <AttendanceViewMenu options={viewOptions} />
+              </div>
+            )}
             <div
               id="attendance-customer-summary"
               hidden={showAppointment || !whatsappChat || !customerOpen}
             >
-              {integrated && whatsappChat && <IntegratedCustomer key={whatsappChat.id} />}
+              {integrated && whatsappChat && (
+                <IntegratedCustomer
+                  key={whatsappChat.id}
+                  onClose={() => setCustomerPreference(false)}
+                />
+              )}
             </div>
             <div
               ref={setAppointmentHost}
@@ -200,6 +224,18 @@ export default function Home() {
           </aside>
         </div>
       </div>
+      <Dialog
+        open={dialerOpen && Boolean(openDialer)}
+        onClose={closeDialer}
+        fullWidth
+        maxWidth="xs"
+        aria-labelledby="attendance-dialer-heading"
+      >
+        <DialogTitle id="attendance-dialer-heading">Discador</DialogTitle>
+        <DialogContent>
+          <TelephonyPanel />
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

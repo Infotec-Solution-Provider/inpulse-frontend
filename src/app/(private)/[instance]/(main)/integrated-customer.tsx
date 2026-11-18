@@ -3,13 +3,15 @@
 import { useState } from "react";
 import { Button, Alert } from "@mui/material";
 import { Phone } from "lucide-react";
+import { OperationalIconButton } from "@/lib/ui-system/actions";
+import { UiIcon } from "@/lib/ui-system/icons";
 import { useAppContext } from "../app-context";
 import { useWhatsappContext } from "../whatsapp-context";
 import { useTelephony } from "@/lib/telephony/telephony-provider";
 import { normalizeDialTarget } from "@/lib/telephony/types";
 import CustomerCrmDetailModal from "./(chats-menu)/(start-chat-modal)/customer-crm-detail-modal";
 
-export function IntegratedCustomer() {
+export function IntegratedCustomer({ onClose }: { onClose: () => void }) {
   const { currentChat, isReadOnlyMode, parameters } = useWhatsappContext();
   const { openModal, closeModal } = useAppContext();
   const phone = useTelephony();
@@ -40,7 +42,12 @@ export function IntegratedCustomer() {
   };
   return (
     <section className="attendance-customer" aria-label="Ficha do cliente">
-      <h2>Ficha do cliente</h2>
+      <header className="attendance-customer-header">
+        <h2>Ficha do cliente</h2>
+        <OperationalIconButton label="Fechar ficha do cliente" onClick={onClose}>
+          <UiIcon name="close" scale="toolbar" />
+        </OperationalIconButton>
+      </header>
       <strong>{contact?.name || "Contato"}</strong>
       <p>{customer?.RAZAO || "Cliente sem vínculo no CRM"}</p>
       {target && <p>{number}</p>}

@@ -46,11 +46,11 @@ test("audio settings, direct transfer, pause and indicators use the operator con
   await expect(page.getByRole("status", { name: "Ramal conectado" })).toBeVisible();
   await page.getByRole("button", { name: "Configurações da telefonia" }).click();
   await expect(page.getByRole("dialog", { name: "Aparelhos e áudio" })).toBeVisible();
-  await expect(page.getByRole("switch", { name: "Atender automaticamente" })).not.toBeChecked();
-  await expect(page.getByRole("switch", { name: "Cancelamento de eco" })).toBeChecked();
+  await expect(page.getByLabel("Atender automaticamente", { exact: true })).not.toBeChecked();
+  await expect(page.getByLabel("Cancelamento de eco", { exact: true })).toBeChecked();
   await page.waitForTimeout(300);
   await page.screenshot({ path: "test-results/telephony-parity-audio.png", fullPage: true });
-  await page.getByRole("switch", { name: "Atender automaticamente" }).scrollIntoViewIfNeeded();
+  await page.getByLabel("Atender automaticamente", { exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/telephony-parity-audio-advanced.png", fullPage: true });
   await closeInHeader(page, "Aparelhos e áudio");
   await page.getByLabel("Telefone ou ramal", { exact: true }).fill("103");

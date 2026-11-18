@@ -17,6 +17,10 @@ function phoneDigits(value: string) {
   return /^55\d{10,11}$/.test(digits) ? digits.slice(2) : digits;
 }
 
+export function hasWhatsappLookup(number: string) {
+  return phoneDigits(number).length >= 8;
+}
+
 export default function IntegratedCallContact({ number }: { number: string }) {
   const { token } = useAuthContext();
   const { wppApi, startChatByContactId, openChat, chats } = useWhatsappContext();
@@ -70,16 +74,9 @@ export default function IntegratedCallContact({ number }: { number: string }) {
 
   return (
     <div className="attendance-call-contact">
-      {contacts === null && (
-        <Button
-          size="small"
-          variant="outlined"
-          disabled={pending}
-          onClick={() => void findContacts()}
-        >
-          Localizar conversa de WhatsApp
-        </Button>
-      )}
+      <Button size="small" aria-disabled={pending} onClick={() => void findContacts()}>
+        {contacts === null ? "Localizar conversa de WhatsApp" : "Atualizar contatos"}
+      </Button>
       {contacts?.length === 0 && <p>Nenhum contato de WhatsApp para este número.</p>}
       {!!contacts?.length && (
         <div role="group" aria-label="Contatos encontrados" className="flex flex-wrap gap-2">
@@ -88,7 +85,7 @@ export default function IntegratedCallContact({ number }: { number: string }) {
               key={contact.id}
               size="small"
               variant="outlined"
-              disabled={pending}
+              aria-disabled={pending}
               onClick={() => void openContact(contact)}
             >
               {contact.name || contact.phone} · #{contact.id}

@@ -14,6 +14,7 @@ import PendingSendStatus from "./pending-send-status";
 import { canReactToWhatsappMessage } from "@/lib/utils/message-reactions";
 import { Phone } from "lucide-react";
 import type { AttendanceHistory } from "../integrated-call-history";
+import "./attendance-history.css";
 
 const CANT_EDIT_MESSAGE_TYPES = ["audio", "sticker", "ptt"];
 
@@ -136,23 +137,11 @@ export default function RenderWhatsappChatMessages({
     };
   }, [activeFilter, attendanceHistory, messagesToRender.length, visibleCallCount, visibleCount, visibleMessages]);
 
-  return (
+  const history = (
     <div
       ref={messagesContainerRef}
-      className="ip-message-history scrollbar-whatsapp h-full w-full overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
+      className="ip-message-history scrollbar-whatsapp min-h-0 w-full flex-1 overflow-y-auto bg-slate-300 p-2 dark:bg-slate-900"
     >
-      {attendanceHistory && (
-        <div className="attendance-history-toolbar">
-          <h3>Histórico do atendimento</h3>
-          <div className="attendance-history-filters" role="group" aria-label="Canal do histórico">
-            {(Object.entries(historyFilters) as [HistoryFilter, string][]).map(([filter, label]) => (
-              <button key={filter} type="button" aria-pressed={activeFilter === filter} disabled={isSelectionMode} onClick={() => setHistoryFilter(filter)}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
       {attendanceHistory && activeFilter !== "whatsapp" && (
         <>
           {attendanceHistory.status === "loading" && <p className="attendance-history-status" role="status">Buscando ligações do cliente…</p>}
@@ -201,7 +190,7 @@ export default function RenderWhatsappChatMessages({
             const seconds = call.end == null ? null : Math.floor((call.end - call.time) / 1000);
             return (
               <li className="attendance-history-call" key={`call-${call.id}`}>
-                <span className="attendance-history-icon"><Phone size={16} aria-hidden /></span>
+                <span className="attendance-history-icon"><Phone size={14} aria-hidden /></span>
                 <div>
                   <strong>{call.title}</strong>
                   <p>{[call.result, seconds == null ? null : `${Math.floor(seconds / 60)}min ${seconds % 60}s`].filter(Boolean).join(" · ") || "Registro do CRM"}</p>
@@ -289,6 +278,30 @@ export default function RenderWhatsappChatMessages({
         )}
         <div className="h-1" />
       </ul>
+    </div>
+  );
+
+  return (
+    <div className="attendance-history-frame">
+      {attendanceHistory && (
+        <div className="attendance-history-toolbar">
+          <h3>Histórico do atendimento</h3>
+          <div className="attendance-history-tabs" role="group" aria-label="Canal do histórico">
+            {(Object.entries(historyFilters) as [HistoryFilter, string][]).map(([filter, label]) => (
+              <button
+                key={filter}
+                type="button"
+                aria-pressed={activeFilter === filter}
+                disabled={isSelectionMode}
+                onClick={() => setHistoryFilter(filter)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {history}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { useTelephony } from "@/lib/telephony/telephony-provider";
 import { TelephonyHeaderHost } from "@/lib/telephony/header-host";
 import { UiIcon } from "@/lib/ui-system/icons";
+import { AttendanceViewMenu, type AttendanceViewOptions } from "../attendance-view-menu";
 import "./attendance-sidebar.css";
 import "./attendance-telephony.css";
 
@@ -12,6 +13,7 @@ interface ConversationSidebarProps {
   telephony?: ReactNode;
   filters: ReactNode;
   children: ReactNode;
+  viewOptions?: AttendanceViewOptions;
 }
 
 export default function ConversationSidebar({
@@ -19,6 +21,7 @@ export default function ConversationSidebar({
   telephony,
   filters,
   children,
+  viewOptions,
 }: ConversationSidebarProps) {
   const phone = useTelephony();
   const [telephonyExpanded, setTelephonyExpanded] = useState(true);
@@ -33,10 +36,10 @@ export default function ConversationSidebar({
   return (
     <aside aria-label="Painel de atendimento" className="attendance-sidebar">
       {integrated && (
-        <div className="attendance-history-filters attendance-channel-filter" role="group" aria-label="Canal da fila">
+        <div className="attendance-channel-filter" role="group" aria-label="Canal da fila">
           {(["all", "whatsapp", "phone"] as const).map((kind) => (
             <button key={kind} type="button" aria-pressed={channel === kind} onClick={() => setChannel(kind)}>
-              {{ all: "Todos", whatsapp: "WhatsApp", phone: "Telefonia" }[kind]}
+              {{ all: "Todos", whatsapp: "Conversas", phone: "Telefonia" }[kind]}
             </button>
           ))}
         </div>
@@ -84,6 +87,11 @@ export default function ConversationSidebar({
         <div className="attendance-sidebar-filters">{filters}</div>
         <div className="attendance-sidebar-list">{children}</div>
       </div>
+      {viewOptions && (
+        <footer className="attendance-sidebar-preferences">
+          <AttendanceViewMenu options={viewOptions} />
+        </footer>
+      )}
     </aside>
   );
 }
