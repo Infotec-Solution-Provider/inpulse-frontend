@@ -33,6 +33,7 @@ import {
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { UiIcon } from "./icons";
+import { ReportsNavigationEntry, type ReportShortcuts } from "./reports-navigation-entry";
 import { activeNavigationPath, type NavigationIcon, type NavigationItem } from "./navigation";
 
 const icons: Record<NavigationIcon, typeof Headset> = {
@@ -57,6 +58,7 @@ type Props = {
   instance: string;
   pathname: string;
   search?: string;
+  reportShortcuts: ReportShortcuts;
   onNavigate: () => void;
 };
 
@@ -66,6 +68,7 @@ export function NavigationTree({
   instance,
   pathname,
   search = "",
+  reportShortcuts,
   onNavigate,
 }: Props) {
   const active = useMemo(
@@ -84,6 +87,7 @@ export function NavigationTree({
           onNavigate={onNavigate}
           activeIds={activeIds}
           locationKey={`${pathname}?${search}`}
+          reportShortcuts={item.id === "reports" ? reportShortcuts : undefined}
         />
       ))}
     </List>
@@ -97,6 +101,7 @@ function Entry({
   onNavigate,
   activeIds,
   locationKey,
+  reportShortcuts,
   depth = 0,
 }: {
   item: NavigationItem;
@@ -105,6 +110,7 @@ function Entry({
   onNavigate: () => void;
   activeIds: string[];
   locationKey: string;
+  reportShortcuts?: ReportShortcuts;
   depth?: number;
 }) {
   const active = activeIds.includes(item.id),
@@ -161,115 +167,141 @@ function Entry({
       )}
     </>
   );
+  if (item.kind === "link") {
+    const entry = (
+      <Tooltip title={expanded ? "" : item.title} placement="right">
+        <ListItemButton
+          component={Link}
+          href={`/${instance}${item.href}`}
+          onClick={onNavigate}
+          selected={selected}
+          aria-label={expanded ? undefined : item.title}
+          aria-current={selected ? "page" : undefined}
+          sx={
+            reportShortcuts
+              ? {
+                  ...sx,
+                  mx: 0,
+                  mb: 0,
+                  px: expanded ? 1.5 : 0,
+                  flex: 1,
+                  justifyContent: expanded ? "flex-start" : "center",
+                  "& > .MuiListItemIcon-root": { minWidth: expanded ? 30 : 0 },
+                }
+              : sx
+          }
+        >
+          {content}
+        </ListItemButton>
+      </Tooltip>
+    );
+    return reportShortcuts ? (
+      <ReportsNavigationEntry
+        key={reportShortcuts.scope}
+        expanded={expanded}
+        instance={instance}
+        locationKey={locationKey}
+        shortcuts={reportShortcuts}
+        onNavigate={onNavigate}
+      >
+        {entry}
+      </ReportsNavigationEntry>
+    ) : (
+      entry
+    );
+  }
+
   const current = trail.at(-1) ?? item;
   return (
     <>
       <Tooltip title={expanded ? "" : item.title} placement="right">
-        {item.kind === "link" ? (
-          <ListItemButton
-            component={Link}
-            href={`/${instance}${item.href}`}
-            onClick={onNavigate}
-            selected={selected}
-            aria-label={expanded ? undefined : item.title}
-            aria-current={selected ? "page" : undefined}
-            sx={sx}
-          >
-            {content}
-          </ListItemButton>
-        ) : (
-          <ListItemButton
-            onClick={(event) =>
-              expanded ? setOpen((value) => !value) : setAnchor(event.currentTarget)
-            }
-            aria-label={expanded ? undefined : item.title}
-            aria-expanded={expanded ? open : Boolean(anchor)}
-            aria-controls={expanded && open ? groupId : undefined}
-            aria-haspopup={expanded ? undefined : "menu"}
-            sx={sx}
-          >
-            {content}
-          </ListItemButton>
-        )}
+        <ListItemButton
+          onClick={(event) =>
+            expanded ? setOpen((value) => !value) : setAnchor(event.currentTarget)
+          }
+          aria-label={expanded ? undefined : item.title}
+          aria-expanded={expanded ? open : Boolean(anchor)}
+          aria-controls={expanded && open ? groupId : undefined}
+          aria-haspopup={expanded ? undefined : "menu"}
+          sx={sx}
+        >
+          {content}
+        </ListItemButton>
       </Tooltip>
-      {item.kind === "group" && (
-        <>
-          <Collapse in={expanded && open} timeout={160} unmountOnExit>
-            <List component="div" id={groupId} disablePadding>
-              {item.routes.map((child) => (
-                <Entry
-                  key={child.id}
-                  item={child}
-                  expanded
-                  instance={instance}
-                  onNavigate={onNavigate}
-                  activeIds={activeIds}
-                  locationKey={locationKey}
-                  depth={depth + 1}
-                />
-              ))}
-            </List>
-          </Collapse>
-          <Menu
-            anchorEl={anchor}
-            open={!expanded && Boolean(anchor)}
-            onClose={() => {
-              setAnchor(null);
-              setTrail([]);
-            }}
-            anchorOrigin={{ vertical: "top", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "left" }}
-            slotProps={{
-              paper: { sx: { width: 260, maxWidth: "calc(100vw - 24px)" } },
-              list: { ref: menuList, "aria-label": current.title },
-            }}
-          >
-            {trail.length > 0 && (
-              <MenuItem onClick={() => setTrail((value) => value.slice(0, -1))}>
-                <UiIcon icon={ChevronLeft} scale="metadata" />
-                <Box component="span" ml={1}>
-                  Voltar para {trail.length > 1 ? trail[trail.length - 2].title : item.title}
-                </Box>
-              </MenuItem>
-            )}
-            <Box
-              component="li"
-              sx={{ px: 2, py: 1, fontSize: 12, fontWeight: 600, color: "text.secondary" }}
-            >
-              {current.title}
+      <Collapse in={expanded && open} timeout={160} unmountOnExit>
+        <List component="div" id={groupId} disablePadding>
+          {item.routes.map((child) => (
+            <Entry
+              key={child.id}
+              item={child}
+              expanded
+              instance={instance}
+              onNavigate={onNavigate}
+              activeIds={activeIds}
+              locationKey={locationKey}
+              depth={depth + 1}
+            />
+          ))}
+        </List>
+      </Collapse>
+      <Menu
+        anchorEl={anchor}
+        open={!expanded && Boolean(anchor)}
+        onClose={() => {
+          setAnchor(null);
+          setTrail([]);
+        }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{
+          paper: { sx: { width: 260, maxWidth: "calc(100vw - 24px)" } },
+          list: { ref: menuList, "aria-label": current.title },
+        }}
+      >
+        {trail.length > 0 && (
+          <MenuItem onClick={() => setTrail((value) => value.slice(0, -1))}>
+            <UiIcon icon={ChevronLeft} scale="metadata" />
+            <Box component="span" ml={1}>
+              Voltar para {trail.length > 1 ? trail[trail.length - 2].title : item.title}
             </Box>
-            {current.kind === "group" &&
-              current.routes.map((child) =>
-                child.kind === "link" ? (
-                  <MenuItem
-                    key={child.id}
-                    component={Link}
-                    href={`/${instance}${child.href}`}
-                    selected={activeIds.at(-1) === child.id}
-                    aria-current={activeIds.at(-1) === child.id ? "page" : undefined}
-                    onClick={() => {
-                      setAnchor(null);
-                      setTrail([]);
-                      onNavigate();
-                    }}
-                    sx={{ minHeight: 44, fontSize: 13 }}
-                  >
-                    {child.title}
-                  </MenuItem>
-                ) : (
-                  <MenuItem
-                    key={child.id}
-                    onClick={() => setTrail((value) => [...value, child])}
-                    sx={{ minHeight: 44, fontSize: 13, justifyContent: "space-between" }}
-                  >
-                    {child.title}
-                    <UiIcon icon={ChevronRight} scale="metadata" />
-                  </MenuItem>
-                ),
-              )}
-          </Menu>
-        </>
-      )}
+          </MenuItem>
+        )}
+        <Box
+          component="li"
+          sx={{ px: 2, py: 1, fontSize: 12, fontWeight: 600, color: "text.secondary" }}
+        >
+          {current.title}
+        </Box>
+        {current.kind === "group" &&
+          current.routes.map((child) =>
+            child.kind === "link" ? (
+              <MenuItem
+                key={child.id}
+                component={Link}
+                href={`/${instance}${child.href}`}
+                selected={activeIds.at(-1) === child.id}
+                aria-current={activeIds.at(-1) === child.id ? "page" : undefined}
+                onClick={() => {
+                  setAnchor(null);
+                  setTrail([]);
+                  onNavigate();
+                }}
+                sx={{ minHeight: 44, fontSize: 13 }}
+              >
+                {child.title}
+              </MenuItem>
+            ) : (
+              <MenuItem
+                key={child.id}
+                onClick={() => setTrail((value) => [...value, child])}
+                sx={{ minHeight: 44, fontSize: 13, justifyContent: "space-between" }}
+              >
+                {child.title}
+                <UiIcon icon={ChevronRight} scale="metadata" />
+              </MenuItem>
+            ),
+          )}
+      </Menu>
     </>
   );
 }

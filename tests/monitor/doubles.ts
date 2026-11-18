@@ -21,6 +21,7 @@ declare global {
       switchTenant: (instance: string) => void;
       refreshToken: () => void;
       setRole: (role: string) => void;
+      setReportSales: (enabled: boolean) => void;
       emit: () => void;
       listeners: () => number;
       actions: () => { type: string; chatId: number }[];
@@ -56,6 +57,7 @@ const pendingAction = (type: string, chatId: number) =>
 const currentChat = { id: 999, chatType: "wpp" } as DetailedChat;
 const monitorQuery = new URLSearchParams(location.search);
 const whatsapp = {
+  loaded: true,
   parameters: {
     ...(monitorQuery.has("homolog-no-flags")
       ? resolveFeatureParameters("homolog", {})
