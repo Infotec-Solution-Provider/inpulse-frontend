@@ -52,6 +52,12 @@ export default function RenderWhatsappChatMessages({
   attendanceHistory,
 }: RenderWhatsappChatMessagesProps) {
   const { currentChatMessages, reactToMessage, channels, currentChat } = useWhatsappContext();
+  // Homologação também executa versões do helper que recebem somente mensagem e provedor.
+  const canReactInChat: (
+    message: WppMessage,
+    provider: string | undefined,
+    conversation: typeof currentChat,
+  ) => boolean = canReactToWhatsappMessage;
   const { getMessageById, handleQuoteMessage, handleEditMessage, pendingSends } =
     useContext(ChatContext);
   const { instance } = useContext(AuthContext);
@@ -254,7 +260,7 @@ export default function RenderWhatsappChatMessages({
               reactions={m.reactions}
               onReaction={
                 !isReadOnlyMode &&
-                canReactToWhatsappMessage(
+                canReactInChat(
                   m,
                   channels.find((channel) => channel.id === m.clientId)?.type,
                   currentChat,
