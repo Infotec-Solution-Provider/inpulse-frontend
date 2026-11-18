@@ -16,8 +16,9 @@ import {
 import { alpha } from "@mui/material/styles";
 import {
   CheckCircle2,
+  ChevronDown,
   Clock3,
-  Ellipsis,
+  Headset,
   Pause,
   Play,
   RefreshCw,
@@ -51,6 +52,7 @@ function PauseControl({ phone }: { phone: Phone }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  const optionsButton = useRef<HTMLButtonElement>(null);
   const alive = useRef(true);
   const inFlight = useRef<Promise<void> | null>(null);
   const current = useRef(phone);
@@ -151,21 +153,19 @@ function PauseControl({ phone }: { phone: Phone }) {
               : phone.busy
                 ? "Em atendimento"
                 : "Disponível";
-  const caption = exceeded
-    ? `Limite excedido${reasonName ? ` · ${reasonName}` : ""}`
-    : scopeUnavailable
-      ? "WhatsApp não confirmado"
-      : pending
-        ? `Após atendimento telefônico${reasonName ? ` · ${reasonName}` : ""}`
-        : pendingSync
-          ? "Aguardando sincronização"
-          : paused
-            ? `${reasonName ? `${reasonName} · ` : ""}${scopeName}${pbxUncertain ? " · Central pendente" : ""}`
-            : uncertain
-              ? "Há pendências na sincronização"
-              : pbxUncertain
-                ? `${scopeName} · Central pendente`
-                : scopeName;
+  const caption = scopeUnavailable
+    ? "WhatsApp não confirmado"
+    : pending
+      ? `Após atendimento telefônico${reasonName ? ` · ${reasonName}` : ""}`
+      : pendingSync
+        ? "Aguardando sincronização"
+        : paused
+          ? `${reasonName ? `${reasonName} · ` : ""}${scopeName}${pbxUncertain ? " · Central pendente" : ""}`
+          : uncertain
+            ? "Há pendências na sincronização"
+            : pbxUncertain
+              ? `${scopeName} · Central pendente`
+              : scopeName;
 
   async function command(kind: string) {
     if (working) return;
@@ -190,6 +190,7 @@ function PauseControl({ phone }: { phone: Phone }) {
     }
   }
   function showOptions() {
+    if (working) return;
     setActionError(null);
     setOpen(true);
     void refresh();
@@ -197,14 +198,15 @@ function PauseControl({ phone }: { phone: Phone }) {
   const close = () => {
     if (!working) setOpen(false);
   };
-  const Icon =
-    exceeded || uncertain || pbxUncertain || scopeUnavailable
-      ? TriangleAlert
-      : paused
-        ? Pause
-        : pending
-          ? Clock3
-          : CheckCircle2;
+  const needsAttention = uncertain || pbxUncertain || scopeUnavailable || status?.enabled === false;
+  const headerLabel = exceeded && !pendingSync ? "Limite excedido" : label;
+  const tone = exceeded ? "error" : paused || pending || needsAttention ? "warning" : "neutral";
+  const activityIcon =
+    pending || pendingSync || !status ? Clock3 : paused ? Pause : phone.busy ? Headset : CheckCircle2;
+  const Icon = exceeded || (needsAttention && !paused && !pending && !pendingSync)
+    ? TriangleAlert
+    : activityIcon;
+  const quickAction = paused ? "Retomar" : pending ? "Cancelar" : null;
   const timer = seconds === null ? "Tempo indisponível" : duration(seconds);
   const pbxLabel = status?.pbx
     ? (
@@ -220,117 +222,90 @@ function PauseControl({ phone }: { phone: Phone }) {
   return (
     <>
       <Box
-        component="section"
+        role="group"
         aria-label="Pausa do operador"
         aria-busy={working}
         sx={(theme) => ({
-          flexShrink: 0,
-          minWidth: 0,
-          minHeight: 56,
-          display: "flex",
+          display: "inline-flex",
           alignItems: "center",
-          gap: 1,
-          px: { xs: 1.5, md: 3 },
-          py: 0.75,
-          borderBottom: "1px solid",
-          borderColor: exceeded
-            ? alpha(theme.palette.error.main, 0.4)
-            : paused || pending
-              ? alpha(theme.palette.warning.main, 0.3)
-              : "var(--ip-border)",
-          bgcolor: exceeded
-            ? alpha(theme.palette.error.main, 0.12)
-            : paused || pending
-              ? alpha(theme.palette.warning.main, 0.12)
-              : "var(--ip-surface, #fff)",
-          color: "var(--ip-text, inherit)",
+          flexShrink: 0,
+          borderRadius: 2,
+          color: tone === "neutral" ? "var(--ip-text)" : theme.palette[tone].main,
+          bgcolor:
+            tone === "neutral" ? "var(--ip-surface-muted)" : alpha(theme.palette[tone].main, 0.12),
         })}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: 1, minWidth: 0 }}>
-          <UiIcon icon={Icon} scale="toolbar" style={{ flexShrink: 0 }} />
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-              <Typography
-                role="status"
-                aria-live="polite"
-                title={label}
-                noWrap
-                sx={{ fontSize: 13, fontWeight: 700, minWidth: 0 }}
-              >
-                {label}
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
-              <Typography
-                noWrap
-                title={caption}
-                sx={{ fontSize: 11, color: "var(--ip-muted, inherit)", minWidth: 0 }}
-              >
-                {caption}
-              </Typography>
-              {(paused || pendingSync) && (
-                <Typography
-                  component="span"
-                  role="timer"
-                  aria-label="Tempo de pausa"
-                  aria-live="off"
-                  sx={{
-                    flexShrink: 0,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {seconds === null ? "—" : timer}
-                </Typography>
-              )}
-            </Box>
-          </Box>
+        <Box
+          component="span"
+          role="status"
+          sx={{
+            position: "absolute",
+            clipPath: "inset(50%)",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {headerLabel}
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.25, flexShrink: 0 }}>
+        <Tooltip title={`${headerLabel} · ${caption}`} describeChild>
           <Button
+            ref={optionsButton}
             size="small"
-            variant={paused ? "contained" : "outlined"}
-            startIcon={
-              <UiIcon
-                icon={
-                  paused ? Play : pending ? X : !status?.enabled || pendingSync ? RefreshCw : Pause
-                }
-              />
-            }
-            disabled={working || ((!status?.enabled || pendingSync) && refreshing)}
-            onClick={() => {
-              if (paused) void command("resume");
-              else if (pending) void command("cancel_pending");
-              else if (!status?.enabled || pendingSync) void refresh();
-              else showOptions();
+            color="inherit"
+            aria-label="Opções de pausa"
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-disabled={working}
+            onClick={showOptions}
+            sx={{
+              minWidth: 36,
+              px: { xs: 0.75, sm: 1 },
+              gap: 0.5,
+              fontSize: 12,
+              whiteSpace: "nowrap",
+              "@media (pointer: coarse)": { minWidth: 44 },
             }}
-            sx={{ minHeight: 36, textTransform: "none", whiteSpace: "nowrap", px: 1.25 }}
           >
-            {paused
-              ? "Retomar"
-              : pending
-                ? "Cancelar"
-                : !status?.enabled || pendingSync
-                  ? "Atualizar"
-                  : uncertain || scopeUnavailable
-                    ? "Conferir"
-                    : "Pausar"}
+            <UiIcon icon={Icon} scale="metadata" />
+            <Box component="span" aria-hidden="true" sx={{ display: { xs: "none", sm: "inline" } }}>
+              {headerLabel}
+            </Box>
+            {(paused || pendingSync) && (
+              <Box
+                component="span"
+                role="timer"
+                aria-label="Tempo de pausa"
+                sx={{ fontSize: 11, fontVariantNumeric: "tabular-nums" }}
+              >
+                {seconds === null ? "—" : timer}
+              </Box>
+            )}
+            {!quickAction && (
+              <Box component="span" sx={{ display: { xs: "none", sm: "inline-flex" } }}>
+                <UiIcon icon={ChevronDown} scale="metadata" />
+              </Box>
+            )}
           </Button>
-          <Tooltip title="Opções de pausa">
-            <IconButton
-              size="small"
-              aria-label="Opções de pausa"
-              aria-haspopup="dialog"
-              aria-expanded={open}
-              disabled={working}
-              onClick={showOptions}
-              sx={{ width: 36, height: 36 }}
-            >
-              <UiIcon icon={Ellipsis} />
-            </IconButton>
+        </Tooltip>
+        {quickAction && (
+          <Tooltip title={quickAction}>
+            <span>
+              <IconButton
+                size="small"
+                color="inherit"
+                aria-label={quickAction}
+                disabled={working}
+                onClick={() => {
+                  optionsButton.current?.focus();
+                  void command(paused ? "resume" : "cancel_pending");
+                }}
+                sx={{ width: 36, height: 36 }}
+              >
+                <UiIcon icon={paused ? Play : X} scale="metadata" />
+              </IconButton>
+            </span>
           </Tooltip>
-        </Box>
+        )}
       </Box>
       <Dialog
         open={open}

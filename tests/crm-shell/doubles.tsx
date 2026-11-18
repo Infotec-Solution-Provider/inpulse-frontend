@@ -1,4 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import { IconButton } from "@mui/material";
 import { harness as phoneHarness } from "../telephony/doubles";
 import {
   AuthContext,
@@ -40,6 +42,13 @@ export function Passthrough({ children }: { children: ReactNode }) {
 }
 export function Empty() {
   return null;
+}
+export function NotificationsButton() {
+  return (
+    <IconButton aria-label="Notificações">
+      <NotificationsIcon />
+    </IconButton>
+  );
 }
 export function WppProvider({ children }: { children: ReactNode }) {
   const env = useEnvironment();

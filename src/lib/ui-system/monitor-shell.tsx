@@ -317,7 +317,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              px: { xs: 2, md: 3 },
+              px: { xs: 1.5, sm: 2, md: 3 },
               gap: 1,
               borderBottom: "1px solid var(--ip-border)",
               bgcolor: "var(--ip-surface)",
@@ -334,8 +334,29 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
                   <UiIcon icon={MenuIcon} scale="toolbar" />
                 </IconButton>
               )}
-              <Box sx={{ display: { xs: "block", sm: "none" }, minWidth: 0, maxWidth: 80 }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>{pageTitle}</Typography>
+              <Box
+                sx={{
+                  display: { xs: "block", sm: "none" },
+                  width: 80,
+                  minWidth: 0,
+                  containerType: "inline-size",
+                  "@container (max-width: 56px)": { "& > *": { display: "none" } },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    lineHeight: 1.25,
+                    display: "-webkit-box",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 2,
+                    overflowWrap: "anywhere",
+                    overflow: "hidden",
+                  }}
+                >
+                  {pageTitle}
+                </Typography>
                 <Typography
                   noWrap
                   title={`Instância: ${instance}`}
@@ -366,7 +387,9 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
                   scale="metadata"
                   style={{ color: "var(--ip-muted)", flexShrink: 0 }}
                 />
-                <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{pageTitle}</Typography>
+                <Typography noWrap sx={{ fontSize: 13, fontWeight: 600 }}>
+                  {pageTitle}
+                </Typography>
               </Box>
               <Box
                 component="span"
@@ -391,6 +414,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             <Box
               sx={{ display: "flex", alignItems: "center", gap: { xs: 0, sm: 0.5 }, flexShrink: 0 }}
             >
+              <OperatorPause />
               <Tooltip title="Preferência de tema">
                 <IconButton
                   aria-label="Preferência de tema"
@@ -414,6 +438,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
                   gap: 1,
                   color: "var(--ip-text)",
                   textTransform: "none",
+                  "& > .ip-icon": { display: { xs: "none", sm: "block" } },
                 }}
               >
                 <Avatar
@@ -526,9 +551,6 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             open={notificationSettingsOpen}
             onClose={() => setNotificationSettingsOpen(false)}
           />
-        </PilotDesignProvider>
-        <PilotDesignProvider style={{ height: "auto", flexShrink: 0, minWidth: 0 }}>
-          <OperatorPause />
         </PilotDesignProvider>
         <Box
           component="main"
