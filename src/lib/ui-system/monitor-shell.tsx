@@ -63,6 +63,9 @@ import {
 import type { ThemePreference } from "./theme-preference";
 import { UiIcon } from "./icons";
 import { NavigationTree } from "./navigation-tree";
+import { availableReports } from "@/lib/reports/catalog";
+import { useRecentReports } from "@/lib/reports/recent";
+import type { ReportShortcuts } from "./reports-navigation-entry";
 import { PilotDesignProvider } from "./provider";
 import { uiCssVariables } from "./tokens";
 
@@ -73,6 +76,7 @@ function Sidebar({
   pathname,
   search,
   items,
+  reportShortcuts,
   onNavigate,
   onToggle,
 }: {
@@ -82,6 +86,7 @@ function Sidebar({
   pathname: string;
   search: string;
   items: NavigationItem[];
+  reportShortcuts: ReportShortcuts;
   onNavigate: () => void;
   onToggle: () => void;
 }) {
@@ -164,6 +169,7 @@ function Sidebar({
           instance={instance}
           pathname={pathname}
           search={search}
+          reportShortcuts={reportShortcuts}
           onNavigate={onNavigate}
         />
       </Box>
@@ -208,7 +214,7 @@ const themeChoices: Array<{ value: ThemePreference; label: string; icon: typeof 
 /** Page chrome lives below persistent chat and phone providers. */
 export default function MonitorShell({ children }: { children: ReactNode }) {
   const { instance, user, signOut } = useContext(AuthContext);
-  const { parameters } = useContext(WhatsappContext);
+  const { parameters, loaded } = useContext(WhatsappContext);
   const { preference, setPreference, theme } = useThemeContext();
   const pathname = usePathname();
   const search = useSearchParams()?.toString() ?? "";
@@ -225,6 +231,18 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
     () => getNavigationItems(parameters, user?.NIVEL, instance),
     [parameters, user?.NIVEL, instance],
   );
+
+  const reports = useMemo(
+    () => (loaded ? availableReports(parameters, user?.NIVEL, instance) : []),
+    [loaded, parameters, user?.NIVEL, instance],
+  );
+  const recentIds = useRecentReports({ instance, userId: user?.CODIGO, pathname, reports });
+  const reportShortcuts: ReportShortcuts = {
+    scope: storageKey ?? "",
+    ready: loaded,
+    reports,
+    recentIds,
+  };
 
   useEffect(() => {
     if (!storageKey) return;
@@ -300,6 +318,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
             pathname={pathname}
             search={search}
             items={items}
+            reportShortcuts={reportShortcuts}
             onNavigate={closeNavigation}
             onToggle={toggleExpanded}
           />
@@ -480,6 +499,7 @@ export default function MonitorShell({ children }: { children: ReactNode }) {
               pathname={pathname}
               search={search}
               items={items}
+              reportShortcuts={reportShortcuts}
               onNavigate={closeNavigation}
               onToggle={toggleExpanded}
             />

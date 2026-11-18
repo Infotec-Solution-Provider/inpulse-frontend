@@ -4,7 +4,7 @@ async function open(page: Page, width = 1440) {
   await page.route("**/api/whatsapp/monitor/**", (route) =>
     route.fulfill({ json: { data: { items: [], totalCount: 0, page: 1, pageSize: 20 } } }),
   );
-  await page.goto("/tests/monitor/index.html");
+  await page.goto("/tests/monitor/index.html?homolog-no-flags");
   if (width >= 1024)
     await expect(page.getByRole("navigation", { name: "Navegação principal" })).toBeAttached();
   else await expect(page.getByRole("button", { name: "Abrir navegação" })).toBeVisible();
