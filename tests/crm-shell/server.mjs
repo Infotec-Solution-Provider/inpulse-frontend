@@ -20,7 +20,7 @@ const stubs = {
     ].map((name) => [name, `export {Passthrough as default} from '${doubles}'`]),
   ),
   "cache-warmup": `export {Empty as default} from '${doubles}'`,
-  "lazy-notifications-dropdown": `export {Empty as default} from '${doubles}'`,
+  "lazy-notifications-dropdown": `export {NotificationsButton as default} from '${doubles}'`,
   "notification-preferences-modal": `export {Empty as default} from '${doubles}'`,
   "users.service": `export {usersService as default} from '/tests/telephony/doubles.ts'`,
   "customers.service": `export {customersService as default} from '/tests/telephony/doubles.ts'`,

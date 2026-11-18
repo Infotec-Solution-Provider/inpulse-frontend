@@ -15,12 +15,12 @@ async function closeInHeader(page: Page, title: string) {
 
 test("audio settings, direct transfer, pause and indicators use the operator controls", async ({ page }) => {
   await page.goto("/tests/telephony/index.html?runtime");
-  const disconnectedPause = page.getByRole("region", { name: "Pausa do operador", exact: true });
+  const disconnectedPause = page.getByRole("group", { name: "Pausa do operador", exact: true });
   await expect(disconnectedPause).toHaveCount(1);
   await expect(disconnectedPause).toBeVisible();
   await expect(page.getByRole("status", { name: "Desconectado" })).toBeVisible();
   await expect(page.getByLabel("Telefone ou ramal", { exact: true })).toHaveCount(0);
-  await disconnectedPause.getByRole("button", { name: "Pausar", exact: true }).click();
+  await disconnectedPause.getByRole("button", { name: "Opções de pausa", exact: true }).click();
   const pauseDialog = page.getByRole("dialog", { name: "Pausa", exact: true });
   await expect(pauseDialog).toContainText("Mensagens e outras áreas continuam disponíveis.");
   await pauseDialog.getByLabel("Motivo da pausa", { exact: true }).click();
@@ -28,7 +28,6 @@ test("audio settings, direct transfer, pause and indicators use the operator con
   await pauseDialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
   await closeInHeader(page, "Pausa");
   await expect(disconnectedPause).toContainText("Em pausa");
-  await expect(disconnectedPause).toContainText("Café");
   await expect(disconnectedPause.getByRole("timer")).toBeVisible();
   expect(await page.evaluate(() => window.phoneHarness.runtimeState.reasonId)).toBe(1);
   for (const width of [320, 390]) {
@@ -47,11 +46,11 @@ test("audio settings, direct transfer, pause and indicators use the operator con
   await expect(page.getByRole("status", { name: "Ramal conectado" })).toBeVisible();
   await page.getByRole("button", { name: "Configurações da telefonia" }).click();
   await expect(page.getByRole("dialog", { name: "Aparelhos e áudio" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Atender automaticamente" })).not.toBeChecked();
-  await expect(page.getByRole("checkbox", { name: "Cancelamento de eco" })).toBeChecked();
+  await expect(page.getByRole("switch", { name: "Atender automaticamente" })).not.toBeChecked();
+  await expect(page.getByRole("switch", { name: "Cancelamento de eco" })).toBeChecked();
   await page.waitForTimeout(300);
   await page.screenshot({ path: "test-results/telephony-parity-audio.png", fullPage: true });
-  await page.getByRole("checkbox", { name: "Atender automaticamente" }).scrollIntoViewIfNeeded();
+  await page.getByRole("switch", { name: "Atender automaticamente" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/telephony-parity-audio-advanced.png", fullPage: true });
   await closeInHeader(page, "Aparelhos e áudio");
   await page.getByLabel("Telefone ou ramal", { exact: true }).fill("103");
@@ -65,8 +64,8 @@ test("audio settings, direct transfer, pause and indicators use the operator con
   await page.getByRole("button", { name: "Transferir", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.phoneHarness.transfers)).toEqual(["sip:0200@pbx.example.test"]);
   await expect(page.getByRole("button", { name: /Avaliar áudio|Histórico e qualidade/ })).toHaveCount(0);
-  const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
-  await pause.getByRole("button", { name: "Pausar", exact: true }).click();
+  const pause = page.getByRole("group", { name: "Pausa do operador", exact: true });
+  await pause.getByRole("button", { name: "Opções de pausa", exact: true }).click();
   await pauseDialog.getByLabel("Motivo da pausa").click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
   await expect(pauseDialog.getByRole("button", { name: "Após atendimento telefônico", exact: true })).toBeDisabled();
@@ -87,11 +86,11 @@ test("audio settings, direct transfer, pause and indicators use the operator con
 
 test("operator pause stays available without the SIP feature and disappears on logout", async ({ page }) => {
   await page.goto("/tests/telephony/index.html?runtime&all-channels&dialer-off");
-  const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
-  await expect(pause).toContainText("Ligações e WhatsApp");
+  const pause = page.getByRole("group", { name: "Pausa do operador", exact: true });
   await expect(page.getByRole("button", { name: "Conectar telefonia", exact: true })).toHaveCount(0);
-  await pause.getByRole("button", { name: "Pausar", exact: true }).click();
+  await pause.getByRole("button", { name: "Opções de pausa", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Pausa", exact: true });
+  await expect(dialog).toContainText("Escopo confirmado: Ligações e WhatsApp.");
   await expect(dialog).toContainText("Você pode responder e concluir as conversas já abertas.");
   await dialog.getByLabel("Motivo da pausa", { exact: true }).click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
