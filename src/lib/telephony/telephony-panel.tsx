@@ -55,6 +55,8 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
       ? "fixed right-4 top-20 z-[1250] max-h-[calc(100dvh-14rem)] w-[330px] max-w-[calc(100vw-2rem)] shadow-xl"
       : "w-full min-w-0 shadow-sm";
   const statusLabel = busy ? callPhaseLabels[state.phase] : labels[state.connection];
+  const connectionAction = state.connection === "ready" ? "Desconectar" : "Conectar telefonia";
+  const connectionHint = state.extension ? `${statusLabel} · ${state.extension}` : statusLabel;
   const controlsVisible = !!(
     (open && (busy || state.connection === "ready")) ||
     (phone.operatorState?.enabled && phone.operatorState.activeCallId && !busy) ||
@@ -65,17 +67,11 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
   );
   const header = (
     <>
-      <span
-        role="status"
-        aria-label={statusLabel}
-        title={`${statusLabel}${state.extension ? ` · ${state.extension}` : ""}`}
-        className={`ip-phone-status ip-phone-status--${state.connection}${busy ? " ip-phone-status--busy" : ""}`}
-      />
-      <Tooltip title={state.connection === "ready" ? "Desconectar" : "Conectar telefonia"}>
-        <span>
+      <Tooltip describeChild title={`${connectionAction} · ${connectionHint}`}>
+        <span className="ip-phone-connection">
           <IconButton
             size="small"
-            aria-label={state.connection === "ready" ? "Desconectar" : "Conectar telefonia"}
+            aria-label={connectionAction}
             disabled={busy || state.connection === "connecting"}
             onClick={() => {
               if (state.connection === "ready") phone.disconnect();
@@ -87,6 +83,11 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           >
             <UiIcon icon={Power} />
           </IconButton>
+          <span
+            role="status"
+            aria-label={statusLabel}
+            className={`ip-phone-status ip-phone-status--${state.connection}${busy ? " ip-phone-status--busy" : ""}`}
+          />
         </span>
       </Tooltip>
       <Tooltip title={open ? "Recolher telefone" : "Abrir telefone"}>
