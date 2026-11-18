@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { useState, type ReactNode } from "react";
+import { useContext, useMemo, useState, type ReactNode } from "react";
 import { Modal } from "@mui/material";
 import { ThemeProvider, useThemeContext } from "../../src/app/theme-context";
 import { PilotDesignProvider } from "../../src/lib/ui-system";
@@ -9,7 +9,7 @@ import { isMonitorPath } from "../../src/lib/ui-system/navigation";
 import { navigate, usePathname } from "./navigation-doubles";
 import MonitorPage from "../../src/app/(private)/[instance]/monitor/page";
 import MonitorLayout from "../../src/app/(private)/[instance]/monitor/layout";
-import { AuthContext, AppContext, socket, state } from "./doubles";
+import { AuthContext, AppContext, WhatsappContext, socket, state } from "./doubles";
 import { authSession } from "../../src/lib/auth-session";
 import "./harness.css";
 
@@ -18,6 +18,25 @@ function Harness() {
   const [token, setToken] = useState("test-token");
   const [role, setRole] = useState("ADMIN");
   const [userId, setUserId] = useState(1);
+  const [reportSales, setReportSales] = useState(
+    new URLSearchParams(location.search).has("report-navigation"),
+  );
+  const whatsapp = useContext(WhatsappContext);
+  const reportContext = useMemo(
+    () => ({
+      ...whatsapp,
+      parameters: {
+        ...whatsapp.parameters,
+        feature_sales_reports_enabled: String(reportSales),
+        feature_reports_advanced_enabled: new URLSearchParams(location.search).has(
+          "report-navigation",
+        )
+          ? "true"
+          : "false",
+      },
+    }),
+    [reportSales, whatsapp],
+  );
   const [modal, setModal] = useState<ReactNode>(null);
   const { setPreference } = useThemeContext();
   const pathname = usePathname();
@@ -35,6 +54,7 @@ function Harness() {
         setToken(`test-user-${id}`);
       },
       setRole,
+      setReportSales,
       emit: socket.emit,
       listeners: socket.listenerCount,
       actions: () => state.actions.map(({ type, chatId }) => ({ type, chatId })),
@@ -70,22 +90,26 @@ function Harness() {
         },
       }}
     >
-      <AppContext.Provider value={{ modal, openModal: setModal, closeModal: () => setModal(null) }}>
-        <MonitorShell>
-          {isMonitorPath(pathname) ? (
-            <PilotDesignProvider>
-              <MonitorLayout>
-                <MonitorPage />
-              </MonitorLayout>
-              {appModal}
-            </PilotDesignProvider>
-          ) : (
-            <div aria-label="Conteúdo legado" style={{ padding: 24 }}>
-              Página demonstrativa no layout anterior.{appModal}
-            </div>
-          )}
-        </MonitorShell>
-      </AppContext.Provider>
+      <WhatsappContext.Provider value={reportContext}>
+        <AppContext.Provider
+          value={{ modal, openModal: setModal, closeModal: () => setModal(null) }}
+        >
+          <MonitorShell>
+            {isMonitorPath(pathname) ? (
+              <PilotDesignProvider>
+                <MonitorLayout>
+                  <MonitorPage />
+                </MonitorLayout>
+                {appModal}
+              </PilotDesignProvider>
+            ) : (
+              <div aria-label="Conteúdo legado" data-pathname={pathname} style={{ padding: 24 }}>
+                Página demonstrativa no layout anterior.{appModal}
+              </div>
+            )}
+          </MonitorShell>
+        </AppContext.Provider>
+      </WhatsappContext.Provider>
     </AuthContext.Provider>
   );
 }
