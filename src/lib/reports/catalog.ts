@@ -60,6 +60,16 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     output: "Tabela e gráfico",
   },
   {
+    id: "call-abc",
+    title: "Curva ABC de ligações",
+    description: "Classifique clientes e campanhas pelo volume de ligações, contatos ou vendas no período.",
+    category: "attendance",
+    href: "/reports/call-abc",
+    keywords: ["g29", "telefonia", "ranking", "receptivo", "ativo"],
+    output: "Tabela e gráfico",
+    feature: F.reportsAdvanced,
+  },
+  {
     id: "general-performance",
     title: "Performance Geral",
     description: "Indicadores consolidados de atendimento e desempenho da equipe.",

@@ -1,11 +1,17 @@
+.ip-phone-connection {
+  display: inline-flex;
+  position: relative;
+}
 .ip-phone-status {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
+  position: absolute;
+  inset-block-start: calc(50% - 12px);
+  inset-inline-start: calc(50% + 5px);
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #94a3b8;
-  box-shadow: 0 0 0 3px rgb(148 163 184 / 12%);
+  box-shadow: 0 0 0 2px var(--ip-surface-muted, white);
+  pointer-events: none;
 }
 .ip-phone-status--ready {
   background: #22c55e;
