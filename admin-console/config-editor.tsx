@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Alert,
   Button,
@@ -26,7 +26,6 @@ const applicationLabels = {
   unknown: "Execução a conferir",
 };
 const effectLabels = {
-  dynamic: "Efeito imediato ao salvar",
   reload: "Próximo carregamento",
   restart: "Requer aplicação / reinício",
   build: "Requer novo build",
@@ -526,6 +525,7 @@ function Field({
   onChange: (draft: Draft | null) => void;
 }) {
   const inherited = snapshot.inherited?.[field.key];
+  const hintId = useId();
   const raw =
     draft?.action === "reset"
       ? (inherited?.value ?? field.defaultValue)
@@ -541,6 +541,12 @@ function Field({
           : displayValue(field, raw);
   const blocked = disabled || field.readOnly || !!field.unavailableReason;
   const set = (input: string) => onChange({ action: "set", input });
+  const inheritanceHint = inherited && (
+    <span className="admin-setting-hint" id={hintId}>
+      Herdado de {inherited.source}
+      {!isSecret && ` · ${displayValue(field, inherited.value) || "Não definido"}`}
+    </span>
+  );
   return (
     <div className="admin-setting" data-testid={`setting-${field.key}`}>
       <div>
@@ -565,13 +571,7 @@ function Field({
         </div>
         <code>{field.key}</code>
         <p>{field.description}</p>
-        {field.applyMode && <p>{effectLabels[field.applyMode]}</p>}
-        {inherited && (
-          <p>
-            Herdado de {inherited.source}
-            {isSecret ? "" : ` · ${displayValue(field, inherited.value) || "Não definido"}`}
-          </p>
-        )}
+        {field.applyMode && field.applyMode !== "dynamic" && <p>{effectLabels[field.applyMode]}</p>}
         {field.unavailableReason && <p>{field.unavailableReason}</p>}
       </div>
       <div className="admin-setting-input">
@@ -583,14 +583,19 @@ function Field({
           </div>
         )}
         {field.type === "boolean" ? (
-          <div className="admin-setting-actions">
-            <span className="admin-metadata">{value === "true" ? "Ativado" : "Desativado"}</span>
-            <Switch
-              checked={value === "true"}
-              disabled={blocked}
-              slotProps={{ input: { "aria-label": field.label } }}
-              onChange={(_, checked) => set(String(checked))}
-            />
+          <div className="admin-setting-switch">
+            <div className="admin-setting-actions">
+              <span className="admin-metadata">{value === "true" ? "Ativado" : "Desativado"}</span>
+              <Switch
+                checked={value === "true"}
+                disabled={blocked}
+                slotProps={{
+                  input: { "aria-label": field.label, "aria-describedby": inherited ? hintId : undefined },
+                }}
+                onChange={(_, checked) => set(String(checked))}
+              />
+            </div>
+            {inheritanceHint}
           </div>
         ) : field.type === "enum" ? (
           <TextField
@@ -602,6 +607,7 @@ function Field({
               field.options?.some((option) => JSON.stringify(option.value) === value) ? value : ""
             }
             disabled={blocked}
+            helperText={inheritanceHint}
             onChange={(event) => set(event.target.value)}
           >
             {field.options?.map((option) => (
@@ -622,7 +628,7 @@ function Field({
             autoComplete={isSecret ? "new-password" : "off"}
             disabled={blocked}
             error={!!error}
-            helperText={error}
+            helperText={error ? <>{error}{inheritanceHint}</> : inheritanceHint}
             slotProps={{
               htmlInput: {
                 "aria-label": field.label,

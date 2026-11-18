@@ -385,6 +385,16 @@ a {
   gap: 7px;
   min-width: 0;
 }
+.admin-setting-hint {
+  display: block;
+  color: var(--ip-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.admin-setting-switch .admin-setting-hint {
+  text-align: right;
+}
 .admin-setting-actions {
   display: flex;
   align-items: center;
