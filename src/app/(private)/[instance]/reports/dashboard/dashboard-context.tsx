@@ -3,7 +3,15 @@
 import { AuthContext } from "@/app/auth-context";
 import { WPP_BASE_URL } from "@/app/(private)/[instance]/whatsapp-context";
 import axios from "axios";
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "react-toastify";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 
@@ -13,10 +21,6 @@ export type ReportKey =
   | "generalPerformance"
   | "operatorPerformance"
   | "salesFunnel"
-  | "contactsAwaitingReturn"
-  | "messagesPerUser"
-  | "messagesPerContact"
-  | "messagesPerHourDay"
   | "satisfactionSurvey";
 
 const REPORTS_URL = process.env["NEXT_PUBLIC_REPORTS_URL"] || "http://localhost:8006";
@@ -26,55 +30,8 @@ const ALL_TIME_END = "2099-12-31";
 export interface DashboardFilters {
   startDate: string;
   endDate: string;
-  userId: string;
   sectors: string;
   operators: string;
-  minDate: string;
-  maxDate: string;
-}
-
-export interface AwaitingReturnRow {
-  CODIGO_ATENDIMENTO: number;
-  CONTATO: string;
-  CLIENTE: string | null;
-  OPERADOR: string | null;
-  SETOR: string | null;
-  DATA_MENSAGEM_CLIENTE: string | null;
-}
-
-export interface MessagesPerUserRow {
-  userId: number;
-  userName: string;
-  userActive: string | number | null;
-  userType: string | number | null;
-  userSector: string | null;
-  attendancesCount: number;
-  messagesCount: number;
-  sentMessagesCount: number;
-  receivedMessagesCount: number;
-  contactsCount: number;
-}
-
-export interface MessagesPerContactRow {
-  contactId: number;
-  contactName: string;
-  customerId: number | null;
-  customerName?: string | null;
-  customerCnpj?: string | null;
-  customerSector?: string | null;
-  messagesCount: number;
-  sentMessagesCount: number;
-  receivedMessagesCount: number;
-  attendancesCount: number;
-}
-
-export interface MessagesPerHourDayRow {
-  sector: string | null;
-  hour: number;
-  weekDay: number;
-  messagesCount: number;
-  sentMessagesCount: number;
-  receivedMessagesCount: number;
 }
 
 export interface SatisfactionSurveyAnalyticalRow {
@@ -175,10 +132,6 @@ interface DashboardContextType {
   setSelectedReport: (report: ReportKey) => void;
   chartTypes: Record<ReportKey, ChartType>;
   setChartType: (key: ReportKey, type: ChartType) => void;
-  contactsAwaitingReturn: AwaitingReturnRow[];
-  messagesPerUser: MessagesPerUserRow[];
-  messagesPerContact: MessagesPerContactRow[];
-  messagesPerHourDay: MessagesPerHourDayRow[];
   operatorPerformanceSummary: OperatorPerformanceSummary | null;
   operatorPerformancePreviousSummary: OperatorPerformanceSummary | null;
   operatorPerformance: OperatorPerformanceRow[];
@@ -198,10 +151,6 @@ const defaultChartTypes: Record<ReportKey, ChartType> = {
   generalPerformance: "bar",
   operatorPerformance: "bar",
   salesFunnel: "bar",
-  contactsAwaitingReturn: "pie",
-  messagesPerUser: "bar",
-  messagesPerContact: "bar",
-  messagesPerHourDay: "line",
   satisfactionSurvey: "bar",
 };
 
@@ -220,11 +169,8 @@ function createDefaultFilters(): DashboardFilters {
   return {
     startDate: sevenDaysAgo,
     endDate: today,
-    userId: "",
     sectors: "*",
     operators: "*",
-    minDate: today,
-    maxDate: today,
   };
 }
 
@@ -241,24 +187,26 @@ export default function DashboardProvider({
   const [filters, setFilters] = useState<DashboardFilters>(() => createDefaultFilters());
   const [chartTypes, setChartTypes] = useState<Record<ReportKey, ChartType>>(defaultChartTypes);
   const [loading, setLoading] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<ReportKey>(initialSelectedReport || "messagesPerUser");
+  const [selectedReport, setSelectedReport] = useState<ReportKey>(
+    initialSelectedReport || "generalPerformance",
+  );
 
-  const [contactsAwaitingReturn, setContactsAwaitingReturn] = useState<AwaitingReturnRow[]>([]);
-  const [messagesPerUser, setMessagesPerUser] = useState<MessagesPerUserRow[]>([]);
-  const [messagesPerContact, setMessagesPerContact] = useState<MessagesPerContactRow[]>([]);
-  const [messagesPerHourDay, setMessagesPerHourDay] = useState<MessagesPerHourDayRow[]>([]);
   const [operatorPerformanceSummary, setOperatorPerformanceSummary] =
     useState<OperatorPerformanceSummary | null>(null);
   const [operatorPerformancePreviousSummary, setOperatorPerformancePreviousSummary] =
     useState<OperatorPerformanceSummary | null>(null);
   const [operatorPerformance, setOperatorPerformance] = useState<OperatorPerformanceRow[]>([]);
-  const [operatorPerformanceDailySeries, setOperatorPerformanceDailySeries] =
-    useState<OperatorPerformanceDailySeriesRow[]>([]);
-  const [satisfactionSurveyAnalytical, setSatisfactionSurveyAnalytical] = useState<SatisfactionSurveyAnalyticalRow[]>(
-    [],
-  );
-  const [satisfactionSurveySynthetic, setSatisfactionSurveySynthetic] = useState<SatisfactionSurveySyntheticRow[]>([]);
-  const [satisfactionViewMode, setSatisfactionViewMode] = useState<SatisfactionViewMode>("analytical");
+  const [operatorPerformanceDailySeries, setOperatorPerformanceDailySeries] = useState<
+    OperatorPerformanceDailySeriesRow[]
+  >([]);
+  const [satisfactionSurveyAnalytical, setSatisfactionSurveyAnalytical] = useState<
+    SatisfactionSurveyAnalyticalRow[]
+  >([]);
+  const [satisfactionSurveySynthetic, setSatisfactionSurveySynthetic] = useState<
+    SatisfactionSurveySyntheticRow[]
+  >([]);
+  const [satisfactionViewMode, setSatisfactionViewMode] =
+    useState<SatisfactionViewMode>("analytical");
   const [satisfactionPage, setSatisfactionPage] = useState(1);
   const [satisfactionPageSize, setSatisfactionPageSize] = useState(20);
 
@@ -273,100 +221,60 @@ export default function DashboardProvider({
 
   const loadReport = useCallback(
     async (report?: ReportKey, overrideFilters?: DashboardFilters) => {
-    setLoading(true);
-    try {
-      const effectiveFilters = overrideFilters || filters;
-      const periodStart = effectiveFilters.startDate || ALL_TIME_START;
-      const periodEnd = effectiveFilters.endDate || ALL_TIME_END;
-      const dateFilter = `${periodStart}_${periodEnd}`;
-      const minDate = effectiveFilters.minDate || ALL_TIME_START;
-      const maxDate = effectiveFilters.maxDate || ALL_TIME_END;
-      const target = report || selectedReport;
+      setLoading(true);
+      try {
+        const effectiveFilters = overrideFilters || filters;
+        const periodStart = effectiveFilters.startDate || ALL_TIME_START;
+        const periodEnd = effectiveFilters.endDate || ALL_TIME_END;
+        const target = report || selectedReport;
 
-      if (target === "messagesPerUser") {
-        const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/messages-per-user`, {
-          headers,
-          params: { date: dateFilter },
-        });
-        setMessagesPerUser(res.data?.data?.messagesPerUser || []);
-      }
+        if (target === "operatorPerformance" || target === "generalPerformance") {
+          const res = await axios.get(
+            `${WPP_BASE_URL}/api/whatsapp/dashboard/operator-performance`,
+            {
+              headers,
+              params: {
+                startDate: periodStart,
+                endDate: periodEnd,
+                SETORES: effectiveFilters.sectors || "*",
+                OPERADORES: effectiveFilters.operators || "*",
+              },
+            },
+          );
 
-      if (target === "operatorPerformance" || target === "generalPerformance") {
-        const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/operator-performance`, {
-          headers,
-          params: {
-            startDate: periodStart,
-            endDate: periodEnd,
-            SETORES: effectiveFilters.sectors || "*",
-            OPERADORES: effectiveFilters.operators || "*",
-          },
-        });
+          setOperatorPerformanceSummary(res.data?.data?.summary || null);
+          setOperatorPerformancePreviousSummary(res.data?.data?.previousSummary || null);
+          setOperatorPerformance(res.data?.data?.operatorPerformance || []);
+          setOperatorPerformanceDailySeries(res.data?.data?.dailySeries || []);
+        }
 
-        setOperatorPerformanceSummary(res.data?.data?.summary || null);
-        setOperatorPerformancePreviousSummary(res.data?.data?.previousSummary || null);
-        setOperatorPerformance(res.data?.data?.operatorPerformance || []);
-        setOperatorPerformanceDailySeries(res.data?.data?.dailySeries || []);
-      }
+        if (target === "salesFunnel") {
+          return;
+        }
 
-      if (target === "salesFunnel") {
-        return;
-      }
-
-      if (target === "messagesPerContact") {
-        const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/messages-per-contact`, {
-          headers,
-          params: {
-            date: dateFilter,
-            ...(effectiveFilters.userId ? { user: effectiveFilters.userId } : {}),
-          },
-        });
-        setMessagesPerContact(res.data?.data?.messagesPerContact || []);
-      }
-
-      if (target === "messagesPerHourDay") {
-        const res = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/messages-per-hour-day`, {
-          headers,
-          params: {
-            SETORES: effectiveFilters.sectors || "*",
-            OPERADORES: effectiveFilters.operators || "*",
-            MIN_DATE: minDate,
-            MAX_DATE: maxDate,
-          },
-        });
-        setMessagesPerHourDay(res.data?.data?.messagesPerHourDay || []);
-      }
-
-      if (target === "contactsAwaitingReturn") {
-        const res = await axios.get(
-          `${WPP_BASE_URL}/api/whatsapp/dashboard/contacts-awaiting-return`,
-          {
+        if (target === "satisfactionSurvey") {
+          const res = await axios.get(`${REPORTS_URL}/api/reports/satisfaction-survey`, {
             headers,
-          },
-        );
-        setContactsAwaitingReturn(res.data?.data || []);
-      }
+            params: {
+              startDate: periodStart,
+              endDate: periodEnd,
+              ...(effectiveFilters.operators && effectiveFilters.operators !== "*"
+                ? { operators: effectiveFilters.operators }
+                : {}),
+            },
+          });
 
-      if (target === "satisfactionSurvey") {
-        const res = await axios.get(`${REPORTS_URL}/api/reports/satisfaction-survey`, {
-          headers,
-          params: {
-            startDate: periodStart,
-            endDate: periodEnd,
-            ...(effectiveFilters.operators && effectiveFilters.operators !== "*"
-              ? { operators: effectiveFilters.operators }
-              : {}),
-          },
-        });
-
-        setSatisfactionSurveyAnalytical(res.data?.data?.analytical || []);
-        setSatisfactionSurveySynthetic(res.data?.data?.synthetic || []);
+          setSatisfactionSurveyAnalytical(res.data?.data?.analytical || []);
+          setSatisfactionSurveySynthetic(res.data?.data?.synthetic || []);
+        }
+      } catch (err) {
+        toast.error("Falha ao carregar relatórios!\n" + sanitizeErrorMessage(err));
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      toast.error("Falha ao carregar relatórios!\n" + sanitizeErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, headers, selectedReport]);
+    },
+    [filters, headers, selectedReport],
+  );
 
   useEffect(() => {
     if (initialSelectedReport) {
@@ -390,10 +298,6 @@ export default function DashboardProvider({
         setSelectedReport,
         chartTypes,
         setChartType,
-        contactsAwaitingReturn,
-        messagesPerUser,
-        messagesPerContact,
-        messagesPerHourDay,
         operatorPerformanceSummary,
         operatorPerformancePreviousSummary,
         operatorPerformance,

@@ -111,10 +111,8 @@ export default function DashboardFilters() {
         loadReport(selectedReport, local);
       }}
     >
-      {(selectedReport === "messagesPerUser" ||
-        selectedReport === "generalPerformance" ||
+      {(selectedReport === "generalPerformance" ||
         selectedReport === "operatorPerformance" ||
-        selectedReport === "messagesPerContact" ||
         selectedReport === "satisfactionSurvey") && (
         <>
           <TextField
@@ -136,24 +134,6 @@ export default function DashboardFilters() {
             className="w-48"
           />
         </>
-      )}
-
-      {selectedReport === "messagesPerContact" && (
-        <TextField
-          select
-          label="Operador"
-          size="small"
-          value={local.userId || ""}
-          onChange={(e) => setLocal((prev) => ({ ...prev, userId: e.target.value }))}
-          className="w-56"
-        >
-          <MenuItem value="">Todos</MenuItem>
-          {operatorOptions.map((operator) => (
-            <MenuItem key={operator.id} value={operator.id}>
-              {operator.name}
-            </MenuItem>
-          ))}
-        </TextField>
       )}
 
       {(selectedReport === "operatorPerformance" || selectedReport === "generalPerformance") && (
@@ -220,91 +200,6 @@ export default function DashboardFilters() {
               </MenuItem>
             ))}
           </TextField>
-        </>
-      )}
-
-      {selectedReport === "messagesPerHourDay" && (
-        <>
-          <TextField
-            select
-            label="Setores"
-            size="small"
-            value={selectedSectorIds}
-            InputLabelProps={{ shrink: true }}
-            onChange={(e) => {
-              const value = e.target.value;
-              handleSectorsChange(Array.isArray(value) ? value : [value]);
-            }}
-            className="w-64"
-            SelectProps={{
-              multiple: true,
-              displayEmpty: true,
-              renderValue: (selected) => {
-                const selectedIds = selected as string[];
-                if (!selectedIds.length) return "Todos";
-
-                return selectedIds
-                  .map((id) => sectorOptions.find((option) => option.id === id)?.name || `#${id}`)
-                  .join(", ");
-              },
-            }}
-          >
-            <MenuItem value={ALL_OPTION_VALUE}>Todos</MenuItem>
-            {sectorOptions.map((sector) => (
-              <MenuItem key={sector.id} value={sector.id}>
-                {sector.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Operadores"
-            size="small"
-            value={selectedOperatorIds}
-            InputLabelProps={{ shrink: true }}
-            onChange={(e) => {
-              const value = e.target.value;
-              handleOperatorsChange(Array.isArray(value) ? value : [value]);
-            }}
-            className="w-64"
-            SelectProps={{
-              multiple: true,
-              displayEmpty: true,
-              renderValue: (selected) => {
-                const selectedIds = selected as string[];
-                if (!selectedIds.length) return "Todos";
-
-                return selectedIds
-                  .map((id) => operatorOptions.find((option) => option.id === id)?.name || `#${id}`)
-                  .join(", ");
-              },
-            }}
-          >
-            <MenuItem value={ALL_OPTION_VALUE}>Todos</MenuItem>
-            {operatorOptions.map((operator) => (
-              <MenuItem key={operator.id} value={operator.id}>
-                {operator.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            label="Data mínima"
-            type="date"
-            size="small"
-            value={local.minDate}
-            onChange={(e) => setLocal((prev) => ({ ...prev, minDate: e.target.value }))}
-            InputLabelProps={{ shrink: true }}
-            className="w-40"
-          />
-          <TextField
-            label="Data máxima"
-            type="date"
-            size="small"
-            value={local.maxDate}
-            onChange={(e) => setLocal((prev) => ({ ...prev, maxDate: e.target.value }))}
-            InputLabelProps={{ shrink: true }}
-            className="w-40"
-          />
         </>
       )}
 

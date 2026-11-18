@@ -60,10 +60,10 @@ export function ReportFilterPanel({
   dirty,
   children,
 }: {
-  period: ReportPeriod;
-  onPeriodChange: (period: ReportPeriod) => void;
+  period?: ReportPeriod;
+  onPeriodChange?: (period: ReportPeriod) => void;
   onGenerate: () => void;
-  onClear: () => void;
+  onClear?: () => void;
   onRestore?: () => void;
   loading: boolean;
   dirty: boolean;
@@ -77,46 +77,61 @@ export function ReportFilterPanel({
         onGenerate();
       }}
     >
-      <div className="flex flex-wrap gap-2" aria-label="Atalhos de período">
-        {[
-          ["today", "Hoje"],
-          ["yesterday", "Ontem"],
-          ["last7", "Últimos 7 dias"],
-          ["month", "Este mês"],
-          ["previousMonth", "Mês anterior"],
-        ].map(([id, label]) => (
-          <Button
-            key={id}
-            size="small"
-            variant="outlined"
-            onClick={() => onPeriodChange(reportPeriodShortcut(id))}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
-      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <TextField
-          label="Data inicial"
-          type="date"
-          size="small"
-          value={period.startDate}
-          onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })}
-          InputLabelProps={{ shrink: true }}
-          required
-        />
-        <TextField
-          label="Data final"
-          type="date"
-          size="small"
-          value={period.endDate}
-          onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })}
-          InputLabelProps={{ shrink: true }}
-          required
-        />
-        {children}
-      </div>
-      <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+      {(period || children) && <h2 className="font-semibold">Filtros</h2>}
+      {period && onPeriodChange && (
+        <div className="flex flex-wrap gap-2" aria-label="Atalhos de período">
+          {[
+            ["today", "Hoje"],
+            ["yesterday", "Ontem"],
+            ["last7", "Últimos 7 dias"],
+            ["month", "Este mês"],
+            ["previousMonth", "Mês anterior"],
+          ].map(([id, label]) => (
+            <Button
+              key={id}
+              size="small"
+              variant="outlined"
+              onClick={() => onPeriodChange(reportPeriodShortcut(id))}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      )}
+      {(period || children) && (
+        <div className="grid min-w-0 items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {period && onPeriodChange && (
+            <>
+              <TextField
+                label="Data inicial"
+                type="date"
+                size="small"
+                value={period.startDate}
+                onChange={(event) => onPeriodChange({ ...period, startDate: event.target.value })}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+              <TextField
+                label="Data final"
+                type="date"
+                size="small"
+                value={period.endDate}
+                onChange={(event) => onPeriodChange({ ...period, endDate: event.target.value })}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </>
+          )}
+          {children}
+        </div>
+      )}
+      <div
+        className={
+          period || children
+            ? "flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"
+            : "flex flex-wrap items-center gap-3"
+        }
+      >
         <Button
           type="submit"
           variant="contained"
@@ -127,9 +142,11 @@ export function ReportFilterPanel({
         >
           {loading ? "Gerando relatório…" : "Gerar relatório"}
         </Button>
-        <Button onClick={onClear} startIcon={<RotateCcw size={16} />}>
-          Limpar filtros
-        </Button>
+        {onClear && (
+          <Button onClick={onClear} startIcon={<RotateCcw size={16} />}>
+            Limpar filtros
+          </Button>
+        )}
         {dirty && onRestore && <Button onClick={onRestore}>Descartar alterações</Button>}
       </div>
       {dirty && (
@@ -147,12 +164,14 @@ export function ReportExecutionStatus({
   generatedAt,
   labels,
   hasResult,
+  hasFilters = true,
 }: {
   loading: boolean;
   error: string | null;
   generatedAt: string | null;
   labels: string[];
   hasResult: boolean;
+  hasFilters?: boolean;
 }) {
   return (
     <div className="grid gap-3" aria-live="polite">
@@ -169,7 +188,9 @@ export function ReportExecutionStatus({
       )}
       {!hasResult && !loading && !error && (
         <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-          Defina os filtros e clique em Gerar relatório para consultar os dados.
+          {hasFilters
+            ? "Defina os filtros e clique em Gerar relatório para consultar os dados."
+            : "Clique em Gerar relatório para consultar os dados."}
         </div>
       )}
       {hasResult && (
@@ -178,8 +199,8 @@ export function ReportExecutionStatus({
           aria-label="Filtros aplicados"
         >
           <span>
-            Resultado gerado em {generatedAt && new Date(generatedAt).toLocaleString("pt-BR")} ·
-            filtros aplicados:
+            Resultado gerado em {generatedAt && new Date(generatedAt).toLocaleString("pt-BR")}
+            {labels.length > 0 && " · filtros aplicados:"}
           </span>
           {labels.map((label) => (
             <Chip key={label} size="small" label={label} />
