@@ -208,7 +208,7 @@ export class BrowserPhone {
     this.transferTimer = null;
     if (this.scheduledCall) this.deps.reportSchedule?.(this.scheduledCall, phase);
     this.scheduledCall = null;
-    this.update({ phase, error, muted: false, transferPending: false, endedAt: new Date().toISOString() });
+    this.update({ phase, error, muted: false, transferPending: false, held: false, holdPending: false, endedAt: new Date().toISOString() });
     if (phase === "failed") {
       try { if (session && !session.isEnded()) session.terminate(); } catch { /* Already released media. */ }
     }
@@ -225,7 +225,7 @@ export class BrowserPhone {
   transfer(value: string) {
     const target = value.trim();
     const session = this.session;
-    if (!session || this.state.phase !== "active" || !this.config || this.state.transferPending) throw new Error("Aguarde uma conversa ativa para transferir.");
+    if (!session || this.state.phase !== "active" || !this.config || this.state.transferPending || this.state.holdPending) throw new Error("Aguarde uma conversa ativa para transferir.");
     if (!/^[0-9]{1,16}$/.test(target) || target === this.config.extension || target === this.state.number) throw new Error("Informe outro ramal interno válido.");
     this.update({ transferPending: true, error: null });
     const failed = () => {
@@ -255,6 +255,24 @@ export class BrowserPhone {
     if (muted) this.session.mute({ audio: true });
     else this.session.unmute({ audio: true });
     this.update({ muted });
+  }
+
+  toggleHold() {
+    const session = this.session;
+    if (!session || this.state.phase !== "active" || this.state.holdPending || this.state.transferPending) return;
+    const held = Boolean(this.state.held);
+    this.update({ holdPending: true, error: null });
+    const confirmed = () => {
+      if (this.session === session) this.update({ held: !held, holdPending: false });
+    };
+    try {
+      if (held ? session.unhold({}, confirmed) : session.hold({}, confirmed)) return;
+    } catch {
+      // A mid-dialog SIP request can be rejected before renegotiation starts.
+    }
+    if (this.session === session) {
+      this.update({ holdPending: false, error: "Não foi possível alterar a espera. Tente novamente com a ligação ativa." });
+    }
   }
 
   sendTone(tone: string) {

@@ -62,6 +62,7 @@ interface CustomerCrmDetailModalProps {
   onClose: () => void;
   canEdit: boolean;
   presentation?: "modal" | "panel";
+  initialTab?: "main" | "observations";
 }
 
 function getWhatsappChatTypeLabel(chatType?: string | null) {
@@ -160,12 +161,12 @@ function getUniqueOptions(values: Array<string | null | undefined>) {
   ).sort((left, right) => left.localeCompare(right, "pt-BR"));
 }
 
-export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, presentation = "modal" }: CustomerCrmDetailModalProps) {
+export default function CustomerCrmDetailModal({ customerId, onClose, canEdit, presentation = "modal", initialTab = "main" }: CustomerCrmDetailModalProps) {
   const { token, user, instance } = useAuthContext();
   const segmentContext = useRef({ instance, customerId, token });
   segmentContext.current = { instance, customerId, token };
   const [correctResultId, setCorrectResultId] = useState<number | null>(null);
-  const [tab, setTab] = useState<TabValue>("main");
+  const [tab, setTab] = useState<TabValue>(initialTab);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deactivationReason, setDeactivationReason] = useState("");

@@ -16,6 +16,8 @@ class Session extends EventEmitter {
   connection = Object.assign(new EventTarget(), { getReceivers: () => [], connectionState: "new" });
   isEnded = vi.fn(() => false);
   refer = vi.fn((_target: string, _options: { eventHandlers: Record<string, () => void> }) => {});
+  hold = vi.fn((_options: unknown, _confirmed: () => void) => true);
+  unhold = vi.fn((_options: unknown, _confirmed: () => void) => true);
   terminate = vi.fn(); answer = vi.fn(); mute = vi.fn(); unmute = vi.fn(); sendDTMF = vi.fn();
 }
 class Agent extends EventEmitter {
@@ -40,6 +42,30 @@ function setup() {
   return { phone, agent, microphone, deps, state: () => state };
 }
 describe("BrowserPhone", () => {
+  it("changes local hold only after SIP confirmation and ignores confirmation after hangup", async () => {
+    const { phone, agent, state } = setup();
+    await phone.dial("102");
+    agent.session.emit("confirmed");
+    phone.toggleHold();
+    expect(state()).toMatchObject({ phase: "active", held: false, holdPending: true });
+    phone.toggleHold();
+    expect(agent.session.hold).toHaveBeenCalledTimes(1);
+    agent.session.hold.mock.calls[0][1]();
+    expect(state()).toMatchObject({ phase: "active", held: true, holdPending: false });
+    phone.toggleHold();
+    phone.hangup();
+    agent.session.unhold.mock.calls[0][1]();
+    expect(state()).toMatchObject({ phase: "ended", held: false, holdPending: false });
+  });
+
+  it("keeps the call active when SIP cannot start hold renegotiation", async () => {
+    const { phone, agent, state } = setup();
+    await phone.dial("102");
+    agent.session.emit("confirmed");
+    agent.session.hold.mockReturnValue(false);
+    phone.toggleHold();
+    expect(state()).toMatchObject({ phase: "active", held: false, holdPending: false, error: expect.stringContaining("espera") });
+  });
   it("only calls after microphone permission and updates from SIP events", async () => {
     const { phone, agent, deps, state } = setup();
     await phone.dial("(11) 99999-9999", 42);

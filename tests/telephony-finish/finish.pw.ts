@@ -61,12 +61,15 @@ async function result(page: Page, name: string) {
   await page.getByRole("option", { name, exact: true }).click();
 }
 test("delegates with selected operator/date/observation and commits once", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-13T16:00:00.000Z"));
   const commands = await setup(page);
   await result(page, "Delegar");
   await page.getByLabel("Observação do atendimento").fill("Cliente pediu retorno.");
   await page.getByLabel("Delegar para").click();
   await page.getByRole("option", { name: "Ana" }).click();
-  await page.getByLabel("Data e hora do reagendamento").fill("2026-11-14T11:30");
+  const agenda = page.getByRole("region", { name: "Agenda do operador" });
+  await agenda.getByRole("button", { name: "14 0 ag.", exact: true }).click();
+  await agenda.getByRole("button", { name: "11:30 livre", exact: true }).click();
   await page.getByRole("button", { name: "Finalizar", exact: true }).click();
   await expect.poll(() => commands.length).toBe(1);
   expect(commands[0]).toMatchObject({
