@@ -271,6 +271,19 @@ export function navigationLeaves(
   return items.flatMap((item) => (item.kind === "link" ? [item] : navigationLeaves(item.routes)));
 }
 
+export function navigationGroupTrail(items: NavigationItem[], ids: string[]) {
+  type Group = Extract<NavigationItem, { kind: "group" }>;
+  const groups: Group[] = [];
+  let level = items;
+  for (const id of ids) {
+    const group = level.find((item): item is Group => item.id === id && item.kind === "group");
+    if (!group) break;
+    groups.push(group);
+    level = group.routes;
+  }
+  return groups;
+}
+
 /** Most specific matching leaf wins; query-specific destinations remain distinct. */
 export function activeNavigationPath(
   items: NavigationItem[],
