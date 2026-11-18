@@ -363,6 +363,7 @@ export function TenantScreen({
               onBusy={onBusy}
               onResources={receiveResources}
               applyOnly={source.applyOnly}
+              separateFeatures={source.id === "whatsapp"}
             />
           ) : (
             <div className="admin-card admin-empty">

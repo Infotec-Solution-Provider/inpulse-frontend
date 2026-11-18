@@ -10,6 +10,8 @@ import {
   DialogTitle,
   MenuItem,
   Switch,
+  Tab,
+  Tabs,
   TextField,
 } from "@mui/material";
 import { Save, RotateCcw, RefreshCw, KeyRound, Check, Play } from "lucide-react";
@@ -41,7 +43,11 @@ export interface EditorProps {
   onBusy: (busy: boolean) => void;
   onResources?: (resources: NonNullable<Snapshot["resources"]>) => void;
   applyOnly?: boolean;
+  separateFeatures?: boolean;
 }
+
+const isFeatureFlag = (field: Setting) =>
+  field.type === "boolean" && field.key.startsWith("feature_");
 
 export function ConfigEditor(props: EditorProps) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -56,6 +62,9 @@ export function ConfigEditor(props: EditorProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [filter, setFilter] = useState("all");
+  const [tab, setTab] = useState<"parameters" | "features">("parameters");
+  const tabsId = useId();
+  const features = props.separateFeatures && tab === "features";
   const [conflicted, setConflicted] = useState(false);
   const mounted = useRef(true);
   const request = useRef<AbortController | null>(null);
@@ -67,6 +76,7 @@ export function ConfigEditor(props: EditorProps) {
   const busy = loading || sending || unresolved;
   const editable = snapshot?.catalog.some((field) => !field.readOnly && !field.unavailableReason);
   const canApply =
+    !features &&
     !!snapshot &&
     !snapshot.unavailableReason &&
     (props.applyOnly === true ||
@@ -248,16 +258,18 @@ export function ConfigEditor(props: EditorProps) {
     await load();
   };
 
-  const visible =
-    snapshot?.catalog.filter(
-      (field) =>
-        searchableField(field, search) &&
-        (!category || field.category === category) &&
-        (filter === "all" ||
-          (filter === "changed" && drafts[field.key]) ||
-          (filter === "flags" && field.type === "boolean") ||
-          (filter === "secrets" && field.type === "secret")),
-    ) ?? [];
+  const catalog = (snapshot?.catalog ?? []).filter(
+    (field) => !props.separateFeatures || isFeatureFlag(field) === !!features,
+  );
+  const visible = catalog.filter(
+    (field) =>
+      searchableField(field, search) &&
+      (!category || field.category === category) &&
+      (filter === "all" ||
+        (filter === "changed" && drafts[field.key]) ||
+        (filter === "flags" && field.type === "boolean") ||
+        (filter === "secrets" && field.type === "secret")),
+  );
   const categories = [...new Set(visible.map((field) => field.category))];
   const changeDraft = (key: string, draft: Draft | null) =>
     setDrafts((current) => {
@@ -317,93 +329,137 @@ export function ConfigEditor(props: EditorProps) {
           {snapshot.unavailableReason && (
             <Alert severity="warning">{snapshot.unavailableReason}</Alert>
           )}
-          {snapshot.catalog.length > 0 && (
-            <div className="admin-toolbar">
-              <TextField
-                className="admin-search"
-                label="Buscar parâmetro, chave ou descrição"
-                size="small"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <TextField
-                select
-                label="Categoria"
-                size="small"
-                value={category}
-                onChange={(event) => setCategory(event.target.value)}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {[...new Set(snapshot.catalog.map((field) => field.category))].map((group) => (
-                  <MenuItem key={group} value={group}>
-                    {group}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label="Exibir"
-                size="small"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-              >
-                <MenuItem value="all">Todos</MenuItem>
-                <MenuItem value="flags">Feature flags</MenuItem>
-                <MenuItem value="secrets">Credenciais</MenuItem>
-                <MenuItem value="changed">Alterados</MenuItem>
-              </TextField>
-              <Button
-                startIcon={<RefreshCw size={16} />}
-                disabled={busy || dirty}
-                onClick={() => void load()}
-              >
-                Recarregar
-              </Button>
-            </div>
-          )}
-          {snapshot.application && !snapshot.unavailableReason && (editable || canApply) && (
-            <Alert
-              severity={snapshot.application.state === "applied" ? "success" : "info"}
-              icon={snapshot.application.state === "applied" ? <Check size={18} /> : undefined}
+          {props.separateFeatures && (
+            <Tabs
+              className="admin-setting-tabs"
+              aria-label="Tipos de configuração"
+              value={tab}
+              onChange={(_, value: typeof tab) => {
+                setTab(value);
+                setSearch("");
+                setCategory("");
+                setFilter("all");
+              }}
             >
-              {applicationLabels[snapshot.application.state]}
-              {snapshot.application.message ? ` · ${snapshot.application.message}` : ""}
-            </Alert>
+              <Tab
+                value="parameters"
+                label="Parâmetros"
+                id={`${tabsId}-parameters`}
+                aria-controls={`${tabsId}-panel`}
+              />
+              <Tab
+                value="features"
+                label="Features"
+                id={`${tabsId}-features`}
+                aria-controls={`${tabsId}-panel`}
+              />
+            </Tabs>
           )}
-          {categories.map((group) => (
-            <section key={group} className="admin-card">
-              <h2 className="admin-card-title">
-                {group}{" "}
-                <span className="admin-metadata">
-                  · {visible.filter((field) => field.category === group).length}
-                </span>
-              </h2>
-              {visible
-                .filter((field) => field.category === group)
-                .map((field) => (
-                  <Field
-                    key={field.key}
-                    field={field}
-                    snapshot={snapshot}
-                    draft={drafts[field.key]}
-                    disabled={busy || !!snapshot.unavailableReason}
-                    error={compiled.errors[field.key]}
-                    onChange={(draft) => changeDraft(field.key, draft)}
-                  />
-                ))}
-            </section>
-          ))}
-          {!visible.length && (
-            <div className="admin-card admin-empty">
-              {snapshot.catalog.length
-                ? "Nenhum parâmetro corresponde aos filtros."
-                : snapshot.resources?.length && !snapshot.target?.resourceId
-                  ? "Selecione um registro acima para consultar suas configurações."
-                  : snapshot.unavailableReason
-                    ? "Não há configurações disponíveis nesta fonte para o tenant selecionado."
-                    : "Nenhum parâmetro cadastrado ou classificado nesta fonte."}
-            </div>
-          )}
+          <div
+            className="admin-stack"
+            id={props.separateFeatures ? `${tabsId}-panel` : undefined}
+            role={props.separateFeatures ? "tabpanel" : undefined}
+            aria-labelledby={props.separateFeatures ? `${tabsId}-${tab}` : undefined}
+          >
+            {catalog.length > 0 && (
+              <div className="admin-toolbar">
+                <TextField
+                  className="admin-search"
+                  label={
+                    features
+                      ? "Buscar feature, chave ou descrição"
+                      : "Buscar parâmetro, chave ou descrição"
+                  }
+                  size="small"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+                <TextField
+                  select
+                  label="Categoria"
+                  size="small"
+                  value={category}
+                  onChange={(event) => setCategory(event.target.value)}
+                >
+                  <MenuItem value="">Todas</MenuItem>
+                  {[...new Set(catalog.map((field) => field.category))].map((group) => (
+                    <MenuItem key={group} value={group}>
+                      {group}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  select
+                  label="Exibir"
+                  size="small"
+                  value={filter}
+                  onChange={(event) => setFilter(event.target.value)}
+                >
+                  <MenuItem value="all">Todos</MenuItem>
+                  {!features && <MenuItem value="flags">Opções booleanas</MenuItem>}
+                  {!features && <MenuItem value="secrets">Credenciais</MenuItem>}
+                  <MenuItem value="changed">Alterados</MenuItem>
+                </TextField>
+                <Button
+                  startIcon={<RefreshCw size={16} />}
+                  disabled={busy || dirty}
+                  onClick={() => void load()}
+                >
+                  Recarregar
+                </Button>
+              </div>
+            )}
+            {snapshot.application &&
+              !features &&
+              !snapshot.unavailableReason &&
+              (editable || canApply) && (
+                <Alert
+                  severity={snapshot.application.state === "applied" ? "success" : "info"}
+                  icon={snapshot.application.state === "applied" ? <Check size={18} /> : undefined}
+                >
+                  {applicationLabels[snapshot.application.state]}
+                  {snapshot.application.message ? ` · ${snapshot.application.message}` : ""}
+                </Alert>
+              )}
+            {categories.map((group) => (
+              <section key={group} className="admin-card admin-setting-card">
+                <h2 className="admin-card-title">
+                  {group}{" "}
+                  <span className="admin-metadata">
+                    · {visible.filter((field) => field.category === group).length}
+                  </span>
+                </h2>
+                {visible
+                  .filter((field) => field.category === group)
+                  .map((field) => (
+                    <Field
+                      key={field.key}
+                      field={field}
+                      snapshot={snapshot}
+                      draft={drafts[field.key]}
+                      disabled={busy || !!snapshot.unavailableReason}
+                      error={compiled.errors[field.key]}
+                      onChange={(draft) => changeDraft(field.key, draft)}
+                    />
+                  ))}
+              </section>
+            ))}
+            {!visible.length && (
+              <div className="admin-card admin-empty">
+                {catalog.length
+                  ? features
+                    ? "Nenhuma feature corresponde aos filtros."
+                    : "Nenhum parâmetro corresponde aos filtros."
+                  : snapshot.resources?.length && !snapshot.target?.resourceId
+                    ? "Selecione um registro acima para consultar suas configurações."
+                    : snapshot.unavailableReason
+                      ? "Não há configurações disponíveis nesta fonte para o tenant selecionado."
+                      : features
+                        ? "Nenhuma feature disponível neste escopo."
+                        : "Nenhum parâmetro cadastrado ou classificado nesta fonte."}
+              </div>
+            )}
+          </div>
           {!snapshot.unavailableReason && (editable || canApply) && (
             <div className="admin-savebar">
               <span role="status">
@@ -541,6 +597,35 @@ function Field({
           : displayValue(field, raw);
   const blocked = disabled || field.readOnly || !!field.unavailableReason;
   const set = (input: string) => onChange({ action: "set", input });
+  const actions = (
+    <>
+      {draft && (
+        <Button size="small" disabled={disabled} onClick={() => onChange(null)}>
+          Desfazer
+        </Button>
+      )}
+      {!isSecret && field.canReset !== false && !field.readOnly && (
+        <Button
+          size="small"
+          startIcon={<RotateCcw size={13} />}
+          disabled={blocked || draft?.action === "reset"}
+          onClick={() => onChange({ action: "reset", input: "" })}
+        >
+          Usar padrão
+        </Button>
+      )}
+      {isSecret && snapshot.secrets?.[field.key]?.configured && !field.readOnly && (
+        <Button
+          size="small"
+          color="error"
+          disabled={blocked || draft?.action === "remove"}
+          onClick={() => onChange({ action: "remove", input: "" })}
+        >
+          Remover credencial
+        </Button>
+      )}
+    </>
+  );
   const inheritanceHint = inherited && (
     <span className="admin-setting-hint" id={hintId}>
       Herdado de {inherited.source}
@@ -587,13 +672,19 @@ function Field({
             <div className="admin-setting-actions">
               <span className="admin-metadata">{value === "true" ? "Ativado" : "Desativado"}</span>
               <Switch
+                size="small"
                 checked={value === "true"}
                 disabled={blocked}
                 slotProps={{
-                  input: { "aria-label": field.label, "aria-describedby": inherited ? hintId : undefined },
+                  input: {
+                    role: isFeatureFlag(field) ? "switch" : undefined,
+                    "aria-label": field.label,
+                    "aria-describedby": inherited ? hintId : undefined,
+                  },
                 }}
                 onChange={(_, checked) => set(String(checked))}
               />
+              {actions}
             </div>
             {inheritanceHint}
           </div>
@@ -628,7 +719,16 @@ function Field({
             autoComplete={isSecret ? "new-password" : "off"}
             disabled={blocked}
             error={!!error}
-            helperText={error ? <>{error}{inheritanceHint}</> : inheritanceHint}
+            helperText={
+              error ? (
+                <>
+                  {error}
+                  {inheritanceHint}
+                </>
+              ) : (
+                inheritanceHint
+              )
+            }
             slotProps={{
               htmlInput: {
                 "aria-label": field.label,
@@ -641,33 +741,7 @@ function Field({
             onChange={(event) => set(event.target.value)}
           />
         )}
-        <div className="admin-setting-actions">
-          {draft && (
-            <Button size="small" disabled={disabled} onClick={() => onChange(null)}>
-              Desfazer
-            </Button>
-          )}
-          {!isSecret && field.canReset !== false && !field.readOnly && (
-            <Button
-              size="small"
-              startIcon={<RotateCcw size={13} />}
-              disabled={blocked || draft?.action === "reset"}
-              onClick={() => onChange({ action: "reset", input: "" })}
-            >
-              Usar padrão
-            </Button>
-          )}
-          {isSecret && snapshot.secrets?.[field.key]?.configured && !field.readOnly && (
-            <Button
-              size="small"
-              color="error"
-              disabled={blocked || draft?.action === "remove"}
-              onClick={() => onChange({ action: "remove", input: "" })}
-            >
-              Remover credencial
-            </Button>
-          )}
-        </div>
+        {field.type !== "boolean" && <div className="admin-setting-actions">{actions}</div>}
       </div>
     </div>
   );
