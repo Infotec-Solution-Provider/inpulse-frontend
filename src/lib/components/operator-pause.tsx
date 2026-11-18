@@ -6,9 +6,7 @@ import {
   Box,
   Button,
   Dialog,
-  DialogActions,
   DialogContent,
-  DialogTitle,
   IconButton,
   MenuItem,
   TextField,
@@ -27,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useOptionalTelephony } from "@/lib/telephony/telephony-provider";
+import { TelephonyDialogTitle } from "@/lib/telephony/dialog-title";
 import { UiIcon } from "@/lib/ui-system/icons";
 
 type Phone = NonNullable<ReturnType<typeof useOptionalTelephony>>;
@@ -340,7 +339,9 @@ function PauseControl({ phone }: { phone: Phone }) {
         maxWidth="xs"
         aria-labelledby="operator-pause-title"
       >
-        <DialogTitle id="operator-pause-title">Pausa</DialogTitle>
+        <TelephonyDialogTitle id="operator-pause-title" onClose={close} closeDisabled={working}>
+          Pausa
+        </TelephonyDialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -507,11 +508,6 @@ function PauseControl({ phone }: { phone: Phone }) {
             </Button>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button disabled={working} onClick={close}>
-            Fechar
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );

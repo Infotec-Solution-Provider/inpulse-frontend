@@ -12,7 +12,6 @@ import "./telephony-panel.css";
 import { PhoneSettings } from "./phone-settings";
 import { TransferControls } from "./transfer-controls";
 import { CallRecoveryControls } from "./operator-controls";
-import { CallHistory } from "./call-history";
 import { OperatorDashboardDialog } from "./operator-dashboard";
 
 /** The attendance area hosts phone controls in its own layout. */
@@ -210,7 +209,6 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
             </>
           )}
           <CallRecoveryControls />
-          <CallHistory />
         </div>
       )}
     </section>

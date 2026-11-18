@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from "@mui/material";
+import { Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, MenuItem, TextField } from "@mui/material";
+import { TelephonyDialogTitle } from "@/lib/telephony/dialog-title";
 import customersService from "@/lib/services/customers.service";
 import type { AuthRequestConfig } from "@/lib/auth-session";
 
@@ -15,9 +16,12 @@ export default function ResultCorrectionDialog({scheduleId,onClose,onSaved}:{sch
     catch(e){setError(e instanceof Error?e.message:"Falha ao salvar.");setUncertain(true)} finally {setSaving(false)}
   }
   return <Dialog open onClose={saving?undefined:onClose} fullWidth maxWidth="sm" aria-labelledby="result-correction-title">
-    <DialogTitle id="result-correction-title">Alterar resultado da ficha</DialogTitle><DialogContent className="space-y-4">
+    <TelephonyDialogTitle id="result-correction-title" onClose={onClose} closeDisabled={saving}>
+      Alterar resultado da ficha
+    </TelephonyDialogTitle>
+    <DialogContent className="space-y-4">
       {error && <Alert severity="error">{error}</Alert>}
       {!detail && !error && <CircularProgress size={24}/>}
       {detail && <><p>Cliente: {detail.customerName} · Ficha #{detail.id}</p><TextField select fullWidth label="Resultado" value={result} onChange={e=>setResult(e.target.value)}>{detail.results.map(r=><MenuItem key={r.id} value={String(r.id)}>{r.name}</MenuItem>)}</TextField><Alert severity={detail.proposalCount?"warning":"info"}>Ao alterar o resultado, {detail.proposalCount ? `${detail.proposalCount} proposta(s) vinculada(s) serão excluídas` : "não há propostas vinculadas a excluir"}. O histórico de ligações permanece como registrado.</Alert></>}
-    </DialogContent><DialogActions><Button onClick={onClose} disabled={saving}>Fechar</Button><Button onClick={save} disabled={!detail || saving || uncertain || !result || Number(result)===detail.resultId} variant="contained">{saving?"Salvando…":"Confirmar alteração"}</Button></DialogActions></Dialog>;
+    </DialogContent><DialogActions><Button onClick={save} disabled={!detail || saving || uncertain || !result || Number(result)===detail.resultId} variant="contained">{saving?"Salvando…":"Confirmar alteração"}</Button></DialogActions></Dialog>;
 }

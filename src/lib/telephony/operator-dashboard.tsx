@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Alert, Dialog, DialogTitle, DialogContent, IconButton, Tooltip } from "@mui/material";
+import { useEffect, useId, useState } from "react";
+import { Alert, Dialog, DialogContent, IconButton, Tooltip } from "@mui/material";
 import { ChartNoAxesColumnIncreasing } from "lucide-react";
 import { UiIcon } from "@/lib/ui-system/icons";
 import type { RuntimeOperatorState } from "./runtime-client";
 import type { PhoneState } from "./types";
+import { TelephonyDialogTitle } from "./dialog-title";
 
 export interface OperatorDashboardMetrics {
   serverNow: string;
@@ -170,6 +171,8 @@ export default function OperatorDashboard({
 /** Keep indicators accessible without consuming the chat list's fixed sidebar height. */
 export function OperatorDashboardDialog(props: Parameters<typeof OperatorDashboard>[0]) {
   const [open, setOpen] = useState(false);
+  const titleId = useId();
+  const close = () => setOpen(false);
   return (
     <>
       <Tooltip title="Meus indicadores de telefonia">
@@ -182,8 +185,10 @@ export function OperatorDashboardDialog(props: Parameters<typeof OperatorDashboa
           <UiIcon icon={ChartNoAxesColumnIncreasing} />
         </IconButton>
       </Tooltip>
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle>Meus indicadores de telefonia</DialogTitle>
+      <Dialog open={open} onClose={close} fullWidth maxWidth="md" aria-labelledby={titleId}>
+        <TelephonyDialogTitle id={titleId} onClose={close}>
+          Meus indicadores de telefonia
+        </TelephonyDialogTitle>
         <DialogContent>
           <OperatorDashboard {...props} />
         </DialogContent>

@@ -1,14 +1,17 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Switch, TextField, Tooltip } from "@mui/material";
+import { useEffect, useId, useRef, useState } from "react";
+import { Alert, Button, Dialog, DialogContent, FormControlLabel, IconButton, MenuItem, Switch, TextField, Tooltip } from "@mui/material";
 import { Settings } from "lucide-react";
 import { UiIcon } from "@/lib/ui-system/icons";
 import { useTelephony } from "./telephony-provider";
 import { audioConstraints } from "./audio-preferences";
+import { TelephonyDialogTitle } from "./dialog-title";
 
 export function PhoneSettings() {
   const phone = useTelephony();
   const [open, setOpen] = useState(false), [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const titleId = useId();
+  const close = () => setOpen(false);
   const [error, setError] = useState<string | null>(null), [level, setLevel] = useState<number | null>(null);
   const stopTest = useRef<() => void>(() => {});
   const prefs = phone.audioPreferences;
@@ -59,7 +62,9 @@ export function PhoneSettings() {
         <UiIcon icon={Settings} />
       </IconButton>
     </Tooltip>
-    <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm"><DialogTitle>Aparelhos e áudio</DialogTitle><DialogContent className="space-y-4 pt-3">
+    <Dialog open={open} onClose={close} fullWidth maxWidth="sm" aria-labelledby={titleId}>
+      <TelephonyDialogTitle id={titleId} onClose={close}>Aparelhos e áudio</TelephonyDialogTitle>
+      <DialogContent className="space-y-4 pt-3">
       {error && <Alert severity="warning">{error}</Alert>}
       <p className="text-sm">Preferências deste usuário neste navegador. Alterações são usadas na próxima ligação.</p>
       {phone.busy && <Alert severity="info">Encerre a ligação para mudar os aparelhos ou testar o microfone.</Alert>}
@@ -77,6 +82,7 @@ export function PhoneSettings() {
       <FormControlLabel label="Atender automaticamente" control={<Switch checked={prefs.autoAnswer} disabled={phone.busy || !phone.allowAutoAnswer} onChange={event => phone.saveAudioPreferences({ ...prefs, autoAnswer: event.target.checked })} />} />
       {!phone.allowAutoAnswer && <p className="text-sm">O administrador precisa permitir atendimento automático para esta empresa.</p>}
       <details><summary>Preferência de codecs</summary><p className="text-sm">Somente codecs disponíveis neste navegador. A central negocia o codec final.</p>{codecOrder.map((name,index) => <div className="flex items-center justify-between" key={name}><span>{name}</span><Button size="small" disabled={phone.busy || index === 0} onClick={() => { const order = [...codecOrder]; [order[index-1],order[index]] = [order[index]!,order[index-1]!]; phone.saveAudioPreferences({ ...prefs, codecOrder: order }); }}>Subir</Button></div>)}<Button disabled={phone.busy} onClick={() => phone.saveAudioPreferences({ ...prefs, codecOrder: [] })}>Usar negociação automática</Button></details>
-    </DialogContent><DialogActions><Button onClick={() => setOpen(false)}>Fechar</Button></DialogActions></Dialog>
+      </DialogContent>
+    </Dialog>
   </>;
 }

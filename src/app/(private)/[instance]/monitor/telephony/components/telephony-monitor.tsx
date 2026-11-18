@@ -29,7 +29,6 @@ import { telephonyModes } from "./presentation";
 import TelephonyAppliedFilters from "./applied-filters";
 import ScheduleEditDialog from "./schedule-edit-dialog";
 import { MonitorEmptyState, OperationalPanel } from "@/lib/ui-system";
-import {CallHistory} from "@/lib/telephony/call-history";
 import "./customer-detail-panel.css";
 
 function ScopedTelephonyMonitor() {
@@ -130,7 +129,6 @@ function ScopedTelephonyMonitor() {
       className="ip-page flex min-h-0 w-full min-w-0 flex-col gap-4 lg:h-full lg:overflow-hidden"
       aria-label="Monitoria de telefonia"
     >
-      <CallHistory monitor />
       <TelephonyToolbar
         mode={mode}
         onModeChange={(next) => {
