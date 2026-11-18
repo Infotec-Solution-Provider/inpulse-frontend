@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { frontendNavigationPath } from "@/lib/frontend-versions";
 import type { ReportDefinition } from "./catalog";
 
 const historyLimit = 5;
@@ -52,7 +51,10 @@ export function useRecentReports({
 
   useEffect(() => {
     if (!key) return;
-    const currentPath = frontendNavigationPath(pathname).replace(/\/$/, "");
+    const basePath = process.env.NEXT_PUBLIC_FRONTEND_BASE_PATH || "";
+    const currentPath = (
+      basePath && pathname.startsWith(basePath + "/") ? pathname.slice(basePath.length) : pathname
+    ).replace(/\/$/, "");
     const opened = reports.find((report) => currentPath === "/" + instance + report.href);
     let ids = fallback.current.get(key) ?? [];
     try {
