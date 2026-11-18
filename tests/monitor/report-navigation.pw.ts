@@ -30,6 +30,12 @@ test("central link and searchable shortcuts are separate actions", async ({ page
     "/tenant-a/reports",
   );
 
+  const trigger = nav.getByRole("button", { name: shortcutName });
+  await page.evaluate(() => window.monitorHarness.setReportsReady(false));
+  await expect(trigger).toBeDisabled();
+  await expect(central).toBeEnabled();
+  await page.evaluate(() => window.monitorHarness.setReportsReady(true));
+
   const dialog = await openShortcuts(page);
   await expect(dialog.getByRole("list", { name: "Para começar" }).getByRole("link")).toHaveText([
     "Mensagens por Operador",

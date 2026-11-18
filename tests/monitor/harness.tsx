@@ -22,9 +22,11 @@ function Harness() {
     new URLSearchParams(location.search).has("report-navigation"),
   );
   const whatsapp = useContext(WhatsappContext);
+  const [reportsReady, setReportsReady] = useState(whatsapp.loaded);
   const reportContext = useMemo(
     () => ({
       ...whatsapp,
+      loaded: reportsReady,
       parameters: {
         ...whatsapp.parameters,
         feature_sales_reports_enabled: String(reportSales),
@@ -35,7 +37,7 @@ function Harness() {
           : "false",
       },
     }),
-    [reportSales, whatsapp],
+    [reportSales, reportsReady, whatsapp],
   );
   const [modal, setModal] = useState<ReactNode>(null);
   const { setPreference } = useThemeContext();
@@ -55,6 +57,7 @@ function Harness() {
       },
       setRole,
       setReportSales,
+      setReportsReady,
       emit: socket.emit,
       listeners: socket.listenerCount,
       actions: () => state.actions.map(({ type, chatId }) => ({ type, chatId })),

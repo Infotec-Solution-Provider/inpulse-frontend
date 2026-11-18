@@ -22,6 +22,7 @@ declare global {
       refreshToken: () => void;
       setRole: (role: string) => void;
       setReportSales: (enabled: boolean) => void;
+      setReportsReady: (ready: boolean) => void;
       emit: () => void;
       listeners: () => number;
       actions: () => { type: string; chatId: number }[];

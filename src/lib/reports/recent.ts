@@ -46,7 +46,12 @@ export function useRecentReports({
     instance && userId !== undefined
       ? "@inpulse/ui/recent-reports:v1:" + encodeURIComponent(instance) + ":" + userId
       : null;
-  const [history, setHistory] = useState<{ key: string; ids: string[] }>();
+  const [history, setHistory] = useState<{
+    key: string;
+    pathname: string;
+    reports: readonly ReportDefinition[];
+    ids: string[];
+  }>();
   const fallback = useRef(new Map<string, string[]>());
 
   useEffect(() => {
@@ -73,8 +78,10 @@ export function useRecentReports({
       }
     }
 
-    setHistory({ key, ids });
+    setHistory({ key, pathname, reports, ids });
   }, [instance, key, pathname, reports]);
 
-  return history?.key === key ? history.ids : [];
+  const ready =
+    history?.key === key && history.pathname === pathname && history.reports === reports;
+  return { ready, ids: history?.key === key ? history.ids : [] };
 }
