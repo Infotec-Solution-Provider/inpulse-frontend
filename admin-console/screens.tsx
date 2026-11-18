@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Autocomplete,
@@ -16,7 +16,13 @@ import { RefreshCw, Settings2, Play, Square, RotateCw, ArrowLeft } from "lucide-
 import { api, AdminError } from "./client";
 import { ConfigEditor } from "./config-editor";
 import { ParameterNavigation } from "./parameter-source-navigation";
-import { resourceLabel, sourceDescription } from "./parameter-navigation";
+import {
+  configurationSources,
+  FEATURES_SOURCE,
+  resourceLabel,
+  settingsSourceId,
+  sourceDescription,
+} from "./parameter-navigation";
 import type {
   AuditEntry,
   Environment,
@@ -90,6 +96,10 @@ export function TenantScreen({
 }: ScreenProps) {
   const tenants = useRead((signal) => api.tenants(env, signal), [env]);
   const sources = useRead((signal) => api.sources(env, signal), [env]);
+  const navigationSources = useMemo(
+    () => configurationSources(sources.data?.sources ?? []),
+    [sources.data],
+  );
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [source, setSource] = useState<Source | null>(null);
   const [scope, setScope] = useState<"INSTANCE" | "SECTOR" | "USER">("INSTANCE");
@@ -104,8 +114,7 @@ export function TenantScreen({
   }, []);
   useEffect(() => {
     const availableTenants = tenants.data?.tenants;
-    const availableSources = sources.data?.sources;
-    if (!availableTenants || !availableSources || restoredSelection.current) return;
+    if (!availableTenants || !sources.data || restoredSelection.current) return;
     restoredSelection.current = true;
     let remembered: { tenant?: string; source?: string } = {};
     try {
@@ -115,12 +124,12 @@ export function TenantScreen({
     }
     setTenant(availableTenants.find((item) => item.id === remembered.tenant) ?? null);
     setSource(
-      availableSources.find((item) => item.id === remembered.source) ??
-        availableSources.find((item) => item.id === "whatsapp" && item.available) ??
-        availableSources.find((item) => item.available) ??
+      navigationSources.find((item) => item.id === remembered.source) ??
+        navigationSources.find((item) => item.id === "whatsapp" && item.available) ??
+        navigationSources.find((item) => item.available) ??
         null,
     );
-  }, [tenants.data, sources.data, selectionKey]);
+  }, [tenants.data, sources.data, navigationSources, selectionKey]);
   useEffect(() => {
     if (!tenant || !source) return;
     try {
@@ -132,17 +141,18 @@ export function TenantScreen({
       /* Optional bookmark contains only selected IDs. */
     }
   }, [tenant?.id, source?.id, selectionKey]);
-  const canScope = !!source && ["whatsapp", "smtp"].includes(source.id);
-  const effectiveScope = source?.id === "sip-user" ? "USER" : scope;
+  const sourceId = settingsSourceId(source?.id);
+  const canScope = sourceId === "whatsapp" || sourceId === "smtp";
+  const effectiveScope = sourceId === "sip-user" ? "USER" : scope;
   const options = useRead<{ targets: TargetOption[]; unavailableReason?: string }>(
     async (signal) => {
-      if (!tenant || !source || effectiveScope === "INSTANCE")
+      if (!tenant || !sourceId || effectiveScope === "INSTANCE")
         return { targets: [] as TargetOption[] };
       await new Promise<void>((resolve) => setTimeout(resolve, 250));
       if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-      return api.targets(env, tenant.id, source.id, effectiveScope, search, signal);
+      return api.targets(env, tenant.id, sourceId, effectiveScope, search, signal);
     },
-    [env, tenant?.id, source?.id, effectiveScope, search],
+    [env, tenant?.id, sourceId, effectiveScope, search],
   );
   const target: Target = {
     scope: effectiveScope,
@@ -158,26 +168,27 @@ export function TenantScreen({
     setResources([]);
     setSearch("");
   };
-  const identity = `${actorId}:${env}:${tenant?.id}:${source?.id}:${JSON.stringify(target)}`;
+  const identity = `${actorId}:${env}:${tenant?.id}:${sourceId}:${JSON.stringify(target)}`;
   const load = useCallback(
-    (signal?: AbortSignal) => api.settings(env, tenant!.id, source!.id, target, signal),
+    (signal?: AbortSignal) => api.settings(env, tenant!.id, sourceId!, target, signal),
     [identity],
   );
   const save = useCallback(
     (operationId: string, revision: string, changes: Parameters<typeof api.save>[3]["changes"]) =>
-      api.save(env, tenant!.id, source!.id, { operationId, revision, target, changes }),
+      api.save(env, tenant!.id, sourceId!, { operationId, revision, target, changes }),
     [identity],
   );
   const apply = useCallback(
     (operationId: string, revision: string) =>
-      api.apply(env, tenant!.id, source!.id, { operationId, revision, target }),
+      api.apply(env, tenant!.id, sourceId!, { operationId, revision, target }),
     [identity],
   );
   const selectSource = (next: Source) => {
     if (source?.id === next.id) return true;
-    if (!canLeave()) return false;
+    const sameSettings = sourceId === settingsSourceId(next.id);
+    if (!sameSettings && !canLeave()) return false;
     setSource(next);
-    clearTarget();
+    if (!sameSettings) clearTarget();
     return true;
   };
   return (
@@ -234,7 +245,7 @@ export function TenantScreen({
       </div>
       <div className="admin-parameter-workspace">
         <ParameterNavigation
-          sources={sources.data?.sources ?? []}
+          sources={navigationSources}
           selected={source}
           enabled={!!tenant}
           loading={sources.loading}
@@ -274,7 +285,7 @@ export function TenantScreen({
                     }}
                   >
                     <MenuItem value="INSTANCE">Instância</MenuItem>
-                    {source?.id === "whatsapp" && <MenuItem value="SECTOR">Setor</MenuItem>}
+                    {sourceId === "whatsapp" && <MenuItem value="SECTOR">Setor</MenuItem>}
                     <MenuItem value="USER">Usuário</MenuItem>
                   </TextField>
                 )}
@@ -363,7 +374,13 @@ export function TenantScreen({
               onBusy={onBusy}
               onResources={receiveResources}
               applyOnly={source.applyOnly}
-              separateFeatures={source.id === "whatsapp"}
+              featureView={
+                sourceId === "whatsapp"
+                  ? source.id === FEATURES_SOURCE
+                    ? "features"
+                    : "parameters"
+                  : undefined
+              }
             />
           ) : (
             <div className="admin-card admin-empty">

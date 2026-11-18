@@ -10,8 +10,6 @@ import {
   DialogTitle,
   MenuItem,
   Switch,
-  Tab,
-  Tabs,
   TextField,
 } from "@mui/material";
 import { Save, RotateCcw, RefreshCw, KeyRound, Check, Play } from "lucide-react";
@@ -43,7 +41,7 @@ export interface EditorProps {
   onBusy: (busy: boolean) => void;
   onResources?: (resources: NonNullable<Snapshot["resources"]>) => void;
   applyOnly?: boolean;
-  separateFeatures?: boolean;
+  featureView?: "parameters" | "features";
 }
 
 const isFeatureFlag = (field: Setting) =>
@@ -62,9 +60,7 @@ export function ConfigEditor(props: EditorProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [filter, setFilter] = useState("all");
-  const [tab, setTab] = useState<"parameters" | "features">("parameters");
-  const tabsId = useId();
-  const features = props.separateFeatures && tab === "features";
+  const features = props.featureView === "features";
   const [conflicted, setConflicted] = useState(false);
   const mounted = useRef(true);
   const request = useRef<AbortController | null>(null);
@@ -93,6 +89,11 @@ export function ConfigEditor(props: EditorProps) {
     // Reads can be cancelled when changing target; writes need a receipt first.
     props.onBusy(sending || unresolved);
   }, [sending, unresolved]);
+  useEffect(() => {
+    setSearch("");
+    setCategory("");
+    setFilter("all");
+  }, [props.featureView]);
 
   const accept = (next: Snapshot) => {
     setSnapshot(next);
@@ -259,7 +260,7 @@ export function ConfigEditor(props: EditorProps) {
   };
 
   const catalog = (snapshot?.catalog ?? []).filter(
-    (field) => !props.separateFeatures || isFeatureFlag(field) === !!features,
+    (field) => !props.featureView || isFeatureFlag(field) === features,
   );
   const visible = catalog.filter(
     (field) =>
@@ -329,38 +330,7 @@ export function ConfigEditor(props: EditorProps) {
           {snapshot.unavailableReason && (
             <Alert severity="warning">{snapshot.unavailableReason}</Alert>
           )}
-          {props.separateFeatures && (
-            <Tabs
-              className="admin-setting-tabs"
-              aria-label="Tipos de configuração"
-              value={tab}
-              onChange={(_, value: typeof tab) => {
-                setTab(value);
-                setSearch("");
-                setCategory("");
-                setFilter("all");
-              }}
-            >
-              <Tab
-                value="parameters"
-                label="Parâmetros"
-                id={`${tabsId}-parameters`}
-                aria-controls={`${tabsId}-panel`}
-              />
-              <Tab
-                value="features"
-                label="Features"
-                id={`${tabsId}-features`}
-                aria-controls={`${tabsId}-panel`}
-              />
-            </Tabs>
-          )}
-          <div
-            className="admin-stack"
-            id={props.separateFeatures ? `${tabsId}-panel` : undefined}
-            role={props.separateFeatures ? "tabpanel" : undefined}
-            aria-labelledby={props.separateFeatures ? `${tabsId}-${tab}` : undefined}
-          >
+          <div className="admin-stack">
             {catalog.length > 0 && (
               <div className="admin-toolbar">
                 <TextField

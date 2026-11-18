@@ -276,6 +276,14 @@ a {
 .admin-parameter-area-toggle svg.is-open {
   transform: rotate(180deg);
 }
+.admin-parameter-feature-link[aria-current="page"] {
+  background: var(--ip-accent-soft);
+  color: var(--ip-accent);
+}
+.admin-parameter-feature-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .admin-parameter-source-list {
   display: grid;
   gap: 4px;
@@ -358,9 +366,6 @@ a {
 }
 .admin-setting-card .admin-card-title {
   padding: 10px 16px;
-}
-.admin-setting-tabs {
-  border-bottom: 1px solid var(--ip-border);
 }
 .admin-setting:first-child {
   border-top: 0;

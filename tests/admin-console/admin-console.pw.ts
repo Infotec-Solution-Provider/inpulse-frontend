@@ -5,6 +5,11 @@ const chooseConfiguration = async (page: import("@playwright/test").Page, name: 
   await page.getByRole("button", { name, exact: true }).click();
 };
 
+const featureSection = (page: import("@playwright/test").Page) =>
+  page
+    .getByRole("navigation", { name: "Áreas de configuração" })
+    .getByRole("button", { name: "Features", exact: true });
+
 test.beforeEach(async ({ request, page }) => {
   await request.post("/__fixture/reset", { data: {} });
   if (process.env.ADMIN_REAL_API === "1") {
@@ -22,7 +27,7 @@ test.beforeEach(async ({ request, page }) => {
   await expect(page.getByRole("heading", { name: "Parâmetros dos tenants" })).toBeVisible();
   await page.getByRole("combobox", { name: "Tenant de destino", exact: true }).fill("Infotec");
   await page.getByRole("option", { name: "Infotec (infotec)", exact: true }).click();
-  await expect(page.getByRole("tab", { name: "Features", exact: true })).toBeVisible();
+  await expect(featureSection(page)).toBeEnabled();
 });
 
 test("loads independent assets and allows all four areas without Next", async ({
@@ -91,7 +96,8 @@ test("requires an explicit target and remembers only selected IDs across areas",
 test("keeps a draft when a source change is cancelled and supports source search", async ({
   page,
 }) => {
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
+  await featureSection(page).click();
+  await expect(featureSection(page)).toHaveAttribute("aria-current", "page");
   await page.getByRole("switch", { name: "Inteligência artificial", exact: true }).check();
   const search = page.getByRole("textbox", { name: "Encontrar configuração", exact: true });
   await search.fill("OPENAI");
@@ -244,19 +250,16 @@ test("searches keys, saves typed changes and clears write-only secrets", async (
   const secret = page.getByRole("textbox", { name: "Chave do provedor", exact: true });
   await expect(secret).toHaveValue("");
   await secret.fill("fixture-new-secret");
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
-  await expect(
-    page
-      .getByRole("tabpanel", { name: "Features" })
-      .getByRole("textbox", { name: "Chave do provedor" }),
-  ).toHaveCount(0);
+  await featureSection(page).click();
+  await expect(page.getByRole("tab", { name: "Features", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Chave do provedor" })).toHaveCount(0);
   await page.getByRole("switch", { name: "Inteligência artificial", exact: true }).check();
   await expect(page.getByRole("button", { name: "Aplicar versão salva" })).toHaveCount(0);
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await expect(page.getByRole("dialog")).not.toContainText("fixture-new-secret");
   await page.getByRole("button", { name: "Confirmar salvamento" }).click();
   await expect(page.getByRole("status")).toContainText("Nenhuma alteração pendente");
-  await page.getByRole("tab", { name: "Parâmetros", exact: true }).click();
+  await chooseConfiguration(page, "WhatsApp e atendimento");
   await expect(secret).toHaveValue("");
   expect(
     await page.evaluate(() =>
@@ -272,7 +275,7 @@ test("searches keys, saves typed changes and clears write-only secrets", async (
   await page.getByRole("button", { name: "Aplicar versão salva" }).click();
   await page.getByRole("button", { name: "Confirmar aplicação" }).click();
   await expect(page.getByText("Operação confirmada.", { exact: false })).toBeVisible();
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
+  await page.getByRole("button", { name: "Features", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Buscar feature, chave ou descrição" })
     .fill("feature_ai_enabled");
@@ -310,7 +313,7 @@ test("retains drafts on revision conflict and requires refresh before resaving",
 
 test("reconciles an uncertain save without replaying the mutation", async ({ page, request }) => {
   await request.post("/__fixture/uncertain", { data: {} });
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
+  await page.getByRole("button", { name: "Features", exact: true }).click();
   await page.getByRole("switch", { name: "Inteligência artificial", exact: true }).check();
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await page.getByRole("button", { name: "Confirmar salvamento" }).click();
@@ -337,7 +340,7 @@ test("preserves a dirty tenant target when navigation is cancelled and fits mobi
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
+  await page.getByRole("button", { name: "Features", exact: true }).click();
   await page.getByRole("switch", { name: "Inteligência artificial", exact: true }).check();
   page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "Servidor", exact: true }).click();
@@ -372,7 +375,7 @@ test("cancels an old tenant read when the target changes", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Nome de exibição", exact: true })).toHaveValue(
     "infotec · Empresa",
   );
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
+  await page.getByRole("button", { name: "Features", exact: true }).click();
   await expect(
     page.getByRole("switch", { name: "Inteligência artificial", exact: true }),
   ).toBeVisible();
@@ -428,7 +431,7 @@ test("acknowledges a permanently unknown operation locally without replay or bac
   await page
     .getByRole("textbox", { name: "Chave do provedor", exact: true })
     .fill("discard-this-secret");
-  await page.getByRole("tab", { name: "Features", exact: true }).click();
+  await page.getByRole("button", { name: "Features", exact: true }).click();
   await page.getByRole("switch", { name: "Inteligência artificial", exact: true }).check();
   await page.getByRole("button", { name: "Salvar alterações", exact: true }).click();
   await page.getByRole("button", { name: "Confirmar salvamento" }).click();
@@ -440,7 +443,7 @@ test("acknowledges a permanently unknown operation locally without replay or bac
   await expect(dialog).toContainText("continua indeterminado no histórico");
   await expect(dialog).not.toContainText("discard-this-secret");
   await dialog.getByRole("button", { name: "Encerrar acompanhamento", exact: true }).click();
-  await page.getByRole("tab", { name: "Parâmetros", exact: true }).click();
+  await chooseConfiguration(page, "WhatsApp e atendimento");
   await expect(page.getByRole("textbox", { name: "Chave do provedor", exact: true })).toHaveValue(
     "",
   );

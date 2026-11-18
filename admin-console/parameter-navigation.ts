@@ -1,5 +1,18 @@
 import type { Source } from "./types";
 
+export const FEATURES_SOURCE = "features";
+
+export function configurationSources(sources: Source[]): Source[] {
+  const parameters = sources.find((source) => source.id === "whatsapp");
+  return parameters
+    ? [{ ...parameters, id: FEATURES_SOURCE, label: "Features" }, ...sources]
+    : sources;
+}
+
+export function settingsSourceId(sourceId?: string) {
+  return sourceId === FEATURES_SOURCE ? "whatsapp" : sourceId;
+}
+
 interface AreaDefinition {
   id: string;
   label: string;
@@ -8,6 +21,12 @@ interface AreaDefinition {
 }
 
 const areas: AreaDefinition[] = [
+  {
+    id: FEATURES_SOURCE,
+    label: "Features",
+    description: "Flags e recursos do tenant",
+    sources: [FEATURES_SOURCE],
+  },
   {
     id: "whatsapp",
     label: "WhatsApp e atendimento",
@@ -37,7 +56,8 @@ const areas: AreaDefinition[] = [
 ];
 
 const details: Record<string, string> = {
-  whatsapp: "Feature flags, permissões e regras de atendimento",
+  [FEATURES_SOURCE]: "Ative ou desative recursos por instância, setor ou usuário.",
+  whatsapp: "Permissões e regras de atendimento",
   channels: "Configuração e credenciais por canal",
   crm: "Opções e comportamento do CRM",
   ai: "Modelos e recursos de inteligência artificial",

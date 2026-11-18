@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { TextField } from "@mui/material";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
-import { configurationAreas, sourceAreaId, sourceDescription } from "./parameter-navigation";
+import {
+  configurationAreas,
+  FEATURES_SOURCE,
+  sourceAreaId,
+  sourceDescription,
+} from "./parameter-navigation";
 import type { Source } from "./types";
 
 export function ParameterNavigation({
@@ -20,7 +25,7 @@ export function ParameterNavigation({
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState(sourceAreaId(selected?.id ?? "whatsapp"));
   useEffect(() => {
-    if (selected) setExpanded(sourceAreaId(selected.id));
+    if (selected && selected.id !== FEATURES_SOURCE) setExpanded(sourceAreaId(selected.id));
   }, [selected?.id]);
   const groups = configurationAreas(sources, search);
   return (
@@ -54,6 +59,28 @@ export function ParameterNavigation({
         <p className="admin-parameter-nav-empty">Nenhuma configuração encontrada.</p>
       ) : (
         groups.map((group) => {
+          if (group.id === FEATURES_SOURCE) {
+            const features = group.items[0];
+            return (
+              <section className="admin-parameter-area" key={group.id}>
+                <h3>
+                  <button
+                    type="button"
+                    className="admin-parameter-area-toggle admin-parameter-feature-link"
+                    aria-current={selected?.id === features.id ? "page" : undefined}
+                    disabled={!enabled || !features.available}
+                    title={features.message}
+                    onClick={() => {
+                      if (onSelect(features)) setSearch("");
+                    }}
+                  >
+                    <span>{features.label}</span>
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </button>
+                </h3>
+              </section>
+            );
+          }
           const open = !!search.trim() || expanded === group.id;
           const current = selected && group.items.some((source) => source.id === selected.id);
           return (
