@@ -377,12 +377,20 @@
     grid-template-columns: clamp(278px, 23%, 312px) minmax(0, 1fr);
   }
   .ip-attendance[data-attendance-view="integrated"] .attendance-workspace {
+    --attendance-column-gap: 10px;
     flex-direction: row;
-    gap: 10px;
+    gap: var(--attendance-column-gap);
   }
   .attendance-integrated-details:not([hidden]) {
     flex: 0 0 clamp(208px, 19vw, 258px);
     max-height: none;
+  }
+  .attendance-integrated-details[data-appointment-open="true"] {
+    --attendance-chat-min-width: 300px;
+    flex-basis: min(
+      clamp(270px, 38%, 360px),
+      calc(100% - var(--attendance-chat-min-width) - var(--attendance-column-gap))
+    );
   }
 }
 @media (max-width: 1139px) {

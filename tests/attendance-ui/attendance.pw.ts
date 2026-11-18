@@ -167,6 +167,12 @@ for (const { device, width, height } of [
 
     await page.getByRole("button", { name: "Opções de visualização", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Integrado", exact: true }).click();
+    const details = page.getByRole("complementary", { name: "Dados do atendimento", exact: true });
+    let customerPanelWidth: number | null = null;
+    if (device === "desktop") {
+      await expect(details.getByRole("region", { name: "Ficha do cliente", exact: true })).toBeVisible();
+      customerPanelWidth = (await details.boundingBox())!.width;
+    }
     await page.getByRole("button", { name: /Abrir próxima ligação/ }).click();
 
     const panel = page.getByRole("region", { name: "Atendimento telefônico", exact: true });
@@ -234,7 +240,13 @@ for (const { device, width, height } of [
           expectedColor,
         };
       }, { legalName, tradeName, fiscalNumber });
-      expect(geometry.width).toBeLessThanOrEqual(device === "desktop" ? 258 : width);
+      if (customerPanelWidth !== null) {
+        expect(geometry.width).toBeGreaterThan(customerPanelWidth);
+        expect(geometry.width).toBeGreaterThanOrEqual(300);
+        expect((await details.boundingBox())!.width).toBeLessThanOrEqual(360);
+      } else {
+        expect(geometry.width).toBeLessThanOrEqual(width);
+      }
       expect(geometry.overflow).toBeLessThanOrEqual(1);
       expect(geometry.visibleFields).toBe(3);
       expect(geometry.textFits).toBe(true);
@@ -243,9 +255,35 @@ for (const { device, width, height } of [
       colors.push(geometry.color);
     }
     expect(new Set(colors).size).toBe(2);
+
+    if (customerPanelWidth !== null) {
+      const chat = page.getByRole("region", { name: "Conversa com Ana Souza", exact: true });
+      for (const viewportWidth of [1140, 1139]) {
+        await page.setViewportSize({ width: viewportWidth, height });
+        await noOverflow(page);
+        await expect(draft(page)).toBeInViewport();
+        const chatBox = (await chat.boundingBox())!;
+        const detailsBox = (await details.boundingBox())!;
+        if (viewportWidth === 1140) {
+          expect(chatBox.width).toBeGreaterThanOrEqual(300);
+          expect(detailsBox.x).toBeGreaterThanOrEqual(chatBox.x + chatBox.width - 1);
+        } else {
+          expect(detailsBox.y).toBeGreaterThanOrEqual(chatBox.y + chatBox.height - 1);
+          expect(detailsBox.width).toBeCloseTo(chatBox.width, 0);
+        }
+        expect(await panel.evaluate((element) => element.scrollWidth - element.clientWidth))
+          .toBeLessThanOrEqual(1);
+      }
+      await page.setViewportSize({ width, height });
+    }
+
     await panel.getByRole("button", { name: "Fechar atendimento telefônico", exact: true }).click();
     await expect(panel).toBeHidden();
-    if (device === "desktop") await expect(draft(page)).toBeVisible();
+    if (customerPanelWidth !== null) {
+      await expect(details.getByRole("region", { name: "Ficha do cliente", exact: true })).toBeVisible();
+      expect((await details.boundingBox())!.width).toBeCloseTo(customerPanelWidth, 0);
+      await expect(draft(page)).toBeVisible();
+    }
     expect(errors).toEqual([]);
   });
 }
