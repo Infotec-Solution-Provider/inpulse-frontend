@@ -9,6 +9,7 @@ import { availableReports } from "../../src/lib/reports/catalog";
 import { ReportCatalogView } from "../../src/components/reports/ReportCatalog";
 import { MessagesPerOperatorReport } from "../../src/components/reports/MessagesPerOperatorReport";
 import { AttendanceReport } from "../../src/components/reports/AttendanceReport";
+import CallAbcPage from "../../src/app/(private)/[instance]/reports/call-abc/page";
 import FinancialProvider from "../../src/app/(private)/[instance]/reports/sales/financial-context";
 import FinancialReport from "../../src/app/(private)/[instance]/reports/sales/financial-report";
 import "./styles.css";
@@ -57,6 +58,7 @@ function Harness() {
             <button onClick={() => setPage("messagesPerContact")}>Por contato</button>
             <button onClick={() => setPage("messagesPerHourDay")}>Por horário</button>
             <button onClick={() => setPage("contactsAwaitingReturn")}>Aguardando retorno</button>
+            <button onClick={() => setPage("call-abc")}>Curva ABC</button>
             <button
               onClick={() =>
                 setInstance((current) => (current === "tenant-a" ? "tenant-b" : "tenant-a"))
@@ -86,6 +88,8 @@ function Harness() {
                   token={instance}
                   scope={`${instance}:1`}
                 />
+              ) : page === "call-abc" ? (
+                <CallAbcPage />
               ) : page === "messagesPerContact" ||
                 page === "messagesPerHourDay" ||
                 page === "contactsAwaitingReturn" ? (
