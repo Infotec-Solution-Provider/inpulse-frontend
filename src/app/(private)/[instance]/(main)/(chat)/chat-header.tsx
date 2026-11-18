@@ -4,7 +4,7 @@ import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import reportsService from "@/lib/services/reports.service";
 import { UserRole } from "@/lib/sdk-local";
-import { Avatar, Button, Divider, Menu, MenuItem } from "@mui/material";
+import { Avatar, Divider, Menu, MenuItem } from "@mui/material";
 import {
   Bot,
   ChartNoAxesCombined,
@@ -282,32 +282,21 @@ export default function ChatHeader({
     canInteract &&
     (currentChat?.chatType === "wpp" ||
       (currentChat?.chatType === "internal" && !currentChat.isGroup));
-  const finishConversation =
-    currentChat?.chatType === "internal" ? openFinishInternalChatModal : openFinishChatModal;
-  const menuActions: HeaderAction[] = [
-    ...primaryActions,
-    ...(canTransfer
-      ? [
-          {
-            key: "transfer",
-            label: "Transferir conversa",
-            name: "transfer" as const,
-            run: openTransferChatModal,
-          },
-        ]
-      : []),
-    ...(canFinish
-      ? [
-          {
-            key: "finish",
-            label: "Finalizar conversa",
-            name: "finish" as const,
-            run: finishConversation,
-          },
-        ]
-      : []),
-    ...extraActions,
-  ];
+  if (canTransfer)
+    primaryActions.push({
+      key: "transfer",
+      label: "Transferir conversa",
+      name: "transfer",
+      run: openTransferChatModal,
+    });
+  if (canFinish)
+    primaryActions.push({
+      key: "finish",
+      label: "Finalizar conversa",
+      name: "finish",
+      run: currentChat?.chatType === "internal" ? openFinishInternalChatModal : openFinishChatModal,
+    });
+  const menuActions = [...primaryActions, ...extraActions];
   const hasMobileActions = menuActions.length > 0 || Boolean(viewOptions);
   const distinctCustomerName =
     customerName?.trim() &&
@@ -364,26 +353,6 @@ export default function ChatHeader({
                 {actionIcon(action)}
               </OperationalIconButton>
             ))}
-            {canTransfer && (
-              <Button
-                className="ip-attendance-header-commit"
-                variant="outlined"
-                onClick={openTransferChatModal}
-                startIcon={<UiIcon name="transfer" scale="row" />}
-              >
-                Transferir
-              </Button>
-            )}
-            {canFinish && (
-              <Button
-                className="ip-attendance-header-commit"
-                variant="outlined"
-                onClick={finishConversation}
-                startIcon={<UiIcon name="finish" scale="row" />}
-              >
-                Finalizar
-              </Button>
-            )}
           </div>
           {hasMobileActions && (
             <div

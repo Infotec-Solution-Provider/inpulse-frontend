@@ -71,16 +71,6 @@
   min-width: 44px;
   min-height: 44px;
 }
-.ip-ui .ip-attendance-header-commit.MuiButton-root {
-  min-height: 44px;
-  border-color: var(--ip-border);
-  color: var(--ip-text);
-  padding-inline: 12px;
-}
-.ip-ui .ip-attendance-header-commit.MuiButton-root:hover {
-  background: var(--ip-surface-muted);
-  border-color: var(--ip-muted);
-}
 .ip-ui .ip-attendance-menu-item.MuiMenuItem-root {
   min-height: 44px;
   gap: 12px;

@@ -251,6 +251,7 @@ export function makeWhatsapp(env: ReturnType<typeof useEnvironment>) {
       current: {
         setAuth() {},
         getSectors: async () => [],
+        getResults: async () => [],
         getChannels: async () => channels,
         getCustomerContacts: async () => [initialChats[0].contact],
         getContactsWithCustomer: async () => ({ data: [initialChats[0].contact, { ...initialChats[1].contact, phone: initialChats[0].contact.phone }] }),

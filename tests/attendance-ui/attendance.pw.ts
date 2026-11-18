@@ -40,6 +40,31 @@ async function noOverflow(page: Page) {
     .toBe(true);
 }
 
+test("transfer and finish use accessible icons in the conversation header", async ({ page }) => {
+  await open(page);
+  await selectAna(page);
+
+  const conversation = page.getByRole("region", { name: "Conversa com Ana Souza", exact: true });
+  for (const label of ["Transferir conversa", "Finalizar conversa"]) {
+    const button = conversation.getByRole("button", { name: `${label}: Ana Souza`, exact: true });
+    await expect(button).toBeVisible();
+    await expect(button).toHaveText("");
+    await expect(button.locator("svg")).toBeVisible();
+    await button.hover();
+    await expect(page.getByRole("tooltip", { name: label, exact: true })).toBeVisible();
+    await button.press("Enter");
+    const dialog = page.getByRole("dialog", { name: label, exact: true });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await conversation.getByRole("button", { name: "Ações da conversa com Ana Souza" }).click();
+  const menu = page.getByRole("menu", { name: "Ações da conversa" });
+  await expect(menu.getByRole("menuitem", { name: "Transferir conversa" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Finalizar conversa" })).toBeVisible();
+});
+
 test("view options keep the call and WhatsApp draft while switching layouts on desktop and mobile", async ({ page }) => {
   const errors = await open(page, 1440, 900, "?integrated-fixture");
   const area = page.getByRole("region", { name: "Área de atendimento", exact: true });
