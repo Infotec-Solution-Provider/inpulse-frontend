@@ -1,3 +1,4 @@
+import { attendanceReportPaths } from "@/lib/reports/attendance-routes";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
 import { UserRole } from "@/lib/sdk-local";
@@ -324,6 +325,7 @@ export function isModernCrmPath(pathname: string): boolean {
     [
       undefined,
       "messages-per-operator",
+      ...Object.values(attendanceReportPaths),
       "sales",
       "metrics",
       "dashboards",

@@ -8,9 +8,16 @@ import { UserRole } from "../../src/lib/sdk-local";
 import { availableReports } from "../../src/lib/reports/catalog";
 import { ReportCatalogView } from "../../src/components/reports/ReportCatalog";
 import { MessagesPerOperatorReport } from "../../src/components/reports/MessagesPerOperatorReport";
+import { AttendanceReport } from "../../src/components/reports/AttendanceReport";
+import CallAbcPage from "../../src/app/(private)/[instance]/reports/call-abc/page";
 import FinancialProvider from "../../src/app/(private)/[instance]/reports/sales/financial-context";
 import FinancialReport from "../../src/app/(private)/[instance]/reports/sales/financial-report";
 import "./styles.css";
+
+const sectors = [
+  { id: 8, name: "Pós-vendas" },
+  { id: 19, name: "Suporte" },
+];
 
 function Harness() {
   const [page, setPage] = useState("central");
@@ -48,6 +55,10 @@ function Harness() {
             <button onClick={() => setPage("central")}>Central</button>
             <button onClick={() => setPage("messages")}>Mensagens</button>
             <button onClick={() => setPage("sales")}>Vendas</button>
+            <button onClick={() => setPage("messagesPerContact")}>Por contato</button>
+            <button onClick={() => setPage("messagesPerHourDay")}>Por horário</button>
+            <button onClick={() => setPage("contactsAwaitingReturn")}>Aguardando retorno</button>
+            <button onClick={() => setPage("call-abc")}>Curva ABC</button>
             <button
               onClick={() =>
                 setInstance((current) => (current === "tenant-a" ? "tenant-b" : "tenant-a"))
@@ -76,6 +87,19 @@ function Harness() {
                   instance={instance}
                   token={instance}
                   scope={`${instance}:1`}
+                />
+              ) : page === "call-abc" ? (
+                <CallAbcPage />
+              ) : page === "messagesPerContact" ||
+                page === "messagesPerHourDay" ||
+                page === "contactsAwaitingReturn" ? (
+                <AttendanceReport
+                  key={`${instance}:${page}`}
+                  report={page}
+                  instance={instance}
+                  token={instance}
+                  scope={`${instance}:1:${page}`}
+                  sectors={sectors}
                 />
               ) : (
                 <FinancialProvider>

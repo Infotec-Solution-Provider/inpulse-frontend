@@ -40,6 +40,7 @@ export const ROUTE_FEATURE_FLAGS: ReadonlyArray<{
     "lost-reasons",
     "operator-performance",
     "mailing-analysis",
+    "call-abc",
     "regua-carteira-sintetico-whatsapp",
   ].map((segment) => ({ segment: `/reports/${segment}`, flags: [F.reportsAdvanced] })),
   { segment: "/reports/sales", flags: [F.salesReports] },

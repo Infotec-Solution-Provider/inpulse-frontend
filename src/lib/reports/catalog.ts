@@ -1,3 +1,4 @@
+import { attendanceReportPaths } from "./attendance-routes";
 import { FEATURE_FLAGS as F, isFeatureEnabled } from "@/lib/feature-flags";
 import { UserRole } from "@/lib/sdk-local";
 
@@ -36,7 +37,7 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     title: "Mensagens por Contato",
     description: "Distribuição de mensagens entre contatos e clientes.",
     category: "attendance",
-    href: "/reports/dashboard?report=messagesPerContact",
+    href: `/reports/${attendanceReportPaths.messagesPerContact}`,
     keywords: ["whatsapp", "cliente"],
     output: "Tabela e gráfico",
   },
@@ -45,7 +46,7 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     title: "Mensagens por Hora e Dia",
     description: "Horários e dias da semana com maior volume de mensagens.",
     category: "attendance",
-    href: "/reports/dashboard?report=messagesPerHourDay",
+    href: `/reports/${attendanceReportPaths.messagesPerHourDay}`,
     keywords: ["whatsapp", "horário", "setor"],
     output: "Tabela e gráfico",
   },
@@ -54,9 +55,19 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     title: "Contatos aguardando retorno",
     description: "Posição atual das conversas que aguardam uma resposta do operador.",
     category: "attendance",
-    href: "/reports/dashboard?report=contactsAwaitingReturn",
+    href: `/reports/${attendanceReportPaths.contactsAwaitingReturn}`,
     keywords: ["pendência", "resposta", "whatsapp"],
     output: "Tabela e gráfico",
+  },
+  {
+    id: "call-abc",
+    title: "Curva ABC de ligações",
+    description: "Classifique clientes e campanhas pelo volume de ligações, contatos ou vendas no período.",
+    category: "attendance",
+    href: "/reports/call-abc",
+    keywords: ["g29", "telefonia", "ranking", "receptivo", "ativo"],
+    output: "Tabela e gráfico",
+    feature: F.reportsAdvanced,
   },
   {
     id: "general-performance",

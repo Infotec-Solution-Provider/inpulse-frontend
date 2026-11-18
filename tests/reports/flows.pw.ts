@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 async function fixture(page: Page) {
   const state = {
     messages: [] as URL[],
+    attendance: [] as URL[],
     sales: [] as URL[],
     options: [] as URL[],
     failMessages: false,
@@ -59,6 +60,64 @@ async function fixture(page: Page) {
             receivedMessagesCount: 10,
           })),
         },
+      });
+    }
+    if (url.pathname.endsWith("/messages-per-contact")) {
+      state.attendance.push(url);
+      return respond({
+        data: {
+          messagesPerContact: [
+            {
+              contactId: 516,
+              contactName: "João da Silva",
+              customerId: 14,
+              customerName: "Indústria",
+              messagesCount: 4,
+              sentMessagesCount: 2,
+              receivedMessagesCount: 2,
+            },
+            {
+              contactId: 517,
+              contactName: "Maria Vieira",
+              customerId: null,
+              customerName: null,
+              messagesCount: 3,
+              sentMessagesCount: 3,
+              receivedMessagesCount: 0,
+            },
+          ],
+        },
+      });
+    }
+    if (url.pathname.endsWith("/messages-per-hour-day")) {
+      state.attendance.push(url);
+      return respond({
+        data: {
+          messagesPerHourDay: [
+            {
+              sector: "Pós-vendas",
+              hour: 9,
+              weekDay: 2,
+              messagesCount: 10,
+              sentMessagesCount: 6,
+              receivedMessagesCount: 4,
+            },
+          ],
+        },
+      });
+    }
+    if (url.pathname.endsWith("/contacts-awaiting-return")) {
+      state.attendance.push(url);
+      return respond({
+        data: [
+          {
+            CODIGO_ATENDIMENTO: 12,
+            CONTATO: "Célia",
+            CLIENTE: null,
+            OPERADOR: null,
+            SETOR: "Suporte",
+          },
+        ],
       });
     }
     if (url.pathname.endsWith("/dashboard")) {
@@ -117,6 +176,95 @@ test("central searches by aliases and category without querying business data", 
   expect(state.messages).toHaveLength(0);
   expect(state.sales).toHaveLength(0);
   expect(state.options).toHaveLength(0);
+});
+
+test("contact report preserves the single operator query and exports all rows after table search", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await expect(page.getByRole("link", { name: /Mensagens por Contato/ })).toHaveAttribute(
+    "href",
+    "/tenant-a/reports/messages-per-contact",
+  );
+  await page.getByRole("button", { name: "Por contato" }).click();
+  await page.getByRole("combobox", { name: "Operador", exact: true }).fill("51");
+  await page.getByRole("option", { name: /João sem vendas/ }).click();
+  await page.getByLabel("Data inicial").fill("2026-11-03");
+  await page.getByLabel("Data final").fill("2026-11-17");
+  expect(state.attendance).toHaveLength(0);
+  await page.getByRole("button", { name: "Gerar relatório", exact: true }).click();
+  await expect(page.getByLabel("Pesquisar nos resultados")).toBeVisible();
+  expect(state.attendance).toHaveLength(1);
+  expect(Object.fromEntries(state.attendance[0].searchParams)).toEqual({
+    date: "2026-11-03_2026-11-17",
+    user: "51",
+  });
+  await page.getByLabel("Pesquisar nos resultados").fill("joao industria");
+  await expect(page.getByRole("cell", { name: "João da Silva" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Maria Vieira" })).toHaveCount(0);
+  const pending = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar CSV" }).click();
+  const download = await pending;
+  expect(await readFile((await download.path())!, "utf8")).toContain("Maria Vieira");
+});
+
+test("hour report keeps multiple choices across searches and packs the legacy filters", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Por horário" }).click();
+  const operators = page.getByRole("combobox", { name: "Operadores", exact: true });
+  await operators.fill("2");
+  await page.getByRole("option", { name: "Pessoa 2 · #2", exact: true }).click();
+  await operators.fill("51");
+  await page.getByRole("option", { name: "João sem vendas · #51", exact: true }).click();
+  await operators.press("Escape");
+  const sectors = page.getByRole("combobox", { name: "Setores", exact: true });
+  await sectors.fill("pos-vendas");
+  await page.getByRole("option", { name: "Pós-vendas · #8", exact: true }).click();
+  await sectors.fill("19");
+  await page.getByRole("option", { name: "Suporte · #19", exact: true }).click();
+  await sectors.press("Escape");
+  await expect(operators).toHaveValue("");
+  await expect(sectors).toHaveValue("");
+  await page.getByLabel("Data inicial").fill("2026-11-17");
+  await page.getByLabel("Data final").fill("2026-11-17");
+  expect(state.attendance).toHaveLength(0);
+  await page.getByRole("button", { name: "Gerar relatório", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "Segunda-feira" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Volume por horário" })).toContainText("Enviadas");
+  expect(Object.fromEntries(state.attendance[0].searchParams)).toEqual({
+    MIN_DATE: "2026-11-17",
+    MAX_DATE: "2026-11-17",
+    OPERADORES: "2,51",
+    SETORES: "8,19",
+  });
+  await page.getByRole("button", { name: "Limpar filtros" }).click();
+  await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeDisabled();
+  expect(state.attendance).toHaveLength(1);
+  await page.getByRole("button", { name: "Descartar alterações" }).click();
+  await expect(page.getByRole("button", { name: "Exportar CSV" })).toBeEnabled();
+  await page.getByRole("button", { name: "Alternar tema" }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator("main").screenshot({
+    path: "test-results-reports/hour-day-mobile.png",
+    animations: "disabled",
+  });
+});
+
+test("contacts awaiting reply generates the current snapshot without date controls", async ({
+  page,
+}) => {
+  const state = await fixture(page);
+  await page.getByRole("button", { name: "Aguardando retorno" }).click();
+  await expect(page.getByLabel("Data inicial")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Limpar filtros" })).toHaveCount(0);
+  expect(state.attendance).toHaveLength(0);
+  await page.getByRole("button", { name: "Gerar relatório", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "Célia" })).toBeVisible();
+  expect(state.attendance).toHaveLength(1);
+  expect(state.attendance[0].search).toBe("");
 });
 
 test("messages require generation; search covers all pages and CSV uses the applied complete result", async ({
@@ -251,25 +399,47 @@ test("sales result search preserves the execution, and draft dates disable expor
 test("catalog and pilots fit mobile and dark mode", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await fixture(page);
-  await page.screenshot({ path: "test-results-reports/catalog-mobile.png", fullPage: true, animations: "disabled" });
+  await page.screenshot({
+    path: "test-results-reports/catalog-mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Mensagens", exact: true }).click();
   await page.getByRole("button", { name: "Gerar relatório", exact: true }).click();
   await expect(page.getByLabel("Pesquisar nos resultados")).toBeVisible();
   await page.getByRole("button", { name: "Alternar tema" }).click();
-  await page.screenshot({ path: "test-results-reports/messages-mobile-dark.png", fullPage: true, animations: "disabled" });
+  await page.screenshot({
+    path: "test-results-reports/messages-mobile-dark.png",
+    fullPage: true,
+    animations: "disabled",
+  });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Vendas", exact: true }).click();
   await page.getByRole("button", { name: "Gerar relatório", exact: true }).click();
   await expect(page.getByLabel("Pesquisar operadores no resultado")).toBeVisible();
-  await page.screenshot({ path: "test-results-reports/sales-mobile-dark.png", fullPage: true, animations: "disabled" });
+  await page.screenshot({
+    path: "test-results-reports/sales-mobile-dark.png",
+    fullPage: true,
+    animations: "disabled",
+  });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   for (const width of [768, 1440]) {
     await page.setViewportSize({ width, height: 1000 });
-    await page.screenshot({ path: `test-results-reports/sales-${width}-dark.png`, fullPage: true, animations: "disabled" });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({
+      path: `test-results-reports/sales-${width}-dark.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
   }
   await page.getByRole("button", { name: "Central", exact: true }).click();
   await page.getByRole("button", { name: "Alternar tema" }).click();
-  await page.screenshot({ path: "test-results-reports/catalog-desktop.png", fullPage: true, animations: "disabled" });
+  await page.screenshot({
+    path: "test-results-reports/catalog-desktop.png",
+    fullPage: true,
+    animations: "disabled",
+  });
 });

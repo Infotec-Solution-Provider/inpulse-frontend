@@ -13,19 +13,27 @@ export type EntityOptionsLoader = (
   signal: AbortSignal,
 ) => Promise<{ options: EntityOption[]; hasMore: boolean }>;
 
-export function SearchableEntityFilter({
-  label,
-  scope,
-  value,
-  onChange,
-  loadOptions,
-}: {
+type EntityFilterProps = {
   label: string;
   scope: string;
-  value: EntityOption | null;
-  onChange: (value: EntityOption | null) => void;
   loadOptions: EntityOptionsLoader;
-}) {
+  moreLabel?: string;
+  emptyLabel?: string;
+} & (
+  | { multiple: true; value: EntityOption[]; onChange: (value: EntityOption[]) => void }
+  | { multiple?: false; value: EntityOption | null; onChange: (value: EntityOption | null) => void }
+);
+
+export function SearchableEntityFilter(props: EntityFilterProps) {
+  const {
+    label,
+    scope,
+    value,
+    loadOptions,
+    multiple = false,
+    moreLabel = "Carregar mais operadores",
+    emptyLabel = "Nenhum operador encontrado",
+  } = props;
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -93,12 +101,13 @@ export function SearchableEntityFilter({
     };
   }, [scope, search, page, open, retry, loadOptions]);
   const options = state.scope === scope && state.search === search ? state.options : [];
-  const combined =
-    value && !options.some((option) => option.id === value.id) ? [value, ...options] : options;
+  const selected = Array.isArray(value) ? value : value ? [value] : [];
+  const optionIds = new Set(options.map((option) => option.id));
+  const combined = [...selected.filter((option) => !optionIds.has(option.id)), ...options];
   const choices = state.error
     ? [...combined, { id: -2, label: "Tentar carregar opções" }]
     : open && state.hasMore && !state.loading
-      ? [...combined, { id: -1, label: "Carregar mais operadores" }]
+      ? [...combined, { id: -1, label: moreLabel }]
       : combined;
   return (
     <div className="grid min-w-0 content-start gap-1">
@@ -107,9 +116,18 @@ export function SearchableEntityFilter({
         options={choices}
         disableCloseOnSelect
         value={value}
+        multiple={multiple}
+        limitTags={2}
+        inputValue={multiple ? search : undefined}
         open={open}
         onOpen={() => setOpen(true)}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          if (multiple) {
+            setSearch("");
+            setPage(1);
+          }
+        }}
         filterOptions={(items) => items}
         isOptionEqualToValue={(option, selected) => option.id === selected.id}
         getOptionLabel={(option) =>
@@ -117,17 +135,22 @@ export function SearchableEntityFilter({
         }
         loading={state.loading}
         loadingText="Carregando opções…"
-        noOptionsText={state.error ?? "Nenhum operador encontrado"}
+        noOptionsText={state.error ?? emptyLabel}
         onChange={(_, option) => {
-          if (option?.id === -2) {
+          const next = Array.isArray(option) ? option : option ? [option] : [];
+          if (next.some((item) => item.id === -2)) {
             setRetry((count) => count + 1);
             return;
           }
-          if (option?.id === -1) {
+          if (next.some((item) => item.id === -1)) {
             setPage((current) => current + 1);
             return;
           }
-          onChange(option);
+          if (props.multiple) {
+            props.onChange(next);
+            return;
+          }
+          props.onChange(next[0] ?? null);
           setSearch("");
           setPage(1);
           setOpen(false);
@@ -142,7 +165,7 @@ export function SearchableEntityFilter({
           <TextField
             {...params}
             label={label}
-            placeholder="Todos os permitidos"
+            placeholder={selected.length ? (open ? "Pesquisar…" : undefined) : "Todos os permitidos"}
             helperText={state.error ?? "Pesquise por nome ou código. Vazio: todos os permitidos."}
             error={Boolean(state.error)}
             InputProps={{
