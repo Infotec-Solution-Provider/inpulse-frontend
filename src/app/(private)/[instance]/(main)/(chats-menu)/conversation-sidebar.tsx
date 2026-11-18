@@ -8,18 +8,21 @@ import "./attendance-sidebar.css";
 import "./attendance-telephony.css";
 
 interface ConversationSidebarProps {
+  integrated?: boolean;
   telephony?: ReactNode;
   filters: ReactNode;
   children: ReactNode;
 }
 
 export default function ConversationSidebar({
+  integrated = false,
   telephony,
   filters,
   children,
 }: ConversationSidebarProps) {
   const phone = useTelephony();
   const [telephonyExpanded, setTelephonyExpanded] = useState(true);
+  const [channel, setChannel] = useState<"all" | "whatsapp" | "phone">("all");
   const contentId = useId();
   const [headerElement, setHeaderElement] = useState<HTMLDivElement | null>(null);
 
@@ -29,10 +32,20 @@ export default function ConversationSidebar({
 
   return (
     <aside aria-label="Painel de atendimento" className="attendance-sidebar">
+      {integrated && (
+        <div className="attendance-history-filters attendance-channel-filter" role="group" aria-label="Canal da fila">
+          {(["all", "whatsapp", "phone"] as const).map((kind) => (
+            <button key={kind} type="button" aria-pressed={channel === kind} onClick={() => setChannel(kind)}>
+              {{ all: "Todos", whatsapp: "WhatsApp", phone: "Telefonia" }[kind]}
+            </button>
+          ))}
+        </div>
+      )}
       {telephony && (
         <section
           aria-label="Telefonia e próximas ligações"
           className="attendance-sidebar-telephony attendance-telephony-section"
+          hidden={integrated && channel === "whatsapp"}
           data-expanded={telephonyExpanded}
         >
           <div className="attendance-telephony-header">
@@ -67,7 +80,7 @@ export default function ConversationSidebar({
           </div>
         </section>
       )}
-      <div className="attendance-sidebar-conversations">
+      <div className="attendance-sidebar-conversations" hidden={integrated && channel === "phone"}>
         <div className="attendance-sidebar-filters">{filters}</div>
         <div className="attendance-sidebar-list">{children}</div>
       </div>

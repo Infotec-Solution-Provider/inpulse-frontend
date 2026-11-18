@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppContext } from "@/app/(private)/[instance]/app-context";
+import { createPortal } from "react-dom";
 import { useAuthContext } from "@/app/auth-context";
 import { useContactsContext } from "@/app/(private)/[instance]/(cruds)/contacts/contacts-context";
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
@@ -36,6 +37,7 @@ import { TelephoneQueueItem } from "./telephone-dialer.types";
 
 interface TelephoneAttendanceDrawerProps {
   open: boolean;
+  inlineHost?: HTMLDivElement | null;
   appointment: TelephoneQueueItem | null;
   isDialing: boolean;
   callStatusLabel: string;
@@ -99,6 +101,7 @@ function normalizePhone(phone?: string | null) {
 
 export default function TelephoneAttendanceDrawer({
   open,
+  inlineHost,
   appointment,
   isDialing,
   callStatusLabel,
@@ -247,7 +250,7 @@ export default function TelephoneAttendanceDrawer({
 
     try {
       await startChatByContactId(contact.id);
-      onClose();
+      if (inlineHost === undefined) onClose();
     } catch (err) {
       toast.error(`Falha ao iniciar conversa no WhatsApp: ${sanitizeErrorMessage(err)}`);
     } finally {
@@ -299,16 +302,7 @@ export default function TelephoneAttendanceDrawer({
     );
   };
 
-  return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        className:
-          "w-full max-w-[32rem] bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100",
-      }}
-    >
+  const content = (
       <div className="flex h-full flex-col">
         <header className="border-b border-slate-200 bg-white/80 px-5 py-4 backdrop-blur dark:border-slate-700 dark:bg-slate-800/90">
           <div className="flex items-start justify-between gap-3">
@@ -330,7 +324,7 @@ export default function TelephoneAttendanceDrawer({
                 {appointment?.campaignName || "Sem campanha"}
               </p>
             </div>
-            <IconButton onClick={onClose}>
+            <IconButton aria-label="Fechar atendimento telefônico" onClick={onClose}>
               <CloseIcon />
             </IconButton>
           </div>
@@ -649,6 +643,21 @@ export default function TelephoneAttendanceDrawer({
           </div>
         </footer>
       </div>
+  );
+  if (inlineHost !== undefined) {
+    return open && inlineHost ? createPortal(content, inlineHost) : null;
+  }
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        className:
+          "w-full max-w-[32rem] bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100",
+      }}
+    >
+      {content}
     </Drawer>
   );
 }

@@ -15,7 +15,15 @@ import TelephoneAttendanceDrawer from "./telephone-attendance-drawer";
 import TelephoneFinishModal from "./telephone-finish-modal";
 import { mapTelephonyScheduleToQueueItem, TelephoneQueueItem } from "./telephone-dialer.types";
 
-export default function TelephoneDialerCard() {
+export default function TelephoneDialerCard({
+  inlineHost,
+  onOpenChange,
+  onFinished,
+}: {
+  inlineHost?: HTMLDivElement | null;
+  onOpenChange?: (open: boolean) => void;
+  onFinished?: () => void;
+} = {}) {
   const { token, instance, user } = useAuthContext();
   const authScope = useRef({ instance, userId: user?.CODIGO });
   authScope.current = { instance, userId: user?.CODIGO };
@@ -33,6 +41,10 @@ export default function TelephoneDialerCard() {
   const isDialing = matchesCall && phone.busy;
   const startedAt = matchesCall ? phone.state.startedAt : null;
   const callStatusLabel = matchesCall ? callPhaseLabels[phone.state.phase] : "Não iniciado";
+
+  useEffect(() => {
+    onOpenChange?.(isDrawerOpen && !!nextAppointment && !isLoadingQueue && !queueError);
+  }, [isDrawerOpen, nextAppointment, isLoadingQueue, queueError, onOpenChange]);
 
   useEffect(() => {
     if (!nextAppointment) {
@@ -172,6 +184,7 @@ export default function TelephoneDialerCard() {
       if (authScope.current.instance !== instance || authScope.current.userId !== user?.CODIGO)
         return;
       setIsDrawerOpen(false);
+      onFinished?.();
       await reloadQueue();
       toast.success("Atendimento telefonico finalizado com sucesso.");
     } catch (err) {
@@ -192,6 +205,7 @@ export default function TelephoneDialerCard() {
           await phone.waitForSync();
         }}
         onV2Committed={async () => {
+          onFinished?.();
           await phone.refreshOperator();
           setIsDrawerOpen(false);
           await reloadQueue();
@@ -213,6 +227,7 @@ export default function TelephoneDialerCard() {
             throw new Error("A sessão mudou. Releia a fila.");
           if (response.data.status === "applied") {
             setIsDrawerOpen(false);
+            onFinished?.();
             await reloadQueue();
             toast.success("Finalização confirmada. A fila foi atualizada.");
           }
@@ -300,6 +315,7 @@ export default function TelephoneDialerCard() {
 
       <TelephoneAttendanceDrawer
         open={isDrawerOpen}
+        inlineHost={inlineHost}
         appointment={nextAppointment}
         isDialing={isDialing || isStartingDial}
         callStatusLabel={callStatusLabel}

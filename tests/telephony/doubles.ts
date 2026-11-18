@@ -58,6 +58,8 @@ class Session extends Emitter {
   terminate() { this.ended = true; this.emit("ended"); }
   mute() { harness.media?.getAudioTracks().forEach(track => { track.enabled = false; }); }
   unmute() { harness.media?.getAudioTracks().forEach(track => { track.enabled = true; }); }
+  hold(_options: unknown, done: () => void) { setTimeout(done, 25); return true; }
+  unhold(_options: unknown, done: () => void) { setTimeout(done, 25); return true; }
   refer(target:string,options:{eventHandlers:Record<string,()=>void>}){harness.transfers.push(target);setTimeout(()=>options.eventHandlers.accepted(),25);}
   sendDTMF() {} answer() { this.emit("confirmed"); }
 }

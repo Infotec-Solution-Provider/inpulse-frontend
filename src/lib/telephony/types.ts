@@ -23,11 +23,13 @@ export interface PhoneState {
   scheduleId: number | null;
   callId?: string | null;
   transferPending?: boolean;
+  held?: boolean;
+  holdPending?: boolean;
 }
 
 export const initialPhoneState: PhoneState = {
   connection: "disconnected", phase: "idle", number: "", extension: "", muted: false,
-  error: null, startedAt: null, answeredAt: null, endedAt: null, scheduleId: null, callId: null, transferPending: false,
+  error: null, startedAt: null, answeredAt: null, endedAt: null, scheduleId: null, callId: null, transferPending: false, held: false, holdPending: false,
 };
 
 export function isCallBusy(phase: CallPhase) {
