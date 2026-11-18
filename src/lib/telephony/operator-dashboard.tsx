@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Alert, Button, Dialog, DialogTitle, DialogContent } from "@mui/material";
+import { Alert, Dialog, DialogTitle, DialogContent, IconButton, Tooltip } from "@mui/material";
+import { ChartNoAxesColumnIncreasing } from "lucide-react";
+import { UiIcon } from "@/lib/ui-system/icons";
 import type { RuntimeOperatorState } from "./runtime-client";
 import type { PhoneState } from "./types";
 
@@ -170,9 +172,16 @@ export function OperatorDashboardDialog(props: Parameters<typeof OperatorDashboa
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button size="small" onClick={() => setOpen(true)}>
-        Meus indicadores de telefonia
-      </Button>
+      <Tooltip title="Meus indicadores de telefonia">
+        <IconButton
+          size="small"
+          aria-label="Meus indicadores de telefonia"
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
+          <UiIcon icon={ChartNoAxesColumnIncreasing} />
+        </IconButton>
+      </Tooltip>
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="md">
         <DialogTitle>Meus indicadores de telefonia</DialogTitle>
         <DialogContent>
