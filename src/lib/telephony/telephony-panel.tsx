@@ -12,19 +12,15 @@ import "./telephony-panel.css";
 import { PhoneSettings } from "./phone-settings";
 import { TransferControls } from "./transfer-controls";
 import { CallRecoveryControls } from "./operator-controls";
-import { CallHistory } from "./call-history";
-import {OperatorDashboardDialog} from "./operator-dashboard";
+import { OperatorDashboardDialog } from "./operator-dashboard";
 
 /** The attendance area hosts phone controls in its own layout. */
 export function TelephonyPanelSlot({ className }: { className?: string }) {
-  const { enabled, hostPanel, metrics, operatorState, state } = useTelephony();
+  const { enabled, hostPanel } = useTelephony();
   useEffect(() => hostPanel(), [hostPanel]);
   return enabled ? (
     <div className={className}>
       <TelephonyPanel />
-      {operatorState?.enabled && (
-        <OperatorDashboardDialog metrics={metrics} state={operatorState} phone={state} />
-      )}
     </div>
   ) : null;
 }
@@ -73,7 +69,7 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
         role="status"
         aria-label={statusLabel}
         title={`${statusLabel}${state.extension ? ` · ${state.extension}` : ""}`}
-        className={`ip-phone-status ip-phone-status--${state.connection}${busy ? "ip-phone-status--busy" : ""}`}
+        className={`ip-phone-status ip-phone-status--${state.connection}${busy ? " ip-phone-status--busy" : ""}`}
       />
       <Tooltip title={state.connection === "ready" ? "Desconectar" : "Conectar telefonia"}>
         <span>
@@ -93,7 +89,6 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           </IconButton>
         </span>
       </Tooltip>
-      <PhoneSettings />
       <Tooltip title={open ? "Recolher telefone" : "Abrir telefone"}>
         <IconButton
           size="small"
@@ -107,6 +102,10 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
           <UiIcon icon={open ? X : Phone} />
         </IconButton>
       </Tooltip>
+      {placement === "sidebar" && phone.operatorState?.enabled && (
+        <OperatorDashboardDialog metrics={phone.metrics} state={phone.operatorState} phone={state} />
+      )}
+      <PhoneSettings />
     </>
   );
   return (
@@ -210,7 +209,6 @@ export function TelephonyPanel({ placement = "sidebar" }: { placement?: "sidebar
             </>
           )}
           <CallRecoveryControls />
-          <CallHistory />
         </div>
       )}
     </section>

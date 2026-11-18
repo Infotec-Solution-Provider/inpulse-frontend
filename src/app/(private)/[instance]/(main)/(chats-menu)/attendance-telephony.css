@@ -3,7 +3,7 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-  background: var(--ip-surface);
+  background: var(--ip-surface-muted);
 }
 .ip-ui .attendance-sidebar-telephony.attendance-telephony-section > * + * {
   margin-top: 0;
@@ -15,8 +15,8 @@
   min-height: 44px;
   flex-shrink: 0;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: 4px;
+  padding: 4px 0 4px 8px;
   border: 0;
   background: transparent;
   color: var(--ip-muted);
@@ -28,22 +28,34 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  padding-right: 4px;
+  padding: 2px 4px 2px 0;
 }
 .ip-ui .attendance-telephony-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
 }
 .ip-ui .attendance-telephony-actions > .ip-phone-status {
-  margin-inline: 6px;
+  margin-inline: 5px 7px;
 }
 .ip-ui .attendance-telephony-actions .MuiIconButton-root {
-  width: 44px;
+  width: 36px;
   height: 44px;
+  border-radius: 8px;
+  color: var(--ip-muted);
+}
+.ip-ui .attendance-telephony-actions .MuiIconButton-root[aria-expanded="true"],
+.ip-ui .attendance-telephony-actions .MuiIconButton-root:hover {
+  background: var(--ip-surface);
+  color: var(--ip-text);
+}
+@media (pointer: coarse) {
+  .ip-ui .attendance-telephony-actions .MuiIconButton-root {
+    width: 44px;
+  }
 }
 .ip-ui .attendance-telephony-toggle:hover {
-  background: var(--ip-surface-muted);
+  background: var(--ip-surface);
 }
 .ip-ui .attendance-telephony-toggle:focus-visible {
   outline-offset: -4px;
@@ -52,6 +64,7 @@
   color: var(--ip-text);
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .ip-ui .attendance-telephony-status {
   overflow: hidden;

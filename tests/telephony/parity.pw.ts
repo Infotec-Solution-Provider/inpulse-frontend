@@ -1,12 +1,19 @@
 import { expect, test, type Page } from "@playwright/test";
 import type {} from "./doubles";
 
-async function closePauseDialog(page: Page) {
-  const dialog = page.getByRole("dialog", { name: "Pausa", exact: true });
-  if (await dialog.isVisible()) await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
+async function closeInHeader(page: Page, title: string) {
+  const dialog = page.getByRole("dialog", { name: title, exact: true });
+  const heading = dialog.getByRole("heading", { name: title, exact: true });
+  const close = heading.locator("..").getByRole("button", { name: "Fechar", exact: true });
+  await expect(close.locator("svg")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Fechar", exact: true })).toHaveCount(1);
+  const [headingBox, closeBox] = await Promise.all([heading.boundingBox(), close.boundingBox()]);
+  expect(closeBox!.x).toBeGreaterThan(headingBox!.x);
+  await close.click();
+  await expect(dialog).toBeHidden();
 }
 
-test("audio settings, direct transfer, optional call quality and pause controls", async ({ page }) => {
+test("audio settings, direct transfer, pause and indicators use the operator controls", async ({ page }) => {
   await page.goto("/tests/telephony/index.html?runtime");
   const disconnectedPause = page.getByRole("region", { name: "Pausa do operador", exact: true });
   await expect(disconnectedPause).toHaveCount(1);
@@ -19,7 +26,7 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await pauseDialog.getByLabel("Motivo da pausa", { exact: true }).click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
   await pauseDialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
-  await closePauseDialog(page);
+  await closeInHeader(page, "Pausa");
   await expect(disconnectedPause).toContainText("Em pausa");
   await expect(disconnectedPause).toContainText("Café");
   await expect(disconnectedPause.getByRole("timer")).toBeVisible();
@@ -46,7 +53,7 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await page.screenshot({ path: "test-results/telephony-parity-audio.png", fullPage: true });
   await page.getByRole("checkbox", { name: "Atender automaticamente" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "test-results/telephony-parity-audio-advanced.png", fullPage: true });
-  await page.getByRole("button", { name: "Fechar", exact: true }).click();
+  await closeInHeader(page, "Aparelhos e áudio");
   await page.getByLabel("Telefone ou ramal", { exact: true }).fill("103");
   await page.getByRole("button", { name: "Ligar", exact: true }).click();
   await expect.poll(() => page.evaluate(() => !!window.phoneHarness.session)).toBe(true);
@@ -57,25 +64,14 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await page.screenshot({ path: "test-results/telephony-parity-transfer.png", fullPage: true });
   await page.getByRole("button", { name: "Transferir", exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.phoneHarness.transfers)).toEqual(["sip:0200@pbx.example.test"]);
-  await expect(page.getByRole("button", { name: "Avaliar áudio da última ligação" })).toBeVisible();
-  await page.getByRole("button", { name: "Avaliar áudio da última ligação" }).click();
-  await page.getByRole("button", { name: "Avaliar áudio", exact: true }).click();
-  await page.getByLabel("Qualidade do áudio").click();
-  await page.getByRole("option", { name: "BOA", exact: true }).click();
-  await page.getByLabel("Comentário opcional").fill("Áudio claro e sem cortes.");
-  await page.getByRole("button", { name: "Salvar avaliação" }).click();
-  await expect.poll(() => page.evaluate(() => window.phoneHarness.runtimeCalls[0]?.rating)).toBe("BOA");
-  await page.screenshot({ path: "test-results/telephony-parity-quality.png", fullPage: true });
-  await expect(page.getByRole("button", { name: "Salvar avaliação" })).toHaveCount(0);
-  await page.getByRole("dialog", { name: "Ligações e qualidade técnica do áudio" }).getByRole("button", { name: "Fechar", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Ligações e qualidade técnica do áudio" })).toBeHidden();
+  await expect(page.getByRole("button", { name: /Avaliar áudio|Histórico e qualidade/ })).toHaveCount(0);
   const pause = page.getByRole("region", { name: "Pausa do operador", exact: true });
   await pause.getByRole("button", { name: "Pausar", exact: true }).click();
   await pauseDialog.getByLabel("Motivo da pausa").click();
   await page.getByRole("option", { name: "Café", exact: true }).click();
   await expect(pauseDialog.getByRole("button", { name: "Após atendimento telefônico", exact: true })).toBeDisabled();
   await pauseDialog.getByRole("button", { name: "Pausar agora", exact: true }).click();
-  await closePauseDialog(page);
+  await closeInHeader(page, "Pausa");
   await expect(pause).toContainText("Em pausa");
   await expect(pause.getByRole("timer")).toBeVisible();
   await page.screenshot({ path: "test-results/telephony-parity-paused.png", fullPage: true });
@@ -85,6 +81,7 @@ test("audio settings, direct transfer, optional call quality and pause controls"
   await expect(page.getByRole("dialog", { name: "Meus indicadores de telefonia" })).toBeVisible();
   await page.waitForTimeout(250);
   await page.screenshot({ path: "test-results/telephony-parity-dashboard.png", fullPage: true });
+  await closeInHeader(page, "Meus indicadores de telefonia");
   expect(await page.evaluate(() => window.phoneHarness.calls.length)).toBe(1);
 });
 
