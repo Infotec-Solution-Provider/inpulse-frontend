@@ -8,7 +8,9 @@ import { UnconfirmedMessageSendError } from "../../src/lib/utils/reliable-messag
 import { EMPTY_MENTION_DIRECTORY } from "../../src/lib/utils/message-mentions";
 
 const date = new Date("2026-10-19T12:00:00.000Z");
-const integratedFixture = new URLSearchParams(location.search).has("integrated-fixture");
+const fixtureOptions = new URLSearchParams(location.search);
+const integratedFixture = fixtureOptions.has("integrated-fixture");
+const appointmentOverflowFixture = fixtureOptions.has("appointment-overflow");
 export const user = {
   CODIGO: 1,
   NOME: "Operadora demonstrativa",
@@ -264,8 +266,20 @@ export const customersService = {
   setAuth() {},
   ax: {
     get: async (path: string) => ({ data: { data: {
-      customer: initialChats[0].customer,
-      purchases: [],
+      customer: appointmentOverflowFixture ? {
+        ...initialChats[0].customer,
+        RAZAO: "DISTRIBUIDORA DEMONSTRATIVA DE ALIMENTOS E PRODUTOS PARA SUPERMERCADOS LTDA",
+        FANTASIA: "SUPERMERCADOEXEMPLOCOMNOMECOMERCIALMUITOLONGO",
+        CPF_CNPJ: "00841236000145",
+        OBS_OPERADOR: "Empresa fictícia com observação longa para conferir a leitura no painel. O retorno foi agendado para o departamento de compras.",
+      } : initialChats[0].customer,
+      purchases: appointmentOverflowFixture ? [{
+        CODIGO: 105,
+        DESCRICAO: "Pedido demonstrativo com uma descrição longa para o setor de compras",
+        DATA: date.toISOString(),
+        FORMA_PGTO: "Transferência bancária",
+        VALOR: 119840.20,
+      }] : [],
       callHistory: path.includes("/customers/1/full") ? [
         { CODIGO: 420, TIPO_ACAO: "RECEP", LIGACAO_RECEBIDA: new Date(date.getTime() + 1000).toISOString(), LIGACAO_FINALIZADA: new Date(date.getTime() + 62000).toISOString(), RESULTADO_NOME: "Contato realizado" },
         { CODIGO: 421, CANAL_ATENDIMENTO: "WhatsApp", LIGACAO_RECEBIDA: date.toISOString() },
@@ -275,8 +289,8 @@ export const customersService = {
   getTelephonySchedules: async () => ({ data: integratedFixture ? [{
     CODIGO: 1042,
     CLIENTE: 1,
-    CLIENTE_FANTASIA: "Ana da fila",
-    CAMPANHA_NOME: "Retorno de pós-venda",
+    CLIENTE_FANTASIA: appointmentOverflowFixture ? "SUPERMERCADO DEMONSTRATIVO FILIAL CENTRAL" : "Ana da fila",
+    CAMPANHA_NOME: appointmentOverflowFixture ? "Campanha demonstrativa para retornos do departamento de compras" : "Retorno de pós-venda",
     FONE1: "11900000001",
     FONE2: "11900000008",
     CONCLUIDO: "NAO",

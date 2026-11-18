@@ -7,7 +7,7 @@ import { useContactsContext } from "@/app/(private)/[instance]/(cruds)/contacts/
 import { useWhatsappContext } from "@/app/(private)/[instance]/whatsapp-context";
 import customersService from "@/lib/services/customers.service";
 import { WppContact } from "@/lib/sdk-local";
-import { Formatter, sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import AddIcCallIcon from "@mui/icons-material/AddIcCall";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import CloseIcon from "@mui/icons-material/Close";
@@ -34,6 +34,8 @@ import {
   CustomerPurchaseDetail,
 } from "./(start-chat-modal)/customer-crm-detail-modal.types";
 import { TelephoneQueueItem } from "./telephone-dialer.types";
+import TelephoneAttendancePanel from "./telephone-attendance-panel";
+import { formatCurrency, formatDateTime, formatPhone, getHistoryResultLabel, normalizePhone } from "./telephone-attendance-format";
 
 interface TelephoneAttendanceDrawerProps {
   open: boolean;
@@ -42,61 +44,13 @@ interface TelephoneAttendanceDrawerProps {
   isDialing: boolean;
   callStatusLabel: string;
   canStartCall: boolean;
+  callUnavailableReason?: string | null;
   canFinish: boolean;
   dialedPhone: string;
   onClose: () => void;
   onSelectPhone: (phone: string) => void;
   onStartDial: () => void;
   onOpenFinishModal: () => void;
-}
-
-function formatPhone(phone?: string | null) {
-  if (!phone) return "-";
-
-  try {
-    return Formatter.phone(phone);
-  } catch {
-    return phone;
-  }
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-
-  const parsedDate = new Date(value.includes("T") ? value : value.replace(" ", "T"));
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(parsedDate);
-}
-
-function formatCurrency(value?: number | null) {
-  if (value == null) return "-";
-
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function getHistoryResultLabel(item: CustomerCallHistoryDetail) {
-  if (item.RESULTADO_NOME?.trim()) {
-    return item.RESULTADO_NOME;
-  }
-
-  return item.TIPO_ACAO === "RECEP" ? "Atendimento receptivo" : "Atendimento ativo";
-}
-
-function normalizePhone(phone?: string | null) {
-  return phone?.replace(/\D/g, "") || "";
 }
 
 export default function TelephoneAttendanceDrawer({
@@ -106,6 +60,7 @@ export default function TelephoneAttendanceDrawer({
   isDialing,
   callStatusLabel,
   canStartCall,
+  callUnavailableReason = null,
   canFinish,
   dialedPhone,
   onClose,
@@ -301,6 +256,45 @@ export default function TelephoneAttendanceDrawer({
       />,
     );
   };
+
+  if (inlineHost !== undefined) {
+    if (!open || !inlineHost || !appointment) return null;
+    return createPortal(
+      <TelephoneAttendancePanel
+        appointment={appointment}
+        onClose={onClose}
+        call={{
+          phone: dialedPhone,
+          status: callStatusLabel,
+          dialing: isDialing,
+          canStart: canStartCall,
+          canFinish,
+          unavailableReason: callUnavailableReason,
+          onSelectPhone,
+          onStart: onStartDial,
+          onFinish: onOpenFinishModal,
+        }}
+        customer={{
+          data: detail?.customer ?? null,
+          loading: loadingDetail,
+          purchases: recentPurchases,
+          history: recentHistory,
+          onOpen: handleOpenCustomerDetail,
+        }}
+        whatsapp={{
+          contacts: whatsappContacts,
+          loading: loadingWhatsappContacts,
+          error: whatsappContactsError,
+          startingContactId,
+          registering: registeringWhatsappContact,
+          canRegister: !!selectedPhoneNormalized && !hasMatchingWhatsappContact,
+          onOpen: (contact) => void handleStartWhatsappConversation(contact),
+          onRegister: () => void handleRegisterWhatsappContact(),
+        }}
+      />,
+      inlineHost,
+    );
+  }
 
   const content = (
       <div className="flex h-full flex-col">
@@ -644,9 +638,6 @@ export default function TelephoneAttendanceDrawer({
         </footer>
       </div>
   );
-  if (inlineHost !== undefined) {
-    return open && inlineHost ? createPortal(content, inlineHost) : null;
-  }
   return (
     <Drawer
       anchor="right"

@@ -157,6 +157,99 @@ test("view options keep the call and WhatsApp draft while switching layouts on d
   expect(errors).toEqual([]);
 });
 
+for (const { device, width, height } of [
+  { device: "desktop", width: 1440, height: 900 },
+  { device: "mobile", width: 320, height: 844 },
+]) {
+  test(`inline phone appointment fits long customer data and follows both themes on ${device}`, async ({ page }) => {
+    const errors = await open(page, width, height, "?integrated-fixture&appointment-overflow");
+    if (device === "desktop") await selectAna(page);
+
+    await page.getByRole("button", { name: "Opções de visualização", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Integrado", exact: true }).click();
+    await page.getByRole("button", { name: /Abrir próxima ligação/ }).click();
+
+    const panel = page.getByRole("region", { name: "Atendimento telefônico", exact: true });
+    await expect(panel.getByRole("heading", { name: "Resumo do cliente", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Iniciar ligação", exact: true })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Finalizar atendimento", exact: true })).toBeVisible();
+
+    const legalName = "DISTRIBUIDORA DEMONSTRATIVA DE ALIMENTOS E PRODUTOS PARA SUPERMERCADOS LTDA";
+    const tradeName = "SUPERMERCADOEXEMPLOCOMNOMECOMERCIALMUITOLONGO";
+    const fiscalNumber = "00841236000145";
+    await expect.poll(async () => (await panel.locator("dd").allTextContents()).map((value) => value.trim()))
+      .toEqual(expect.arrayContaining([legalName, tradeName]));
+
+    await panel.getByText("Telefones do atendimento", { exact: true }).click();
+    const phones = panel.locator("button[aria-pressed]");
+    await expect(phones).toHaveCount(2);
+    await expect(phones.first()).toHaveAttribute("aria-pressed", "true");
+    await phones.last().click();
+    await expect(phones.last()).toHaveAttribute("aria-pressed", "true");
+    await panel.getByText("Contatos do WhatsApp", { exact: true }).click();
+    await expect(panel.getByRole("button", { name: /Ana Souza.*Conversar/ })).toBeVisible();
+    await panel.getByText("Últimas compras", { exact: true }).click();
+    await expect(panel.getByText(/Pedido demonstrativo/)).toBeVisible();
+    await panel.getByText("Histórico recente", { exact: true }).click();
+    await expect(panel.getByText("Contato realizado", { exact: true })).toBeVisible();
+
+    const colors: string[] = [];
+    for (const mode of ["light", "dark"] as const) {
+      await page.evaluate((selected) => window.attendanceFixture.theme(selected), mode);
+      await expect(page.locator("[data-ui-theme]").first()).toHaveAttribute("data-ui-theme", mode);
+      await noOverflow(page);
+      const geometry = await panel.evaluate((element, values) => {
+        const panelBounds = element.getBoundingClientRect();
+        const fields = [...element.querySelectorAll("dd")].filter((field) => {
+          const value = field.textContent?.trim() ?? "";
+          return value === values.legalName || value === values.tradeName ||
+            value.replace(/\D/g, "") === values.fiscalNumber;
+        });
+        const textFits = fields.every((field) => {
+          const fieldBounds = field.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(field);
+          const rectangles = [...range.getClientRects()];
+          return rectangles.length > 0 && rectangles.every((rect) =>
+            rect.left >= Math.max(fieldBounds.left, panelBounds.left) - 1 &&
+            rect.right <= Math.min(fieldBounds.right, panelBounds.right) + 1,
+          );
+        });
+        const nestedScrollers = [...element.querySelectorAll("*")].filter(
+          (child) => ["auto", "scroll"].includes(getComputedStyle(child).overflowY) &&
+            child.scrollHeight > child.clientHeight + 1,
+        ).length;
+        const surface = document.createElement("span");
+        surface.style.cssText = "position:absolute;background-color:var(--ip-surface)";
+        element.append(surface);
+        const expectedColor = getComputedStyle(surface).backgroundColor;
+        surface.remove();
+        return {
+          width: panelBounds.width,
+          overflow: element.scrollWidth - element.clientWidth,
+          visibleFields: fields.length,
+          textFits,
+          nestedScrollers,
+          color: getComputedStyle(element).backgroundColor,
+          expectedColor,
+        };
+      }, { legalName, tradeName, fiscalNumber });
+      expect(geometry.width).toBeLessThanOrEqual(device === "desktop" ? 258 : width);
+      expect(geometry.overflow).toBeLessThanOrEqual(1);
+      expect(geometry.visibleFields).toBe(3);
+      expect(geometry.textFits).toBe(true);
+      expect(geometry.nestedScrollers).toBe(0);
+      expect(geometry.color).toBe(geometry.expectedColor);
+      colors.push(geometry.color);
+    }
+    expect(new Set(colors).size).toBe(2);
+    await panel.getByRole("button", { name: "Fechar atendimento telefônico", exact: true }).click();
+    await expect(panel).toBeHidden();
+    if (device === "desktop") await expect(draft(page)).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
+
 test("conversation type carousel navigates without applying filters and keeps keyboard focus visible", async ({
   page,
 }) => {

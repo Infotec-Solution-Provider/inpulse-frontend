@@ -1,0 +1,306 @@
+.telephone-attendance-panel {
+  container-type: inline-size;
+  flex: 1 1 0;
+  min-inline-size: 0;
+  min-block-size: 0;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  background: var(--ip-surface);
+  color: var(--ip-text);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.telephone-attendance-panel-header {
+  padding: 8px 12px;
+}
+
+.telephone-attendance-panel-top,
+.telephone-attendance-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-inline-size: 0;
+}
+
+.telephone-attendance-panel-top {
+  min-block-size: 36px;
+  color: var(--ip-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.telephone-attendance-panel-title {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.telephone-attendance-panel-muted {
+  margin-block: 4px 0;
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+
+.telephone-attendance-panel-status {
+  display: inline-block;
+  max-inline-size: 100%;
+  margin-block-start: 7px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--ip-surface-muted);
+  color: var(--ip-muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.telephone-attendance-panel-status[data-active="true"] {
+  background: var(--ip-accent-soft);
+  color: var(--ip-accent);
+}
+
+.telephone-attendance-panel-metadata,
+.telephone-attendance-panel-facts {
+  display: grid;
+  margin: 0;
+}
+
+.telephone-attendance-panel-metadata {
+  gap: 5px 10px;
+  margin-block-start: 10px;
+  padding-block: 8px;
+  border-block: 1px solid var(--ip-border-subtle);
+}
+
+.telephone-attendance-panel-metadata > div {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  align-items: baseline;
+  gap: 3px 8px;
+  min-inline-size: 0;
+}
+
+.telephone-attendance-panel :is(dt, dd) {
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.telephone-attendance-panel dt {
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+
+.telephone-attendance-panel-metadata dd {
+  text-align: end;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.telephone-attendance-panel-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 0 12px 12px;
+  border-block-end: 1px solid var(--ip-border-subtle);
+}
+
+.telephone-attendance-panel-actions > .MuiButton-root {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding-block: 7px;
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.telephone-attendance-panel-actions .MuiButton-startIcon {
+  flex: none;
+}
+
+.telephone-attendance-panel-actions > p {
+  grid-column: 1 / -1;
+  margin: 1px 0 0;
+}
+
+.telephone-attendance-panel-group {
+  min-inline-size: 0;
+  padding: 9px 12px 12px;
+  border-block-end: 1px solid var(--ip-border-subtle);
+}
+
+.telephone-attendance-panel-heading {
+  flex-wrap: wrap;
+}
+
+.telephone-attendance-panel-heading h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.telephone-attendance-panel-heading > .MuiButton-root {
+  min-inline-size: 0;
+  padding-inline: 4px;
+  font-size: 12px;
+}
+
+.telephone-attendance-panel-facts {
+  gap: 9px;
+  margin-block-start: 5px;
+}
+
+.telephone-attendance-panel-facts > div {
+  display: grid;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.telephone-attendance-panel :is(.telephone-attendance-panel-metadata, .telephone-attendance-panel-facts) dd {
+  overflow-wrap: anywhere;
+}
+
+details.telephone-attendance-panel-group {
+  padding: 0;
+}
+
+.telephone-attendance-panel-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-block-size: 42px;
+  padding: 8px 12px;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+}
+
+.telephone-attendance-panel-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.telephone-attendance-panel-group > summary::after {
+  content: "";
+  flex: 0 0 7px;
+  block-size: 7px;
+  margin-inline-end: 2px;
+  border-block-end: 1.5px solid var(--ip-muted);
+  border-inline-end: 1.5px solid var(--ip-muted);
+  transform: rotate(45deg);
+}
+
+.telephone-attendance-panel-group[open] > summary::after {
+  transform: rotate(225deg);
+}
+
+.telephone-attendance-panel-group > summary:hover {
+  background: var(--ip-surface-muted);
+}
+
+.telephone-attendance-panel :is(summary, .telephone-attendance-panel-row):focus-visible {
+  outline: 2px solid var(--ip-focus);
+  outline-offset: -2px;
+}
+
+.telephone-attendance-panel-items {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 6px;
+  padding: 0 12px 10px;
+}
+
+.telephone-attendance-panel-items > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.telephone-attendance-panel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: 7px 8px;
+  border: 1px solid var(--ip-border-subtle);
+  border-radius: 8px;
+  background: var(--ip-surface);
+  color: var(--ip-text);
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.telephone-attendance-panel-row strong {
+  font-weight: 600;
+}
+
+.telephone-attendance-panel-row span {
+  color: var(--ip-muted);
+  font-size: 12px;
+}
+
+button.telephone-attendance-panel-row:hover:not(:disabled) {
+  background: var(--ip-surface-muted);
+}
+
+.telephone-attendance-panel-row[aria-pressed="true"] {
+  border-color: var(--ip-accent);
+  background: var(--ip-accent-soft);
+}
+
+.telephone-attendance-panel-row:disabled {
+  opacity: 0.65;
+}
+
+.telephone-attendance-panel-error {
+  color: var(--ip-danger);
+  font-size: 12px;
+}
+
+.telephone-attendance-panel-loading {
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  color: var(--ip-muted);
+}
+
+.telephone-attendance-panel-footer {
+  padding: 8px 12px;
+  color: var(--ip-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+@container (min-width: 300px) {
+  .telephone-attendance-panel-metadata {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .telephone-attendance-panel-metadata > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .telephone-attendance-panel-metadata dd {
+    text-align: start;
+  }
+}
+
+@container (min-width: 360px) {
+  .telephone-attendance-panel-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (pointer: coarse) {
+  .telephone-attendance-panel-group > summary,
+  button.telephone-attendance-panel-row {
+    min-block-size: 44px;
+  }
+}

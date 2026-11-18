@@ -287,6 +287,11 @@ export default function TelephoneDialerCard({
     );
   }
 
+  const callUnavailableReason = phone.state.connection !== "ready" ? "Conecte o ramal no discador para ligar."
+    : phone.busy ? "Encerre a ligação atual antes de discar."
+    : phone.operatorState?.state === "paused" ? "Retome o atendimento para ligar."
+    : null;
+
   return (
     <>
       <button
@@ -319,12 +324,8 @@ export default function TelephoneDialerCard({
         appointment={nextAppointment}
         isDialing={isDialing || isStartingDial}
         callStatusLabel={callStatusLabel}
-        canStartCall={
-          phone.state.connection === "ready" &&
-          !phone.busy &&
-          !isStartingDial &&
-          phone.operatorState?.state !== "paused"
-        }
+        canStartCall={!callUnavailableReason && !isStartingDial}
+        callUnavailableReason={callUnavailableReason}
         canFinish={!phone.busy && !isStartingDial}
         dialedPhone={selectedPhone || nextAppointment.phone}
         onClose={() => setIsDrawerOpen(false)}
