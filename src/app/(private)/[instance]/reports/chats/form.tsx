@@ -1,87 +1,86 @@
 "use client";
-import { ChatsReportFormat } from "@/lib/sdk-local";
-import ArrowRightAltIcon from "@mui/icons-material/ArrowRightAlt";
-import { FormEventHandler, useCallback, useContext, useState } from "react";
-import { ChatsReportContext, GenerateReportParams } from "./chats-reports-context";
-import { Autocomplete, Button, MenuItem, TextField } from "@mui/material";
 
-export default function ChatReportForm() {
-  const { users, generateReport } = useContext(ChatsReportContext);
+import { useContext, useMemo, useState } from "react";
+import { Alert, MenuItem, TextField } from "@mui/material";
+import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
+import { AuthContext } from "@/app/auth-context";
+import { ReportFormControls } from "@/components/reports/ReportFormControls";
+import {
+  SearchableEntityFilter,
+  type EntityOption,
+} from "@/components/reports/SearchableEntityFilter";
+import { defaultReportPeriod, validateReportPeriod } from "@/lib/reports/filters";
+import { reportOperatorOptions } from "@/lib/reports/operator-options";
+import { useReportForm } from "@/lib/reports/use-report-form";
+import type { ChatsReportFormat } from "@/lib/sdk-local";
+import { ChatsReportContext } from "./chats-reports-context";
 
-  const [formData, setFormData] = useState<GenerateReportParams>({
-    format: "pdf",
-    userId: "*",
-    startDate: "",
-    endDate: "",
+const defaults = () => ({
+  period: defaultReportPeriod(),
+  operator: null as EntityOption | null,
+  format: "pdf" as ChatsReportFormat,
+});
+
+export default function ChatReportForm({ instance }: { instance: string }) {
+  const { token, user } = useContext(AuthContext);
+  const { generateReport } = useContext(ChatsReportContext);
+  const scope = instance + ":" + user?.CODIGO + ":chat-export";
+  const options = useMemo(() => reportOperatorOptions(token ?? ""), [token]);
+  const [notification, setNotification] = useState<string | null>(null);
+  const form = useReportForm({
+    scope,
+    defaults,
+    validate: (filters) => validateReportPeriod(filters.period),
+    execute: async (filters) => {
+      setNotification(null);
+      try {
+        await generateReport({
+          ...filters.period,
+          userId: String(filters.operator?.id ?? "*"),
+          format: filters.format,
+        });
+        setNotification("Arquivo solicitado. Acompanhe o processamento no histórico abaixo.");
+        // A solicitação cria um item no histórico, não um resultado vinculado aos filtros atuais.
+        return null;
+      } catch (error) {
+        throw new Error(sanitizeErrorMessage(error) ?? "Falha ao solicitar o arquivo.");
+      }
+    },
   });
 
-  const handleSubmit: FormEventHandler<HTMLFormElement> = useCallback(
-    async (e) => {
-      e.preventDefault();
-      generateReport(formData);
-    },
-    [formData, generateReport],
-  );
-
   return (
-    <form
-      className="flex items-center gap-3 bg-indigo-700/5 px-4 py-4 text-xs shadow-md"
-      onSubmit={handleSubmit}
-    >
-      <TextField
-        className="w-32"
-        select
-        onChange={(e) => setFormData({ ...formData, format: e.target.value as ChatsReportFormat })}
-        label="Formato"
-        required
-        size="small"
-        defaultValue={formData.format}
+    <>
+      <ReportFormControls
+        form={{ ...form, dirty: false }}
+        period={form.draft.period}
+        setPeriod={(period) => form.setDraft({ ...form.draft, period })}
+        submitLabel="Gerar arquivo"
+        pendingLabel="Solicitando arquivo…"
+        disabled={!token}
       >
-        <MenuItem value="txt">TXT</MenuItem>
-        <MenuItem value="pdf">PDF</MenuItem>
-        <MenuItem value="csv">CSV</MenuItem>
-      </TextField>
-
-      <Autocomplete
-        className="w-96"
-        size="small"
-        options={[
-          ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
-          { label: "Todos", value: "*" },
-        ]}
-        getOptionKey={(option) => option.value}
-        value={
-          [
-            ...users.map((u) => ({ label: u.NOME, value: String(u.CODIGO) })),
-            { label: "Todos", value: "*" },
-          ].find((opt) => opt.value === formData.userId) || { label: "Todos", value: "*" }
-        }
-        onChange={(_, option) => {
-          setFormData({ ...formData, userId: option?.value ?? "*" });
-        }}
-        renderInput={(params) => <TextField {...params} label="Usuário" />}
-      />
-
-      <div className="ml-4 flex items-center gap-2">
-        <TextField
-          className="w-52"
-          type="date"
-          size="small"
-          onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+        <SearchableEntityFilter
+          label="Operador"
+          scope={scope}
+          value={form.draft.operator}
+          loadOptions={options}
+          onChange={(operator) => form.setDraft({ ...form.draft, operator })}
         />
-        <ArrowRightAltIcon />
         <TextField
-          className="w-52"
+          select
           size="small"
-          type="date"
-          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-        />
-      </div>
-      <div className="ml-auto">
-        <Button title="Exportar" type="submit" variant="outlined" size="small">
-          Exportar
-        </Button>
-      </div>
-    </form>
+          label="Formato"
+          value={form.draft.format}
+          onChange={(event) =>
+            form.setDraft({ ...form.draft, format: event.target.value as ChatsReportFormat })
+          }
+        >
+          <MenuItem value="pdf">PDF</MenuItem>
+          <MenuItem value="csv">CSV</MenuItem>
+          <MenuItem value="txt">TXT</MenuItem>
+        </TextField>
+      </ReportFormControls>
+      {form.error && <Alert severity="error">{form.error}</Alert>}
+      {notification && !form.error && <Alert severity="success">{notification}</Alert>}
+    </>
   );
 }

@@ -1,38 +1,108 @@
 "use client";
-import { useContext } from "react";
-import ChatReportListItem from "./list-item";
 
+import { useContext, useState } from "react";
+import { Alert, Button, MenuItem, TextField } from "@mui/material";
+import { Download, Trash2 } from "lucide-react";
+import { Formatter } from "@in.pulse-crm/utils";
+import { ReportResultTable } from "@/components/reports/ReportResults";
+import { reportPeriodLabel } from "@/lib/reports/filters";
+import filesService from "@/lib/services/files.service";
 import { ChatsReportContext } from "./chats-reports-context";
 
+const statuses = { pending: "Processando", completed: "Finalizado", failed: "Falhou" };
+
 export default function ChatsReportList() {
-  const { reports, users } = useContext(ChatsReportContext);
+  const { reports, loading, error, reload, deleteReport, users } = useContext(ChatsReportContext);
+  const [status, setStatus] = useState("all");
+  const names = new Map(users.map((user) => [String(user.CODIGO), user.NOME]));
+  const visible = reports.filter((report) => status === "all" || status === report.status);
 
   return (
-    <div className="scrollbar-whatsapp mx-auto w-full overflow-y-scroll bg-indigo-700/5 dark:bg-indigo-900/10">
-      <table className="w-max text-sm text-black dark:text-white">
-        <thead className="sticky top-0 rounded-md bg-white shadow-sm dark:bg-indigo-900 dark:shadow-md">
-          <tr>
-            <th className="w-44 px-2 py-2 pl-8 text-left">Status</th>
-            <th className="w-48 px-2 py-2 text-left">Usuário</th>
-            <th className="w-48 px-2 py-2 text-left">Gerado em</th>
-            <th className="w-28 px-2 py-2 text-left">De</th>
-            <th className="w-28 px-2 py-2 text-left">Até</th>
-            <th className="w-24 px-2 py-2 text-left">Chats</th>
-            <th className="w-28 px-2 py-2 text-left">Mensagens</th>
-            <th className="w-24 px-2 py-2 text-left">Formato</th>
-            <th className="w-24 px-2 py-2 pr-4 text-left"></th>
-          </tr>
-        </thead>
-        <tbody className="w-full py-2">
-          {reports.map((report) => (
-            <ChatReportListItem
-              report={report}
-              user={users.find((u) => u.CODIGO == +report.userId)?.NOME || "Todos"}
-              key={`report:${report.id}`}
-            />
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <TextField
+          select
+          size="small"
+          label="Situação do arquivo"
+          value={status}
+          sx={{ minWidth: 190 }}
+          onChange={(event) => setStatus(event.target.value)}
+        >
+          <MenuItem value="all">Todas</MenuItem>
+          {Object.entries(statuses).map(([value, label]) => (
+            <MenuItem key={value} value={value}>
+              {label}
+            </MenuItem>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </TextField>
+        <Button disabled={loading} onClick={reload}>
+          Atualizar histórico
+        </Button>
+      </div>
+      {loading && <Alert severity="info">Carregando histórico…</Alert>}
+      {error && <Alert severity="error">{error}</Alert>}
+      {!loading || reports.length > 0 ? (
+        <ReportResultTable
+          title="Histórico de arquivos"
+          columns={[
+            "Status",
+            "Operador",
+            "Solicitado em",
+            "Período",
+            "Conversas",
+            "Mensagens",
+            "Formato",
+            "Ações",
+          ].map((label) => ({ label }))}
+          searchHint="Operador, formato, período ou situação"
+          exportDisabled
+          rows={visible.map((report) => {
+            const label = statuses[report.status as keyof typeof statuses] ?? report.status;
+            const operator =
+              String(report.userId) === "*"
+                ? "Todos"
+                : names.get(String(report.userId)) || "Operador " + report.userId;
+            const period = reportPeriodLabel({
+              startDate: report.startDate.slice(0, 10),
+              endDate: report.endDate.slice(0, 10),
+            });
+            const requested = Formatter.date(report.exportDate);
+            const format = report.format.toUpperCase();
+            return {
+              key: report.id,
+              search: [label, operator, report.userId, period, requested, format].join(" "),
+              cells: [
+                label + (report.status === "pending" ? " (" + report.progress + "%)" : ""),
+                operator,
+                requested,
+                period,
+                report.chats,
+                report.messages,
+                format,
+                <div key="actions" className="flex items-center gap-2">
+                  {report.status === "completed" && report.fileId && (
+                    <Button
+                      size="small"
+                      href={filesService.getFileDownloadUrl(report.fileId)}
+                      startIcon={<Download size={15} />}
+                    >
+                      Baixar
+                    </Button>
+                  )}
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => void deleteReport(report.id)}
+                    startIcon={<Trash2 size={15} />}
+                  >
+                    Excluir
+                  </Button>
+                </div>,
+              ],
+            };
+          })}
+        />
+      ) : null}
+    </>
   );
 }

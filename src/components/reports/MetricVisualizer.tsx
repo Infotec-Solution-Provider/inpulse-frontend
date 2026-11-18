@@ -1,53 +1,67 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts';
-import { Metric, QueryResult } from '@/types/reports';
-import CircularProgress from '@mui/material/CircularProgress';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Table from '@mui/material/Table';
-import TableHead from '@mui/material/TableHead';
-import TableBody from '@mui/material/TableBody';
-import TableRow from '@mui/material/TableRow';
-import TableCell from '@mui/material/TableCell';
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { Metric, QueryResult } from "@/types/reports";
+import CircularProgress from "@mui/material/CircularProgress";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import Table from "@mui/material/Table";
+import TableHead from "@mui/material/TableHead";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
 
-const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#3b82f6', '#a855f7', '#ec4899'];
+const COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#3b82f6", "#a855f7", "#ec4899"];
 
 interface Props {
   metric: Metric;
   data?: QueryResult;
-  status: 'pending' | 'done' | 'failed';
+  status: "idle" | "pending" | "done" | "failed";
   error?: string;
 }
 
 export function MetricVisualizer({ metric, data, status, error }: Props) {
   const renderContent = () => {
-    if (status === 'pending') {
+    if (status === "idle")
+      return <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Aguardando geração.</p>;
+
+    if (status === "pending") {
       return (
-        <div className="flex items-center justify-center h-40">
+        <div className="flex h-40 items-center justify-center">
           <CircularProgress size={32} />
         </div>
       );
     }
 
-    if (status === 'failed' || !data) {
+    if (status === "failed" || !data) {
       return (
-        <div className="flex items-center justify-center h-40 text-red-500">
-          <Typography variant="body2">{error ?? 'Erro ao carregar'}</Typography>
+        <div className="flex h-40 items-center justify-center text-red-500">
+          <Typography variant="body2">{error ?? "Erro ao carregar"}</Typography>
         </div>
       );
     }
 
     const { rows, columns } = data;
 
-    if (metric.visualizationType === 'card') {
-      const value = rows[0]?.[columns[0]] ?? '—';
+    if (metric.visualizationType === "card") {
+      const value = rows[0]?.[columns[0]] ?? "—";
       return (
-        <div className="flex flex-col items-center justify-center h-32">
+        <div className="flex h-32 flex-col items-center justify-center">
           <Typography variant="h3" fontWeight={700} color="primary">
             {String(value)}
           </Typography>
@@ -58,9 +72,9 @@ export function MetricVisualizer({ metric, data, status, error }: Props) {
       );
     }
 
-    if (metric.visualizationType === 'table') {
+    if (metric.visualizationType === "table") {
       return (
-        <div className="overflow-auto max-h-72">
+        <div className="max-h-72 overflow-auto">
           <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
@@ -73,7 +87,7 @@ export function MetricVisualizer({ metric, data, status, error }: Props) {
               {rows.map((row, i) => (
                 <TableRow key={i}>
                   {columns.map((col) => (
-                    <TableCell key={col}>{String(row[col] ?? '')}</TableCell>
+                    <TableCell key={col}>{String(row[col] ?? "")}</TableCell>
                   ))}
                 </TableRow>
               ))}
@@ -86,7 +100,7 @@ export function MetricVisualizer({ metric, data, status, error }: Props) {
     const xKey = metric.groupBy ?? columns[0];
     const yKey = columns.find((c) => c !== xKey) ?? columns[1] ?? columns[0];
 
-    if (metric.visualizationType === 'pie') {
+    if (metric.visualizationType === "pie") {
       return (
         <ResponsiveContainer width="100%" height={220}>
           <PieChart>
@@ -102,7 +116,7 @@ export function MetricVisualizer({ metric, data, status, error }: Props) {
       );
     }
 
-    if (metric.visualizationType === 'line') {
+    if (metric.visualizationType === "line") {
       return (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={rows}>
@@ -131,7 +145,10 @@ export function MetricVisualizer({ metric, data, status, error }: Props) {
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
+    <Paper
+      elevation={2}
+      sx={{ p: 2, height: "100%", display: "flex", flexDirection: "column", gap: 1 }}
+    >
       <Typography variant="subtitle2" fontWeight={600} noWrap>
         {metric.name}
       </Typography>

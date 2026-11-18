@@ -1,4 +1,3 @@
-import { attendanceReportPaths } from "@/lib/reports/attendance-routes";
 import { FEATURE_FLAGS, isFeatureEnabled } from "@/lib/feature-flags";
 import { canAccessInternalGroups, isExternalOperator } from "@/lib/permissions/operator-access";
 import { UserRole } from "@/lib/sdk-local";
@@ -320,20 +319,7 @@ export function isModernCrmPath(pathname: string): boolean {
   const route = pathname.split("?")[0].split("/").filter(Boolean)[1];
   if (!route) return true;
   if (route === "tools" && pathname.split("/").filter(Boolean)[2] === "mass-messages") return true;
-  if (
-    route === "reports" &&
-    [
-      undefined,
-      "messages-per-operator",
-      ...Object.values(attendanceReportPaths),
-      "sales",
-      "metrics",
-      "dashboards",
-      "report-generator",
-      "generated",
-    ].includes(pathname.split("/").filter(Boolean)[2])
-  )
-    return true;
+  if (route === "reports") return true;
   return [
     "monitor",
     "customers",

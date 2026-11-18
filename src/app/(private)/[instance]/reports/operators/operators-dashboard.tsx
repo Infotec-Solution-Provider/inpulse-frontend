@@ -1,14 +1,26 @@
 "use client";
 
 import { AuthContext } from "@/app/auth-context";
-import useInternalChatContext from "@/app/(private)/[instance]/internal-context";
-import { useWhatsappContext, WPP_BASE_URL } from "@/app/(private)/[instance]/whatsapp-context";
+import { WPP_BASE_URL } from "@/app/(private)/[instance]/whatsapp-context";
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
+import { ReportFormControls, ReportQueryStatus } from "@/components/reports/ReportFormControls";
+import {
+  operatorFiltersLabels,
+  operatorFiltersParams,
+  OperatorReportFields,
+  type OperatorReportFilters,
+} from "@/components/reports/OperatorReportFilters";
+import { reportPeriodShortcut, validateReportPeriod } from "@/lib/reports/filters";
+import { normalizeReportSearch } from "@/lib/reports/catalog";
+import { useReportForm } from "@/lib/reports/use-report-form";
 import { sanitizeErrorMessage } from "@in.pulse-crm/utils";
 import EventNoteOutlinedIcon from "@mui/icons-material/EventNoteOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import {
   Checkbox,
+  FormControlLabel,
+  Switch,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -35,15 +47,7 @@ import {
   YAxis,
 } from "recharts";
 
-const ALL_OPTION_VALUE = "__ALL__";
 const POLLING_INTERVAL_MS = 60000;
-
-interface OperatorDashboardFilters {
-  startDate: string;
-  endDate: string;
-  sectors: string;
-  operators: string;
-}
 
 interface OperatorPerformanceSummary {
   periodStart: string | null;
@@ -174,36 +178,12 @@ interface OperatorDashboardData {
   dailySeries: OperatorPerformanceDailySeriesRow[];
 }
 
-function formatDateInput(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function buildDefaultFilters(): OperatorReportFilters {
+  return { period: reportPeriodShortcut("last7"), operators: [], sectors: [] };
 }
 
-function buildDefaultFilters(): OperatorDashboardFilters {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(end.getDate() - 6);
-  return {
-    startDate: formatDateInput(start),
-    endDate: formatDateInput(end),
-    sectors: "*",
-    operators: "*",
-  };
-}
-
-function parseIds(value: string): string[] {
-  if (!value || value === "*") return [];
-
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function normalizeMultiSelectValue(value: string | string[]): string[] {
-  return Array.isArray(value) ? value : value.split(",").map((item) => item.trim()).filter(Boolean);
+function validate(filters: OperatorReportFilters) {
+  return validateReportPeriod(filters.period);
 }
 
 function formatDuration(seconds: number | null | undefined) {
@@ -255,7 +235,9 @@ function StatusBadge({
   };
 
   return (
-    <span className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ring-1 ${tones[tone]}`}>
+    <span
+      className={`inline-flex rounded-full px-2 py-1 text-[11px] font-semibold ring-1 ${tones[tone]}`}
+    >
       {label}
     </span>
   );
@@ -297,7 +279,10 @@ interface ColumnDef {
   render: (row: OperatorPerformanceRow, ctx: { nowTick: number }) => React.ReactNode;
 }
 
-const TELEPHONY_STATUS_TEXT: Record<string, { label: string; tone: "green" | "amber" | "red" | "slate" }> = {
+const TELEPHONY_STATUS_TEXT: Record<
+  string,
+  { label: string; tone: "green" | "amber" | "red" | "slate" }
+> = {
   D: { label: "Disponível", tone: "green" },
   P: { label: "Em pausa", tone: "amber" },
   L: { label: "Em ligação", tone: "amber" },
@@ -368,7 +353,9 @@ const OPERATOR_COLUMNS: ColumnDef[] = [
       return (
         <div className="flex flex-col gap-0.5">
           <StatusBadge label={display.label} tone={display.tone} />
-          <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">{duration}</span>
+          <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+            {duration}
+          </span>
         </div>
       );
     },
@@ -426,14 +413,16 @@ const OPERATOR_COLUMNS: ColumnDef[] = [
   {
     id: "calls",
     label: "Ligações",
-    tooltip: "Agendamentos com telefone ligado no período (campanhas_clientes com TELEFONE_LIGADO preenchido).",
+    tooltip:
+      "Agendamentos com telefone ligado no período (campanhas_clientes com TELEFONE_LIGADO preenchido).",
     align: "right",
     render: (row) => row.callsCount,
   },
   {
     id: "contacts",
     label: "Contatos",
-    tooltip: "Atendimentos do operador no período cujo resultado teve ECONTATO = 'SIM' (historico_cli).",
+    tooltip:
+      "Atendimentos do operador no período cujo resultado teve ECONTATO = 'SIM' (historico_cli).",
     align: "right",
     render: (row) => row.contactsResultCount,
   },
@@ -458,7 +447,11 @@ const OPERATOR_COLUMNS: ColumnDef[] = [
   },
 ];
 
-const LAYOUT_PRESETS: Array<{ id: "default" | "whatsapp" | "telephony"; label: string; columns: string[] }> = [
+const LAYOUT_PRESETS: Array<{
+  id: "default" | "whatsapp" | "telephony";
+  label: string;
+  columns: string[];
+}> = [
   {
     id: "default",
     label: "Padrão",
@@ -517,11 +510,15 @@ function loadStoredVisibility(): Record<string, boolean> | null {
 function loadStoredLayout(): LayoutId {
   if (typeof window === "undefined") return "default";
   const raw = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
-  if (raw === "default" || raw === "whatsapp" || raw === "telephony" || raw === "custom") return raw;
+  if (raw === "default" || raw === "whatsapp" || raw === "telephony" || raw === "custom")
+    return raw;
   return "default";
 }
 
-function buildVisibilityForLayout(layoutId: LayoutId, storedCustom: Record<string, boolean> | null) {
+function buildVisibilityForLayout(
+  layoutId: LayoutId,
+  storedCustom: Record<string, boolean> | null,
+) {
   if (layoutId === "custom" && storedCustom) {
     const visibility: Record<string, boolean> = {};
     for (const column of OPERATOR_COLUMNS) {
@@ -540,14 +537,26 @@ function buildVisibilityForLayout(layoutId: LayoutId, storedCustom: Record<strin
 }
 
 export default function OperatorsDashboard() {
-  const { token } = useContext(AuthContext);
-  const { users } = useInternalChatContext();
-  const { sectors } = useWhatsappContext();
-
-  const [draftFilters, setDraftFilters] = useState<OperatorDashboardFilters>(() => buildDefaultFilters());
-  const [appliedFilters, setAppliedFilters] = useState<OperatorDashboardFilters>(() => buildDefaultFilters());
-  const [data, setData] = useState<OperatorDashboardData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { token, instance, user } = useContext(AuthContext);
+  const scope = `${instance}:${user?.CODIGO ?? ""}:operators`;
+  const execute = useCallback(
+    async (filters: OperatorReportFilters, signal: AbortSignal) => {
+      const response = await axios.get<{ data: OperatorDashboardData }>(
+        `${WPP_BASE_URL}/api/whatsapp/dashboard/operator-performance`,
+        {
+          headers: { authorization: `Bearer ${token}` },
+          params: operatorFiltersParams(filters),
+          signal,
+        },
+      );
+      return response.data.data;
+    },
+    [token],
+  );
+  const form = useReportForm({ scope, defaults: buildDefaultFilters, execute, validate });
+  const { result: data, applied: appliedFilters, loading, refresh } = form;
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [tableSearch, setTableSearch] = useState("");
   const [selectedOperator, setSelectedOperator] = useState<OperatorPerformanceRow | null>(null);
   const [details, setDetails] = useState<OperatorPerformanceDetailsResult | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -583,18 +592,15 @@ export default function OperatorsDashboard() {
     }
   }, []);
 
-  const applyLayout = useCallback(
-    (layoutId: LayoutId) => {
-      const storedCustom = layoutId === "custom" ? loadStoredVisibility() : null;
-      const nextVisibility = buildVisibilityForLayout(layoutId, storedCustom);
-      setActiveLayout(layoutId);
-      setColumnVisibility(nextVisibility);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(LAYOUT_STORAGE_KEY, layoutId);
-      }
-    },
-    [],
-  );
+  const applyLayout = useCallback((layoutId: LayoutId) => {
+    const storedCustom = layoutId === "custom" ? loadStoredVisibility() : null;
+    const nextVisibility = buildVisibilityForLayout(layoutId, storedCustom);
+    setActiveLayout(layoutId);
+    setColumnVisibility(nextVisibility);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LAYOUT_STORAGE_KEY, layoutId);
+    }
+  }, []);
 
   const toggleColumnVisibility = useCallback(
     (columnId: string) => {
@@ -621,63 +627,18 @@ export default function OperatorsDashboard() {
     return { authorization: `Bearer ${token}` };
   }, [token]);
 
-  const operatorOptions = useMemo(
-    () =>
-      users
-        .filter((user) => Number.isFinite(Number(user.CODIGO)))
-        .map((user) => ({
-          id: String(user.CODIGO),
-          name: user.NOME || user.LOGIN || `#${user.CODIGO}`,
-        }))
-        .sort((left, right) => left.name.localeCompare(right.name)),
-    [users],
-  );
-
-  const sectorOptions = useMemo(
-    () =>
-      sectors
-        .filter((sector) => Number.isFinite(Number(sector.id)))
-        .map((sector) => ({
-          id: String(sector.id),
-          name: sector.name || `#${sector.id}`,
-        }))
-        .sort((left, right) => left.name.localeCompare(right.name)),
-    [sectors],
-  );
-
   const visibleOperatorRows = useMemo(
     () => (data?.operatorPerformance || []).filter((row) => row.userId > 0),
     [data],
   );
-
-  const loadDashboard = useCallback(
-    async (filters: OperatorDashboardFilters) => {
-      if (!headers) return;
-
-      setLoading(true);
-      try {
-        const response = await axios.get(`${WPP_BASE_URL}/api/whatsapp/dashboard/operator-performance`, {
-          headers,
-          params: {
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-            SETORES: filters.sectors || "*",
-            OPERADORES: filters.operators || "*",
-          },
-        });
-
-        setData(response.data?.data || null);
-      } catch (error) {
-        toast.error(`Falha ao carregar dashboard de operadores.\n${sanitizeErrorMessage(error)}`);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [headers],
+  const filteredRows = visibleOperatorRows.filter((row) =>
+    normalizeReportSearch(`${row.userName} ${row.userId} ${row.userSector ?? ""}`).includes(
+      normalizeReportSearch(tableSearch),
+    ),
   );
 
   const loadDetails = useCallback(
-    async (operatorId: number, filters: OperatorDashboardFilters) => {
+    async (operatorId: number, filters: OperatorReportFilters) => {
       if (!headers) return;
 
       setDetailsLoading(true);
@@ -687,9 +648,9 @@ export default function OperatorsDashboard() {
           {
             headers,
             params: {
-              startDate: filters.startDate,
-              endDate: filters.endDate,
-              SETORES: filters.sectors || "*",
+              startDate: filters.period.startDate,
+              endDate: filters.period.endDate,
+              SETORES: operatorFiltersParams(filters).SETORES,
             },
           },
         );
@@ -730,54 +691,24 @@ export default function OperatorsDashboard() {
   );
 
   useEffect(() => {
-    if (!headers) return;
-    void loadDashboard(appliedFilters);
-  }, [appliedFilters, headers, loadDashboard]);
-
-  useEffect(() => {
-    if (!headers) return;
-
+    if (!token || !appliedFilters || !autoRefresh) return;
     const intervalId = window.setInterval(() => {
-      void loadDashboard(appliedFilters);
-      if (selectedOperator) {
-        void loadDetails(selectedOperator.userId, appliedFilters);
-      }
-      if (agendaOperator) {
-        void loadAgenda(agendaOperator.userId);
-      }
+      if (document.visibilityState !== "visible") return;
+      void refresh();
+      if (selectedOperator) void loadDetails(selectedOperator.userId, appliedFilters);
+      if (agendaOperator) void loadAgenda(agendaOperator.userId);
     }, POLLING_INTERVAL_MS);
-
     return () => window.clearInterval(intervalId);
-  }, [agendaOperator, appliedFilters, headers, loadAgenda, loadDashboard, loadDetails, selectedOperator]);
-
-  const selectedOperatorIds = useMemo(() => parseIds(draftFilters.operators), [draftFilters.operators]);
-  const selectedSectorIds = useMemo(() => parseIds(draftFilters.sectors), [draftFilters.sectors]);
-
-  const handleOperatorsChange = (ids: string[]) => {
-    if (ids.includes(ALL_OPTION_VALUE)) {
-      setDraftFilters((prev) => ({ ...prev, operators: "*" }));
-      return;
-    }
-
-    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
-    setDraftFilters((prev) => ({
-      ...prev,
-      operators: uniqueIds.length ? uniqueIds.join(",") : "*",
-    }));
-  };
-
-  const handleSectorsChange = (ids: string[]) => {
-    if (ids.includes(ALL_OPTION_VALUE)) {
-      setDraftFilters((prev) => ({ ...prev, sectors: "*" }));
-      return;
-    }
-
-    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
-    setDraftFilters((prev) => ({
-      ...prev,
-      sectors: uniqueIds.length ? uniqueIds.join(",") : "*",
-    }));
-  };
+  }, [
+    agendaOperator,
+    appliedFilters,
+    autoRefresh,
+    token,
+    loadAgenda,
+    refresh,
+    loadDetails,
+    selectedOperator,
+  ]);
 
   const topOperatorsChartData = useMemo(() => {
     return [...visibleOperatorRows]
@@ -811,7 +742,7 @@ export default function OperatorsDashboard() {
 
     setSelectedOperator(row);
     setDetails(null);
-    void loadDetails(row.userId, appliedFilters);
+    if (appliedFilters) void loadDetails(row.userId, appliedFilters);
   };
 
   const openAgenda = (row: OperatorPerformanceRow) => {
@@ -825,526 +756,236 @@ export default function OperatorsDashboard() {
   };
 
   return (
-    <div className="grid gap-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">
-              Dashboard de Operadores
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm text-slate-600 dark:text-slate-400">
-              Supervisão operacional em tempo real com status do WhatsApp, carga atual, tempos médios,
-              pendências e transferências por operador.
-            </p>
-          </div>
-
-          <form
-            className="grid gap-3 md:grid-cols-2 xl:grid-cols-5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setAppliedFilters(draftFilters);
-            }}
-          >
-            <TextField
-              label="Data inicial"
-              type="date"
-              size="small"
-              value={draftFilters.startDate}
-              onChange={(event) =>
-                setDraftFilters((prev) => ({ ...prev, startDate: event.target.value }))
-              }
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Data final"
-              type="date"
-              size="small"
-              value={draftFilters.endDate}
-              onChange={(event) => setDraftFilters((prev) => ({ ...prev, endDate: event.target.value }))}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Setores"
-              size="small"
-              value={selectedSectorIds}
-              SelectProps={{
-                multiple: true,
-                renderValue: (selected) => {
-                  const values = selected as string[];
-                  if (!values.length) return "Todos";
-                  if (values.length === 1) {
-                    return sectorOptions.find((option) => option.id === values[0])?.name || values[0];
-                  }
-                  return `${values.length} setores`;
-                },
-              }}
-              onChange={(event) => handleSectorsChange(normalizeMultiSelectValue(event.target.value))}
-            >
-              <MenuItem value={ALL_OPTION_VALUE}>Todos</MenuItem>
-              {sectorOptions.map((sector) => (
-                <MenuItem key={sector.id} value={sector.id}>
-                  {sector.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Operadores"
-              size="small"
-              value={selectedOperatorIds}
-              SelectProps={{
-                multiple: true,
-                renderValue: (selected) => {
-                  const values = selected as string[];
-                  if (!values.length) return "Todos";
-                  if (values.length === 1) {
-                    return operatorOptions.find((option) => option.id === values[0])?.name || values[0];
-                  }
-                  return `${values.length} operadores`;
-                },
-              }}
-              onChange={(event) => handleOperatorsChange(normalizeMultiSelectValue(event.target.value))}
-            >
-              <MenuItem value={ALL_OPTION_VALUE}>Todos</MenuItem>
-              {operatorOptions.map((operator) => (
-                <MenuItem key={operator.id} value={operator.id}>
-                  {operator.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                className="inline-flex min-h-10 items-center justify-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-              >
-                Aplicar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void loadDashboard(appliedFilters);
-                  if (selectedOperator) {
-                    void loadDetails(selectedOperator.userId, appliedFilters);
-                  }
-                }}
-                className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                Atualizar
-              </button>
+    <ReportPageShell
+      instance={instance}
+      category="Atendimento e WhatsApp"
+      title="Dashboard de Operadores"
+      description="Acompanhe o status da equipe, a carga atual, os tempos de resposta e os agendamentos por operador."
+    >
+      <ReportFormControls
+        form={form}
+        period={form.draft.period}
+        disabled={!token}
+        setPeriod={(period) => form.setDraft((current) => ({ ...current, period }))}
+      >
+        <OperatorReportFields
+          filters={form.draft}
+          onChange={form.setDraft}
+          scope={scope}
+          token={token ?? ""}
+        />
+      </ReportFormControls>
+      <ReportQueryStatus query={form} labels={operatorFiltersLabels(appliedFilters)} />
+      {data && (
+        <>
+          <FormControlLabel
+            control={
+              <Switch checked={autoRefresh} onChange={(_, checked) => setAutoRefresh(checked)} />
+            }
+            label="Atualizar a cada minuto"
+          />
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex flex-wrap gap-2">
+              <CompactStat
+                label="Online"
+                value={String(data?.summary.onlineOperatorsCount || 0)}
+                tooltip="Operadores com sessão WhatsApp ativa neste momento."
+              />
+              <CompactStat
+                label="Telefonia em pausa"
+                value={String(data?.summary.telephonyPausedOperatorsCount || 0)}
+                tooltip="Operadores cujo status atual de telefonia indica pausa."
+              />
+              <CompactStat
+                label="Conversas"
+                value={String(data?.summary.currentOpenChatsCount || 0)}
+                tooltip="Conversas WhatsApp abertas atribuídas a operadores no momento."
+              />
+              <CompactStat
+                label="Em espera"
+                value={String(data?.summary.pendingReturnsCount || 0)}
+                tooltip="Conversas WhatsApp aguardando resposta do operador."
+              />
+              <CompactStat
+                label="Atendimentos"
+                value={String(data?.summary.chatsFinishedCount || 0)}
+                tooltip="Atendimentos encerrados no período selecionado (historico_cli)."
+              />
+              <CompactStat
+                label="1ª resposta"
+                value={formatDuration(data?.summary.averageFirstResponseSeconds)}
+                tooltip="Tempo médio entre a primeira mensagem do cliente e a primeira resposta do operador."
+              />
+              <CompactStat
+                label="Atendimento"
+                value={formatDuration(data?.summary.averageHandlingSeconds)}
+                tooltip="Tempo médio de duração dos atendimentos finalizados no período."
+              />
+              <CompactStat
+                label="Agendamentos"
+                value={String(data?.summary.crmUpcomingSchedulesCount || 0)}
+                tooltip="Agendamentos futuros pendentes nas campanhas do CRM."
+              />
+              <CompactStat
+                label="Pedidos"
+                value={String(data?.summary.ordersCount || 0)}
+                tooltip="Pedidos cadastrados no período (compras com TIPO = 'PD')."
+              />
+              <CompactStat
+                label="Ligações"
+                value={String(data?.summary.callsCount || 0)}
+                tooltip="Agendamentos com telefone ligado no período (campanhas_clientes.TELEFONE_LIGADO)."
+              />
+              <CompactStat
+                label="Contatos"
+                value={String(data?.summary.contactsResultCount || 0)}
+                tooltip="Atendimentos no período com resultado ECONTATO = 'SIM' (historico_cli)."
+              />
             </div>
-          </form>
-        </div>
+          </section>
 
-        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-200">
-          Métricas reais por operador combinando WhatsApp, atendimentos finalizados (historico_cli), agendamentos
-          (campanhas_clientes), propostas (compras com TIPO &lsquo;PR&rsquo;), pedidos (compras com TIPO &lsquo;PD&rsquo;),
-          ligações realizadas e contatos efetivos (ECONTATO &lsquo;SIM&rsquo;).
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <div className="flex flex-wrap gap-2">
-          <CompactStat
-            label="Online"
-            value={String(data?.summary.onlineOperatorsCount || 0)}
-            tooltip="Operadores com sessão WhatsApp ativa neste momento."
-          />
-          <CompactStat
-            label="Telefonia em pausa"
-            value={String(data?.summary.telephonyPausedOperatorsCount || 0)}
-            tooltip="Operadores cujo status atual de telefonia indica pausa."
-          />
-          <CompactStat
-            label="Conversas"
-            value={String(data?.summary.currentOpenChatsCount || 0)}
-            tooltip="Conversas WhatsApp abertas atribuídas a operadores no momento."
-          />
-          <CompactStat
-            label="Em espera"
-            value={String(data?.summary.pendingReturnsCount || 0)}
-            tooltip="Conversas WhatsApp aguardando resposta do operador."
-          />
-          <CompactStat
-            label="Atendimentos"
-            value={String(data?.summary.chatsFinishedCount || 0)}
-            tooltip="Atendimentos encerrados no período selecionado (historico_cli)."
-          />
-          <CompactStat
-            label="1ª resposta"
-            value={formatDuration(data?.summary.averageFirstResponseSeconds)}
-            tooltip="Tempo médio entre a primeira mensagem do cliente e a primeira resposta do operador."
-          />
-          <CompactStat
-            label="Atendimento"
-            value={formatDuration(data?.summary.averageHandlingSeconds)}
-            tooltip="Tempo médio de duração dos atendimentos finalizados no período."
-          />
-          <CompactStat
-            label="Agendamentos"
-            value={String(data?.summary.crmUpcomingSchedulesCount || 0)}
-            tooltip="Agendamentos futuros pendentes nas campanhas do CRM."
-          />
-          <CompactStat
-            label="Pedidos"
-            value={String(data?.summary.ordersCount || 0)}
-            tooltip="Pedidos cadastrados no período (compras com TIPO = 'PD')."
-          />
-          <CompactStat
-            label="Ligações"
-            value={String(data?.summary.callsCount || 0)}
-            tooltip="Agendamentos com telefone ligado no período (campanhas_clientes.TELEFONE_LIGADO)."
-          />
-          <CompactStat
-            label="Contatos"
-            value={String(data?.summary.contactsResultCount || 0)}
-            tooltip="Atendimentos no período com resultado ECONTATO = 'SIM' (historico_cli)."
-          />
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Operadores</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Monitoramento em tempo real por operador com foco em status, carga atual, fila e ritmo de resposta.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {loading && <span className="text-xs text-slate-500">Atualizando tabela...</span>}
-            <MuiTooltip title="Configurar colunas visíveis e layouts">
-              <button
-                type="button"
-                onClick={(event) => setColumnMenuAnchor(event.currentTarget)}
-                className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-              >
-                <ViewColumnIcon fontSize="small" />
-                Colunas
-              </button>
-            </MuiTooltip>
-            <Menu
-              anchorEl={columnMenuAnchor}
-              open={Boolean(columnMenuAnchor)}
-              onClose={() => setColumnMenuAnchor(null)}
-              slotProps={{ paper: { sx: { maxHeight: 480 } } }}
-            >
-              <li className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Layouts
-              </li>
-              {LAYOUT_PRESETS.map((preset) => (
-                <MenuItem
-                  key={preset.id}
-                  selected={activeLayout === preset.id}
-                  onClick={() => applyLayout(preset.id)}
-                >
-                  <ListItemText primary={preset.label} />
-                </MenuItem>
-              ))}
-              <MenuItem
-                selected={activeLayout === "custom"}
-                onClick={() => applyLayout("custom")}
-              >
-                <ListItemText primary="Personalizado" secondary="Use os toggles abaixo" />
-              </MenuItem>
-              <Divider />
-              <li className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Colunas
-              </li>
-              {OPERATOR_COLUMNS.map((column) => (
-                <MenuItem
-                  key={column.id}
-                  onClick={() => toggleColumnVisibility(column.id)}
-                  dense
-                >
-                  <Checkbox
-                    edge="start"
-                    checked={Boolean(columnVisibility[column.id])}
-                    tabIndex={-1}
-                    disableRipple
-                    size="small"
-                  />
-                  <ListItemText primary={column.label} secondary={column.tooltip} />
-                </MenuItem>
-              ))}
-            </Menu>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1540px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
-                {visibleColumns.map((column) => (
-                  <th
-                    key={column.id}
-                    className={`px-3 py-3 ${column.align === "right" ? "text-right" : ""} ${column.headerClassName || ""}`}
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  Operadores
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Monitoramento em tempo real por operador com foco em status, carga atual, fila e
+                  ritmo de resposta.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {loading && <span className="text-xs text-slate-500">Atualizando tabela...</span>}
+                <MuiTooltip title="Configurar colunas visíveis e layouts">
+                  <button
+                    type="button"
+                    onClick={(event) => setColumnMenuAnchor(event.currentTarget)}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    <MuiTooltip title={column.tooltip} arrow>
-                      <span className="cursor-help">{column.label}</span>
-                    </MuiTooltip>
-                  </th>
-                ))}
-                <th className="px-3 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleOperatorRows.map((row) => (
-                <tr key={row.userId} className="border-b border-slate-100 dark:border-slate-800">
-                  {visibleColumns.map((column) => (
-                    <td
-                      key={column.id}
-                      className={`px-3 py-3 ${column.align === "right" ? "text-right" : ""} ${column.cellClassName || ""}`}
+                    <ViewColumnIcon fontSize="small" />
+                    Colunas
+                  </button>
+                </MuiTooltip>
+                <Menu
+                  anchorEl={columnMenuAnchor}
+                  open={Boolean(columnMenuAnchor)}
+                  onClose={() => setColumnMenuAnchor(null)}
+                  slotProps={{ paper: { sx: { maxHeight: 480 } } }}
+                >
+                  <li className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Layouts
+                  </li>
+                  {LAYOUT_PRESETS.map((preset) => (
+                    <MenuItem
+                      key={preset.id}
+                      selected={activeLayout === preset.id}
+                      onClick={() => applyLayout(preset.id)}
                     >
-                      {column.render(row, { nowTick })}
-                    </td>
+                      <ListItemText primary={preset.label} />
+                    </MenuItem>
                   ))}
-                  <td className="px-3 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <MuiTooltip title="Ver detalhes operacionais">
-                        <button
-                          type="button"
-                          onClick={() => openDetails(row)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                          <InfoOutlinedIcon fontSize="small" />
-                        </button>
-                      </MuiTooltip>
-                      <MuiTooltip title="Ver agendamentos de telefonia">
-                        <button
-                          type="button"
-                          onClick={() => openAgenda(row)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                          <EventNoteOutlinedIcon fontSize="small" />
-                        </button>
-                      </MuiTooltip>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!visibleOperatorRows.length && (
-                <tr>
-                  <td colSpan={visibleColumns.length + 1} className="px-3 py-10 text-center text-sm text-slate-500">
-                    Nenhum operador encontrado para os filtros atuais.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                Contexto agregado do período
-              </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Série histórica para dar contexto, sem tirar o foco da operação atual.
-              </p>
+                  <MenuItem
+                    selected={activeLayout === "custom"}
+                    onClick={() => applyLayout("custom")}
+                  >
+                    <ListItemText primary="Personalizado" secondary="Use os toggles abaixo" />
+                  </MenuItem>
+                  <Divider />
+                  <li className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Colunas
+                  </li>
+                  {OPERATOR_COLUMNS.map((column) => (
+                    <MenuItem
+                      key={column.id}
+                      onClick={() => toggleColumnVisibility(column.id)}
+                      dense
+                    >
+                      <Checkbox
+                        edge="start"
+                        checked={Boolean(columnVisibility[column.id])}
+                        tabIndex={-1}
+                        disableRipple
+                        size="small"
+                      />
+                      <ListItemText primary={column.label} secondary={column.tooltip} />
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </div>
             </div>
-            {loading && <span className="text-xs text-slate-500">Carregando...</span>}
-          </div>
-          <div className="h-[280px] rounded-lg bg-slate-50 p-3 dark:bg-slate-800/40">
-            {dailySeriesData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailySeriesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <RechartsTooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="mensagens" name="Mensagens" stroke="#2563eb" strokeWidth={2} />
-                  <Line type="monotone" dataKey="atendimentosFinalizados" name="Atendimentos finalizados" stroke="#16a34a" strokeWidth={2} />
-                  <Line type="monotone" dataKey="emEspera" name="Em espera" stroke="#f97316" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                Sem série diária para o período selecionado.
-              </div>
-            )}
-          </div>
-        </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Fila mais carregada</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Visão dos operadores com maior pressão no momento.
-            </p>
-          </div>
-          <div className="h-[280px] rounded-lg bg-slate-50 p-3 dark:bg-slate-800/40">
-            {topOperatorsChartData.length ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topOperatorsChartData} layout="vertical" margin={{ left: 32, right: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={120} />
-                  <RechartsTooltip />
-                  <Legend />
-                  <Bar dataKey="conversas" name="Conversas" fill="#2563eb" radius={[0, 4, 4, 0]} />
-                  <Bar dataKey="emEspera" name="Em espera" fill="#f97316" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-500">
-                Sem dados de carga para exibir.
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <Dialog
-        open={Boolean(selectedOperator)}
-        onClose={() => {
-          setSelectedOperator(null);
-          setDetails(null);
-        }}
-        maxWidth="xl"
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedOperator ? `Detalhes de ${selectedOperator.userName}` : "Detalhes do operador"}
-        </DialogTitle>
-        <DialogContent>
-          <div className="grid gap-6 py-2 lg:grid-cols-2">
-            <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Primeiras respostas
-                </h3>
-                {detailsLoading && <span className="text-xs text-slate-500">Carregando...</span>}
-              </div>
-              <div className="max-h-[420px] overflow-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="text-slate-500">
-                      <th className="px-2 py-2">Contato</th>
-                      <th className="px-2 py-2">1ª mensagem do cliente</th>
-                      <th className="px-2 py-2">1ª resposta</th>
-                      <th className="px-2 py-2">Tempo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(details?.firstResponses || []).map((item) => (
-                      <tr key={`fr-${item.chatId}`} className="border-t border-slate-100 dark:border-slate-800">
-                        <td className="px-2 py-2">
-                          <div className="font-medium text-slate-800 dark:text-slate-100">
-                            {item.contactName || `Chat #${item.chatId}`}
-                          </div>
-                          <div className="text-[11px] text-slate-500">{item.contactPhone || "-"}</div>
-                        </td>
-                        <td className="px-2 py-2">{formatDateTime(item.firstCustomerMessageAt)}</td>
-                        <td className="px-2 py-2">{formatDateTime(item.firstResponseAt)}</td>
-                        <td className="px-2 py-2 font-semibold">{formatDuration(item.firstResponseSeconds)}</td>
-                      </tr>
-                    ))}
-                    {!detailsLoading && !details?.firstResponses?.length && (
-                      <tr>
-                        <td colSpan={4} className="px-2 py-8 text-center text-slate-500">
-                          Sem detalhes de primeira resposta para o período.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                  Retornos pendentes
-                </h3>
-                {detailsLoading && <span className="text-xs text-slate-500">Carregando...</span>}
-              </div>
-              <div className="max-h-[420px] overflow-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="text-slate-500">
-                      <th className="px-2 py-2">Contato</th>
-                      <th className="px-2 py-2">Última mensagem do cliente</th>
-                      <th className="px-2 py-2">Aguardando</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(details?.pendingReturns || []).map((item) => (
-                      <tr key={`pr-${item.chatId}`} className="border-t border-slate-100 dark:border-slate-800">
-                        <td className="px-2 py-2">
-                          <div className="font-medium text-slate-800 dark:text-slate-100">
-                            {item.contactName || `Chat #${item.chatId}`}
-                          </div>
-                          <div className="text-[11px] text-slate-500">{item.contactPhone || "-"}</div>
-                        </td>
-                        <td className="px-2 py-2">{formatDateTime(item.lastCustomerMessageAt)}</td>
-                        <td className="px-2 py-2 font-semibold">{formatDuration(item.waitingSeconds)}</td>
-                      </tr>
-                    ))}
-                    {!detailsLoading && !details?.pendingReturns?.length && (
-                      <tr>
-                        <td colSpan={3} className="px-2 py-8 text-center text-slate-500">
-                          Sem retornos pendentes para o operador no filtro atual.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(agendaOperator)}
-        onClose={() => {
-          setAgendaOperator(null);
-          setAgendaItems([]);
-        }}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          {agendaOperator ? `Agendamentos de ${agendaOperator.userName}` : "Agendamentos do operador"}
-        </DialogTitle>
-        <DialogContent>
-          <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Campanhas e clientes</h3>
-              {agendaLoading && <span className="text-xs text-slate-500">Carregando...</span>}
+            <div className="mb-4 max-w-md">
+              <TextField
+                fullWidth
+                size="small"
+                label="Pesquisar operadores no resultado"
+                value={tableSearch}
+                onChange={(event) => setTableSearch(event.target.value)}
+              />
             </div>
-            <div className="max-h-[420px] overflow-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1540px] text-left text-sm">
                 <thead>
-                  <tr className="text-slate-500">
-                    <th className="px-2 py-2">Agendamento</th>
-                    <th className="px-2 py-2">Contato</th>
-                    <th className="px-2 py-2">Telefone</th>
-                    <th className="px-2 py-2">Campanha</th>
-                    <th className="px-2 py-2">Observação</th>
+                  <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
+                    {visibleColumns.map((column) => (
+                      <th
+                        key={column.id}
+                        className={`px-3 py-3 ${column.align === "right" ? "text-right" : ""} ${column.headerClassName || ""}`}
+                      >
+                        <MuiTooltip title={column.tooltip} arrow>
+                          <span className="cursor-help">{column.label}</span>
+                        </MuiTooltip>
+                      </th>
+                    ))}
+                    <th className="px-3 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {agendaItems.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-100 dark:border-slate-800">
-                      <td className="px-2 py-2">{formatDateTime(item.scheduleAt)}</td>
-                      <td className="px-2 py-2 font-medium text-slate-800 dark:text-slate-100">
-                        {item.contactName || `#${item.scheduleId}`}
+                  {filteredRows.map((row) => (
+                    <tr
+                      key={row.userId}
+                      className="border-b border-slate-100 dark:border-slate-800"
+                    >
+                      {visibleColumns.map((column) => (
+                        <td
+                          key={column.id}
+                          className={`px-3 py-3 ${column.align === "right" ? "text-right" : ""} ${column.cellClassName || ""}`}
+                        >
+                          {column.render(row, { nowTick })}
+                        </td>
+                      ))}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <MuiTooltip title="Ver detalhes operacionais">
+                            <button
+                              type="button"
+                              onClick={() => openDetails(row)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <InfoOutlinedIcon fontSize="small" />
+                            </button>
+                          </MuiTooltip>
+                          <MuiTooltip title="Ver agendamentos de telefonia">
+                            <button
+                              type="button"
+                              onClick={() => openAgenda(row)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              <EventNoteOutlinedIcon fontSize="small" />
+                            </button>
+                          </MuiTooltip>
+                        </div>
                       </td>
-                      <td className="px-2 py-2">{item.contactPhone || "-"}</td>
-                      <td className="px-2 py-2">{item.telephonyCampaignName || "-"}</td>
-                      <td className="px-2 py-2">{item.description || "-"}</td>
                     </tr>
                   ))}
-                  {!agendaLoading && !agendaItems.length && (
+                  {!filteredRows.length && (
                     <tr>
-                      <td colSpan={5} className="px-2 py-8 text-center text-slate-500">
-                        Sem agendamentos de telefonia para este operador.
+                      <td
+                        colSpan={visibleColumns.length + 1}
+                        className="px-3 py-10 text-center text-sm text-slate-500"
+                      >
+                        Nenhum operador encontrado para os filtros atuais.
                       </td>
                     </tr>
                   )}
@@ -1352,8 +993,293 @@ export default function OperatorsDashboard() {
               </table>
             </div>
           </section>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+          <section className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    Contexto agregado do período
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Série histórica para dar contexto, sem tirar o foco da operação atual.
+                  </p>
+                </div>
+                {loading && <span className="text-xs text-slate-500">Carregando...</span>}
+              </div>
+              <div className="h-[280px] rounded-lg bg-slate-50 p-3 dark:bg-slate-800/40">
+                {dailySeriesData.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={dailySeriesData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <RechartsTooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="mensagens"
+                        name="Mensagens"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="atendimentosFinalizados"
+                        name="Atendimentos finalizados"
+                        stroke="#16a34a"
+                        strokeWidth={2}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="emEspera"
+                        name="Em espera"
+                        stroke="#f97316"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                    Sem série diária para o período selecionado.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-4">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                  Fila mais carregada
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Visão dos operadores com maior pressão no momento.
+                </p>
+              </div>
+              <div className="h-[280px] rounded-lg bg-slate-50 p-3 dark:bg-slate-800/40">
+                {topOperatorsChartData.length ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={topOperatorsChartData}
+                      layout="vertical"
+                      margin={{ left: 32, right: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={120} />
+                      <RechartsTooltip />
+                      <Legend />
+                      <Bar
+                        dataKey="conversas"
+                        name="Conversas"
+                        fill="#2563eb"
+                        radius={[0, 4, 4, 0]}
+                      />
+                      <Bar
+                        dataKey="emEspera"
+                        name="Em espera"
+                        fill="#f97316"
+                        radius={[0, 4, 4, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                    Sem dados de carga para exibir.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <Dialog
+            open={Boolean(selectedOperator)}
+            onClose={() => {
+              setSelectedOperator(null);
+              setDetails(null);
+            }}
+            maxWidth="xl"
+            fullWidth
+          >
+            <DialogTitle>
+              {selectedOperator
+                ? `Detalhes de ${selectedOperator.userName}`
+                : "Detalhes do operador"}
+            </DialogTitle>
+            <DialogContent>
+              <div className="grid gap-6 py-2 lg:grid-cols-2">
+                <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Primeiras respostas
+                    </h3>
+                    {detailsLoading && (
+                      <span className="text-xs text-slate-500">Carregando...</span>
+                    )}
+                  </div>
+                  <div className="max-h-[420px] overflow-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-500">
+                          <th className="px-2 py-2">Contato</th>
+                          <th className="px-2 py-2">1ª mensagem do cliente</th>
+                          <th className="px-2 py-2">1ª resposta</th>
+                          <th className="px-2 py-2">Tempo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(details?.firstResponses || []).map((item) => (
+                          <tr
+                            key={`fr-${item.chatId}`}
+                            className="border-t border-slate-100 dark:border-slate-800"
+                          >
+                            <td className="px-2 py-2">
+                              <div className="font-medium text-slate-800 dark:text-slate-100">
+                                {item.contactName || `Chat #${item.chatId}`}
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {item.contactPhone || "-"}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2">
+                              {formatDateTime(item.firstCustomerMessageAt)}
+                            </td>
+                            <td className="px-2 py-2">{formatDateTime(item.firstResponseAt)}</td>
+                            <td className="px-2 py-2 font-semibold">
+                              {formatDuration(item.firstResponseSeconds)}
+                            </td>
+                          </tr>
+                        ))}
+                        {!detailsLoading && !details?.firstResponses?.length && (
+                          <tr>
+                            <td colSpan={4} className="px-2 py-8 text-center text-slate-500">
+                              Sem detalhes de primeira resposta para o período.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Retornos pendentes
+                    </h3>
+                    {detailsLoading && (
+                      <span className="text-xs text-slate-500">Carregando...</span>
+                    )}
+                  </div>
+                  <div className="max-h-[420px] overflow-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="text-slate-500">
+                          <th className="px-2 py-2">Contato</th>
+                          <th className="px-2 py-2">Última mensagem do cliente</th>
+                          <th className="px-2 py-2">Aguardando</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(details?.pendingReturns || []).map((item) => (
+                          <tr
+                            key={`pr-${item.chatId}`}
+                            className="border-t border-slate-100 dark:border-slate-800"
+                          >
+                            <td className="px-2 py-2">
+                              <div className="font-medium text-slate-800 dark:text-slate-100">
+                                {item.contactName || `Chat #${item.chatId}`}
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {item.contactPhone || "-"}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2">
+                              {formatDateTime(item.lastCustomerMessageAt)}
+                            </td>
+                            <td className="px-2 py-2 font-semibold">
+                              {formatDuration(item.waitingSeconds)}
+                            </td>
+                          </tr>
+                        ))}
+                        {!detailsLoading && !details?.pendingReturns?.length && (
+                          <tr>
+                            <td colSpan={3} className="px-2 py-8 text-center text-slate-500">
+                              Sem retornos pendentes para o operador no filtro atual.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={Boolean(agendaOperator)}
+            onClose={() => {
+              setAgendaOperator(null);
+              setAgendaItems([]);
+            }}
+            maxWidth="lg"
+            fullWidth
+          >
+            <DialogTitle>
+              {agendaOperator
+                ? `Agendamentos de ${agendaOperator.userName}`
+                : "Agendamentos do operador"}
+            </DialogTitle>
+            <DialogContent>
+              <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                    Campanhas e clientes
+                  </h3>
+                  {agendaLoading && <span className="text-xs text-slate-500">Carregando...</span>}
+                </div>
+                <div className="max-h-[420px] overflow-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="text-slate-500">
+                        <th className="px-2 py-2">Agendamento</th>
+                        <th className="px-2 py-2">Contato</th>
+                        <th className="px-2 py-2">Telefone</th>
+                        <th className="px-2 py-2">Campanha</th>
+                        <th className="px-2 py-2">Observação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {agendaItems.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="border-t border-slate-100 dark:border-slate-800"
+                        >
+                          <td className="px-2 py-2">{formatDateTime(item.scheduleAt)}</td>
+                          <td className="px-2 py-2 font-medium text-slate-800 dark:text-slate-100">
+                            {item.contactName || `#${item.scheduleId}`}
+                          </td>
+                          <td className="px-2 py-2">{item.contactPhone || "-"}</td>
+                          <td className="px-2 py-2">{item.telephonyCampaignName || "-"}</td>
+                          <td className="px-2 py-2">{item.description || "-"}</td>
+                        </tr>
+                      ))}
+                      {!agendaLoading && !agendaItems.length && (
+                        <tr>
+                          <td colSpan={5} className="px-2 py-8 text-center text-slate-500">
+                            Sem agendamentos de telefonia para este operador.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+    </ReportPageShell>
   );
 }

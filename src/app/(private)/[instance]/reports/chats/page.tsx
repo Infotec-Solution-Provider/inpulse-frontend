@@ -1,14 +1,25 @@
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
 import ChatReportForm from "./form";
 import ChatsReportList from "./list";
 import ChatsReportProvider from "./chats-reports-context";
 
-export default async function ChatsReportsPage() {
+export default async function ChatsReportsPage({
+  params,
+}: {
+  params: Promise<{ instance: string }>;
+}) {
+  const { instance } = await params;
   return (
-    <div className="mx-auto box-border grid grid-rows-[max-content_1fr] gap-y-8 bg-white px-4 py-8 text-black dark:bg-gray-900 dark:text-white">
-      <ChatsReportProvider>
-        <ChatReportForm />
+    <ReportPageShell
+      instance={instance}
+      category="Atendimento e WhatsApp"
+      title="Exportação de Conversas"
+      description="Solicite um arquivo de conversas e acompanhe a geração no histórico."
+    >
+      <ChatsReportProvider key={instance}>
+        <ChatReportForm instance={instance} />
         <ChatsReportList />
       </ChatsReportProvider>
-    </div>
+    </ReportPageShell>
   );
 }

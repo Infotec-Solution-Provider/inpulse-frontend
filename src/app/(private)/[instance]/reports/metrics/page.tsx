@@ -1,5 +1,7 @@
 "use client";
-import { CrmPage, CrmFilters, CrmTableHead, useCrmQueryState } from "@/lib/ui-system";
+import { normalizeReportSearch } from "@/lib/reports/catalog";
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
+import { CrmFilters, CrmTableHead, useCrmQueryState } from "@/lib/ui-system";
 
 import { useEffect, useState } from "react";
 import { getMetrics, deleteMetric } from "@/lib/reports/api";
@@ -52,14 +54,17 @@ export default function MetricsPage() {
   const [filters, setFilters] = useCrmQueryState<Record<string, string>>("report-metrics-list", {});
   const filtered = metrics.filter(
     (metric) =>
-      !filters.name || metric.name.toLocaleLowerCase().includes(filters.name.toLocaleLowerCase()),
+      !filters.name ||
+      normalizeReportSearch(metric.name + " " + (metric.description ?? "")).includes(
+        normalizeReportSearch(filters.name),
+      ),
   );
   return (
-    <CrmPage
+    <ReportPageShell
+      instance={instance}
+      category="Painéis e métricas"
       title="Métricas"
       description="Organize as definições de métricas dos relatórios."
-      count={loading ? undefined : filtered.length}
-      breadcrumbs={[{ label: "Relatórios" }, { label: "Métricas" }]}
       actions={
         <Button
           variant="contained"
@@ -71,7 +76,7 @@ export default function MetricsPage() {
       }
     >
       <CrmFilters
-        fields={[{ key: "name", label: "Nome" }]}
+        fields={[{ key: "name", label: "Pesquisar por nome ou descrição" }]}
         values={filters}
         onApply={setFilters}
         onRefresh={() => void load()}
@@ -116,6 +121,6 @@ export default function MetricsPage() {
           </Table>
         </div>
       )}
-    </CrmPage>
+    </ReportPageShell>
   );
 }

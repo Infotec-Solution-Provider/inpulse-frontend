@@ -74,7 +74,7 @@ describe("shared navigation authorization", () => {
       { disable_contacts_crud: "true", disable_internal_groups: "true" },
       "exatron",
     );
-    expect(visible).toContain("/reports/dashboard?report=satisfactionSurvey");
+    expect(visible).toContain("/reports/satisfaction");
     expect(visible).not.toContain("/contacts");
     expect(visible).not.toContain("/internal-groups");
   });
@@ -182,7 +182,7 @@ describe("hierarchical application navigation", () => {
     expect(isModernCrmPath("/homolog/reports/sales")).toBe(true);
     expect(isModernCrmPath("/homolog/crm-customers/12")).toBe(true);
     expect(isModernCrmPath("/homolog/customers-old")).toBe(false);
-    expect(isModernCrmPath("/homolog/reports/dashboard")).toBe(false);
+    expect(isModernCrmPath("/homolog/reports/dashboard")).toBe(true);
   });
   it("selects the email section and keeps importer restricted to administrators", () => {
     for (const [query, title] of [

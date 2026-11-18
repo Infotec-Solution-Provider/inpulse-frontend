@@ -6,7 +6,9 @@ import { availableReports, REPORT_CATALOG, searchReports } from "./catalog";
 describe("report discovery and authorization", () => {
   it("matches each catalog feature flag to the direct route gate", () => {
     for (const report of REPORT_CATALOG) {
-      expect(featureRoute(report.href)?.flags ?? []).toEqual(report.feature ? [report.feature] : []);
+      expect(featureRoute(report.href)?.flags ?? []).toEqual(
+        report.feature ? [report.feature] : [],
+      );
     }
   });
   it("has unique stable IDs and destinations, without promoting hidden tools or demo data", () => {
@@ -14,15 +16,15 @@ describe("report discovery and authorization", () => {
       expect(new Set(REPORT_CATALOG.map((report) => report[field])).size).toBe(
         REPORT_CATALOG.length,
       );
-    expect(
-      REPORT_CATALOG.some((report) =>
-        /salesFunnel|generated|report-generator|mailing-analysis/.test(report.href),
-      ),
-    ).toBe(false);
+    expect(REPORT_CATALOG.some((report) => /salesFunnel|report-generator/.test(report.href))).toBe(
+      false,
+    );
   });
   it("preserves role, tenant and effective feature gates, including the old sales-only WhatsApp shortcut", () => {
     const disabled = availableReports({}, UserRole.ADMIN, "odim");
     expect(disabled.map((report) => report.id)).not.toContain("sales");
+    expect(disabled.map((report) => report.id)).not.toContain("generated");
+    expect(disabled.map((report) => report.id)).not.toContain("mailing-analysis");
     expect(disabled.map((report) => report.id)).not.toContain("satisfaction");
     expect(availableReports({}, UserRole.ADMIN, "exatron").map((report) => report.id)).toContain(
       "satisfaction",
@@ -31,6 +33,7 @@ describe("report discovery and authorization", () => {
       feature_sales_reports_enabled: "true",
       feature_reports_advanced_enabled: "true",
       feature_chat_export_enabled: "true",
+      feature_reports_dashboards_enabled: "true",
     };
     expect(availableReports(enabled, UserRole.ACTIVE, "exatron")).toEqual([]);
     expect(availableReports(enabled, UserRole.EXTERNAL, "exatron")).toEqual([]);
@@ -41,7 +44,15 @@ describe("report discovery and authorization", () => {
       ),
     ).not.toContain("operator-performance");
     expect(availableReports(enabled, UserRole.ADMIN, "homolog").map((report) => report.id)).toEqual(
-      expect.arrayContaining(["sales", "operator-performance", "chats"]),
+      expect.arrayContaining([
+        "sales",
+        "operator-performance",
+        "chats",
+        "generated",
+        "dashboards",
+        "mailing-analysis",
+        "portfolio-journey",
+      ]),
     );
   });
   it("searches accents, aliases, categories and multiple terms only within the visible set", () => {

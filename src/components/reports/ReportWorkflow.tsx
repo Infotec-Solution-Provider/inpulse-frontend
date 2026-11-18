@@ -12,17 +12,19 @@ export function ReportPageShell({
   title,
   description,
   children,
+  actions,
 }: {
   instance: string;
   category: string;
   title: string;
-  description: string;
+  description?: string;
   children: ReactNode;
+  actions?: ReactNode;
 }) {
   return (
     <div className="box-border h-full min-w-0 overflow-y-auto bg-slate-50 p-4 text-slate-950 dark:bg-slate-950 dark:text-slate-100 md:p-6">
       <div className="mx-auto grid w-full min-w-0 max-w-[1600px] gap-6">
-        <header className="grid gap-3">
+        <header className="grid gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
           <nav
             aria-label="Caminho do relatório"
             className="flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400"
@@ -37,11 +39,16 @@ export function ReportPageShell({
             <span aria-hidden="true">/</span>
             <span>{category}</span>
           </nav>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-              {description}
-            </p>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
+              {description && (
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+                  {description}
+                </p>
+              )}
+            </div>
+            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
           </div>
         </header>
         {children}
@@ -59,6 +66,9 @@ export function ReportFilterPanel({
   loading,
   dirty,
   children,
+  submitLabel = "Gerar relatório",
+  pendingLabel = "Gerando relatório…",
+  disabled = false,
 }: {
   period?: ReportPeriod;
   onPeriodChange?: (period: ReportPeriod) => void;
@@ -68,13 +78,16 @@ export function ReportFilterPanel({
   loading: boolean;
   dirty: boolean;
   children?: ReactNode;
+  submitLabel?: string;
+  pendingLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <form
       className="grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:p-5"
       onSubmit={(event) => {
         event.preventDefault();
-        onGenerate();
+        if (!disabled && !loading) onGenerate();
       }}
     >
       {(period || children) && <h2 className="font-semibold">Filtros</h2>}
@@ -135,12 +148,12 @@ export function ReportFilterPanel({
         <Button
           type="submit"
           variant="contained"
-          disabled={loading}
+          disabled={loading || disabled}
           startIcon={
             loading ? <CircularProgress size={16} color="inherit" /> : <FileChartColumn size={17} />
           }
         >
-          {loading ? "Gerando relatório…" : "Gerar relatório"}
+          {loading ? pendingLabel : submitLabel}
         </Button>
         {onClear && (
           <Button onClick={onClear} startIcon={<RotateCcw size={16} />}>

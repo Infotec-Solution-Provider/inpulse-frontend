@@ -36,15 +36,17 @@ export default function SqlReportForm() {
     resultColumns,
   } = useContext(SqlReportsContext);
 
+  const [applied, setApplied] = useState<{ sql: string; description: string } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!sql.trim() || !description.trim()) return;
+    if (loading || !sql.trim() || !description.trim()) return;
 
     try {
       await executeReport(sql, description);
+      setApplied({ sql, description });
       setModalOpen(true);
     } catch {
       // erro já tratado
@@ -57,9 +59,9 @@ export default function SqlReportForm() {
 
   const handleExportFormat = async (format: "pdf" | "csv" | "txt") => {
     setAnchorEl(null);
-    if (!sql.trim() || !description.trim()) return;
+    if (loading || !applied) return;
     try {
-      await exportReport(sql, description, format);
+      await exportReport(applied.sql, applied.description, format);
     } catch {
       // erro tratado no contexto
     }
@@ -67,7 +69,10 @@ export default function SqlReportForm() {
 
   return (
     <>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <form
+        onSubmit={onSubmit}
+        className="flex min-w-0 flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:p-5"
+      >
         <TextField
           label="Descrição"
           variant="outlined"
@@ -88,7 +93,7 @@ export default function SqlReportForm() {
         />
         {error && <div className="text-red-500">{error}</div>}
         <Button type="submit" variant="contained" disabled={loading}>
-          {loading ? <CircularProgress size={24} /> : "Executar SQL"}
+          {loading ? <CircularProgress size={24} /> : "Executar consulta"}
         </Button>
       </form>
 
@@ -122,14 +127,18 @@ export default function SqlReportForm() {
           <Button onClick={() => setModalOpen(false)}>Fechar</Button>
 
           <Tooltip title="Exportar relatório">
-            <IconButton onClick={handleExportClick}>
+            <IconButton
+              aria-label="Exportar consulta"
+              onClick={handleExportClick}
+              disabled={loading || !applied}
+            >
               <FileDownloadIcon />
             </IconButton>
           </Tooltip>
 
           <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
-            {["pdf", "csv"].map((format) => (
-              <MenuItem key={format} onClick={() => handleExportFormat(format as any)}>
+            {(["pdf", "csv"] as const).map((format) => (
+              <MenuItem key={format} onClick={() => handleExportFormat(format)}>
                 Exportar como {format.toUpperCase()}
               </MenuItem>
             ))}

@@ -7,6 +7,7 @@ export const attendanceReportPaths = {
 export type AttendanceReportId = keyof typeof attendanceReportPaths;
 
 export function migratedDashboardPath(key: string): string | undefined {
+  if (key === "generalPerformance") return "general-performance";
   if (key === "messagesPerUser") return "messages-per-operator";
   return Object.hasOwn(attendanceReportPaths, key)
     ? attendanceReportPaths[key as AttendanceReportId]

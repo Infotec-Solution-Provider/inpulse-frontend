@@ -22,7 +22,11 @@ import {
   YAxis,
 } from "recharts";
 
-type TrendMetric = "chatsFinishedCount" | "messagesCount" | "pendingReturnsCount" | "transfersSentCount";
+type TrendMetric =
+  | "chatsFinishedCount"
+  | "messagesCount"
+  | "pendingReturnsCount"
+  | "transfersSentCount";
 
 interface GeneralPerformanceReportProps {
   summary: OperatorPerformanceSummary | null;
@@ -30,6 +34,7 @@ interface GeneralPerformanceReportProps {
   operators: OperatorPerformanceRow[];
   dailySeries: OperatorPerformanceDailySeriesRow[];
   isLoading?: boolean;
+  exportDisabled?: boolean;
 }
 
 interface SectorOverviewRow {
@@ -122,9 +127,10 @@ function exportToCsv(filename: string, rows: Record<string, unknown>[]) {
     return `"${stringValue.replace(/"/g, '""')}"`;
   };
 
-  const csv = [headers.join(";"), ...rows.map((row) => headers.map((header) => escape(row[header])).join(";"))].join(
-    "\n",
-  );
+  const csv = [
+    headers.join(";"),
+    ...rows.map((row) => headers.map((header) => escape(row[header])).join(";")),
+  ].join("\n");
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = window.URL.createObjectURL(blob);
@@ -141,13 +147,21 @@ function EmptyState({ message = "Sem dados para este relatório." }: { message?:
   return <div className="text-sm text-slate-500">{message}</div>;
 }
 
-function getPendingRate(row: Pick<OperatorPerformanceRow, "pendingReturnsCount" | "chatsHandledCount" | "chatsFinishedCount">) {
+function getPendingRate(
+  row: Pick<
+    OperatorPerformanceRow,
+    "pendingReturnsCount" | "chatsHandledCount" | "chatsFinishedCount"
+  >,
+) {
   const base = Math.max(row.chatsHandledCount, row.chatsFinishedCount, 1);
   return row.pendingReturnsCount / base;
 }
 
 function getTransferLoadRate(
-  row: Pick<OperatorPerformanceRow, "transfersSentCount" | "transfersReceivedCount" | "chatsHandledCount" | "chatsFinishedCount">,
+  row: Pick<
+    OperatorPerformanceRow,
+    "transfersSentCount" | "transfersReceivedCount" | "chatsHandledCount" | "chatsFinishedCount"
+  >,
 ) {
   const base = Math.max(row.chatsHandledCount, row.chatsFinishedCount, 1);
   return (row.transfersSentCount + row.transfersReceivedCount) / base;
@@ -175,7 +189,12 @@ function getComparisonBadge(
   direction: "higher" | "lower",
   formatter: (value: number) => string,
 ): ComparisonBadge | null {
-  if (current == null || previous == null || !Number.isFinite(current) || !Number.isFinite(previous)) {
+  if (
+    current == null ||
+    previous == null ||
+    !Number.isFinite(current) ||
+    !Number.isFinite(previous)
+  ) {
     return null;
   }
 
@@ -222,20 +241,32 @@ function KpiCard({
       <div className={`absolute inset-x-0 top-0 h-1 ${accentClass}`} />
       <div>
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          <DashboardLabelWithTooltip label={label} tooltip={tooltip} className="inline-flex items-center gap-1.5" />
+          <DashboardLabelWithTooltip
+            label={label}
+            tooltip={tooltip}
+            className="inline-flex items-center gap-1.5"
+          />
         </div>
-        <div className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">{value}</div>
+        <div className="mt-2 text-3xl font-semibold text-slate-900 dark:text-slate-100">
+          {value}
+        </div>
       </div>
       {helper ? <div className="mt-2 text-xs text-slate-500">{helper}</div> : null}
       {comparison ? (
         <div className="mt-auto pt-4">
           <div className="flex items-end justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/90 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/60">
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Variação</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">{comparison.percentageLabel}</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Variação
+              </div>
+              <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {comparison.percentageLabel}
+              </div>
             </div>
             <div className="text-right">
-              <div className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${comparison.className}`}>
+              <div
+                className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${comparison.className}`}
+              >
                 {comparison.label}
               </div>
               <div className="mt-1 text-[11px] text-slate-500">{comparison.detail}</div>
@@ -247,12 +278,26 @@ function KpiCard({
   );
 }
 
-function SectionCard({ title, description, tooltip, children }: { title: string; description: string; tooltip?: React.ReactNode; children: React.ReactNode }) {
+function SectionCard({
+  title,
+  description,
+  tooltip,
+  children,
+}: {
+  title: string;
+  description: string;
+  tooltip?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <header className="mb-4">
         <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          <DashboardLabelWithTooltip label={title} tooltip={tooltip} className="inline-flex items-center gap-1.5" />
+          <DashboardLabelWithTooltip
+            label={title}
+            tooltip={tooltip}
+            className="inline-flex items-center gap-1.5"
+          />
         </h4>
         <p className="mt-1 text-sm text-slate-500">{description}</p>
       </header>
@@ -267,18 +312,24 @@ export default function GeneralPerformanceReport({
   operators,
   dailySeries,
   isLoading,
+  exportDisabled,
 }: GeneralPerformanceReportProps) {
   const [trendMetric, setTrendMetric] = useState<TrendMetric>("chatsFinishedCount");
 
   const filteredOperators = useMemo(() => operators.filter((row) => row.userId > 0), [operators]);
 
   const sectorRows = useMemo<SectorOverviewRow[]>(() => {
-    const map = new Map<string, SectorOverviewRow & { responseWeight: number; handlingWeight: number }>();
+    const map = new Map<
+      string,
+      SectorOverviewRow & { responseWeight: number; handlingWeight: number }
+    >();
 
     // A linha "Sistema/Admin" (userId <= 0) entra para que a soma por setor feche com os cards.
     for (const row of operators) {
       const isSystemRow = row.userId <= 0;
-      const sectorName = isSystemRow ? row.userName || "Sistema/Admin" : row.userSector || "Sem setor";
+      const sectorName = isSystemRow
+        ? row.userName || "Sistema/Admin"
+        : row.userSector || "Sem setor";
       const current = map.get(sectorName) || {
         sectorName,
         operatorsCount: 0,
@@ -316,13 +367,15 @@ export default function GeneralPerformanceReport({
 
       if (row.averageFirstResponseSeconds != null) {
         current.averageFirstResponseSeconds =
-          (current.averageFirstResponseSeconds ?? 0) + row.averageFirstResponseSeconds * Math.max(row.respondedChatsCount, 1);
+          (current.averageFirstResponseSeconds ?? 0) +
+          row.averageFirstResponseSeconds * Math.max(row.respondedChatsCount, 1);
         current.responseWeight += Math.max(row.respondedChatsCount, 1);
       }
 
       if (row.averageHandlingSeconds != null) {
         current.averageHandlingSeconds =
-          (current.averageHandlingSeconds ?? 0) + row.averageHandlingSeconds * Math.max(row.chatsFinishedCount, 1);
+          (current.averageHandlingSeconds ?? 0) +
+          row.averageHandlingSeconds * Math.max(row.chatsFinishedCount, 1);
         current.handlingWeight += Math.max(row.chatsFinishedCount, 1);
       }
 
@@ -346,7 +399,9 @@ export default function GeneralPerformanceReport({
         averageFirstResponseSeconds: row.responseWeight
           ? (row.averageFirstResponseSeconds ?? 0) / row.responseWeight
           : null,
-        averageHandlingSeconds: row.handlingWeight ? (row.averageHandlingSeconds ?? 0) / row.handlingWeight : null,
+        averageHandlingSeconds: row.handlingWeight
+          ? (row.averageHandlingSeconds ?? 0) / row.handlingWeight
+          : null,
       }))
       .sort((left, right) => {
         if (right.criticalOperatorsCount !== left.criticalOperatorsCount) {
@@ -360,7 +415,10 @@ export default function GeneralPerformanceReport({
   }, [operators]);
 
   const topOperators = useMemo(
-    () => [...filteredOperators].sort((left, right) => right.chatsFinishedCount - left.chatsFinishedCount).slice(0, 5),
+    () =>
+      [...filteredOperators]
+        .sort((left, right) => right.chatsFinishedCount - left.chatsFinishedCount)
+        .slice(0, 5),
     [filteredOperators],
   );
 
@@ -371,7 +429,8 @@ export default function GeneralPerformanceReport({
           const leftSeverity = getOperatorSeverity(left);
           const rightSeverity = getOperatorSeverity(right);
           if (rightSeverity !== leftSeverity) return rightSeverity - leftSeverity;
-          if (right.pendingReturnsCount !== left.pendingReturnsCount) return right.pendingReturnsCount - left.pendingReturnsCount;
+          if (right.pendingReturnsCount !== left.pendingReturnsCount)
+            return right.pendingReturnsCount - left.pendingReturnsCount;
           return (right.averageFirstResponseSeconds ?? 0) - (left.averageFirstResponseSeconds ?? 0);
         })
         .slice(0, 5),
@@ -381,20 +440,51 @@ export default function GeneralPerformanceReport({
   const trendData = useMemo(() => {
     return dailySeries.map((row) => {
       if (trendMetric === "messagesCount") {
-        return { label: row.label, current: row.messagesCount, previous: row.previousMessagesCount, currentDate: row.date, previousDate: row.previousDate };
+        return {
+          label: row.label,
+          current: row.messagesCount,
+          previous: row.previousMessagesCount,
+          currentDate: row.date,
+          previousDate: row.previousDate,
+        };
       }
       if (trendMetric === "pendingReturnsCount") {
-        return { label: row.label, current: row.pendingReturnsCount, previous: row.previousPendingReturnsCount, currentDate: row.date, previousDate: row.previousDate };
+        return {
+          label: row.label,
+          current: row.pendingReturnsCount,
+          previous: row.previousPendingReturnsCount,
+          currentDate: row.date,
+          previousDate: row.previousDate,
+        };
       }
       if (trendMetric === "transfersSentCount") {
-        return { label: row.label, current: row.transfersSentCount, previous: row.previousTransfersSentCount, currentDate: row.date, previousDate: row.previousDate };
+        return {
+          label: row.label,
+          current: row.transfersSentCount,
+          previous: row.previousTransfersSentCount,
+          currentDate: row.date,
+          previousDate: row.previousDate,
+        };
       }
-      return { label: row.label, current: row.chatsFinishedCount, previous: row.previousChatsFinishedCount, currentDate: row.date, previousDate: row.previousDate };
+      return {
+        label: row.label,
+        current: row.chatsFinishedCount,
+        previous: row.previousChatsFinishedCount,
+        currentDate: row.date,
+        previousDate: row.previousDate,
+      };
     });
   }, [dailySeries, trendMetric]);
 
   const sectorChartData = useMemo(
-    () => sectorRows.slice(0, 8).map((row) => ({ name: row.sectorName, finalizados: row.chatsFinishedCount, pendencias: row.pendingReturnsCount })),
+    () =>
+      sectorRows
+        .slice(0, 8)
+        .map((row) => ({
+          name: row.sectorName,
+          finalizados: row.chatsFinishedCount,
+          pendencias: row.pendingReturnsCount,
+        })),
     [sectorRows],
   );
 
@@ -402,8 +492,16 @@ export default function GeneralPerformanceReport({
     () => [
       { name: "Recebidas", value: summary?.receivedMessagesCount || 0, fill: CHART_COLORS.primary },
       { name: "Enviadas", value: summary?.sentMessagesCount || 0, fill: "#0891b2" },
-      { name: "Transf. feitas", value: summary?.transfersSentCount || 0, fill: CHART_COLORS.attention },
-      { name: "Transf. recebidas", value: summary?.transfersReceivedCount || 0, fill: CHART_COLORS.critical },
+      {
+        name: "Transf. feitas",
+        value: summary?.transfersSentCount || 0,
+        fill: CHART_COLORS.attention,
+      },
+      {
+        name: "Transf. recebidas",
+        value: summary?.transfersReceivedCount || 0,
+        fill: CHART_COLORS.critical,
+      },
     ],
     [summary],
   );
@@ -429,32 +527,61 @@ export default function GeneralPerformanceReport({
     [sectorRows],
   );
 
-  const finalizadosComparison = getComparisonBadge(summary?.chatsFinishedCount, previousSummary?.chatsFinishedCount, "higher", formatNumber);
-  const mensagensComparison = getComparisonBadge(summary?.messagesCount, previousSummary?.messagesCount, "higher", formatNumber);
+  const finalizadosComparison = getComparisonBadge(
+    summary?.chatsFinishedCount,
+    previousSummary?.chatsFinishedCount,
+    "higher",
+    formatNumber,
+  );
+  const mensagensComparison = getComparisonBadge(
+    summary?.messagesCount,
+    previousSummary?.messagesCount,
+    "higher",
+    formatNumber,
+  );
   const primeiraDevolutivaComparison = getComparisonBadge(
     summary?.averageFirstResponseSeconds,
     previousSummary?.averageFirstResponseSeconds,
     "lower",
     formatDuration,
   );
-  const cicloComparison = getComparisonBadge(summary?.averageHandlingSeconds, previousSummary?.averageHandlingSeconds, "lower", formatDuration);
-  const pendenciasComparison = getComparisonBadge(summary?.pendingReturnsCount, previousSummary?.pendingReturnsCount, "lower", formatNumber);
+  const cicloComparison = getComparisonBadge(
+    summary?.averageHandlingSeconds,
+    previousSummary?.averageHandlingSeconds,
+    "lower",
+    formatDuration,
+  );
+  const pendenciasComparison = getComparisonBadge(
+    summary?.pendingReturnsCount,
+    previousSummary?.pendingReturnsCount,
+    "lower",
+    formatNumber,
+  );
 
   return (
     <section className="relative grid gap-6">
-      {isLoading ? <DashboardLoadingIndicator mode="overlay" label="Consolidando setores, backlog e ritmo diário" /> : null}
+      {isLoading ? (
+        <DashboardLoadingIndicator
+          mode="overlay"
+          label="Consolidando setores, backlog e ritmo diário"
+        />
+      ) : null}
       <header className="rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">Performance Geral</h3>
+            <h3 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+              Performance Geral
+            </h3>
             <p className="mt-1 max-w-3xl text-sm text-slate-500">
-              Visão consolidada da operação com foco em produção, backlog, ritmo diário e concentração de risco por setor.
+              Visão consolidada da operação com foco em produção, backlog, ritmo diário e
+              concentração de risco por setor.
             </p>
           </div>
           <div className="flex items-center gap-3">
             {isLoading ? <DashboardLoadingIndicator label="Atualizando visão consolidada" /> : null}
             <button
               type="button"
+              disabled={exportDisabled}
               onClick={() => exportToCsv("performance-geral.csv", exportRows)}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
@@ -480,9 +607,29 @@ export default function GeneralPerformanceReport({
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="Operadores ativos" value={summary?.operatorsCount || 0} helper="Com movimentação no período" tooltip="Quantidade de operadores com alguma movimentação contabilizada no período selecionado." accentClass="bg-slate-600" />
-        <KpiCard label="Finalizados" value={summary?.chatsFinishedCount || 0} helper="Produção consolidada" tooltip="Quantidade total de chats encerrados no período em toda a operação." accentClass="bg-emerald-600" comparison={finalizadosComparison} />
-        <KpiCard label="Mensagens" value={summary?.messagesCount || 0} helper="Carga total de interação" tooltip="Volume total de mensagens trocadas no período, somando recebidas e enviadas." accentClass="bg-blue-600" comparison={mensagensComparison} />
+        <KpiCard
+          label="Operadores ativos"
+          value={summary?.operatorsCount || 0}
+          helper="Com movimentação no período"
+          tooltip="Quantidade de operadores com alguma movimentação contabilizada no período selecionado."
+          accentClass="bg-slate-600"
+        />
+        <KpiCard
+          label="Finalizados"
+          value={summary?.chatsFinishedCount || 0}
+          helper="Produção consolidada"
+          tooltip="Quantidade total de chats encerrados no período em toda a operação."
+          accentClass="bg-emerald-600"
+          comparison={finalizadosComparison}
+        />
+        <KpiCard
+          label="Mensagens"
+          value={summary?.messagesCount || 0}
+          helper="Carga total de interação"
+          tooltip="Volume total de mensagens trocadas no período, somando recebidas e enviadas."
+          accentClass="bg-blue-600"
+          comparison={mensagensComparison}
+        />
         <KpiCard
           label="1ª devolutiva"
           value={formatDuration(summary?.averageFirstResponseSeconds)}
@@ -499,7 +646,14 @@ export default function GeneralPerformanceReport({
           accentClass="bg-indigo-600"
           comparison={cicloComparison}
         />
-        <KpiCard label="Pendências" value={summary?.pendingReturnsCount || 0} helper="Conversas aguardando retorno" tooltip="Conversas abertas cuja última interação foi do cliente e ainda aguardam resposta da operação. Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, não entram como pendência." accentClass="bg-amber-500" comparison={pendenciasComparison} />
+        <KpiCard
+          label="Pendências"
+          value={summary?.pendingReturnsCount || 0}
+          helper="Conversas aguardando retorno"
+          tooltip="Conversas abertas cuja última interação foi do cliente e ainda aguardam resposta da operação. Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, não entram como pendência."
+          accentClass="bg-amber-500"
+          comparison={pendenciasComparison}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
@@ -536,15 +690,39 @@ export default function GeneralPerformanceReport({
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip
-                    formatter={(value: number, name: string) => [formatNumber(value), name === "current" ? "Atual" : "Anterior"]}
+                    formatter={(value: number, name: string) => [
+                      formatNumber(value),
+                      name === "current" ? "Atual" : "Anterior",
+                    ]}
                     labelFormatter={(label, payload) => {
-                      const point = payload?.[0]?.payload as { currentDate?: string; previousDate?: string } | undefined;
-                      return point ? `${point.currentDate || label}${point.previousDate ? ` • ref. ${point.previousDate}` : ""}` : String(label);
+                      const point = payload?.[0]?.payload as
+                        | { currentDate?: string; previousDate?: string }
+                        | undefined;
+                      return point
+                        ? `${point.currentDate || label}${point.previousDate ? ` • ref. ${point.previousDate}` : ""}`
+                        : String(label);
                     }}
                   />
-                  <Legend formatter={(value) => (value === "current" ? "Período atual" : "Período anterior")} />
-                  <Line type="monotone" dataKey="current" stroke={CHART_COLORS.primary} strokeWidth={2.5} dot={false} />
-                  <Line type="monotone" dataKey="previous" stroke={CHART_COLORS.previous} strokeWidth={2} strokeDasharray="6 4" dot={false} />
+                  <Legend
+                    formatter={(value) =>
+                      value === "current" ? "Período atual" : "Período anterior"
+                    }
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="current"
+                    stroke={CHART_COLORS.primary}
+                    strokeWidth={2.5}
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="previous"
+                    stroke={CHART_COLORS.previous}
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    dot={false}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
@@ -561,14 +739,28 @@ export default function GeneralPerformanceReport({
           <div className="h-[340px]">
             {sectorChartData.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sectorChartData} layout="vertical" margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                <BarChart
+                  data={sectorChartData}
+                  layout="vertical"
+                  margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" />
                   <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="finalizados" fill={CHART_COLORS.primary} name="Finalizados" radius={[0, 10, 10, 0]} />
-                  <Bar dataKey="pendencias" fill={CHART_COLORS.attention} name="Pendências" radius={[0, 10, 10, 0]} />
+                  <Bar
+                    dataKey="finalizados"
+                    fill={CHART_COLORS.primary}
+                    name="Finalizados"
+                    radius={[0, 10, 10, 0]}
+                  />
+                  <Bar
+                    dataKey="pendencias"
+                    fill={CHART_COLORS.attention}
+                    name="Pendências"
+                    radius={[0, 10, 10, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -613,18 +805,31 @@ export default function GeneralPerformanceReport({
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/40">
               <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                <DashboardLabelWithTooltip label="Maior produção" tooltip="Operadores com maior número de atendimentos finalizados no período." className="inline-flex items-center gap-1.5" />
+                <DashboardLabelWithTooltip
+                  label="Maior produção"
+                  tooltip="Operadores com maior número de atendimentos finalizados no período."
+                  className="inline-flex items-center gap-1.5"
+                />
               </div>
               <div className="grid gap-2">
                 {topOperators.length ? (
                   topOperators.map((row) => (
-                    <div key={row.userId} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 dark:bg-slate-900">
+                    <div
+                      key={row.userId}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 dark:bg-slate-900"
+                    >
                       <div>
-                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{row.userName}</div>
-                        <div className="text-[11px] text-slate-500">{row.userSector || "Sem setor"}</div>
+                        <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {row.userName}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {row.userSector || "Sem setor"}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">{row.chatsFinishedCount}</div>
+                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {row.chatsFinishedCount}
+                        </div>
                         <div className="text-[11px] text-slate-500">finalizados</div>
                       </div>
                     </div>
@@ -637,33 +842,49 @@ export default function GeneralPerformanceReport({
 
             <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/40">
               <div className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                <DashboardLabelWithTooltip label="Pontos de atenção" tooltip="Operadores priorizados por criticidade, backlog e lentidão de resposta." className="inline-flex items-center gap-1.5" />
+                <DashboardLabelWithTooltip
+                  label="Pontos de atenção"
+                  tooltip="Operadores priorizados por criticidade, backlog e lentidão de resposta."
+                  className="inline-flex items-center gap-1.5"
+                />
               </div>
               <div className="grid gap-2">
                 {pressureOperators.length ? (
                   pressureOperators.map((row) => {
                     const severity = getOperatorSeverity(row);
-                    const severityClass = severity === 2
-                      ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
-                      : severity === 1
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
+                    const severityClass =
+                      severity === 2
+                        ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                        : severity === 1
+                          ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                          : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
 
                     return (
-                      <div key={row.userId} className="rounded-lg bg-white px-3 py-2 dark:bg-slate-900">
+                      <div
+                        key={row.userId}
+                        className="rounded-lg bg-white px-3 py-2 dark:bg-slate-900"
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{row.userName}</div>
-                            <div className="text-[11px] text-slate-500">{row.userSector || "Sem setor"}</div>
+                            <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                              {row.userName}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {row.userSector || "Sem setor"}
+                            </div>
                           </div>
-                          <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${severityClass}`}>
+                          <span
+                            className={`rounded-full px-2 py-1 text-[11px] font-semibold ${severityClass}`}
+                          >
                             {severity === 2 ? "Crítico" : severity === 1 ? "Atenção" : "Estável"}
                           </span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-slate-500">
                           <span>Pend.: {row.pendingReturnsCount}</span>
                           <span>1ª dev.: {formatDuration(row.averageFirstResponseSeconds)}</span>
-                          <span>Transf.: {row.transfersSentCount + row.transfersReceivedCount}</span>
+                          <span>
+                            Transf.: {row.transfersSentCount + row.transfersReceivedCount}
+                          </span>
                         </div>
                       </div>
                     );
@@ -689,37 +910,70 @@ export default function GeneralPerformanceReport({
                 <tr className="text-slate-500">
                   <th className="px-3 py-3">Setor</th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Ops" tooltip="Quantidade de operadores considerados naquele setor." />
+                    <DashboardLabelWithTooltip
+                      label="Ops"
+                      tooltip="Quantidade de operadores considerados naquele setor."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Estável" tooltip="Operadores sem sinais relevantes de risco operacional no período." />
+                    <DashboardLabelWithTooltip
+                      label="Estável"
+                      tooltip="Operadores sem sinais relevantes de risco operacional no período."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Atenção" tooltip="Operadores com sinais moderados de risco, como pendência ou tempo acima do esperado." />
+                    <DashboardLabelWithTooltip
+                      label="Atenção"
+                      tooltip="Operadores com sinais moderados de risco, como pendência ou tempo acima do esperado."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Crítico" tooltip="Operadores com maior severidade operacional no período analisado." />
+                    <DashboardLabelWithTooltip
+                      label="Crítico"
+                      tooltip="Operadores com maior severidade operacional no período analisado."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Finalizados" tooltip="Quantidade de chats encerrados pelo setor no período." />
+                    <DashboardLabelWithTooltip
+                      label="Finalizados"
+                      tooltip="Quantidade de chats encerrados pelo setor no período."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Delta" tooltip="Diferença de finalizados em relação ao período comparativo anterior." />
+                    <DashboardLabelWithTooltip
+                      label="Delta"
+                      tooltip="Diferença de finalizados em relação ao período comparativo anterior."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Mensagens" tooltip="Total de mensagens ligadas ao setor no período." />
+                    <DashboardLabelWithTooltip
+                      label="Mensagens"
+                      tooltip="Total de mensagens ligadas ao setor no período."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Pendências" tooltip="Conversas do setor que seguem abertas aguardando resposta da operação. Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, ficam fora dessa contagem." />
+                    <DashboardLabelWithTooltip
+                      label="Pendências"
+                      tooltip="Conversas do setor que seguem abertas aguardando resposta da operação. Follow-ups triviais de cortesia, enviados até 1 hora após um fechamento anterior, ficam fora dessa contagem."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Taxa pend." tooltip="Índice de pendências em relação ao volume finalizado do setor." />
+                    <DashboardLabelWithTooltip
+                      label="Taxa pend."
+                      tooltip="Índice de pendências em relação ao volume finalizado do setor."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="1ª devolutiva" tooltip="Média por conversa do tempo corrido até a primeira resposta da operação. Respostas em outro dia e cortesias até 1 hora após um encerramento ficam fora. Bots não contam; templates podem contar." />
+                    <DashboardLabelWithTooltip
+                      label="1ª devolutiva"
+                      tooltip="Média por conversa do tempo corrido até a primeira resposta da operação. Respostas em outro dia e cortesias até 1 hora após um encerramento ficam fora. Bots não contam; templates podem contar."
+                    />
                   </th>
                   <th className="px-3 py-3">
-                    <DashboardLabelWithTooltip label="Ciclo" tooltip="Tempo médio total do atendimento até a finalização." />
+                    <DashboardLabelWithTooltip
+                      label="Ciclo"
+                      tooltip="Tempo médio total do atendimento até a finalização."
+                    />
                   </th>
                 </tr>
               </thead>
@@ -729,13 +983,26 @@ export default function GeneralPerformanceReport({
                   const deltaFinished = row.chatsFinishedCount - row.previousChatsFinishedCount;
 
                   return (
-                    <tr key={row.sectorName} className="border-t border-slate-100 dark:border-slate-800">
-                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">{row.sectorName}</td>
+                    <tr
+                      key={row.sectorName}
+                      className="border-t border-slate-100 dark:border-slate-800"
+                    >
+                      <td className="px-3 py-2.5 font-medium text-slate-900 dark:text-slate-100">
+                        {row.sectorName}
+                      </td>
                       <td className="px-3 py-2.5">{row.operatorsCount}</td>
-                      <td className="px-3 py-2.5 text-emerald-600 dark:text-emerald-400">{row.stableOperatorsCount}</td>
-                      <td className="px-3 py-2.5 text-amber-600 dark:text-amber-400">{row.attentionOperatorsCount}</td>
-                      <td className="px-3 py-2.5 text-rose-600 dark:text-rose-400">{row.criticalOperatorsCount}</td>
-                      <td className="px-3 py-2.5 font-semibold text-slate-900 dark:text-slate-100">{row.chatsFinishedCount}</td>
+                      <td className="px-3 py-2.5 text-emerald-600 dark:text-emerald-400">
+                        {row.stableOperatorsCount}
+                      </td>
+                      <td className="px-3 py-2.5 text-amber-600 dark:text-amber-400">
+                        {row.attentionOperatorsCount}
+                      </td>
+                      <td className="px-3 py-2.5 text-rose-600 dark:text-rose-400">
+                        {row.criticalOperatorsCount}
+                      </td>
+                      <td className="px-3 py-2.5 font-semibold text-slate-900 dark:text-slate-100">
+                        {row.chatsFinishedCount}
+                      </td>
                       <td className="px-3 py-2.5">
                         <span
                           className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
@@ -749,9 +1016,13 @@ export default function GeneralPerformanceReport({
                         </span>
                       </td>
                       <td className="px-3 py-2.5">{row.messagesCount}</td>
-                      <td className="px-3 py-2.5 font-medium text-amber-600 dark:text-amber-400">{row.pendingReturnsCount}</td>
+                      <td className="px-3 py-2.5 font-medium text-amber-600 dark:text-amber-400">
+                        {row.pendingReturnsCount}
+                      </td>
                       <td className="px-3 py-2.5">{formatPercentage(pendingRate)}</td>
-                      <td className="px-3 py-2.5">{formatDuration(row.averageFirstResponseSeconds)}</td>
+                      <td className="px-3 py-2.5">
+                        {formatDuration(row.averageFirstResponseSeconds)}
+                      </td>
                       <td className="px-3 py-2.5">{formatDuration(row.averageHandlingSeconds)}</td>
                     </tr>
                   );

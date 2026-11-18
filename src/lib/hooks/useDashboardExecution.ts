@@ -1,48 +1,26 @@
-'use client';
+"use client";
 
-import { useCallback, useState } from 'react';
-import { executeDashboard } from '@/lib/reports/api';
-import { QueryResult } from '@/types/reports';
+import { executeDashboard } from "@/lib/reports/api";
+import {
+  defaultReportPeriod,
+  validateReportPeriod,
+  type ReportPeriod,
+} from "@/lib/reports/filters";
+import { useReportForm } from "@/lib/reports/use-report-form";
 
-export interface MetricResult {
-  metricId: string;
-  status: 'pending' | 'done' | 'failed';
-  data?: QueryResult;
-  error?: string;
-}
-
-export function useDashboardExecution(dashboardId: string) {
-  const [results, setResults] = useState<Record<string, MetricResult>>({});
-  const [running, setRunning] = useState(false);
-
-  const execute = useCallback(
-    async (filters: Record<string, Record<string, unknown>> = {}) => {
-      setRunning(true);
-      setResults({});
-
-      try {
-        const response = await executeDashboard(dashboardId, filters);
-        const items = response.data ?? [];
-
-        const next: Record<string, MetricResult> = {};
-        for (const item of items) {
-          next[item.metricId] = {
-            metricId: item.metricId,
-            status: item.status === 'completed' ? 'done' : 'failed',
-            data: item.status === 'completed' ? (item as any).data : undefined,
-            error: item.status === 'failed' ? (item as any).error : undefined,
-          };
-        }
-        setResults(next);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setRunning(false);
-      }
+export function useDashboardExecution(scope: string, id: string, metricIds: string[]) {
+  return useReportForm({
+    scope,
+    defaults: defaultReportPeriod,
+    validate: validateReportPeriod,
+    execute: async (period: ReportPeriod, signal) => {
+      const dateRange = {
+        start: period.startDate + " 00:00:00",
+        end: period.endDate + " 23:59:59",
+      };
+      const filters = Object.fromEntries(metricIds.map((metricId) => [metricId, { dateRange }]));
+      const results = await executeDashboard(id, filters, signal);
+      return Object.fromEntries(results.map((result) => [result.metricId, result]));
     },
-    [dashboardId]
-  );
-
-  return { results, running, execute };
+  });
 }
-

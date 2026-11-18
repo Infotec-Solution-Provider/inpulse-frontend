@@ -6,6 +6,8 @@ export const REPORT_CATEGORIES = [
   { id: "attendance", title: "Atendimento e WhatsApp" },
   { id: "commercial", title: "Comercial" },
   { id: "quality", title: "Qualidade" },
+  { id: "portfolios", title: "Carteiras e campanhas" },
+  { id: "personalized", title: "Personalizados" },
 ] as const;
 
 export interface ReportDefinition {
@@ -20,8 +22,6 @@ export interface ReportDefinition {
   instance?: string;
 }
 
-// Only destinations already exposed by the application. Hidden tools, iframe
-// reports and the demonstration funnel are deliberately not promoted here.
 export const REPORT_CATALOG: readonly ReportDefinition[] = [
   {
     id: "messages-per-user",
@@ -64,7 +64,7 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     title: "Performance Geral",
     description: "Indicadores consolidados de atendimento e desempenho da equipe.",
     category: "attendance",
-    href: "/reports/dashboard?report=generalPerformance",
+    href: "/reports/general-performance",
     keywords: ["whatsapp", "equipe"],
     output: "Painel",
   },
@@ -153,10 +153,50 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     title: "Pesquisa de Satisfação",
     description: "Respostas individuais e indicadores da pesquisa de satisfação.",
     category: "quality",
-    href: "/reports/dashboard?report=satisfactionSurvey",
+    href: "/reports/satisfaction",
     keywords: ["exatron", "qualidade", "avaliação"],
     output: "Painel",
     instance: "exatron",
+  },
+  {
+    id: "mailing-analysis",
+    title: "Análise de Mailing",
+    description: "Cobertura da base, contatos por canal e resultados das carteiras.",
+    category: "portfolios",
+    href: "/reports/mailing-analysis",
+    keywords: ["campanha", "clientes contatados", "base"],
+    output: "Tabela e gráfico",
+    feature: F.reportsAdvanced,
+  },
+  {
+    id: "portfolio-journey",
+    title: "Régua por Carteira",
+    description: "Aproveitamento e conversão por carteira ou operador.",
+    category: "portfolios",
+    href: "/reports/regua-carteira-sintetico-whatsapp",
+    keywords: ["régua", "sintético", "analítico", "whatsapp"],
+    output: "Tabela e gráfico",
+    feature: F.reportsAdvanced,
+  },
+  {
+    id: "generated",
+    title: "Relatórios personalizados",
+    description: "Relatórios salvos pela equipe e seus rascunhos privados.",
+    category: "personalized",
+    href: "/reports/generated",
+    keywords: ["salvos", "rascunhos"],
+    output: "Painel",
+    feature: F.reportsDashboards,
+  },
+  {
+    id: "dashboards",
+    title: "Painéis personalizados",
+    description: "Consulte e organize os painéis de métricas da equipe.",
+    category: "personalized",
+    href: "/reports/dashboards",
+    keywords: ["dashboard", "indicadores", "métricas"],
+    output: "Painel",
+    feature: F.reportsDashboards,
   },
 ];
 

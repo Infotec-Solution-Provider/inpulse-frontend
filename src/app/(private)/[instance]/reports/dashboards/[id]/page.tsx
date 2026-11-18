@@ -1,5 +1,9 @@
 "use client";
-import { CrmPage } from "@/lib/ui-system";
+import { Alert, Autocomplete, TextField } from "@mui/material";
+import Link from "next/link";
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
+import { ReportFormControls, ReportQueryStatus } from "@/components/reports/ReportFormControls";
+import { reportPeriodLabel } from "@/lib/reports/filters";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -15,17 +19,17 @@ import { CrmDialog as Dialog } from "@/lib/ui-system/crm-dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
 import Tooltip from "@mui/material/Tooltip";
-import { PlayArrow as PlayArrowIcon } from "@/lib/ui-system/crm-icons";
 import { Add as AddIcon } from "@/lib/ui-system/crm-icons";
 import { Delete as DeleteIcon } from "@/lib/ui-system/crm-icons";
 
 export default function DashboardViewPage() {
   const { instance, id } = useParams<{ instance: string; id: string }>();
+  return <DashboardViewContent key={instance + ":" + id} instance={instance} id={id} />;
+}
+
+function DashboardViewContent({ instance, id }: { instance: string; id: string }) {
+  const [error, setError] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -33,11 +37,19 @@ export default function DashboardViewPage() {
   const [selectedMetricId, setSelectedMetricId] = useState("");
   const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const { results, running, execute } = useDashboardExecution(id);
+  const metricsIds = (dashboard?.items ?? []).map((item) => item.metricId);
+  const form = useDashboardExecution(
+    instance + ":" + id + ":" + metricsIds.join(","),
+    id,
+    metricsIds,
+  );
 
   const reload = () =>
     getDashboard(id)
       .then(setDashboard)
+      .catch((cause: unknown) =>
+        setError(cause instanceof Error ? cause.message : "Falha ao carregar o painel."),
+      )
       .finally(() => setLoading(false));
 
   useEffect(() => {
@@ -89,19 +101,17 @@ export default function DashboardViewPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !dashboard) {
     return (
-      <div className="mt-24 flex justify-center">
-        <CircularProgress />
-      </div>
-    );
-  }
-
-  if (!dashboard) {
-    return (
-      <div className="p-6">
-        <Typography color="error">Dashboard não encontrado.</Typography>
-      </div>
+      <ReportPageShell
+        instance={instance}
+        category="Painéis e métricas"
+        title="Painel personalizado"
+      >
+        <Alert severity={loading ? "info" : "error"}>
+          {loading ? "Carregando painel…" : (error ?? "Painel não encontrado.")}
+        </Alert>
+      </ReportPageShell>
     );
   }
 
@@ -111,30 +121,37 @@ export default function DashboardViewPage() {
   );
 
   return (
-    <CrmPage
+    <ReportPageShell
+      instance={instance}
+      category="Painéis e métricas"
       title={dashboard.name}
       description={dashboard.description ?? undefined}
-      breadcrumbs={[
-        { label: "Relatórios" },
-        { label: "Dashboards", href: `/${instance}/reports/dashboards` },
-        { label: dashboard.name },
-      ]}
       actions={
-        <div className="flex gap-2">
-          <Button variant="outlined" startIcon={<AddIcon />} onClick={openAddDialog}>
-            Adicionar métrica
+        <>
+          <Button component={Link} href={"/" + instance + "/reports/dashboards"}>
+            Ver painéis
           </Button>
           <Button
-            variant="contained"
-            startIcon={running ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
-            onClick={() => execute()}
-            disabled={running}
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={openAddDialog}
+            disabled={form.loading}
           >
-            {running ? "Executando..." : "Executar"}
+            Adicionar métrica
           </Button>
-        </div>
+        </>
       }
     >
+      {error && <Alert severity="error">{error}</Alert>}
+      {sortedItems.length > 0 && (
+        <>
+          <ReportFormControls form={form} period={form.draft} setPeriod={form.setDraft} />
+          <ReportQueryStatus
+            query={form}
+            labels={form.applied ? [reportPeriodLabel(form.applied)] : []}
+          />
+        </>
+      )}
       {sortedItems.length === 0 ? (
         <div className="mt-16 flex flex-col items-center justify-center gap-3 text-gray-400">
           <Typography>Nenhuma métrica adicionada a este dashboard.</Typography>
@@ -147,7 +164,7 @@ export default function DashboardViewPage() {
           {sortedItems.map((item) => {
             const metric = metricsMap.get(item.metricId);
             if (!metric) return null;
-            const result = results[item.metricId];
+            const result = form.result?.[item.metricId];
             return (
               <div key={item.id} className="group relative">
                 <Tooltip title="Remover do dashboard">
@@ -155,7 +172,7 @@ export default function DashboardViewPage() {
                     size="small"
                     color="error"
                     onClick={() => handleRemove(item.id)}
-                    disabled={removingId === item.id}
+                    disabled={removingId === item.id || form.loading}
                     sx={{
                       position: "absolute",
                       top: 4,
@@ -165,7 +182,7 @@ export default function DashboardViewPage() {
                       boxShadow: 1,
                       opacity: 0,
                       transition: "opacity 0.15s",
-                      ".group:hover &": { opacity: 1 },
+                      ".group:hover &, .group:focus-within &": { opacity: 1 },
                     }}
                   >
                     {removingId === item.id ? (
@@ -177,7 +194,15 @@ export default function DashboardViewPage() {
                 </Tooltip>
                 <MetricVisualizer
                   metric={metric}
-                  status={result?.status ?? "pending"}
+                  status={
+                    result
+                      ? result.status === "completed"
+                        ? "done"
+                        : "failed"
+                      : form.loading
+                        ? "pending"
+                        : "idle"
+                  }
                   data={result?.data}
                   error={result?.error}
                 />
@@ -197,29 +222,16 @@ export default function DashboardViewPage() {
                 : "Todas as métricas disponíveis já estão neste dashboard."}
             </Typography>
           ) : (
-            <FormControl fullWidth sx={{ mt: 1 }}>
-              <InputLabel id="metric-select-label">Métrica</InputLabel>
-              <Select
-                labelId="metric-select-label"
-                label="Métrica"
-                value={selectedMetricId}
-                onChange={(e) => setSelectedMetricId(e.target.value)}
-              >
-                {selectableMetrics.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.name}
-                    <Typography
-                      component="span"
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ ml: 1 }}
-                    >
-                      ({m.tableName} · {m.aggregation})
-                    </Typography>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Autocomplete
+              size="small"
+              sx={{ mt: 1 }}
+              options={selectableMetrics}
+              value={selectableMetrics.find((metric) => metric.id === selectedMetricId) ?? null}
+              getOptionLabel={(metric) => metric.name + " · " + metric.tableName}
+              getOptionKey={(metric) => metric.id}
+              onChange={(_, metric) => setSelectedMetricId(metric?.id ?? "")}
+              renderInput={(params) => <TextField {...params} label="Pesquisar métrica" />}
+            />
           )}
         </DialogContent>
         <DialogActions>
@@ -229,6 +241,6 @@ export default function DashboardViewPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </CrmPage>
+    </ReportPageShell>
   );
 }

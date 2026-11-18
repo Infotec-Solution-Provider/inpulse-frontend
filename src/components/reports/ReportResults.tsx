@@ -37,12 +37,14 @@ export function ReportResultTable({
   searchHint,
   exportDisabled,
   onExport,
+  title = "Resultados",
 }: {
   columns: ResultColumn[];
   rows: ResultRow[];
   searchHint: string;
   exportDisabled: boolean;
-  onExport: () => void;
+  onExport?: () => void;
+  title?: string;
 }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -59,18 +61,20 @@ export function ReportResultTable({
   return (
     <section
       className="grid min-w-0 gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:p-5"
-      aria-label="Resultados do relatório"
+      aria-label={title}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold">Resultados</h2>
-        <Button
-          variant="outlined"
-          startIcon={<Download size={16} />}
-          disabled={exportDisabled}
-          onClick={onExport}
-        >
-          Exportar CSV
-        </Button>
+        <h2 className="font-semibold">{title}</h2>
+        {onExport && (
+          <Button
+            variant="outlined"
+            startIcon={<Download size={16} />}
+            disabled={exportDisabled}
+            onClick={onExport}
+          >
+            Exportar CSV
+          </Button>
+        )}
       </div>
       <TextField
         size="small"
@@ -83,7 +87,7 @@ export function ReportResultTable({
         }}
       />
       <p className="text-xs text-slate-500 dark:text-slate-400" role="status">
-        {filtered.length} de {rows.length} registros. O CSV inclui todo o resultado.
+        {filtered.length} de {rows.length} registros.{onExport && " O CSV inclui todo o resultado."}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">

@@ -1,5 +1,7 @@
 "use client";
-import { CrmPage, CrmFilters, useCrmQueryState } from "@/lib/ui-system";
+import { normalizeReportSearch } from "@/lib/reports/catalog";
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
+import { CrmFilters, useCrmQueryState } from "@/lib/ui-system";
 
 import { useEffect, useState } from "react";
 import { getDashboards, createDashboard } from "@/lib/reports/api";
@@ -59,22 +61,31 @@ export default function DashboardsPage() {
     {},
   );
   const filtered = dashboards.filter(
-    (d) => !filters.name || d.name.toLocaleLowerCase().includes(filters.name.toLocaleLowerCase()),
+    (d) =>
+      !filters.name ||
+      normalizeReportSearch(d.name + " " + (d.description ?? "")).includes(
+        normalizeReportSearch(filters.name),
+      ),
   );
   return (
-    <CrmPage
-      title="Dashboards"
+    <ReportPageShell
+      instance={instance}
+      category="Painéis e métricas"
+      title="Painéis personalizados"
       description="Organize os painéis e suas métricas."
-      count={loading ? undefined : filtered.length}
-      breadcrumbs={[{ label: "Relatórios" }, { label: "Dashboards" }]}
       actions={
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
-          Novo dashboard
-        </Button>
+        <>
+          <Button onClick={() => router.push("/" + instance + "/reports/metrics")}>
+            Gerenciar métricas
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setDialogOpen(true)}>
+            Novo painel
+          </Button>
+        </>
       }
     >
       <CrmFilters
-        fields={[{ key: "name", label: "Nome" }]}
+        fields={[{ key: "name", label: "Pesquisar por nome ou descrição" }]}
         values={filters}
         onApply={setFilters}
         onRefresh={() => void load()}
@@ -137,6 +148,6 @@ export default function DashboardsPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </CrmPage>
+    </ReportPageShell>
   );
 }

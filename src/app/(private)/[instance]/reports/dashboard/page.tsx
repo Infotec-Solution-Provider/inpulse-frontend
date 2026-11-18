@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { migratedDashboardPath } from "@/lib/reports/attendance-routes";
-import DashboardProvider from "./dashboard-context";
-import DashboardFilters from "./dashboard-filters";
-import DashboardReports from "./dashboard-reports";
+import { Alert } from "@mui/material";
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
+import SalesFunnelReport from "./sales-funnel-report";
 
 export default async function DashboardReportsPage({
   params,
@@ -13,22 +13,22 @@ export default async function DashboardReportsPage({
 }) {
   const { instance } = await params;
   const { report } = (await searchParams) ?? {};
-  const migratedPath = migratedDashboardPath(report ?? "messagesPerUser");
-  if (migratedPath) redirect(`/${instance}/reports/${migratedPath}`);
-  const valid =
-    report === "generalPerformance" ||
-    report === "salesFunnel" ||
-    (report === "satisfactionSurvey" && instance === "exatron");
-  if (!valid) redirect(`/${instance}/reports/messages-per-operator`);
-
-  return (
-    <div className="box-border h-full overflow-y-auto bg-white px-4 py-8 text-black dark:bg-gray-900 dark:text-white">
-      <DashboardProvider key={report} initialSelectedReport={report}>
-        <div className="mx-auto grid w-[min(96vw,1800px)] min-w-[1280px] gap-6">
-          <DashboardFilters />
-          <DashboardReports />
-        </div>
-      </DashboardProvider>
-    </div>
-  );
+  if (report === "salesFunnel") {
+    return (
+      <ReportPageShell
+        instance={instance}
+        category="Comercial"
+        title="Demonstração do funil de vendas"
+        description="Exemplo da leitura das etapas de atendimento e venda."
+      >
+        <Alert severity="info">Demonstração com dados ilustrativos.</Alert>
+        <SalesFunnelReport />
+      </ReportPageShell>
+    );
+  }
+  const path =
+    report === "satisfactionSurvey" && instance === "exatron"
+      ? "satisfaction"
+      : (migratedDashboardPath(report ?? "") ?? "messages-per-operator");
+  redirect(`/${instance}/reports/${path}`);
 }

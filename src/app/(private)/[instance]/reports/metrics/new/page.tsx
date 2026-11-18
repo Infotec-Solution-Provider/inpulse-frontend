@@ -1,10 +1,11 @@
 "use client";
-import { CrmPage } from "@/lib/ui-system";
+import { ReportPageShell } from "@/components/reports/ReportWorkflow";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getTables, createMetric } from "@/lib/reports/api";
 import { TableMeta } from "@/types/reports";
+import { Alert, Autocomplete } from "@mui/material";
 import Button from "@mui/material/Button";
 import Step from "@mui/material/Step";
 import StepLabel from "@mui/material/StepLabel";
@@ -32,6 +33,7 @@ export default function NewMetricPage() {
   const [step, setStep] = useState(0);
   const [tables, setTables] = useState<TableMeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form state
@@ -46,12 +48,19 @@ export default function NewMetricPage() {
   useEffect(() => {
     getTables()
       .then(setTables)
+      .catch((cause: unknown) =>
+        setError(cause instanceof Error ? cause.message : "Falha ao carregar as fontes de dados."),
+      )
       .finally(() => setLoading(false));
   }, []);
 
   const selectedTable = tables.find((t) => t.name === tableName);
   const numericCols = selectedTable?.columns.filter((c) => c.numeric) ?? [];
   const allCols = selectedTable?.columns ?? [];
+  const aggregateColumns =
+    aggregation === "count" || aggregation === "count_distinct" || !numericCols.length
+      ? allCols
+      : numericCols;
 
   const canNext = () => {
     if (step === 0) return name.trim().length > 0;
@@ -85,15 +94,18 @@ export default function NewMetricPage() {
   }
 
   return (
-    <CrmPage
+    <ReportPageShell
+      instance={instance}
+      category="Painéis e métricas"
       title="Nova métrica"
       description="Defina nome, fonte de dados, agregação e visualização."
-      breadcrumbs={[
-        { label: "Relatórios" },
-        { label: "Métricas", href: `/${instance}/reports/metrics` },
-        { label: "Nova métrica" },
-      ]}
+      actions={
+        <Button onClick={() => router.push("/" + instance + "/reports/metrics")}>
+          Ver métricas
+        </Button>
+      }
     >
+      {error && <Alert severity="error">{error}</Alert>}
       <Stepper activeStep={step} alternativeLabel sx={{ mb: 4 }}>
         {STEPS.map((label) => (
           <Step key={label}>
@@ -125,44 +137,25 @@ export default function NewMetricPage() {
 
         {step === 1 && (
           <>
-            <TextField
-              select
-              label="Tabela"
-              value={tableName}
-              onChange={(e) => {
-                setTableName(e.target.value);
+            <Autocomplete
+              options={tables}
+              value={selectedTable ?? null}
+              getOptionLabel={(table) => table.label + " (" + table.name + ")"}
+              onChange={(_, table) => {
+                setTableName(table?.name ?? "");
                 setColumn("");
                 setGroupBy("");
               }}
-              fullWidth
-            >
-              {tables.map((t) => (
-                <MenuItem key={t.name} value={t.name}>
-                  {t.label} ({t.name})
-                </MenuItem>
-              ))}
-            </TextField>
-
+              renderInput={(params) => <TextField {...params} label="Pesquisar tabela" />}
+            />
             {tableName && (
-              <TextField
-                select
-                label="Coluna a agregar"
-                value={column}
-                onChange={(e) => setColumn(e.target.value)}
-                fullWidth
-                helperText="Colunas numéricas recomendadas para sum/avg"
-              >
-                {(aggregation === "count" || aggregation === "count_distinct"
-                  ? allCols
-                  : numericCols.length
-                    ? numericCols
-                    : allCols
-                ).map((c) => (
-                  <MenuItem key={c.name} value={c.name}>
-                    {c.name} {c.numeric ? "(numérico)" : ""}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Autocomplete
+                options={aggregateColumns}
+                value={aggregateColumns.find((item) => item.name === column) ?? null}
+                getOptionLabel={(item) => item.name + (item.numeric ? " (numérico)" : "")}
+                onChange={(_, item) => setColumn(item?.name ?? "")}
+                renderInput={(params) => <TextField {...params} label="Pesquisar coluna" />}
+              />
             )}
           </>
         )}
@@ -183,20 +176,12 @@ export default function NewMetricPage() {
               ))}
             </TextField>
 
-            <TextField
-              select
-              label="Agrupar por (opcional)"
-              value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value)}
-              fullWidth
-            >
-              <MenuItem value="">Sem agrupamento</MenuItem>
-              {allCols.map((c) => (
-                <MenuItem key={c.name} value={c.name}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            <Autocomplete
+              options={allCols.map((item) => item.name)}
+              value={groupBy || null}
+              onChange={(_, value) => setGroupBy(value ?? "")}
+              renderInput={(params) => <TextField {...params} label="Agrupar por (opcional)" />}
+            />
           </>
         )}
 
@@ -267,6 +252,6 @@ export default function NewMetricPage() {
           </Button>
         )}
       </div>
-    </CrmPage>
+    </ReportPageShell>
   );
 }

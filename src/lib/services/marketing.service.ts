@@ -128,7 +128,12 @@ export interface LostReasonsResult {
     topReason: string | null;
     operatorsImpacted: number;
   };
-  byReason: Array<{ resultId: number | null; resultName: string; lossesCount: number; share: number }>;
+  byReason: Array<{
+    resultId: number | null;
+    resultName: string;
+    lossesCount: number;
+    share: number;
+  }>;
   byOperator: Array<{ operatorName: string; lossesCount: number; share: number }>;
   byChannel: Array<{ channel: string; lossesCount: number; share: number }>;
   dailySeries: Array<{ date: string; lossesCount: number }>;
@@ -243,10 +248,12 @@ export async function fetchMarketing<TData>(
   path: string,
   token: string | null | undefined,
   params?: MarketingParams,
+  signal?: AbortSignal,
 ) {
   const response = await axios.get<ApiResponse<TData>>(endpoint(path), {
     headers: authHeaders(token),
     params,
+    signal,
   });
   return response.data.data;
 }
@@ -265,17 +272,19 @@ export async function putMarketing<TData, TPayload extends object>(
 class MarketingService {
   private readonly base = `${MARKETING_URL}/api/marketing/campaigns`;
 
-  async listCampaigns(params: {
-    page?: number;
-    perPage?: number;
-    campaignId?: number;
-    search?: string;
-    status?: string;
-    senderClientId?: number;
-    sendMode?: "IMMEDIATE" | "ONE_TIME" | "RECURRING";
-    createdFrom?: string;
-    createdTo?: string;
-  } = {}) {
+  async listCampaigns(
+    params: {
+      page?: number;
+      perPage?: number;
+      campaignId?: number;
+      search?: string;
+      status?: string;
+      senderClientId?: number;
+      sendMode?: "IMMEDIATE" | "ONE_TIME" | "RECURRING";
+      createdFrom?: string;
+      createdTo?: string;
+    } = {},
+  ) {
     const response = await axios.get<CampaignListResponse>(this.base, {
       params: {
         page: params.page || 1,
@@ -322,11 +331,12 @@ class MarketingService {
   }
 
   async previewAudience(campaignId: number) {
-    const response = await axios.post<{ data: unknown[]; page: { totalRows: number; current: number } }>(
-      `${this.base}/${campaignId}/audience/preview`,
-      undefined,
-      { params: { page: 1, perPage: 20 } },
-    );
+    const response = await axios.post<{
+      data: unknown[];
+      page: { totalRows: number; current: number };
+    }>(`${this.base}/${campaignId}/audience/preview`, undefined, {
+      params: { page: 1, perPage: 20 },
+    });
 
     return response.data;
   }
@@ -340,12 +350,16 @@ class MarketingService {
   }
 
   async launchCampaign(campaignId: number) {
-    const response = await axios.post<{ data: MarketingCampaign }>(`${this.base}/${campaignId}/launch`);
+    const response = await axios.post<{ data: MarketingCampaign }>(
+      `${this.base}/${campaignId}/launch`,
+    );
     return response.data.data;
   }
 
   async getMonitoring(campaignId: number) {
-    const response = await axios.get<{ data: MonitoringSummary }>(`${this.base}/${campaignId}/monitoring`);
+    const response = await axios.get<{ data: MonitoringSummary }>(
+      `${this.base}/${campaignId}/monitoring`,
+    );
     return response.data.data;
   }
 
@@ -355,36 +369,77 @@ class MarketingService {
   }
 
   async listDispatches(campaignId: number, page = 1, perPage = 12) {
-    const response = await axios.get<{ data: CampaignDispatchRow[]; page: { totalRows: number; current: number } }>(
-      `${this.base}/${campaignId}/dispatches`,
-      {
-        params: { page, perPage },
-      },
-    );
+    const response = await axios.get<{
+      data: CampaignDispatchRow[];
+      page: { totalRows: number; current: number };
+    }>(`${this.base}/${campaignId}/dispatches`, {
+      params: { page, perPage },
+    });
 
     return response.data;
   }
 
   async cancelCampaign(campaignId: number) {
-    const response = await axios.post<{ data: MarketingCampaign }>(`${this.base}/${campaignId}/cancel`);
+    const response = await axios.post<{ data: MarketingCampaign }>(
+      `${this.base}/${campaignId}/cancel`,
+    );
     return response.data.data;
   }
 }
 
-export const getLeadOriginQuality = (token: string | null | undefined, filters: DateRangeFilters) =>
-  fetchMarketing<LeadOriginQualityResult>("/api/marketing/reports/lead-origin-quality", token, filters);
+export const getLeadOriginQuality = (
+  token: string | null | undefined,
+  filters: DateRangeFilters,
+  signal?: AbortSignal,
+) =>
+  fetchMarketing<LeadOriginQualityResult>(
+    "/api/marketing/reports/lead-origin-quality",
+    token,
+    filters,
+    signal,
+  );
 
-export const getLostReasons = (token: string | null | undefined, filters: DateRangeFilters) =>
-  fetchMarketing<LostReasonsResult>("/api/marketing/reports/lost-reasons", token, filters);
+export const getLostReasons = (
+  token: string | null | undefined,
+  filters: DateRangeFilters,
+  signal?: AbortSignal,
+) =>
+  fetchMarketing<LostReasonsResult>("/api/marketing/reports/lost-reasons", token, filters, signal);
 
-export const getFinancialDashboard = (token: string | null | undefined, filters: DateRangeFilters) =>
-  fetchMarketing<FinancialDashboardResult>("/api/marketing/financial/dashboard", token, filters);
+export const getFinancialDashboard = (
+  token: string | null | undefined,
+  filters: DateRangeFilters,
+  signal?: AbortSignal,
+) =>
+  fetchMarketing<FinancialDashboardResult>(
+    "/api/marketing/financial/dashboard",
+    token,
+    filters,
+    signal,
+  );
 
-export const getFinancialGoals = (token: string | null | undefined, year: number, month: number) =>
-  fetchMarketing<FinancialGoalsResult>("/api/marketing/financial/goals", token, { year, month });
+export const getFinancialGoals = (
+  token: string | null | undefined,
+  year: number,
+  month: number,
+  signal?: AbortSignal,
+) =>
+  fetchMarketing<FinancialGoalsResult>(
+    "/api/marketing/financial/goals",
+    token,
+    { year, month },
+    signal,
+  );
 
-export const upsertGeneralGoal = (token: string | null | undefined, payload: FinancialGoalPayload) =>
-  putMarketing<FinancialGeneralGoal, FinancialGoalPayload>("/api/marketing/financial/goals/general", token, payload);
+export const upsertGeneralGoal = (
+  token: string | null | undefined,
+  payload: FinancialGoalPayload,
+) =>
+  putMarketing<FinancialGeneralGoal, FinancialGoalPayload>(
+    "/api/marketing/financial/goals/general",
+    token,
+    payload,
+  );
 
 export const upsertOperatorGoal = (
   token: string | null | undefined,

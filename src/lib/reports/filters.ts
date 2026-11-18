@@ -3,6 +3,11 @@ export interface ReportPeriod {
   endDate: string;
 }
 
+export function reportPeriodLabel(period: ReportPeriod) {
+  const format = (value: string) => value.split("-").reverse().join("/");
+  return `${format(period.startDate)} a ${format(period.endDate)}`;
+}
+
 export function civilDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -64,9 +69,14 @@ export function csvContent(headers: string[], rows: unknown[][]) {
 }
 
 export function downloadReportCsv(filename: string, headers: string[], rows: unknown[][]) {
-  const url = URL.createObjectURL(
+  downloadReportFile(
+    filename,
     new Blob([csvContent(headers, rows)], { type: "text/csv;charset=utf-8" }),
   );
+}
+
+export function downloadReportFile(filename: string, blob: Blob) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;

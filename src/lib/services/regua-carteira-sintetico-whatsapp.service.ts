@@ -39,7 +39,8 @@ export interface ReguaRow {
   clientesContato: number;
 }
 
-export interface ReguaReportData {
+export interface ReguaSyntheticReport {
+  modoRelatorio: "SINTETICO";
   periodo: { dataInicial: string; dataFinal: string };
   operadorAtivo: "SIM" | "NAO" | "AMBOS";
   carteirasSelecionadas: number[];
@@ -47,35 +48,81 @@ export interface ReguaReportData {
   rows: ReguaRow[];
 }
 
+export type ReguaAnalysisMetrics = {
+  discadas: number;
+  contatosTelefonia: number;
+  contatosWhatsapp: number;
+  contatosTotal: number;
+  sucessos: number;
+  quantidadeBase: number;
+  conversasWhatsapp: number;
+};
+
+export interface ReguaAnalysisReport extends Omit<ReguaSyntheticReport, "modoRelatorio" | "rows"> {
+  modoRelatorio: "ANALITICO";
+  tipos: string[];
+  rows: {
+    operador: string;
+    tipoMetrics: Record<string, ReguaAnalysisMetrics>;
+    totais: ReguaAnalysisMetrics & { aproveitamento: number; conversao: number };
+  }[];
+}
+
+export type ReguaReportData = ReguaSyntheticReport | ReguaAnalysisReport;
 export type OperadorAtivoFiltro = "SIM" | "NAO" | "AMBOS";
+export type ReguaMode = "SINTETICO" | "ANALITICO";
+
+export interface ReguaReportParams {
+  carteiras: number[];
+  operadores: number[];
+  operadorAtivo: OperadorAtivoFiltro;
+  modoRelatorio: ReguaMode;
+  dataInicial: string;
+  dataFinal: string;
+}
+
+function reportQuery(params: ReguaReportParams) {
+  return {
+    ...params,
+    carteiras: params.carteiras.join(","),
+    operadores: params.operadores.join(","),
+  };
+}
 
 class ReguaCarteiraSinteticoWhatsappService {
-  async getFilters(token: string): Promise<ReguaFilters> {
-    const res = await axios.get<{ data: ReguaFilters }>(`${BASE}/filters`, authHeader(token));
+  async getFilters(token: string, signal?: AbortSignal): Promise<ReguaFilters> {
+    const res = await axios.get<{ data: ReguaFilters }>(`${BASE}/filters`, {
+      ...authHeader(token),
+      signal,
+    });
     return res.data.data;
   }
 
   async getReport(
     token: string,
-    params: {
-      carteiras: number[];
-      operadores: number[];
-      operadorAtivo: OperadorAtivoFiltro;
-      dataInicial: string;
-      dataFinal: string;
-    },
+    params: ReguaReportParams,
+    signal?: AbortSignal,
   ): Promise<ReguaReportData> {
     const res = await axios.get<{ data: ReguaReportData }>(BASE, {
       ...authHeader(token),
-      params: {
-        carteiras: params.carteiras.join(","),
-        operadores: params.operadores.join(","),
-        operadorAtivo: params.operadorAtivo,
-        dataInicial: params.dataInicial,
-        dataFinal: params.dataFinal,
-      },
+      params: reportQuery(params),
+      signal,
     });
     return res.data.data;
+  }
+
+  async exportReport(
+    token: string,
+    params: ReguaReportParams,
+    format: "csv" | "pdf",
+  ): Promise<Blob> {
+    const path = format === "csv" ? "/export-csv" : "/export";
+    const res = await axios.get<Blob>(BASE + path, {
+      ...authHeader(token),
+      params: reportQuery(params),
+      responseType: "blob",
+    });
+    return res.data;
   }
 }
 
